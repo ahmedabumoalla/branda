@@ -351,12 +351,19 @@ function otpEndpoint(sender: OtpSender, method: "getStateInstance" | "sendMessag
 }
 
 async function otpSenderReady(sender: OtpSender) {
-  try {
-    const response = await fetch(otpEndpoint(sender, "getStateInstance"), {
-      cache: "no-store", redirect: "error", signal: AbortSignal.timeout(2500),
-    });
-    return response.ok && (await response.json())?.stateInstance === "authorized";
-  } catch { return false; } // No message has been submitted, so choosing the backup is safe.
+  // A single slow/failed readiness request must not move traffic off Branda.
+  // Retry only these read-only probes, never an uncertain message submission.
+  const attempts = sender.idInstance === process.env.GREEN_API_ID_INSTANCE?.trim() ? 3 : 1;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (attempt) await new Promise(resolve => setTimeout(resolve, 250 * attempt));
+    try {
+      const response = await fetch(otpEndpoint(sender, "getStateInstance"), {
+        cache: "no-store", redirect: "error", signal: AbortSignal.timeout(2500),
+      });
+      if (response.ok && (await response.json())?.stateInstance === "authorized") return true;
+    } catch { /* Retry the read-only primary probe within the bounded readiness budget. */ }
+  }
+  return false;
 }
 
 /** OTP entry points and owner welcome can use the backup; campaigns cannot. OTP queue admission remains bound

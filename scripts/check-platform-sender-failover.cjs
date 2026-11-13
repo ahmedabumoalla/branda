@@ -10,9 +10,14 @@ const env = {
 function context(options = {}) {
   const calls = [], config = {...env, ...options.env};
   let primaryState = options.primary || 'authorized';
+  let primaryReads = 0;
   const fetcher = async (url, init) => {
     calls.push({url, ...init});
     if (url.includes('getStateInstance')) {
+      if (url.includes('waInstance111')) {
+        primaryReads++;
+        if (primaryReads <= (options.transientFailures || 0)) throw Error('transient readiness failure');
+      }
       if (options.readinessTimeout && url.includes('waInstance111')) throw Error('fixture');
       return Response.json({stateInstance: url.includes('waInstance111') ? primaryState : options.backup || 'authorized'});
     }
@@ -23,7 +28,7 @@ function context(options = {}) {
   function load(file, imports = {}) {
     const exports = {};
     const code = ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-    new Function('require','exports','process','fetch',code)(n=>n==='server-only'||n.includes('green-api-partner')?{}:imports[n]??require(n),exports,{env:config},fetcher);
+    new Function('require','exports','process','fetch','setTimeout',code)(n=>n==='server-only'||n.includes('green-api-partner')?{}:imports[n]??require(n),exports,{env:config},fetcher,fn=>{fn();return 0;});
     return exports;
   }
   const api=load('lib/whatsapp/green-api.ts');
@@ -32,6 +37,34 @@ function context(options = {}) {
 }
 (async()=>{
   let checks=0;
+  for (const method of ['sendGreenApiPagerMessage','sendGreenApiFinanceShiftAlert','sendGreenApiLoyaltyWelcome','sendGreenApiSupabaseOtp','sendGreenApiOwnerWelcome']) {
+    for (const transientFailures of [1,2]) {
+      const c=context({transientFailures});
+      await c.api[method]({phone:'966500000001',phoneNormalized:'966500000001',code:'123456',message:'fixture',brandName:'Fixture',password:'fixture-only',startsTrial:false});
+      assert.equal(c.sends().length,1);
+      assert.match(c.sends()[0].url,/waInstance111/);
+      assert.ok(c.calls.every(call=>!call.url.includes('waInstance222')),'temporary primary failure must not touch backup');
+      assert.equal(c.calls.filter(call=>call.url.includes('getStateInstance')).length,transientFailures+1);
+      checks++;
+    }
+  }
+  for (const options of [{readinessTimeout:true},{primary:'notAuthorized'}]) {
+    const c=context(options);
+    await c.api.sendGreenApiPagerMessage({phone:'966500000001',message:'fixture'});
+    assert.equal(c.calls.filter(call=>call.url.includes('getStateInstance')&&call.url.includes('waInstance111')).length,3);
+    assert.match(c.calls[3].url,/waInstance222.*getStateInstance/);
+    assert.equal(c.sends().length,1);
+    assert.match(c.sends()[0].url,/waInstance222/);
+    checks++;
+  }
+  {
+    const c=context({transientFailures:2});
+    const {primary}=c.api.getGreenApiCustomerPlatformSenders();
+    assert.equal(await c.api.isGreenApiCustomerSenderReady(primary),true);
+    assert.equal(c.calls.length,3);
+    assert.equal(c.sends().length,0);
+    checks++;
+  }
   for(const method of ['sendGreenApiPagerMessage','sendGreenApiFinanceShiftAlert','sendGreenApiLoyaltyWelcome']) {
     for(const primary of ['authorized','notAuthorized','blocked','sleepMode']) {
       const c=context({primary});await c.api[method]({phone:'966500000001',message:'unchanged'});

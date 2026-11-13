@@ -47,6 +47,8 @@ try {
   let h=await workerHarness();
   let text=h.worker.pagerMessageText(job());check(text.includes("000١٢ / أ"),"message keeps exact invoice zeros and punctuation");
   check(text.includes("Test Brand")&&!text.includes("undefined"),"temporary platform sender names brand");
+  check(text.includes("بانتظار تأكيد استلام طلبك"),"ready copy explains the two-message limit");
+  check(!text.includes("/pager/feedback/"),"ready message never sends a premature rating link");
   text=h.worker.pagerMessageText(job(1,"rating"));check(text.includes(`https://barndaksa.com/pager/feedback/${"a".repeat(64)}`),"rating invite uses first-party opaque URL");
   assert.throws(()=>h.worker.pagerMessageText({...job(1,"rating"),feedbackToken:"bad"}));checks++;
   equal(await h.worker.runPagerMessageJobs(),{claimed:1,queued:1,skipped:0,failed:0},"accepted message reported queued");
@@ -72,17 +74,17 @@ try {
   equal(h.finished.map(x=>x.error??x.providerId),["provider_send_failed","retry-accepted"],"durable retry uses fresh provider result");
   equal(h.finished[1].lease,"retry-lease","retry follows newly claimed lease");
   h=await workerHarness({jobs:[...Array(122)].map((_,i)=>job(i+1))});
-  equal((await h.worker.runPagerMessageJobs(500)).claimed,100,"worker caps total invocation at hundred");equal(h.claimed,[20,20,20,20,20],"claims remain twenty per batch within individual leases");
+  equal((await h.worker.runPagerMessageJobs(500)).claimed,100,"worker caps total invocation at hundred");equal(h.claimed,Array(10).fill(10),"two waves leave time for primary readiness retries within leases");
   h=await workerHarness({jobs:[...Array(30)].map((_,i)=>job(i+1))});
   equal((await h.worker.runPagerMessageJobs(5)).claimed,5,"action kick retains five job limit");equal(h.claimed,[5],"action never opens a second batch");
   let fakeNow=1_000;Date.now=()=>fakeNow;
   h=await workerHarness({jobs:[...Array(80)].map((_,i)=>job(i+1)),send:async()=>{fakeNow+=800;return{providerMessageId:"timed"};}});
   equal((await h.worker.runPagerMessageJobs()).claimed,20,"no new batch claimed after fifteen second budget");
-  equal(h.claimed,[20],"deadline leaves unclaimed work available to next scheduler");equal(h.finished.length,20,"already claimed batch completes before stopping");
+  equal(h.claimed,[10,10],"deadline leaves unclaimed work available to next scheduler");equal(h.finished.length,20,"already claimed batch completes before stopping");
   fakeNow=1_000;
   h=await workerHarness({jobs:[...Array(80)].map((_,i)=>job(i+1)),send:async(_,number)=>{fakeNow+=number<=20?700:2_000;return{providerMessageId:"timed"};}});
-  equal((await h.worker.runPagerMessageJobs()).claimed,40,"second batch may begin before budget and completes after budget");
-  equal(h.claimed,[20,20],"deadline prevents a third batch");
+  equal((await h.worker.runPagerMessageJobs()).claimed,30,"last batch may begin before budget and completes after budget");
+  equal(h.claimed,[10,10,10],"deadline prevents another batch");
   Date.now=originalNow;
   let activeSends=0,peakSends=0;
   h=await workerHarness({jobs:[...Array(40)].map((_,i)=>job(i+1)),send:async()=>{activeSends++;peakSends=Math.max(peakSends,activeSends);await Promise.resolve();activeSends--;return{providerMessageId:"concurrency"};}});
@@ -122,17 +124,17 @@ try {
   await actions.updatePagerOrderAction("order-1","cancelled","staff");equal(afters.length,0,"cancel does not kick messaging");
   transitionError=true;action=await actions.updatePagerOrderAction("order-1","ready","staff");check(!action.ok&&!action.error.includes("private"),"unauthorized mutation returns safe error");equal(afters.length,0,"failed transition never queues worker");
 
-  process.env.GREEN_API_API_URL="https://provider.example.test";process.env.GREEN_API_ID_INSTANCE="test-instance";process.env.GREEN_API_API_TOKEN_INSTANCE="test-token";
+  process.env.GREEN_API_API_URL="https://1100.api.greenapi.com";process.env.GREEN_API_ID_INSTANCE="111";process.env.GREEN_API_API_TOKEN_INSTANCE="test-token";
   process.env.GREEN_API_REQUEST_TIMEOUT_MS="90000";
   const sender=await load("lib/whatsapp/green-api.ts");let fetchCalls=[];
-  globalThis.fetch=async(url,options)=>{fetchCalls.push({url,options});return Response.json({idMessage:"mock-provider-id"});};
+  globalThis.fetch=async(url,options)=>{if(url.includes('getStateInstance'))return Response.json({stateInstance:'authorized'});fetchCalls.push({url,options});return Response.json({idMessage:"mock-provider-id"});};
   equal(await sender.sendGreenApiPagerMessage({phone:"966500000001",message:"exact invoice"}),{providerMessageId:"mock-provider-id"},"sender accepts provider ID without claiming delivery");
   equal(JSON.parse(fetchCalls[0].options.body),{chatId:"966500000001@c.us",linkPreview:false,message:"exact invoice"},"sender address and payload exact");
   equal(fetchCalls[0].options.cache,"no-store","provider request uncacheable");check(fetchCalls[0].options.signal instanceof AbortSignal,"provider request has deadline signal");
   await rejects(()=>sender.sendGreenApiPagerMessage({phone:"0500000001",message:"x"}),/INVALID_PAGER_RECIPIENT/);equal(fetchCalls.length,1,"invalid recipient never sent");
-  globalThis.fetch=async()=>new Response("private provider details",{status:500});
+  globalThis.fetch=async url=>url.includes('getStateInstance')?Response.json({stateInstance:'authorized'}):new Response("private provider details",{status:500});
   await rejects(()=>sender.sendGreenApiPagerMessage({phone:"966500000001",message:"x"}),/^Error: PAGER_PROVIDER_REJECTED$/);
-  globalThis.fetch=async()=>Response.json({success:true});
+  globalThis.fetch=async url=>Response.json(url.includes('getStateInstance')?{stateInstance:'authorized'}:{success:true});
   await rejects(()=>sender.sendGreenApiPagerMessage({phone:"966500000001",message:"x"}),/^Error: PAGER_PROVIDER_INVALID_RESPONSE$/);
   console.log(`PASS ${checks} mocked pager worker route action sender checks with zero real sends`);
 } finally {
