@@ -28,6 +28,7 @@ export function PagerConsole({ context, initialPage, mode = "staff", actions = p
   const [search, setSearch] = useState("");
   const [invoice, setInvoice] = useState("");
   const [phone, setPhone] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState<CashierMessage>("");
   const [busy, setBusy] = useState(false);
@@ -46,7 +47,7 @@ export function PagerConsole({ context, initialPage, mode = "staff", actions = p
   const pipCleanup = useRef<(() => void) | null>(null);
   const requestSequence = useRef(0);
   const mutation = useRef(false);
-  const createAttempt = useRef<{ id: string; invoiceNumber: string; phone: string } | null>(null);
+  const createAttempt = useRef<{ id: string; invoiceNumber: string; phone: string; customerName: string } | null>(null);
   const mounted = useRef(true);
   const readyOpen = view === "active";
   const restoreCompactFocus = useCallback(() => compactButtonRef.current?.focus({ preventScroll: true }), []);
@@ -124,12 +125,13 @@ export function PagerConsole({ context, initialPage, mode = "staff", actions = p
     mutation.current = true; setBusy(true); setError(""); setNotice(""); requestSequence.current++;
     // Retain the same id across uncertain network retries to prevent duplicate orders
     if (!createAttempt.current || createAttempt.current.invoiceNumber !== invoice || createAttempt.current.phone !== phone) {
-      createAttempt.current = { id: crypto.randomUUID(), invoiceNumber: invoice, phone };
+      createAttempt.current = { id: crypto.randomUUID(), invoiceNumber: invoice, phone, customerName };
     }
     try {
+      createAttempt.current.customerName = customerName;
       const result = await actions.createOrder(createAttempt.current, mode);
       if (!result.ok) { setError(result.error); return; }
-      createAttempt.current = null; setInvoice(""); setPhone("");
+      createAttempt.current = null; setInvoice(""); setPhone(""); setCustomerName("");
       setNotice({ text: "أضيفت الفاتورة {invoice} إلى قائمة الاستلام", values: { invoice: result.order.invoiceNumber } });
       if (view !== "active" || page !== 0 || calledPage !== 0 || query) {
         requestSequence.current++; setView("active"); setPage(0); setCalledPage(0); setQuery(""); setSearch("");
@@ -238,6 +240,7 @@ export function PagerConsole({ context, initialPage, mode = "staff", actions = p
       <form data-pager-entry onSubmit={addOrder}>
         <label className={styles.label}>{t("رقم الفاتورة")}<input ref={invoiceRef} className={styles.input} name="invoiceNumber" value={invoice} onChange={e => setInvoice(e.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.nativeEvent.isComposing) { event.preventDefault(); phoneRef.current?.focus(); } }} required maxLength={120} autoComplete="off" placeholder={t("رقم الفاتورة")} dir="auto" disabled={busy} /></label>
         <label className={styles.label}>{t("رقم جوال العميل")}<input ref={phoneRef} className={styles.input} name="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required maxLength={20} autoComplete="off" placeholder="05xxxxxxxx" dir="ltr" disabled={busy} /></label>
+        <label className={styles.label}>{t("اسم العميل اختياري")}<input className={styles.input} name="customerName" value={customerName} onChange={event=>setCustomerName(event.target.value)} maxLength={120} autoComplete="off" dir="auto" disabled={busy} /></label>
         <button className={styles.button} type="submit" disabled={busy}>{busy ? <LoaderCircle size={18} aria-hidden="true" /> : <Plus size={18} aria-hidden="true" />}{t("إضافة الفاتورة")}</button>
       </form>
       <p className={styles.hint}>{t("أبلغ العميل أنه سيستقبل تنبيه الطلب على واتساب")}</p>

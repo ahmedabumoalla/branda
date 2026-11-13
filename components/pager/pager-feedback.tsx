@@ -33,6 +33,7 @@ export function PagerFeedbackForm({ token, initialFeedback }: { token: string; i
       {error && <p className={styles.error} role="alert">{error}</p>}
       <button className={styles.button} type="submit" disabled={busy}>{busy ? "جار إرسال التقييم" : "إرسال التقييم"}</button>
     </form>}
+    {submitted && initialFeedback.googleReviewUrl && <div className={styles.feedbackForm}><a className={styles.button} href={initialFeedback.googleReviewUrl} target="_blank" rel="noopener noreferrer">اكتب مراجعتك على قوقل ماب</a><p className={styles.muted}>تقييمك هنا خاص بفريق العلامة ويمكنك مشاركة تجربتك أيضًا بكتابة مراجعة في قوقل</p></div>}
     <p className={styles.muted} style={{ textAlign: "center", marginTop: 24 }}>بكل عناية من برندة</p>
   </main>;
 }

@@ -17,7 +17,7 @@ export type PagerPage = {
     averagePreparationSeconds: number | null; averageCollectionSeconds: number | null;
     averageRating: number | null; ratedCount: number };
 };
-export type PagerFeedback = { brandName: string; invoiceNumber: string; rating: number | null; notes: string; submitted: boolean };
+export type PagerFeedback = { brandName: string; invoiceNumber: string; rating: number | null; notes: string; submitted: boolean; googleReviewUrl?: string };
 export type PagerMutationResult = { ok: true; order: PagerOrder } | { ok: false; error: string };
 export type PagerMessageJob = { id: string; orderId: string; cafeId: string; phone: string;
   brandName: string; invoiceNumber: string; kind: "ready" | "rating"; leaseToken: string; feedbackToken?: string };

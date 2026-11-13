@@ -62,9 +62,11 @@ check('permitted staff can switch to loyalty', () => assert.ok(html(consoleHarne
 check('owner has staff management link', () => assert.ok(html(consoleHarness({}, { mode: 'owner' })).includes('/dashboard/cashier')));
 input(h, 'invoiceNumber').props.onChange({ target: { value: order.invoiceNumber } });
 input(h, 'phone').props.onChange({ target: { value: '0500000001' } });
+input(h, 'customerName').props.onChange({ target: { value: 'Pager customer' } });
 await form(h).props.onSubmit({ preventDefault() {} });
 check('create sends exact invoice reference and only explicit phone without automatically calling the customer', () => { assert.ok(!h.calls.some(c => c[0] === 'update')); assert.ok(!html(h).includes('قيد التجهيز')); const call = h.calls.find(c => c[0] === 'create')[1]; assert.equal(call.invoiceNumber, order.invoiceNumber); assert.equal(call.phone, '0500000001'); assert.match(call.id, /^[0-9a-f-]{36}$/); });
 check('successful create resets both fields and refreshes queue', () => { assert.equal(input(h, 'invoiceNumber').props.value, ''); assert.equal(input(h, 'phone').props.value, ''); assert.ok(h.calls.some(c => c[0] === 'fetch')); });
+check('optional customer name accompanies registration and clears after success', () => { assert.equal(h.calls.find(c => c[0] === 'create')[1].customerName, 'Pager customer'); assert.equal(input(h,'customerName').props.value,''); assert.equal(input(h,'customerName').props.required,undefined); });
 
 const attempts = [];
 const retry = consoleHarness({ createPagerOrderAction: async input => { attempts.push(input); throw Error('network'); } });

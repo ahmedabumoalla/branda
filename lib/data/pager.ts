@@ -10,6 +10,7 @@ import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
 import type { PagerContext, PagerFeedback, PagerFilter, PagerMessageJob, PagerMode, PagerOrder, PagerPage } from "@/lib/pager/types";
+import { normalizeGoogleReviewLink } from "@/lib/pager/google-review-link";
 
 const idSchema = z.string().uuid();
 const filterSchema = z.object({ page: z.number().int().min(0).max(100000).default(0),
@@ -78,11 +79,11 @@ export async function getAdminPagerPage(cafeId: string, input: PagerFilter = {})
 }
 export async function createPagerOrder(input: unknown, mode: PagerMode = "staff"): Promise<PagerOrder> {
   const ctx = await actorContext(mode);
-  const draft = z.object({ id: idSchema, invoiceNumber: z.string().min(1).max(120).refine(v => v.trim().length > 0), phone: z.string().max(30) }).parse(input);
+  const draft = z.object({ id: idSchema, invoiceNumber: z.string().min(1).max(120).refine(v => v.trim().length > 0), phone: z.string().max(30), customerName: z.string().trim().max(120).default("") }).parse(input);
   const digits = draft.phone.replace(/[٠-٩]/g, c => String(c.charCodeAt(0)-1632)).replace(/[۰-۹]/g, c => String(c.charCodeAt(0)-1776));
   const phone = normalizeSaudiPhone(digits);
   if (!phone) throw new Error("أدخل رقم جوال سعودي صحيح");
-  const { data, error } = await createAdminClient().rpc("pager_create_order", { p_id: draft.id, p_cafe: ctx.cafeId,
+  const { data, error } = await createAdminClient().rpc("pager_create_named_order", { p_id: draft.id, p_cafe: ctx.cafeId, p_name: draft.customerName,
     p_invoice: draft.invoiceNumber, p_phone: phone, p_actor: ctx.actorName, p_station: ctx.station, p_actor_id: ctx.actorId,
     p_feedback_hash: hashToken(tokenForOrder(draft.id)) });
   if (error) {
@@ -107,8 +108,9 @@ export async function getPagerFeedback(token: string): Promise<PagerFeedback | n
   if (error) throw new Error("تعذر تحميل التقييم حاول مجددًا");
   if (!data) return null;
   const { data: cafe } = await db.from("cafes").select("name").eq("id",data.cafe_id).maybeSingle();
+  const { data: settings } = await db.from("pager_brand_settings").select("google_review_url").eq("cafe_id", data.cafe_id).maybeSingle();
   return { brandName: String(cafe?.name ?? "برندة"), invoiceNumber: data.invoice_number,
-    rating: data.rating, notes: data.notes, submitted: data.rating != null };
+    rating: data.rating, notes: data.notes, submitted: data.rating != null, googleReviewUrl: normalizeGoogleReviewLink(settings?.google_review_url ?? "") ?? "" };
 }
 export async function submitPagerFeedback(token: string, rating: number, notes: string) {
   tokenSchema.parse(token); z.number().int().min(1).max(5).parse(rating); z.string().max(1000).parse(notes);

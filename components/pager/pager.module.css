@@ -143,7 +143,7 @@
 .optionsPanel .hint { margin: 0; }
 .console .entry { position: static; padding: 12px; margin: 0 0 12px; border-radius: 14px; }
 .console .entry h2 { margin: 0 0 8px; font-size: 16px; }
-.console .entry form { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) auto; gap: 8px; align-items: end; }
+.console .entry form { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr) auto; gap: 8px; align-items: end; }
 .console .entry form > button { grid-column: auto; min-height: 48px; }
 .console .entry .hint { margin: 6px 0 0; }
 .console .label { gap: 5px; }

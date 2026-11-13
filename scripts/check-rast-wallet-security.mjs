@@ -122,7 +122,7 @@ try {
     const stripPixels = await sharp(bundle[`strip${suffix}.png`]).removeAlpha().raw().toBuffer();
     assert.deepEqual([...stripPixels.subarray(0, 3)], [59, 20, 32], "Apple strip matches the burgundy pass background");
     const icon = await sharp(bundle[`icon${suffix}.png`]).metadata();
-    assert.deepEqual([icon.width, icon.height], [29 * scale, 29 * scale]);
+    assert.deepEqual([icon.width, icon.height], [38 * scale, 38 * scale]);
     const logo = await sharp(bundle[`logo${suffix}.png`]).metadata();
     assert(logo.width <= 160 * scale && logo.height <= 50 * scale);
     const logoPixels = await sharp(bundle[`logo${suffix}.png`]).ensureAlpha().raw().toBuffer();

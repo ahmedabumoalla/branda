@@ -11,7 +11,7 @@ function errorMessage(error: unknown) {
 }
 export async function fetchPagerPageAction(input: PagerFilter = {}, mode: PagerMode = "staff") { return getPagerPage(input,mode); }
 export async function fetchAdminPagerPageAction(cafeId: string,input: PagerFilter = {}) { return getAdminPagerPage(cafeId,input); }
-export async function createPagerOrderAction(input: { id: string; invoiceNumber: string; phone: string },mode: PagerMode = "staff"): Promise<PagerMutationResult> {
+export async function createPagerOrderAction(input: { id: string; invoiceNumber: string; phone: string; customerName?: string },mode: PagerMode = "staff"): Promise<PagerMutationResult> {
   try { return { ok: true, order: await createPagerOrder(input,mode) }; }
   catch (error) { return { ok: false, error: errorMessage(error) }; }
 }

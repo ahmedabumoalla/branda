@@ -5,6 +5,7 @@ export type LocalizedText = { ar: string; en: string };
 export type CashierMessage = string | { text: string; values: Record<string, string | number | LocalizedText> };
 export const cashierLanguageCookie = "branda-cashier-language";
 const readEnglish: Record<string, string> = {
+  "اسم العميل اختياري": "Customer name optional",
   "ملخص العميل": "Customer summary",
   "الرصيد الحالي": "Current balance",
   "الختم قيد التسجيل": "Stamp pending",

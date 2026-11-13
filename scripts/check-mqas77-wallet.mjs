@@ -87,6 +87,17 @@ try {
   assert.equal(pass.storeCard.headerFields[0].value, "3 / 4"); assert.equal(pass.storeCard.secondaryFields[0].value, 1); assert.equal(pass.storeCard.auxiliaryFields[0].value, 0); checks += 3;
   assert.equal(pass.barcodes[0].message, payload.buildGoogleObject(member, "12345").barcode.value); assert.equal(pass.serialNumber, member.card.cardCode); checks++;
   for (const suffix of ["", "@2x", "@3x"]) assert(native[`strip${suffix}.png`] && native[`logo${suffix}.png`]); checks++;
+  for (const [index, suffix] of ["", "@2x", "@3x"].entries()) {
+    const icon = await sharp(native[`icon${suffix}.png`]).metadata();
+    assert.deepEqual([icon.width, icon.height], [38 * (index + 1), 38 * (index + 1)]);
+    assert.equal(icon.hasAlpha, false); checks++;
+  }
+  assert.equal(pass.userInfo.iconVersion, load("lib/wallet/apple-icon.ts").APPLE_ICON_VERSION); checks++;
+  const { appleIconBackground } = load("lib/wallet/apple-icon.ts");
+  for (const [color, expected] of [["#ffffff", "#080808"], ["#000000", "#f8f2e8"]]) {
+    const mark = await sharp({ create: { width: 32, height: 32, channels: 4, background: color } }).png().toBuffer();
+    assert.equal(await appleIconBackground(mark, "#080808", "#f8f2e8"), expected); checks++;
+  }
   const manifest = JSON.parse(native["manifest.json"]);
   for (const [name, hash] of Object.entries(manifest)) assert.equal(createHash("sha1").update(native[name]).digest("hex"), hash); checks++;
   const info = forge.asn1.fromDer(native.signature.toString("binary")).value[1].value[0].value.at(-1).value[0];

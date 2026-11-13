@@ -148,7 +148,7 @@ export function BrandCustomersPage({ initialResult }: { initialResult: BrandCust
   const dirty = draft.search !== applied.search || draft.brandId !== applied.brandId || draft.sort !== applied.sort;
 
   return <section className={s.page} dir="rtl" aria-labelledby="brand-customers-heading">
-    <header className={s.heading}><div><span className={s.eyebrow}><ShieldCheck aria-hidden="true" />خاص بالسوبر أدمن</span><h1 id="brand-customers-heading">عملاء العلامات التجارية</h1><p>كل عميل كل علامة وكل زيارة تابع الأختام والمكافآت وافهم علاقة عملائك بالعلامات من مكان واحد</p></div><button type="button" className={s.button} disabled={pending} onClick={() => void load(applied)}><RefreshCw aria-hidden="true" />{pending ? "جارٍ التحديث…" : "تحديث البيانات"}</button></header>
+    <header className={s.heading}><div><span className={s.eyebrow}><ShieldCheck aria-hidden="true" />خاص بالسوبر أدمن</span><h1 id="brand-customers-heading">عملاء الولاء</h1><p>كل عميل كل علامة وكل زيارة تابع الأختام والمكافآت وافهم علاقة عملائك بالعلامات من مكان واحد</p></div><button type="button" className={s.button} disabled={pending} onClick={() => void load(applied)}><RefreshCw aria-hidden="true" />{pending ? "جارٍ التحديث…" : "تحديث البيانات"}</button></header>
     {error ? <div className={s.error} role="alert" tabIndex={-1} ref={errorRef}><CircleAlert aria-hidden="true" /><span>{error}</span></div> : null}
     <div className={s.metrics} aria-label="ملخص العملاء حسب الفلاتر المطبقة">
       <div className={s.metric}><span>العملاء الفريدون</span><strong>{summary ? n(summary.uniqueCustomers) : "—"}</strong><small>{summary ? `${n(summary.memberships)} عضوية لدى العلامات` : "بانتظار البيانات"}</small></div>
