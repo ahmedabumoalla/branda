@@ -70,7 +70,7 @@ export async function verifyCashierOtp(code: string): Promise<CashierOtpResult> 
     const seconds = Math.floor((Date.parse(session.expiresAt) - Date.now()) / 1000);
     if (!Number.isFinite(seconds) || seconds <= 0) return { ok: false, message: "اطلب رمز تحقق جديدًا" };
     store.set(cashierSessionCookie, session.token, {
-      httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: Math.min(seconds, 8 * 60 * 60),
+      httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: Math.min(seconds, 400 * 24 * 60 * 60),
     });
     store.delete(CHALLENGE_COOKIE);
     return { ok: true, message: "تم تسجيل الدخول" };

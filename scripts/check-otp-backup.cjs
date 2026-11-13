@@ -89,5 +89,27 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
   const marketing = fs.readFileSync('lib/whatsapp/green-api-marketing.ts', 'utf8');
   assert.match(marketing, /value.idInstance === process.env.GREEN_API_OTP_BACKUP_ID_INSTANCE/);
   assert.ok(!fs.readFileSync('lib/whatsapp/green-api-platform-campaigns.ts', 'utf8').includes('OTP_BACKUP')); checks++;
-  console.log(`PASS ${checks} OTP and owner-welcome failover scenarios; mocked only, no messages sent`);
+  const incidentEnv = { ...base, GREEN_API_TEMPORARY_BACKUP_ONLY: 'true' };
+  for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp', 'sendGreenApiPagerMessage']) {
+    const x = await scenario({ method, env: incidentEnv });
+    assert.equal(x.error, undefined); assert.equal(x.sends.length, 1);
+    assert.ok(x.calls.every(c => c.url.includes('waInstance222'))); checks++;
+    const down = await scenario({ method, env: incidentEnv, backupState: 'notAuthorized' });
+    assert.ok(down.error); assert.equal(down.sends.length, 0); checks++;
+  }
+  const incidentCalls = [];
+  const incident = load('lib/whatsapp/green-api.ts', incidentEnv, async (url, init) => {
+    incidentCalls.push({url, ...init});
+    return Response.json(url.includes('getStateInstance') ? {stateInstance:'authorized'} : {idMessage:'mock'});
+  });
+  assert.equal(await incident.isGreenApiLoyaltyWelcomeReady(), false); checks++;
+  for (const method of ['sendGreenApiLoyaltyWelcome','sendGreenApiFinanceShiftAlert','sendGreenApiOwnerWelcome','sendGreenApiCashierWelcome']) {
+    await assert.rejects(() => incident[method]({phone:method==='sendGreenApiCashierWelcome'?'+966500000001':'966500000001',message:'test',brandName:'Test'}), /MESSAGING_TEMPORARILY_PAUSED/); checks++;
+  }
+  const primary = {apiUrl:base.GREEN_API_API_URL,idInstance:base.GREEN_API_ID_INSTANCE,apiTokenInstance:base.GREEN_API_API_TOKEN_INSTANCE};
+  await assert.rejects(() => incident.sendGreenApiCustomerMessage(primary,{phone:'966500000001',message:'welcome'}), /MESSAGING_TEMPORARILY_PAUSED/); checks++;
+  assert.equal(incidentCalls.length,0); checks++;
+  assert.equal((await incident.sendGreenApiCustomerMessage(primary,{phone:'966500000001',message:'otp'},10000,'otp')).status,'queued');
+  assert.ok(incidentCalls.every(c=>c.url.includes('waInstance222'))); checks++;
+  console.log(`PASS ${checks} sender and incident-mode scenarios; mocked only, no messages sent`);
 })().catch(e => { console.error(e); process.exitCode = 1; });

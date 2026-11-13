@@ -1,7 +1,7 @@
 import "server-only";
 import { getLocoCustomerWhatsAppCredentials } from "@/lib/data/brand-whatsapp";
 import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
-import { getGreenApiCustomerPlatformSenders, isGreenApiCustomerSenderReady, type GreenApiCustomerSender } from "@/lib/whatsapp/green-api";
+import { isGreenApiBackupOnly, getGreenApiCustomerPlatformSenders, isGreenApiCustomerSenderReady, type GreenApiCustomerSender } from "@/lib/whatsapp/green-api";
 import { getGreenApiMarketingAccount } from "@/lib/whatsapp/green-api-marketing";
 
 /** Input comes from the atomic admission/claim, never Auth user metadata or a phone lookup. */
@@ -21,6 +21,10 @@ export async function selectLocoLoyaltySender(cafeId: string): Promise<GreenApiC
 
 /** Existing access/document flows retain their pre-submit platform fallback. */
 export async function selectLocoCustomerSender(cafeId: string): Promise<GreenApiCustomerSender | null> {
+  if (isGreenApiBackupOnly()) {
+    const { backup } = getGreenApiCustomerPlatformSenders();
+    return backup && await isGreenApiCustomerSenderReady(backup) ? backup : null;
+  }
   if (cafeId !== LOCO_CAFE_ID) return null;
   const linked = await selectLocoLoyaltySender(cafeId);
   if (linked) return linked;

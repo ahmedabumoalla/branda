@@ -265,7 +265,7 @@ export async function loginCashierWithPassword(
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: 400 * 24 * 60 * 60,
   });
   const loginWindowStart = new Date(Date.now() - 10_000).toISOString();
   const { count: recentLoginCount } = await admin

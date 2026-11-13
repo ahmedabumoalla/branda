@@ -9,7 +9,7 @@ type GreenApiSendResponse = {
 /** Provider acknowledgement does not claim delivery/read receipt; billing mode comes from the locked handoff claim. */
 export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName: string; password: string; startsTrial: boolean }) {
   if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_OWNER_RECIPIENT");
-  const primary = requireGreenApiConfig();
+  const primary = await requireDeliveryConfig("other");
   const backup = backupOtpSender(primary);
   let sender = primary;
   // Choose before submitting credentials so a disconnected primary cannot queue them.
@@ -49,6 +49,7 @@ export function isGreenApiConfigured() {
 
 /** Customer welcomes stay on the primary sender; standby is reserved for access messages */
 export async function isGreenApiLoyaltyWelcomeReady() {
+  if (isGreenApiBackupOnly()) return false;
   if (!isGreenApiConfigured()) return false;
   try { return await otpSenderReady(validateOtpSender(requireGreenApiConfig())); }
   catch { return false; }
@@ -56,7 +57,7 @@ export async function isGreenApiLoyaltyWelcomeReady() {
 
 export async function sendGreenApiLoyaltyWelcome(input: { phone: string; message: string }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
   if (!/^9665\d{8}$/.test(input.phone) || !input.message.trim() || input.message.length > 2000) throw new Error("INVALID_LOYALTY_WELCOME");
-  const { apiUrl, idInstance, apiTokenInstance } = validateOtpSender(requireGreenApiConfig());
+  const { apiUrl, idInstance, apiTokenInstance } = validateOtpSender(await requireDeliveryConfig("other"));
   try {
     const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
       method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
@@ -73,7 +74,7 @@ export async function sendGreenApiLoyaltyWelcome(input: { phone: string; message
 /** A provider acknowledgement means queued only. Ambiguous outcomes must not be retried automatically */
 export async function sendGreenApiFinanceShiftAlert(input: { phone: string; message: string }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
   if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_FINANCE_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   try {
     const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
       method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
@@ -104,7 +105,7 @@ function financeReceiptMediaOrigin() {
 
 export async function sendGreenApiFinanceReceipt(input: { phone: string; message: string; pdf: Uint8Array; invoiceNumber: number }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string; errorCode?: string }> {
   if (!/^9665\d{8}$/.test(input.phone) || !Number.isSafeInteger(input.invoiceNumber) || input.invoiceNumber < 1 || input.message.length > 1024 || !input.pdf.length || input.pdf.length > 8 * 1024 * 1024 || new TextDecoder().decode(input.pdf.slice(0, 5)) !== "%PDF-") throw new Error("INVALID_FINANCE_RECEIPT");
-  const { idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const { idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   const mediaOrigin = financeReceiptMediaOrigin();
   const body = new FormData();
   const fileName = `invoice-${input.invoiceNumber}.pdf`;
@@ -126,9 +127,9 @@ export async function sendGreenApiFinanceReceipt(input: { phone: string; message
 /** A provider ID means queued by GREEN-API, not delivered or read */
 export async function sendGreenApiPagerMessage(input: { phone: string; message: string }) {
   if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_PAGER_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("pager");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
-    method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
+    method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
     signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
     body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: input.message }),
   });
@@ -143,7 +144,7 @@ export async function sendGreenApiSalesCashierWelcome(input: {
   phone: string; fullName: string; brandName: string; slug: string; password: string;
 }) {
   if (!/^9665\d{8}$/.test(input.phone) || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(input.slug)) throw new Error("INVALID_SALES_CASHIER_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
     signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
@@ -167,7 +168,7 @@ export async function sendGreenApiSalesCashierWelcome(input: {
 /** Linking a customer never reveals or replaces their existing password. */
 export async function sendGreenApiLinkedSalesCashierWelcome(input: { phone: string; fullName: string; brandName: string }) {
   if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_SALES_CASHIER_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
     signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
@@ -194,7 +195,7 @@ export async function sendGreenApiCashierWelcome(input: {
   brandName: string;
 }) {
   if (!/^\+9665\d{8}$/.test(input.phone)) throw new Error("INVALID_CASHIER_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -226,7 +227,7 @@ export async function sendGreenApiCashierWelcome(input: {
 /** idMessage acknowledges provider queueing only, not WhatsApp delivery */
 export async function sendGreenApiMenuFeedback(input: { recipient: string; brandName: string; rating: number; notes: string }) {
   if (!/^9665\d{8}$/.test(input.recipient)) throw new Error("INVALID_FEEDBACK_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
     signal: AbortSignal.timeout(greenApiTimeoutMs()),
@@ -299,9 +300,9 @@ export async function isGreenApiCustomerSenderReady(sender: GreenApiCustomerSend
 }
 
 /** Exactly one POST. Selection/failover must finish before calling this function. */
-export async function sendGreenApiCustomerMessage(sender: GreenApiCustomerSender, input: { phone: string; message: string }, timeoutMs = 10_000): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
+export async function sendGreenApiCustomerMessage(sender: GreenApiCustomerSender, input: { phone: string; message: string }, timeoutMs = 10_000, kind: "otp" | "other" = "other"): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
   if (!/^9665\d{8}$/.test(input.phone) || !input.message.trim() || input.message.length > 2000) throw new Error("INVALID_CUSTOMER_MESSAGE");
-  const config = validateOtpSender(sender);
+  const config = validateOtpSender(isGreenApiBackupOnly() ? await requireDeliveryConfig(kind) : sender);
   try {
     const response = await fetch(otpEndpoint(config, "sendMessage"), {
       method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
@@ -363,8 +364,8 @@ async function otpSenderReady(sender: OtpSender) {
  */
 async function sendVerificationCode(phone: string, code: string, message: string, timeoutMs: number) {
   if (!/^9665\d{8}$/.test(phone) || !/^\d{6}$/.test(code)) throw new Error("OTP_INPUT_INVALID");
-  const primary = validateOtpSender(requireGreenApiConfig());
-  const backup = backupOtpSender(primary);
+  const primary = validateOtpSender(await requireDeliveryConfig("otp"));
+  const backup = isGreenApiBackupOnly() ? null : backupOtpSender(primary);
   let sender = primary;
   if (backup && (preferBackupForAccess() || !await otpSenderReady(primary))) {
     if (!await otpSenderReady(backup)) throw new Error("OTP_SENDERS_UNAVAILABLE");
@@ -395,4 +396,17 @@ async function sendVerificationCode(phone: string, code: string, message: string
     return { providerMessageId: payload.idMessage };
   }
   throw new Error("OTP_SENDERS_UNAVAILABLE");
+}
+
+/** Explicit incident switch; stays on standby until the operator restores primary. */
+export function isGreenApiBackupOnly() {
+  return process.env.GREEN_API_TEMPORARY_BACKUP_ONLY?.trim() === "true";
+}
+
+async function requireDeliveryConfig(kind: "otp" | "pager" | "other") {
+  if (!isGreenApiBackupOnly()) return requireGreenApiConfig();
+  if (kind === "other") throw new Error("MESSAGING_TEMPORARILY_PAUSED");
+  const sender = backupOtpSender({ apiUrl: "", idInstance: "", apiTokenInstance: "" });
+  if (!sender || !await otpSenderReady(sender)) throw new Error("BACKUP_SENDER_UNAVAILABLE");
+  return sender;
 }

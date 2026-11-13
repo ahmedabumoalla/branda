@@ -145,7 +145,7 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
     try {
       const result = await updatePagerOrderAction(id, status, mode);
       if (!result.ok) { setError(result.error); return; }
-      setNotice(status === "ready" ? data.orders.find(order => order.id === id)?.status === "ready" ? "الاستدعاء مفعّل والتذكير مستمر كل دقيقة حتى الاستلام" : "تم الاستدعاء وبدأت تنبيهات الجاهزية" : status === "received" ? "تم تأكيد الاستلام وإيقاف التذكير" : "ألغي الطلب وتوقفت تنبيهاته");
+      setNotice(status === "ready" ? data.orders.find(order => order.id === id)?.status === "ready" ? "تم تسجيل الاستدعاء" : "تم الاستدعاء وبدأت تنبيهات الجاهزية" : status === "received" ? "تم تأكيد الاستلام وإيقاف التذكير" : "ألغي الطلب وتوقفت تنبيهاته");
       await refresh();
       if (status === "ready" && view !== "active") selectView("active");
     } catch { setError("تعذر تأكيد تغيير الحالة حدث القائمة ثم حاول مرة أخرى"); }

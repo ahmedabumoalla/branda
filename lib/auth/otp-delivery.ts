@@ -73,7 +73,7 @@ export async function deliverQueuedOtp(id?: string) {
       const outcome = await sendGreenApiCustomerMessage(sender, {
         phone: payload.phoneNormalized,
         message: `رمز التحقق في برندة: ${payload.code}\nصالح لمدة 5 دقائق\nلا تشارك الرمز مع أي شخص\nإذا لم تطلبه فتجاهل الرسالة`,
-      }, 25_000);
+      }, 25_000, "otp");
       status = outcome.status === "queued" ? "sent" : outcome.status === "rejected" ? "failed" : "unknown";
     } else {
       status = "unknown";

@@ -1,0 +1,16 @@
+# Temporary sender and persistent cashier sessions
+
+2026-11-13: Scoped release based on production 8600fad6a497a81dbd610a26f2645ba22f93820e. Unrelated ERP workspace changes are excluded.
+
+- Standby phone suffix 24401 is verified authorized. Production `GREEN_API_TEMPORARY_BACKUP_ONLY=true` permits login OTP, one pager ready message, then rating on explicit receipt. No fallback to restricted primary. Welcomes, card links, documents and platform campaigns are suppressed. Incident mode stays active until explicit primary restoration; it does not expire at midnight.
+- Old DB delivery work is terminal and provider queues are cleared at cutover. Audit history/customer data remain intact. Suppressed messages must never be revived when restoring primary.
+- Ordinary active cafe cashier sessions have no practical time/idle expiration. Existing valid sessions were extended; expired/revoked sessions were not revived. Browser cookies renew on visits, activity and six-hour heartbeat with a 400-day lifetime. Explicit logout, inactive staff and administrator revocation remain authoritative. Browser storage deletion/private browsing still ends local persistence. Owner/maintenance sessions retain short lifetimes.
+- New pager enrollment is installed but disabled. When explicitly activated after primary restoration, only a newly created invoice for a new brand customer creates a loyalty card, one idempotent stamp and one card link. Existing customers and replayed invoices cause no enrollment/stamp/message. Today's orders are never backfilled.
+
+Applied migrations: 20261113081516 (normal two-message cap), 20261113084325 (incident one-message cap/suppression), 20261113084834 (sessions), 20261113084836 (disabled enrollment). Live transactional rollback probes cover cap/rating, revocation, disabled enrollment, new/existing customers and invoice replay with no real messages or retained probe rows.
+
+Verification RUN on 2026-11-13: TypeScript, UTF-8 text integrity, 83 sender, 48 routing/document suppression, 15 durable OTP, 24 staff OTP, persistent-session/heartbeat/recovery and 71 pager worker checks PASS. Scoped ESLint has no errors and two existing pager ref-cleanup warnings. Existing pager UI test fails on unrelated default palette expectation (#5c5c5c vs current #53621c); do not overwrite saved/current branding to satisfy this stale assertion. Local checks use Node20.20.2 with shared dependencies; deployment must independently build the release lock with Node24. No browser inspection or real test messages.
+
+Local sanitized evidence: `.codex-tmp/backup-sender-20261113/release-checks.json`, migration apply/preflight/results, cutover grants/drain/clear/readback and deployment metadata in the primary workspace. Final production SHA/deployment verification must be recorded in task-state after publication.
+
+Future primary restoration: verify the actual primary phone is connected and restriction removed, pause queue workers, cancel stale work and clear both provider queues, set database policy `backup_only=false` and environment incident flag false, deploy/verify the exact production revision, then restore workers. Enable `pager_enrollment_enabled=true` only as part of that explicit restoration. Normal ready cap becomes two. Never replay terminal jobs or create loyalty records for historical invoices.

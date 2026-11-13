@@ -251,7 +251,7 @@ nodes(compactReadyTree).find(n => n.type === 'button' && text(n) === 'استدع
 nodes(compactReadyTree).find(n => n.type === 'button' && text(n) === 'تم الاستلام').props.onClick();
 check('ready card exposes distinct call and collection actions with exact order ID', () => assert.deepEqual(ready.calls.filter(c => c[0] === 'card'), [['card', readyOrder.id, 'ready'], ['card', readyOrder.id, 'received']]));
 nodes(ready.render()).find(n => n.type?.name === 'PagerOrderCard').props.onChange(readyOrder.id, 'ready'); await tick();
-check('recall preserves the durable reminder schedule without claiming a new message was sent', () => assert.match(html(ready), /الاستدعاء مفعّل والتذكير مستمر/));
+check('recall preserves the durable reminder schedule without claiming a new message was sent', () => assert.match(html(ready), /تم تسجيل الاستدعاء/));
 nodes(ready.render()).find(n => n.type?.name === 'PagerOrderCard').props.onChange(readyOrder.id, 'received'); await tick();
 check('collection removes the order and keeps confirmation inside the open dialog', () => {
   assert.ok(dialogNode(ready)); assert.ok(!html(ready).includes('READY-61')); assert.match(renderToStaticMarkup(dialogNode(ready)), /تم تأكيد الاستلام/);

@@ -53,20 +53,25 @@ const settle = () => new Promise(setImmediate);
 function harness() {
   const target = new EventTarget(), document = new EventTarget(), navigations = [];
   let status = 200, failure = false, calls = 0, resolve;
+  let heartbeat, cleared = false;
+  target.setInterval = (callback, delay) => { assert.equal(delay, 6 * 60 * 60 * 1000); heartbeat = callback; return 1; };
+  target.clearInterval = id => { assert.equal(id, 1); cleared = true; };
   target.fetch = async () => { calls++; if (failure) throw new Error("offline"); return new Promise(done => { resolve = () => done({ status }); }); };
   target.location = { replace: path => navigations.push(path) };
   const stop = watchCashierSession(target, document);
-  return { target, document, navigations, stop, finish: async value => { status = value; resolve(); await settle(); }, offline: () => { failure = true; }, calls: () => calls };
+  return { target, document, navigations, stop, tick: () => heartbeat(), cleared: () => cleared, finish: async value => { status = value; resolve(); await settle(); }, offline: () => { failure = true; }, calls: () => calls };
 }
 const healthy = harness();
 healthy.document.dispatchEvent(new Event("click"));
 healthy.document.dispatchEvent(new Event("submit"));
 assert.equal(healthy.calls(), 1, "Concurrent interactions share a pending check");
 await healthy.finish(200);
+healthy.tick(); assert.equal(healthy.calls(), 2, "An idle tab refreshes its persistent cookie"); await healthy.finish(200);
 healthy.document.dispatchEvent(new Event("click")); await healthy.finish(503);
 assert.deepEqual(healthy.navigations, []);
 healthy.offline(); healthy.target.dispatchEvent(new Event("focus")); await settle();
 assert.deepEqual(healthy.navigations, [], "Offline keeps pending operations intact"); healthy.stop();
+assert.equal(healthy.cleared(), true, "Unmount cancels the renewal timer");
 const expired = harness(); await expired.finish(401);
 assert.deepEqual(expired.navigations, ["/cashier/session/clear?reason=session"]);
 expired.document.dispatchEvent(new Event("click")); assert.equal(expired.calls(), 1); expired.stop();

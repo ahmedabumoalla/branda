@@ -24,7 +24,7 @@ export function PagerOrderCard({ order, busy = false, compact = false, onChange 
       <p className={styles.phone}><bdi dir="ltr">{order.phone}</bdi></p>
       <div className={styles.cardMeta}><Clock3 size={14} aria-hidden="true" /><time dateTime={order.createdAt} dir="ltr">{pagerDate(order.createdAt, locale)}</time><span>{order.createdStation || order.createdBy || t("إدارة العلامة")}</span></div>
       {order.readyAt && <div className={styles.cardMeta}><BellRing size={14} aria-hidden="true" /><span>{t("تم الاستدعاء")} </span><time dateTime={order.readyAt} dir="ltr">{pagerDate(order.readyAt, locale)}</time></div>}
-      {order.status === "ready" && <p className={styles.hint}>{t("التذكير كل دقيقة حتى تأكيد الاستلام")} </p>}
+      {order.status === "ready" && <p className={styles.hint}>{t("يُرسل رابط التقييم بعد تأكيد الاستلام")} </p>}
       {onChange && (order.status === "waiting" || order.status === "ready") && (
         <div className={styles.cardActions}>
           {(order.status === "waiting" || compact) && <button type="button" className={order.status === "waiting" ? styles.button : styles.secondary} disabled={busy} onClick={() => onChange(order.id, "ready")}><BellRing size={17} aria-hidden="true" />{t(compact ? "استدعاء" : "الطلب جاهز")}</button>}

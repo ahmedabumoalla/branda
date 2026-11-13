@@ -18,8 +18,9 @@ const mocks={
  '@/lib/auth/phone-utils':load('lib/auth/phone-utils.ts',{'server-only':{}}),
  '@/lib/data/cashier':{cashierSessionCookie:'barndaksa_cashier_session'},
  '@/lib/whatsapp/green-api':{isGreenApiConfigured:()=>configured,sendGreenApiOtp:async input=>{if(sendFail)throw Error('provider secret');sent.push(input);}},
- '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name,args)=>{calls.push({name,args});return {error:name===rpcFail?{message:'private sql error'}:null,data:name==='begin_staff_otp'?{ok:allow,brandName}:name==='mark_staff_otp_sent'?mark:{ok:verified,token:'a'.repeat(48),expiresAt:new Date(Date.now()+28800000).toISOString()}};}})},
+ '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name,args)=>{calls.push({name,args});return {error:name===rpcFail?{message:'private sql error'}:null,data:name==='begin_staff_otp'?{ok:allow,brandName}:name==='mark_staff_otp_sent'?mark:{ok:verified,token:'a'.repeat(48),expiresAt:sessionExpiry ?? new Date(Date.now()+28800000).toISOString()}};}})},
 };
+let sessionExpiry;
 const api=load('lib/auth/cashier-otp.ts',mocks);
 await test('invalid phone never calls provider or database',async()=>{assert.equal((await api.requestCashierOtp('123')).ok,false);assert.equal(calls.length,0);});
 await test('unconfigured provider rejects',async()=>{configured=false;assert.equal((await api.requestCashierOtp('0501234567')).ok,false);assert.equal(calls.length,0);configured=true;});
@@ -37,6 +38,7 @@ await test('successful verify sets bounded HttpOnly session and deletes challeng
  verified=true;assert.equal((await api.verifyCashierOtp('123456')).ok,true);const last=writes.at(-1);
  assert.equal(last.name,'barndaksa_cashier_session');assert(last.opts.httpOnly&&last.opts.maxAge<=28800&&last.opts.maxAge>0);assert(!jar.has('barndaksa_staff_otp'));
 });
+await test('persistent staff gets a year-long renewable cookie',async()=>{ sessionExpiry='9999-12-31T00:00:00Z'; await api.requestCashierOtp('0501234567'); assert.equal((await api.verifyCashierOtp('123456')).ok,true);assert.equal(writes.at(-1).opts.maxAge,400*24*60*60);sessionExpiry=undefined; });
 await test('missing browser proof cannot verify',async()=>{const before=calls.length;assert.equal((await api.verifyCashierOtp('123456')).ok,false);assert.equal(calls.length,before);});
 for(const invalid of ['bad','00000000-0000-4000-8000-000000000000.'+'f'.repeat(64)+'.extra']) await test('malformed proof rejected',async()=>{jar.set('barndaksa_staff_otp',invalid);const before=calls.length;assert.equal((await api.verifyCashierOtp('123456')).ok,false);assert.equal(calls.length,before);});
 await test('rate limit never sends or writes cookie',async()=>{allow=false;const b=[sent.length,writes.length];assert.equal((await api.requestCashierOtp('0501234567')).ok,false);assert.deepEqual([sent.length,writes.length],b);allow=true;});

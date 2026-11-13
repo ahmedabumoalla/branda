@@ -5,7 +5,7 @@ import { cashierWorkspaceKey } from "./workspace-session";
 export const cashierRecoveryPath = "/cashier/session/clear?reason=session";
 
 // This is an expiry preflight only. Every action still enforces its own permissions.
-export async function cashierSessionStatus(request: NextRequest): Promise<"valid" | "expired" | "changed" | "unavailable"> {
+export async function cashierSessionStatus(request: NextRequest, onPersistent?: () => void): Promise<"valid" | "expired" | "changed" | "unavailable"> {
   const token = request.cookies.get("barndaksa_cashier_session")?.value;
   if (!token) return "expired";
   const workspace = request.nextUrl.searchParams.get("workspace");
@@ -14,7 +14,9 @@ export async function cashierSessionStatus(request: NextRequest): Promise<"valid
     const { data, error } = await createAdminClient().from("cafe_cashier_sessions")
       .select("expires_at,revoked_at").eq("token", token).maybeSingle();
     if (error) return "unavailable";
-    return data && !data.revoked_at && Date.parse(data.expires_at) > Date.now() ? "valid" : "expired";
+    const valid = data && !data.revoked_at && Date.parse(data.expires_at) > Date.now();
+    if (valid && Date.parse(data.expires_at) > Date.UTC(9000, 0, 1)) onPersistent?.();
+    return valid ? "valid" : "expired";
   } catch {
     return "unavailable";
   }

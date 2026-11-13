@@ -1,3 +1,4 @@
+import { refreshCashierCookie } from "@/lib/cashier/persistent-session";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { updateSession } from "@/lib/supabase/middleware";
@@ -75,7 +76,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!shouldRefreshSupabaseSession(pathname)) {
-    return NextResponse.next({ request });
+    return refreshCashierCookie(request, NextResponse.next({ request }));
   }
 
   return updateSession(request);

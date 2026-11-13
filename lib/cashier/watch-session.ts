@@ -25,9 +25,11 @@ export function watchCashierSession(target: Window, document: Document, workspac
   for (const event of events) document.addEventListener(event, check, true);
   target.addEventListener("focus", check);
   target.addEventListener("pageshow", check);
+  const heartbeat = target.setInterval(check, 6 * 60 * 60 * 1000);
   void check();
   return () => {
     stopped = true;
+    target.clearInterval(heartbeat);
     controller.abort();
     for (const event of events) document.removeEventListener(event, check, true);
     target.removeEventListener("focus", check);

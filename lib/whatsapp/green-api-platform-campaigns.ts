@@ -5,6 +5,7 @@ export class PlatformCampaignProviderError extends Error {
 }
 
 function configuration() {
+  if (process.env.GREEN_API_TEMPORARY_BACKUP_ONLY?.trim() === "true") throw new PlatformCampaignProviderError("MESSAGING_TEMPORARILY_PAUSED");
   const apiUrl = process.env.GREEN_API_API_URL?.trim().replace(/\/+$/, "");
   const id = process.env.GREEN_API_ID_INSTANCE?.trim();
   const token = process.env.GREEN_API_API_TOKEN_INSTANCE?.trim();

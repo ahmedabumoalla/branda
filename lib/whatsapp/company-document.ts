@@ -1,9 +1,10 @@
 import "server-only";
 import { selectLocoCustomerSender } from "./customer-routing";
 import { LOCO_CAFE_ID } from "./brand-connection-types";
-import { getGreenApiCustomerPlatformSenders, isGreenApiCustomerSenderReady, type GreenApiCustomerSender } from "./green-api";
+import { isGreenApiBackupOnly, getGreenApiCustomerPlatformSenders, isGreenApiCustomerSenderReady, type GreenApiCustomerSender } from "./green-api";
 
 export async function selectCompanyDocumentSender(cafeId: string) {
+  if (isGreenApiBackupOnly()) return null;
   if (cafeId === LOCO_CAFE_ID) return selectLocoCustomerSender(cafeId);
   const { primary, backup } = getGreenApiCustomerPlatformSenders();
   if (primary && await isGreenApiCustomerSenderReady(primary)) return primary;
@@ -13,6 +14,7 @@ export async function selectCompanyDocumentSender(cafeId: string) {
 
 /** One submission only, including when the provider acknowledgement is uncertain */
 export async function sendCompanyDocument(sender: GreenApiCustomerSender, input: { phone: string; pdf: Uint8Array; draftId: string }) {
+  if (isGreenApiBackupOnly()) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
   if (!/^9665\d{8}$/.test(input.phone) || !/^[a-f0-9-]{36}$/i.test(input.draftId)
     || !input.pdf.length || input.pdf.length > 8_000_000 || new TextDecoder().decode(input.pdf.slice(0, 5)) !== "%PDF-") throw new Error("INVALID_COMPANY_DOCUMENT");
   const { primary } = getGreenApiCustomerPlatformSenders();

@@ -8,7 +8,7 @@ export function pagerMessageText(job: PagerMessageJob) {
     if (!job.feedbackToken || !/^[0-9a-f]{64}$/.test(job.feedbackToken)) throw new Error("PAGER_FEEDBACK_TOKEN_MISSING");
     return `شكرًا لزيارتك ${job.brandName}\nتم استلام الطلب رقم ${job.invoiceNumber}\nيسعدنا تقييمك للخدمة وملاحظاتك\nhttps://barndaksa.com/pager/feedback/${job.feedbackToken}\n\nأُرسلت عبر برندة نيابة عن ${job.brandName}`;
   }
-  return `${job.brandName}\nطلبك رقم ${job.invoiceNumber} جاهز للاستلام\nتفضل إلى نقطة الاستلام\nيتوقف التذكير عند تسجيل الموظف استلام الطلب\n\nأُرسلت عبر برندة نيابة عن ${job.brandName}`;
+  return `${job.brandName}\nطلبك رقم ${job.invoiceNumber} جاهز للاستلام\nتفضل إلى نقطة الاستلام\nبانتظار تأكيد استلام طلبك\n\nأُرسلت عبر برندة نيابة عن ${job.brandName}`;
 }
 
 /** Durable SQL leases handle overlapping cron/action invocations */

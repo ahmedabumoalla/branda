@@ -68,6 +68,14 @@ async function scenario({ states = {}, linked = { ...config('333'), expectedPhon
   const invalidBrand = await scenario({linked:{...config('333'),apiUrl:'https://evil.example'}}); assert.equal(invalidBrand.selected.idInstance,'111'); checks++;
   const changedPhone = await scenario({accountPhone:'966522222222'}); assert.equal(changedPhone.selected.idInstance,'111'); assert.equal(changedPhone.calls.filter(c=>c.method==='POST').length,1); checks++;
   const normal = await scenario();
+  const incidentGreen = load('lib/whatsapp/green-api.ts', {}, {...env,GREEN_API_TEMPORARY_BACKUP_ONLY:'true'}, async()=>{throw Error('Unexpected network');});
+  const documents = load('lib/whatsapp/company-document.ts', {
+    './green-api': incidentGreen,
+    './customer-routing': {selectLocoCustomerSender:async()=>{throw Error('Unexpected routing');}},
+    './brand-connection-types': {LOCO_CAFE_ID:loco},
+  }, env, async()=>{throw Error('Unexpected document submission');});
+  for (const tenant of [loco,'other']) { assert.equal(await documents.selectCompanyDocumentSender(tenant),null); checks++; }
+  await assert.rejects(documents.sendCompanyDocument(config('222'),{}),/MESSAGING_TEMPORARILY_PAUSED/); checks++;
   for(const purpose of ['finance_cashier_login','owner_login','cashier_login',null,undefined]) { assert.equal(normal.router.isLocoCustomerOtp(loco,purpose),false); checks++; }
   for(const purpose of ['customer_signup','customer_login']) { assert.equal(normal.router.isLocoCustomerOtp(loco,purpose),true); assert.equal(normal.router.isLocoCustomerOtp('other',purpose),false); checks++; }
   assert.equal(normal.router.isLocoCustomerOtp(null,'customer_login'),false); checks++;
