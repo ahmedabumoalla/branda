@@ -4,7 +4,7 @@ import Link from "next/link";
 import { StaffScreenLink } from "@/components/cashier/staff-screen-link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, BellRing, CheckCheck, ChevronLeft, ChevronRight, LoaderCircle, Maximize2, Menu, PictureInPicture2, Plus, RefreshCw, Search, Users, X } from "lucide-react";
+import { ArrowRight, BellRing, CheckCheck, ChevronLeft, ChevronRight, LoaderCircle, Maximize2, Menu, PictureInPicture2, Plus, RefreshCw, Search, Users } from "lucide-react";
 import { createPagerOrderAction, fetchPagerPageAction, updatePagerOrderAction } from "@/app/actions/pager";
 import { logoutCashierAction } from "@/app/actions/cashier";
 import type { PagerContext, PagerPage } from "@/lib/pager/types";
@@ -15,12 +15,15 @@ import styles from "./pager.module.css";
 import { CashierLanguageSwitch, useCashierLanguage } from "@/components/cashier/cashier-language";
 import type { CashierMessage } from "@/lib/cashier/language";
 
-export function PagerConsole({ context, initialPage, mode = "staff" }: { context: PagerContext; initialPage: PagerPage; mode?: "owner" | "staff" }) {
+export const pagerActions = { fetchPage: fetchPagerPageAction, createOrder: createPagerOrderAction, updateOrder: updatePagerOrderAction };
+
+export function PagerConsole({ context, initialPage, mode = "staff", actions = pagerActions }: { context: PagerContext; initialPage: PagerPage; mode?: "owner" | "staff"; actions?: typeof pagerActions }) {
   const { t, errorText, locale, dir } = useCashierLanguage();
-  const [data, setData] = useState(initialPage);
+  const [data, setData] = useState(() => ({ ...initialPage, orders: initialPage.orders.filter(order => order.status === "waiting"), total: initialPage.metrics.waiting }));
+  const [calledData, setCalledData] = useState(() => ({ ...initialPage, orders: initialPage.orders.filter(order => order.status === "ready"), total: initialPage.metrics.ready }));
   const [view, setView] = useState<"active" | "all">("active");
-  const [queueOpen, setQueueOpen] = useState(false);
   const [page, setPage] = useState(0);
+  const [calledPage, setCalledPage] = useState(0);
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [invoice, setInvoice] = useState("");
@@ -38,16 +41,16 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
   const compactButtonRef = useRef<HTMLElement>(null);
   const opening = useRef(false);
   const invoiceRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
   const pipWindow = useRef<Window | null>(null);
   const pipCleanup = useRef<(() => void) | null>(null);
   const requestSequence = useRef(0);
   const mutation = useRef(false);
   const createAttempt = useRef<{ id: string; invoiceNumber: string; phone: string } | null>(null);
   const mounted = useRef(true);
-  const queueDialogRef = useRef<HTMLDialogElement>(null);
-  const queueTriggerRef = useRef<HTMLButtonElement>(null);
   const readyOpen = view === "active";
   const restoreCompactFocus = useCallback(() => compactButtonRef.current?.focus({ preventScroll: true }), []);
+  const invalidateRequests = useCallback(() => { requestSequence.current++; }, []);
   useEffect(() => {
     mounted.current = true;
     void Promise.resolve().then(() => {
@@ -56,10 +59,10 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
       setNativeCompact(isPagerCompanion());
     });
     return () => {
-      mounted.current = false; requestSequence.current++; pipCleanup.current?.(); pipWindow.current?.close();
+      mounted.current = false; invalidateRequests(); pipCleanup.current?.(); pipWindow.current?.close();
       pipCleanup.current = null; pipWindow.current = null; setPipNode(null);
     };
-  }, []);
+  }, [invalidateRequests]);
 
   useEffect(() => {
     if (pipNode && pipWindow.current) setPagerWindowLanguage(pipWindow.current, locale);
@@ -75,17 +78,7 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
   }, [inlineCompact, restoreCompactFocus]);
 
   useEffect(() => {
-    if (!queueOpen || !queueDialogRef.current) return;
-    const trigger = queueTriggerRef.current;
-    const cleanup = preparePagerDialog(queueDialogRef.current);
-    return () => {
-      cleanup();
-      window.setTimeout(() => trigger?.focus({ preventScroll: true }), 0);
-    };
-  }, [queueOpen, pipNode, inlineCompact]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => { setSearch(query); setPage(0); }, 300);
+    const timer = window.setTimeout(() => { setSearch(query); setPage(0); setCalledPage(0); }, 300);
     return () => window.clearTimeout(timer);
   }, [query]);
 
@@ -93,9 +86,16 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
     const sequence = ++requestSequence.current;
     if (showLoading) setLoading(true);
     try {
-      const result = await fetchPagerPageAction({ page, status: view, query: search }, mode);
+      const [result, called] = await Promise.all([
+        actions.fetchPage({ page, status: view === "active" ? "waiting" : "all", query: search }, mode),
+        view === "active" ? actions.fetchPage({ page: calledPage, status: "ready", query: search }, mode) : Promise.resolve(null),
+      ]);
       if (mounted.current && sequence === requestSequence.current) {
         setData(current => JSON.stringify(current) === JSON.stringify(result) ? current : result); setError("");
+        if (called) {
+          setCalledData(current => JSON.stringify(current) === JSON.stringify(called) ? current : called);
+          if (calledPage > 0 && !called.orders.length) setCalledPage(Math.max(0, Math.ceil(called.total / called.pageSize) - 1));
+        }
         if (page > 0 && !result.orders.length) setPage(Math.max(0, Math.ceil(result.total / result.pageSize) - 1));
       }
     } catch {
@@ -103,7 +103,7 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
     } finally {
       if (mounted.current && sequence === requestSequence.current) setLoading(false);
     }
-  }, [mode, page, search, view]);
+  }, [actions, mode, page, calledPage, search, view]);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,8 +115,8 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
     const timer = window.setInterval(poll, 10000);
     window.addEventListener("online", poll);
     document.addEventListener("visibilitychange", poll);
-    return () => { cancelled = true; window.clearInterval(timer); window.removeEventListener("online", poll); document.removeEventListener("visibilitychange", poll); requestSequence.current++; };
-  }, [refresh]);
+    return () => { cancelled = true; window.clearInterval(timer); window.removeEventListener("online", poll); document.removeEventListener("visibilitychange", poll); invalidateRequests(); };
+  }, [refresh, invalidateRequests]);
 
   async function addOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -127,12 +127,14 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
       createAttempt.current = { id: crypto.randomUUID(), invoiceNumber: invoice, phone };
     }
     try {
-      const result = await createPagerOrderAction(createAttempt.current, mode);
+      const result = await actions.createOrder(createAttempt.current, mode);
       if (!result.ok) { setError(result.error); return; }
       createAttempt.current = null; setInvoice(""); setPhone("");
       setNotice({ text: "أضيفت الفاتورة {invoice} إلى قائمة الاستلام", values: { invoice: result.order.invoiceNumber } });
-      if (view !== "active" || page !== 0 || query) { setView("active"); setPage(0); setQuery(""); setSearch(""); }
-      await refresh();
+      if (view !== "active" || page !== 0 || calledPage !== 0 || query) {
+        requestSequence.current++; setView("active"); setPage(0); setCalledPage(0); setQuery(""); setSearch("");
+        setData(current => ({ ...current, orders: [result.order], total: current.metrics.waiting + 1 }));
+      } else await refresh();
     } catch { setError("تعذر تأكيد الإضافة حاول مرة أخرى بنفس البيانات لتجنب تكرار الطلب"); }
     finally { mutation.current = false; setBusy(false); window.setTimeout(() => invoiceRef.current?.focus(), 0); }
   }
@@ -143,9 +145,9 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
     if (status === "cancelled" && !activeWindow.confirm(t("إلغاء هذا الطلب وإيقاف تنبيهاته؟"))) return;
     mutation.current = true; requestSequence.current++; setBusy(true); setError(""); setNotice("");
     try {
-      const result = await updatePagerOrderAction(id, status, mode);
+      const result = await actions.updateOrder(id, status, mode);
       if (!result.ok) { setError(result.error); return; }
-      setNotice(status === "ready" ? data.orders.find(order => order.id === id)?.status === "ready" ? "تم تسجيل الاستدعاء" : "تم الاستدعاء وبدأت تنبيهات الجاهزية" : status === "received" ? "تم تأكيد الاستلام وإيقاف التذكير" : "ألغي الطلب وتوقفت تنبيهاته");
+      setNotice(status === "ready" ? "تم تسجيل الاستدعاء تابع حالة الرسالة على الطلب" : status === "received" ? "تم تأكيد الاستلام وإيقاف التذكير" : "ألغي الطلب وتوقفت تنبيهاته");
       await refresh();
       if (status === "ready" && view !== "active") selectView("active");
     } catch { setError("تعذر تأكيد تغيير الحالة حدث القائمة ثم حاول مرة أخرى"); }
@@ -153,11 +155,11 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
   }
 
   function selectView(next: "active" | "all") {
-    setQueueOpen(true);
     if (next === view) { void refresh(true); return; }
     requestSequence.current++;
-    setView(next); setPage(0); setQuery(""); setSearch(""); setLoading(true);
+    setView(next); setPage(0); setCalledPage(0); setQuery(""); setSearch(""); setLoading(true);
     setData(current => ({ ...current, orders: [], total: 0 }));
+    setCalledData(current => ({ ...current, orders: [], total: 0 }));
   }
 
   async function openCompact() {
@@ -188,18 +190,29 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
   const compact = Boolean(pipNode) || inlineCompact || nativeCompact;
   const closeCompact = () => { if (pipNode) pipWindow.current?.close(); else setInlineCompact(false); };
   const alerts = <>{error && <div className={styles.error} role="alert">{errorText(error)}</div>}{notice && <div className={styles.success} role="status">{t(notice)}</div>}</>;
-  const orders = data.orders.filter(order => view === "all" || order.status === "waiting" || order.status === "ready");
+  const renderOrders = (result: PagerPage) => result.orders.map(order => <PagerOrderCard key={order.id} order={order} busy={busy || loading} compact onChange={(id, status) => void changeOrder(id, status)} />);
+  const pagination = (result: PagerPage, current: number, change: (page: number) => void, label: string) => result.total > result.pageSize && <nav className={styles.pagination} aria-label={t(label)}><button type="button" className={styles.secondary} disabled={current === 0 || loading || busy} onClick={() => change(current - 1)}><ChevronRight size={16} aria-hidden="true" />{t("السابق")}</button><span>{current + 1} {t("من")} {Math.ceil(result.total / result.pageSize)}</span><button type="button" className={styles.secondary} disabled={(current + 1) * result.pageSize >= result.total || loading || busy} onClick={() => change(current + 1)}>{t("التالي")}<ChevronLeft size={16} aria-hidden="true" /></button></nav>;
+  const empty = (title: string, description: string) => <div className={styles.empty}><CheckCheck size={25} aria-hidden="true" /><h3>{loading ? t("جار تحميل الطلبات") : search ? t("لا توجد نتائج مطابقة") : t(title)}</h3><p className={styles.muted}>{t(search ? "جرب رقم الفاتورة كاملًا أو رقم الجوال" : description)}</p></div>;
   const queue = <>
     <div className={styles.toolbar}>
-      {!readyOpen && <button type="button" className={styles.historyButton} aria-pressed={view === "all"} disabled={busy} onClick={() => selectView(view === "all" ? "active" : "all")}>{t(view === "all" ? "الحالية" : "السجل")}</button>}
+      <div className={styles.tabs} aria-label={t("عرض الطلبات")}><button type="button" className={styles.tab} aria-pressed={readyOpen} disabled={busy} onClick={() => selectView("active")}>{t("الطلبات الحالية")}</button><button type="button" className={styles.tab} aria-pressed={!readyOpen} disabled={busy} onClick={() => selectView("all")}>{t("السجل")}</button></div>
       <label className={styles.search}><span className="sr-only">{t("البحث برقم الفاتورة أو الجوال")}</span><input className={styles.input} value={query} disabled={busy} maxLength={120} onChange={(e) => setQuery(e.target.value)} placeholder={t("رقم الفاتورة أو الجوال")} /><Search size={18} aria-hidden="true" /></label>
       <button type="button" className={styles.secondary} disabled={loading || busy} onClick={() => void refresh(true)} aria-label={t("تحديث الطلبات")}><RefreshCw size={17} aria-hidden="true" /></button>
     </div>
-    <div className={styles.queueScroll} aria-busy={loading}>
-      {orders.length ? <div className={styles.queue}>{orders.map(order => <PagerOrderCard key={order.id} order={order} busy={busy || loading} compact onChange={(id, status) => void changeOrder(id, status)} />)}</div>
-        : <div className={styles.empty}><CheckCheck size={25} aria-hidden="true" /><h2>{loading ? t("جار تحميل الطلبات") : search ? t("لا توجد نتائج مطابقة") : readyOpen ? t("لا توجد طلبات جاهزة الآن") : t("يبدأ السجل بأول فاتورة")}</h2><p className={styles.muted}>{search ? t("جرب رقم الفاتورة كاملًا أو رقم الجوال") : t("أضف رقم الفاتورة والجوال لبدء الطلب")}</p></div>}
+    <div className={styles.board} aria-busy={loading}>
+      {readyOpen ? <>
+        <section className={styles.lane} aria-label={t("بانتظار الاستدعاء")}>
+          <header className={styles.laneHeading}><div><h2><BellRing size={18} aria-hidden="true" />{t("بانتظار الاستدعاء")}</h2><p>{t("عندما يجهز الطلب اضغط استدعاء")}</p></div><strong>{data.total}</strong></header>
+          <div className={styles.laneOrders}>{data.orders.length ? renderOrders(data) : empty("لا توجد طلبات بانتظار الاستدعاء", "أضف الفاتورة والجوال من الأعلى")}</div>
+          {pagination(data, page, setPage, "صفحات بانتظار الاستدعاء")}
+        </section>
+        <section className={`${styles.lane} ${styles.calledLane}`} aria-label={t("بانتظار الاستلام")}>
+          <header className={styles.laneHeading}><div><h2><CheckCheck size={18} aria-hidden="true" />{t("بانتظار الاستلام")}</h2><p>{t("أكد الاستلام عند تسليم الطلب للعميل")}</p></div><strong>{calledData.total}</strong></header>
+          <div className={styles.laneOrders}>{calledData.orders.length ? renderOrders(calledData) : empty("لا توجد طلبات بانتظار الاستلام", "تنتقل الطلبات هنا بعد الاستدعاء")}</div>
+          {pagination(calledData, calledPage, setCalledPage, "صفحات بانتظار الاستلام")}
+        </section>
+      </> : <section className={styles.historyLane} aria-label={t("السجل")}><div className={styles.queue}>{data.orders.length ? renderOrders(data) : empty("يبدأ السجل بأول فاتورة", "أضف الفاتورة والجوال من الأعلى")}</div>{pagination(data, page, setPage, "صفحات الطلبات")}</section>}
     </div>
-    {data.total > data.pageSize && <nav className={styles.pagination} aria-label={t("صفحات الطلبات")}><button type="button" className={styles.secondary} disabled={page === 0 || loading || busy} onClick={() => setPage(value => value - 1)}><ChevronRight size={16} aria-hidden="true" />{t("السابق")}</button><span>{page + 1} {t("من")} {Math.ceil(data.total / data.pageSize)}</span><button type="button" className={styles.secondary} disabled={(page + 1) * data.pageSize >= data.total || loading || busy} onClick={() => setPage(value => value + 1)}>{t("التالي")}<ChevronLeft size={16} aria-hidden="true" /></button></nav>}
   </>;
   const content = <section data-pager-console dir={dir} lang={locale} style={pagerTheme(context.colors)} className={`${styles.root} ${compact ? styles.compact : mode === "staff" ? styles.standalone : ""} ${styles.console}`}>
     <header className={styles.header}>
@@ -221,25 +234,17 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
       {context.canUseLoyalty && <StaffScreenLink className={`${styles.secondary} ${styles.loyaltyReturn}`} href={mode === "owner" ? "/dashboard/loyalty" : "/cashier"}><ArrowRight size={18} aria-hidden="true" />{t("الرجوع للولاء")}</StaffScreenLink>}
     </header>
     <section className={styles.entry} aria-label={t("أضف طلبًا جديدًا")}>
-      <h2>{t("أضف طلبًا جديدًا")}</h2>
+      <div className={styles.entryHeading}><h2>{t("أضف طلبًا جديدًا")}</h2><span>{t("الفاتورة والجوال ثم إضافة")}</span></div>
       <form data-pager-entry onSubmit={addOrder}>
-        <label className={styles.label}>{t("رقم الفاتورة")}<input ref={invoiceRef} className={styles.input} name="invoiceNumber" value={invoice} onChange={e => setInvoice(e.target.value)} required maxLength={120} autoComplete="off" placeholder={t("رقم الفاتورة")} dir="auto" disabled={busy} /></label>
-        <label className={styles.label}>{t("رقم جوال العميل")}<input className={styles.input} name="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required maxLength={20} autoComplete="off" placeholder="05xxxxxxxx" dir="ltr" disabled={busy} /></label>
+        <label className={styles.label}>{t("رقم الفاتورة")}<input ref={invoiceRef} className={styles.input} name="invoiceNumber" value={invoice} onChange={e => setInvoice(e.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.nativeEvent.isComposing) { event.preventDefault(); phoneRef.current?.focus(); } }} required maxLength={120} autoComplete="off" placeholder={t("رقم الفاتورة")} dir="auto" disabled={busy} /></label>
+        <label className={styles.label}>{t("رقم جوال العميل")}<input ref={phoneRef} className={styles.input} name="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required maxLength={20} autoComplete="off" placeholder="05xxxxxxxx" dir="ltr" disabled={busy} /></label>
         <button className={styles.button} type="submit" disabled={busy}>{busy ? <LoaderCircle size={18} aria-hidden="true" /> : <Plus size={18} aria-hidden="true" />}{t("إضافة الفاتورة")}</button>
       </form>
       <p className={styles.hint}>{t("أبلغ العميل أنه سيستقبل تنبيه الطلب على واتساب")}</p>
     </section>
-    <div className={styles.queueNav}>
-      <button type="button" className={styles.readyButton} aria-haspopup="dialog" aria-expanded={queueOpen && readyOpen} disabled={busy} onClick={event => { queueTriggerRef.current = event.currentTarget; selectView("active"); }}><BellRing size={20} aria-hidden="true" />{t("جاهز للاستلام")}<strong>{data.metrics.waiting + data.metrics.ready}</strong></button>
-    </div>
-    {!queueOpen && alerts}
-    <button type="button" className={styles.historyButton} aria-haspopup="dialog" disabled={busy} onClick={event => { queueTriggerRef.current = event.currentTarget; selectView("all"); }}>{t("السجل")}</button>
+    {alerts}
+    {queue}
     <p className={styles.footerHint}>{t("المتابعة مشتركة بين أفراد الفريق وتتحدث تلقائيًا")}</p>
-    {queueOpen && <dialog ref={queueDialogRef} className={styles.readyDialog} dir={dir} lang={locale} aria-labelledby="pager-queue-title" onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!busy) setQueueOpen(false); }} onClose={event => { event.stopPropagation(); if (queueOpen) setQueueOpen(false); }}>
-      <header className={styles.dialogHeader}><div><h2 id="pager-queue-title">{t(readyOpen ? "جاهز للاستلام" : "السجل")} <span>{readyOpen ? data.metrics.waiting + data.metrics.ready : data.metrics.total}</span></h2>{readyOpen && <p className={styles.hint}>{t("اضغط تم الاستلام عندما يأخذ العميل طلبه")}</p>}</div><button data-pager-initial-focus type="button" className={styles.secondary} disabled={busy} onClick={() => setQueueOpen(false)} aria-label={t("إغلاق")}><X size={20} aria-hidden="true" /></button></header>
-      {alerts}{queue}
-      {readyOpen && <p className={styles.footerHint}>{t("اضغط استدعاء لتنبيه العميل")}</p>}
-    </dialog>}
   </section>;
 
   if (inlineCompact) return <dialog ref={dialogRef} className={styles.compactDialog} dir={dir} lang={locale} aria-label={t("نداء برندة في نافذة مصغرة")} onCancel={(event) => { event.preventDefault(); setInlineCompact(false); }} onClose={() => setInlineCompact(false)}>{content}</dialog>;
