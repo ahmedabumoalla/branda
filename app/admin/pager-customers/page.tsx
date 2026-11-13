@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Building2, ChevronLeft } from "lucide-react";
 import { getPagerCustomerDirectory } from "@/lib/data/pager-customers";
+import { requirePlatformAdmin } from "@/lib/data/cafes";
 import type { PagerBrand, PagerCustomer, PagerVisit } from "@/lib/pager/customer-types";
 import { CustomerSections, DirectoryPagination, PagerDate, pagerDirectoryUrl, pageNumber, scalar } from "@/components/pager/customer-directory-ui";
 import s from "@/components/pager/customer-directory.module.css";
@@ -9,6 +11,7 @@ export const dynamic = "force-dynamic";
 const base = "/admin/pager-customers";
 const statusLabels: Record<string, string> = { waiting: "بانتظار الاستدعاء", ready: "تم الاستدعاء", received: "تم الاستلام", cancelled: "ملغي" };
 export default async function PagerCustomersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  try { await requirePlatformAdmin(); } catch { redirect("/login"); }
   const params = await searchParams;
   const brand = scalar(params.brand) || undefined, phone = scalar(params.phone) || undefined, query = scalar(params.query).slice(0,120), page = pageNumber(params.page);
   const result = await getPagerCustomerDirectory({ cafeId: brand, phone, query, page });

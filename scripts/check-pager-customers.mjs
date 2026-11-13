@@ -35,3 +35,12 @@ const tabs=renderToStaticMarkup(React.createElement(CustomerSections,{pager:true
 const pagination=renderToStaticMarkup(React.createElement(DirectoryPagination,{total:26,page:0,pageSize:25,base:'/admin/pager-customers',filters:{brand:cafeId,query:'اسم'}}));check(pagination.includes('page=1')&&pagination.includes(cafeId),'pagination preserves tenant and search');
 const css=transform({filename:'customer-directory.module.css',code:fs.readFileSync('components/pager/customer-directory.module.css'),cssModules:true,minify:true});check(css.code.length>0,'responsive directory stylesheet compiles');
 console.log(`PASS ${checks} pager directory authorization, URL validation, review visibility and rendered UI checks`);
+const deniedRoute=load('app/admin/pager-customers/page.tsx',{'@/lib/data/cafes':{requirePlatformAdmin:async()=>{throw Error('forbidden');}},'next/navigation':{redirect:to=>{throw Error('redirect:'+to);}},'@/lib/data/pager-customers':{getPagerCustomerDirectory:async()=>assert.fail('Unauthenticated route cannot read directory')}});
+await assert.rejects(()=>deniedRoute.default({searchParams:Promise.resolve({})}),/redirect:\/login/);checks++;
+const rowsByMode=[
+ [{},{rows:[{id:cafeId,name:'Brand <script>',customers:2,registrations:4,last_seen:'2026-11-13T10:00:00Z'}],total:1,page:0,pageSize:25},'Brand &lt;script&gt;'],
+ [{brand:cafeId},{brandName:'Brand',rows:[{phone:'966500000001',full_name:'Customer',registrations:4,first_seen:'2026-11-13T10:00:00Z',last_seen:'2026-11-13T10:00:00Z'}],total:1,page:0,pageSize:25},'966500000001'],
+ [{brand:cafeId,phone:'966500000001'},{brandName:'Brand',rows:[{id:'visit',invoice_number:'00017',status:'received',created_at:'2026-11-13T10:00:00Z',received_at:null,created_by:'Staff',created_station:'Desk',rating:1,notes:'<script>unsafe</script>'}],total:1,page:0,pageSize:25},'&lt;script&gt;unsafe&lt;/script&gt;'],
+];
+for(const [params,result,expected]of rowsByMode){const route=load('app/admin/pager-customers/page.tsx',{'@/lib/data/cafes':{requirePlatformAdmin:async()=>{}},'next/navigation':{},'@/lib/data/pager-customers':{getPagerCustomerDirectory:async()=>result}});const html=renderToStaticMarkup(await route.default({searchParams:Promise.resolve(params)}));check(html.includes(expected),'actual directory page renders scoped rows with escaped content');}
+console.log(`PASS ${checks} total including anonymous redirect and all directory page modes`);
