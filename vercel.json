@@ -7,6 +7,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/internal/erp-template-deliveries",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/loyalty/read-jobs",
       "schedule": "* * * * *"
     },

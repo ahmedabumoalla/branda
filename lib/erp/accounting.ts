@@ -1,0 +1,17 @@
+import {z} from 'zod';
+import {erpCustomFieldsSchema,type ErpCustomField} from './custom-fields';
+import type {LedgerSnapshot,LedgerDraft,LedgerLine} from '@/lib/finance/ledger';
+export const accountingSections=[['journals','القيود اليومية'],['accounts','دليل الحسابات'],['cost-centers','مراكز التكلفة'],['reports','الأستاذ وميزان المراجعة'],['settings','الإعدادات']] as const;
+export type AccountingAllocation={id:string;percentage:number};
+export type AccountingLine=LedgerLine&{costCenters:AccountingAllocation[]};
+export type AccountingMetadata={currency:string;exchangeRate:number;lines:AccountingLine[];customValues:Record<string,unknown>};
+export type CostCenter={id:string;code:string;name:string;parent_id:string|null;is_group:boolean;active:boolean;revision:number};
+export type AccountingConfiguration={revision:number;journalFields:ErpCustomField[];assetFields:ErpCustomField[];fiscalMonth:number};
+export type AccountingSnapshot=LedgerSnapshot&{slug:string;brand:string;role:string;userId:string;costCenters:CostCenter[];metadata:Record<string,AccountingMetadata>;configuration:AccountingConfiguration;canWrite:boolean;canSettings:boolean;canCreate:boolean;canUpdate:boolean;canDelete:boolean;canApprove:boolean;canFiles:boolean};
+const uuid=z.uuid();
+export const costCenterSchema=z.object({id:uuid.nullable(),revision:z.number().int().nonnegative(),code:z.string().trim().min(1).max(60),name:z.string().trim().min(1).max(150),parentId:uuid.nullable(),isGroup:z.boolean(),active:z.boolean()}).strict();
+export const accountingConfigurationSchema=z.object({revision:z.number().int().nonnegative(),journalFields:erpCustomFieldsSchema,assetFields:erpCustomFieldsSchema,fiscalMonth:z.number().int().min(1).max(12)}).strict();
+export const accountingJournalSchema=z.object({id:uuid.optional(),revision:z.number().int().positive().optional(),title:z.string().trim().min(1).max(150),date:z.iso.date(),note:z.string().max(2000),currency:z.string().regex(/^[A-Z]{3}$/),exchangeRate:z.number().finite().positive().max(1e6),lines:z.array(z.object({accountId:uuid,debit:z.coerce.number().finite().min(0).max(1e9),credit:z.coerce.number().finite().min(0).max(1e9),memo:z.string().max(300),costCenters:z.array(z.object({id:uuid,percentage:z.number().finite().positive().max(100)})).max(100)})).min(2).max(100),customValues:z.record(z.string(),z.unknown())}).strict().superRefine((v,c)=>{let debit=0,credit=0;for(const line of v.lines){debit+=Math.round(line.debit*v.exchangeRate*100);credit+=Math.round(line.credit*v.exchangeRate*100);if(!(line.debit>0&&line.credit===0||line.credit>0&&line.debit===0))c.addIssue({code:'custom',message:'أدخل مبلغًا موجبًا في جانب واحد لكل سطر'});if(line.costCenters.length&&(Math.abs(line.costCenters.reduce((s,a)=>s+a.percentage,0)-100)>0.00001||new Set(line.costCenters.map(x=>x.id)).size!==line.costCenters.length))c.addIssue({code:'custom',message:'وزع السطر بنسبة مئة بالمئة دون تكرار المركز'});}if(debit!==credit||debit===0)c.addIssue({code:'custom',message:'القيد غير متوازن'});if(v.currency==='SAR'&&v.exchangeRate!==1)c.addIssue({code:'custom',message:'سعر صرف الريال يساوي واحدًا'});});
+export type AccountingJournal=z.infer<typeof accountingJournalSchema>;
+export type AccountingResult=LedgerDraft&{deleted?:boolean};
+export type AccountingCostReport={from:string;to:string;centerId:string|null;currency:string;rows:{id:string;code:string;name:string;is_group:boolean;parent_id:string|null;opening:number;debit:number;credit:number;closing:number}[]};

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowRight, ChevronDown, ChevronUp, Copy, CreditCard, FileDown, FileText, Pencil, Printer, RotateCcw, Truck } from "lucide-react";
 import { readInvoiceDetailAction, updateInvoiceManagementAction } from "@/app/actions/finance-invoice-management";
 import { saveInvoiceDraftAction } from "@/app/actions/finance-invoice-drafts";
+import { copyFinanceInvoiceLineNotes } from "@/app/actions/finance-invoice-line-notes";
+import { copyFinanceInvoiceShippingCharge } from "@/app/actions/finance-invoice-shipping-charge";
 import type { FinanceDocument, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { type InvoiceDetail, type InvoiceSchedule } from "@/lib/finance/invoice-management";
 import { canFinance } from "@/lib/finance/permissions";
@@ -18,6 +20,7 @@ import type { InvoicePayment } from "@/lib/finance/payment-management";
 import { PaymentReceiptDialog } from "./payment-receipt-dialog";
 import { paymentReceiptData, type PaymentReceiptMode } from "@/lib/finance/payment-receipt";
 import { renderInvoiceDetails } from "./invoice-details-view";
+import { InvoiceOrderSourceSummary } from "./invoice-order-source-summary";
 import { renderInvoicePayments, type PaymentOrder } from "./invoice-payments-view";
 import { renderInvoiceStock, renderInvoiceInstallments } from "./invoice-stock-installments";
 import { newInvoiceSchedule, InvoiceInstallmentEditor } from "./invoice-installment-editor";
@@ -68,7 +71,7 @@ export function FinanceInvoiceDetail({ id, snapshot, disabled, onBack, onNavigat
   const blocked = disabled || busy || loading;
   const issued = detail?.invoice;
   const displayNumber = issued?.displayNumber || String(issued?.number ?? invoice?.number ?? "").padStart(6, "0");
-  const documentTitle = issued?.documentType === "debit" ? "إشعار مدين" : "الفاتورة";
+  const documentTitle = issued?.documentType === "advance" ? "فاتورة دفعة مقدمة" : issued?.documentType === "debit" ? "إشعار مدين" : "الفاتورة";
   const customer = issued?.customer.name || detail?.customer?.name || "عميل نقدي";
   const delivery = detail?.metadata.delivery ?? issued?.delivery;
   const savedSchedule = detail?.metadata.schedule;
@@ -93,6 +96,10 @@ export function FinanceInvoiceDetail({ id, snapshot, disabled, onBack, onNavigat
       copyId.current ??= crypto.randomUUID();
       const result = await saveInvoiceDraftAction({ id: copyId.current, revision: 0, payload: invoiceCopyPayload(detail!) }, slug);
       if (!result.ok) { setError(result.message); return; }
+      const shipping = await copyFinanceInvoiceShippingCharge(slug, id, result.data.id, result.data.revision);
+      if (!shipping.ok) { setError(shipping.message); return; }
+      const notes = await copyFinanceInvoiceLineNotes(slug, id, result.data.id, result.data.revision);
+      if (!notes.ok) { setError(notes.message); return; }
       onDraft(result.data.id);
     } catch { setError("تعذر تأكيد نسخ الفاتورة راجع المسودات المحفوظة قبل المحاولة مجددًا"); }
     finally { lock.current = false; setBusy(false); }
@@ -151,6 +158,7 @@ export function FinanceInvoiceDetail({ id, snapshot, disabled, onBack, onNavigat
           <dl className={styles.totals}><dt>المجموع</dt><dd><Numeric value={invoice.subtotal} money /></dd><dt>الخصم</dt><dd><Numeric value={invoice.discount} money /></dd><dt>القيمة المضافة</dt><dd><Numeric value={invoice.tax} money /></dd><dt>الإجمالي</dt><dd><Numeric value={invoice.total} money /></dd>{returned > 0 && <><dt>المرتجع</dt><dd><Numeric value={returned} money /></dd></>}<dt>المدفوع</dt><dd><Numeric value={paid} money /></dd><dt>المبلغ المستحق</dt><dd><Numeric value={invoice.outstanding} money /></dd></dl>{invoice.note && <p className={styles.note}>{invoice.note}</p>}
         </article>}</div><div className={styles.liveBalance} aria-label="الرصيد الحالي للفاتورة"><span>المدفوع بعد الاسترداد <Numeric value={paid} money /></span><span>المبلغ المستحق <Numeric value={invoice.outstanding} money /></span>{issued && <small>المعاينة تعرض أصل الفاتورة المحفوظ عند الإصدار</small>}</div></>}
         {activeTab === "details" && <div className={styles.body}>{renderInvoiceDetails(detail!, snapshot)}
+          <InvoiceOrderSourceSummary key={`${slug}:${id}`} slug={slug} documentId={id} />
           {editing && write && <div className={styles.editor}><p>بيانات الفاتورة الصادرة محفوظة كما أُصدرت يمكنك تحديث بيانات العميل التشغيلية وحالة التسليم واتفاقية التقسيط</p><div className={styles.toolbar}><button type="button" disabled={blocked || !invoice.party_id} onClick={() => void update({ action: "sync" })}>مزامنة بيانات العميل</button><button type="button" disabled={blocked} onClick={() => void update({ action: "delivery", confirmed: !delivery?.confirmed })}>{delivery?.confirmed ? "إلغاء التسليم" : "تأكيد التسليم"}</button><button type="button" disabled={blocked || !invoice.party_id || invoice.refunded} onClick={() => { setTab("installments"); setError(""); setSchedule(savedSchedule ?? newInvoiceSchedule()); }}>تعديل اتفاقية التقسيط</button></div></div>}
           {issued?.extraFields.map((field, key) => <p key={key}><strong>{field.title}</strong> {field.value}</p>)}<InvoiceFileDownloads files={issued?.attachments ?? []} slug={slug} />
         </div>}

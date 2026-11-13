@@ -3,6 +3,40 @@ const STATIC = "branda-pos-static-v1";
 const SHELL = "/finance/offline";
 const publicAsset = url => url.origin === self.location.origin && (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/fonts/"));
 const localDevelopment = ["localhost", "127.0.0.1", "[::1]"].includes(self.location.hostname);
+const imageRequests = new Map();
+
+async function productImage(request, url) {
+  const session = await currentSession();
+  const product = session?.snapshot.products.find(product => [product.imageUrl, product.imageFallbackUrl].some(src => src && new URL(src, self.location.origin).href === url.href));
+  // An old token or an unrelated image never reads another account's cache.
+  if (!product) return fetch(request);
+  const key = new URL(product.imageFallbackUrl || product.imageUrl, self.location.origin).href;
+  const cache = await caches.open(`branda-pos-media-${session.scope}`);
+  const clockKey = `${self.location.origin}/__pos-image-time/${encodeURIComponent(key)}`;
+  const cached = await cache.match(key);
+  const clock = cached && await cache.match(clockKey);
+  const recovering = product.imageFallbackUrl && url.href === key && product.imageUrl !== product.imageFallbackUrl;
+  if (cached && !recovering && clock && Date.now() - Number(await clock.text()) < 300_000) return cached;
+  const requestKey = `${session.scope}:${key}`;
+  let pending = imageRequests.get(requestKey);
+  if (!pending) {
+    pending = (async () => {
+      try {
+        const response = await fetch(request);
+        if (response.ok || response.type === "opaque") {
+          await cache.put(key, response.clone());
+          await cache.put(clockKey, new Response(String(Date.now())));
+          return response;
+        }
+        // Expired signatures and transient outages can use the authorized cached image.
+        return cached && (!recovering || response.status >= 500) ? cached : response;
+      } catch (error) { if (cached) return cached; throw error; }
+    })();
+    imageRequests.set(requestKey, pending);
+  }
+  try { return (await pending).clone(); }
+  finally { if (imageRequests.get(requestKey) === pending) imageRequests.delete(requestKey); }
+}
 async function staticAsset(request) {
   const cache = await caches.open(STATIC);
   // Development chunk URLs are reused after edits, unlike production content hashes.
@@ -74,10 +108,5 @@ self.addEventListener("fetch", event => {
     })());
     return;
   }
-  if (request.destination === "image" || (url.origin === self.location.origin && /^\/api\/finance\/[^/]+\/media$/.test(url.pathname))) event.respondWith((async () => {
-    const session = await currentSession();
-    const permitted = session && session.snapshot.products.some(product => product.imageUrl && new URL(product.imageUrl, self.location.origin).href === url.href);
-    try { const response = await fetch(request); if (permitted && (response.ok || response.type === "opaque")) await (await caches.open(`branda-pos-media-${session.scope}`)).put(request, response.clone()); return response; }
-    catch { if (permitted) { const cached = await (await caches.open(`branda-pos-media-${session.scope}`)).match(request); if (cached) return cached; } throw Error("Image unavailable"); }
-  })());
+  if (request.destination === "image" || (url.origin === self.location.origin && /^\/api\/finance\/[^/]+\/media$/.test(url.pathname))) event.respondWith(productImage(request, url));
 });

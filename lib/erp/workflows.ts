@@ -1,0 +1,43 @@
+import {z} from 'zod';
+import {erpCustomFieldsSchema,type ErpCustomField} from '@/lib/erp/custom-fields';
+import {workStateSchema,type WorkLink} from '@/lib/erp/work-orders';
+import type {FinanceSnapshot} from '@/lib/finance/brand-finance';
+const id=z.uuid(),revision=z.number().int().nonnegative(),name=z.string().trim().min(1).max(160),text=z.string().max(20000),key=z.string().regex(/^[a-z][a-z0-9_]{0,59}$/);
+export const workflowSelectorModes={everyone:'الجميع',none:'لا أحد',users:'مستخدمون محددون',employees:'موظفون محددون',branches:'أفرع محددة',departments:'أقسام محددة',designations:'مسميات وظيفية محددة',roles:'أدوار وظيفية محددة'} as const;
+export const workflowSelectorSchema=z.object({mode:z.enum(['everyone','none','users','employees','branches','departments','designations','roles']),ids:z.array(id).max(1000)}).refine(v=>['everyone','none'].includes(v.mode)||v.ids.length>0,'اختر عنصرًا واحدًا على الأقل');
+export type WorkflowSelector=z.infer<typeof workflowSelectorSchema>;
+export const workflowBaseFields={title:'العنوان',code:'رقم الأمر',start:'تاريخ البدء',end:'تاريخ الانتهاء',customerId:'العميل',budget:'الميزانية',currency:'العملة',staffIds:'الموظفون المرتبطون',tags:'الوسوم',description:'الوصف',files:'المرفقات'} as const;
+const permissions=z.object({create:workflowSelectorSchema,read:workflowSelectorSchema,update:workflowSelectorSchema,delete:workflowSelectorSchema});
+export const workflowPermissionsSchema=permissions.extend({fieldRules:z.array(z.object({id,selector:workflowSelectorSchema,create:z.array(z.string().max(80)).max(100),read:z.array(z.string().max(80)).max(100),update:z.array(z.string().max(80)).max(100)})).max(50),stateRules:z.array(z.object({id,selector:workflowSelectorSchema,states:z.array(z.string().max(60)).max(50)})).max(50),transitionRules:z.array(z.object({id,selector:workflowSelectorSchema,states:z.array(z.string().max(60)).max(50)})).max(50)});
+export type WorkflowPermissions=z.infer<typeof workflowPermissionsSchema>;
+export const workflowTypeSchema=z.object({id,revision,plural:name,singular:name,icon:z.enum(['clipboard','briefcase','users','calendar','folder','package','wrench','home','truck','receipt','star','heart']),active:z.boolean(),description:text,nextNumber:z.number().int().min(1).max(999999999),fields:erpCustomFieldsSchema,statuses:z.array(workStateSchema).min(1).max(50),actions:z.array(z.object({id,name})).max(100),permissions:workflowPermissionsSchema}).refine(v=>new Set(v.statuses.map(s=>s.id)).size===v.statuses.length);
+export type WorkflowType=z.infer<typeof workflowTypeSchema>&{canCreate:boolean;canConfigure:boolean;createFields:string[]};
+export const workflowRecordSchema=z.object({id,revision,typeId:id,title:name,code:z.string().trim().max(80),start:z.iso.date(),end:z.iso.date().nullable(),customerId:id.nullable(),budget:z.number().finite().min(0).max(1e9).multipleOf(.01),currency:z.enum(['SAR','USD','EUR','GBP','AED']),staffIds:z.array(id).max(100),tags:z.array(z.string().trim().min(1).max(60)).max(20),description:text,customValues:z.record(z.string(),z.unknown()),draft:z.boolean()}).refine(v=>!v.end||v.end>=v.start);
+export type WorkflowInput=z.infer<typeof workflowRecordSchema>;
+export type WorkflowRecord=Partial<WorkflowInput>&{id:string;typeId:string;revision:number;status:string;draft:boolean;createdAt:string;updatedAt:string;customerName?:string;canUpdate:boolean;canDelete:boolean;canFiles:boolean;canApprove:boolean;allowedFields:{create:string[];read:string[];update:string[]};allowedStates:string[]};
+export const workflowModelSchema=z.object({id,revision,typeId:id,name,key,active:z.boolean(),description:text,nameField:z.string().max(60),fields:erpCustomFieldsSchema,permissions});
+export type WorkflowModel=z.infer<typeof workflowModelSchema>&{canCreate:boolean;canRead:boolean;canUpdate:boolean;canDelete:boolean};
+export type WorkflowChild={id:string;revision:number;recordId:string;modelId:string;draft:boolean;values:Record<string,unknown>;createdAt:string;canUpdate:boolean;canDelete:boolean;canFiles:boolean};
+const base={id,revision};
+export const workflowCommandSchema=z.discriminatedUnion('action',[
+ z.object({action:z.literal('type'),payload:workflowTypeSchema}),z.object({action:z.literal('record'),payload:z.object({...base,typeId:id,changes:z.record(z.string(),z.unknown()),draft:z.boolean()})}),z.object({action:z.literal('model'),payload:workflowModelSchema}),
+ z.object({action:z.literal('child'),payload:z.object({...base,recordId:id,modelId:id,draft:z.boolean().default(false),values:z.record(z.string(),z.unknown())})}),
+ z.object({action:z.literal('status'),payload:z.object({...base,status:z.string().max(60)})}),
+ z.object({action:z.literal('note'),payload:z.object({...base,note:text.min(1),occurredAt:z.iso.datetime({offset:true}),status:z.string().max(60).nullable(),actionId:id.nullable(),shared:z.boolean()})}),
+ z.object({action:z.enum(['copy','delete']),payload:z.object({...base,entity:z.enum(['record','type','model','child'])})}),
+ z.object({action:z.enum(['link','unlink']),payload:z.object({...base,kind:z.enum(['document','quotation','credit_note','task']),targetId:id})}),
+ z.object({action:z.literal('financial'),payload:z.object({...base,operation:z.enum(['purchase','treasury','stock_adjust','stock_transfer','journal','refund','settlement']),values:z.record(z.string(),z.unknown())})}),
+ z.object({action:z.literal('invoice'),payload:z.object({...base,amount:z.number().positive().max(1e9).multipleOf(.01),taxRate:z.number().min(0).max(100),taxReason:z.string().max(250)})}),
+ z.object({action:z.literal('advance'),payload:z.object({...base,accountId:id,amount:z.number().positive().max(1e9).multipleOf(.01),note:text})}),
+ z.object({action:z.literal('debit'),payload:z.object({...base,sourceId:id,amount:z.number().positive().max(1e9).multipleOf(.01),taxRate:z.number().min(0).max(100),description:z.string().trim().min(3).max(500),reason:z.string().trim().min(1).max(250)})}),
+ z.object({action:z.literal('task'),payload:z.object({...base,title:name,typeId:id,assigneeId:id,dueDate:z.iso.date().nullable(),note:text})}),
+ z.object({action:z.literal('activity'),payload:z.object({...base,recordId:id,title:name,note:text,start:z.iso.datetime({offset:true}),end:z.iso.datetime({offset:true}),staffIds:z.array(id).max(100),status:z.enum(['planned','done','cancelled']),repeatCount:z.number().int().min(1).max(52),repeatDays:z.number().int().min(1).max(365)}).refine(v=>v.end>v.start)}),
+ z.object({action:z.literal('settings'),payload:z.object({revision,shareEnabled:z.boolean(),shareMessage:z.string().max(2000)})})
+]);
+export type WorkflowCommand=z.infer<typeof workflowCommandSchema>;
+export type WorkflowActivity=Extract<WorkflowCommand,{action:'activity'}>['payload'];
+export type WorkflowSnapshot={types:WorkflowType[];records:WorkflowRecord[];models:WorkflowModel[];children:WorkflowChild[];links:(Omit<WorkLink,'orderId'>&{recordId:string})[];events:{id:string;recordId:string|null;action:string;note:string;shared:boolean;occurredAt:string|null;actionId:string|null;status:string|null;at:string;actorName:string}[];activities:WorkflowActivity[];settings:{revision:number;shareEnabled:boolean;shareMessage:string};finance:FinanceSnapshot;drafts:{recordId:string;draftId:string}[];taskTypes:{id:string;name:string}[];lookups:Record<string,{id:string;name:string}[]>;canConfigure:boolean;slug:string;brand:string};
+export const defaultWorkflowPermissions=():WorkflowPermissions=>({create:{mode:'everyone',ids:[]},read:{mode:'everyone',ids:[]},update:{mode:'everyone',ids:[]},delete:{mode:'everyone',ids:[]},fieldRules:[],stateRules:[],transitionRules:[]});
+export function newWorkflowType():z.infer<typeof workflowTypeSchema>{return{id:crypto.randomUUID(),revision:0,plural:'',singular:'',icon:'clipboard',active:true,description:'',nextNumber:1,fields:[],statuses:[{id:'open',name:'مفتوح',closed:false,color:'#b99545'},{id:'closed',name:'مغلق',closed:true,color:'#528159'}],actions:[],permissions:defaultWorkflowPermissions()};}
+export function newWorkflowRecord(typeId:string):WorkflowInput{return{id:crypto.randomUUID(),revision:0,typeId,title:'',code:'',start:new Date().toISOString().slice(0,10),end:null,customerId:null,budget:0,currency:'SAR',staffIds:[],tags:[],description:'',customValues:{},draft:false};}
+export function workflowFields(type:Pick<WorkflowType,'fields'>):{key:string;label:string;required:boolean}[]{return[...Object.entries(workflowBaseFields).map(([key,label])=>({key,label,required:['title','code','start'].includes(key)})),...type.fields.map((f:ErpCustomField)=>({key:`custom:${f.id}`,label:f.label,required:f.required}))];}

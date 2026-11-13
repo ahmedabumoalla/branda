@@ -3,6 +3,7 @@ import { financeCsvCell } from '@/lib/finance/csv';
 import { commercialQuantity, documentCommercialLine, ledgerEditableAccountKinds } from '@/lib/finance/ledger';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useId, useRef, useState, useTransition, type FormEvent } from 'react';
 import type { FinanceSnapshot } from '@/lib/finance/brand-finance';
 import { executeLedgerAction, fetchLedgerAction, fetchLedgerDocumentAction, fetchLedgerEventsAction, fetchLedgerReportAction } from '@/app/actions/finance-ledger';
@@ -43,7 +44,9 @@ export function LedgerWorkspace({
   initialDocument?: string;
   initialDraft?: string;
 }) {
-  const [section, setSection] = useState<Section>('journals');
+  const searchParams = useSearchParams();
+  const requestedSection = searchParams.get('tab');
+  const section: Section = requestedSection === 'accounts' || requestedSection === 'periods' || requestedSection === 'reports' ? requestedSection : 'journals';
   const [snapshot, setSnapshot] = useState<LedgerSnapshot | null>(null);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<LedgerDraft | null>(null);
@@ -114,7 +117,11 @@ export function LedgerWorkspace({
   }
   function navigate(next: Section) {
     if (leave()) {
-      setSection(next);
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', next);
+      url.searchParams.delete('document');
+      url.searchParams.delete('draft');
+      window.history.pushState(null, '', `${url.pathname}${url.search}`);
       setError('');
       setNotice('');
       setRetry(null);

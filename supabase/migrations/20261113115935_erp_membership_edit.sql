@@ -1,0 +1,50 @@
+BEGIN;
+ALTER FUNCTION public.erp_memberships_write(uuid,text,jsonb,uuid) RENAME TO erp_memberships_write_before_edit;
+REVOKE ALL ON FUNCTION public.erp_memberships_write_before_edit(uuid,text,jsonb,uuid) FROM PUBLIC,anon,authenticated,service_role;
+CREATE FUNCTION public.erp_memberships_write(p_cafe uuid,p_action text,p_input jsonb,p_request uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE m public.erp_memberships;r public.erp_membership_renewals;first_r public.erp_membership_renewals;last_r public.erp_membership_renewals;prior erp_membership_private.requests;customer uuid;package uuid;joined date;ends date;snapshot jsonb;d public.bf_invoice_drafts;payload jsonb;tax numeric;total numeric;result jsonb;member_extension integer;
+BEGIN
+ IF p_action<>'edit_full' THEN RETURN public.erp_memberships_write_before_edit(p_cafe,p_action,p_input,p_request);END IF;
+ PERFORM erp_membership_private.authorize(p_cafe,'update');PERFORM pg_advisory_xact_lock(hashtextextended(p_cafe::text,60412));PERFORM pg_advisory_xact_lock(hashtextextended(p_cafe::text,67951));
+ IF p_request IS NULL OR jsonb_typeof(p_input) IS DISTINCT FROM 'object' OR octet_length(p_input::text)>16000 THEN RAISE EXCEPTION 'بيانات التعديل غير صالحة';END IF;
+ SELECT * INTO prior FROM erp_membership_private.requests WHERE cafe_id=p_cafe AND request_id=p_request;IF FOUND THEN IF prior.actor<>auth.uid() OR prior.action<>'edit_full' OR prior.input<>p_input THEN RAISE EXCEPTION 'معرف العملية مستخدم لبيانات أخرى';END IF;RETURN prior.result;END IF;
+ PERFORM erp_membership_private.sync(p_cafe);
+ SELECT * INTO m FROM public.erp_memberships WHERE cafe_id=p_cafe AND id=(p_input->>'id')::uuid AND NOT deleted FOR UPDATE;
+ IF m.id IS NULL THEN RAISE EXCEPTION 'العضوية غير متاحة';END IF;IF m.revision IS DISTINCT FROM (p_input->>'revision')::integer THEN RAISE EXCEPTION 'تغيرت العضوية' USING ERRCODE='40001';END IF;
+ customer:=(p_input->>'customerId')::uuid;package:=(p_input->>'packageId')::uuid;joined:=(p_input->>'joinedOn')::date;ends:=nullif(p_input->>'endsOn','')::date;
+ IF customer IS NULL OR package IS NULL OR joined IS NULL OR NOT isfinite(joined) OR(ends IS NOT NULL AND(NOT isfinite(ends) OR ends<joined)) OR length(coalesce(p_input->>'description',''))>4000 THEN RAISE EXCEPTION 'راجع العميل والباقة وفترة العضوية';END IF;
+ IF NOT EXISTS(SELECT 1 FROM public.bf_parties WHERE cafe_id=p_cafe AND id=customer AND kind='customer' AND active) THEN RAISE EXCEPTION 'العميل غير متاح';END IF;
+ IF customer<>m.customer_id OR package<>m.package_id THEN
+  IF(SELECT count(*) FROM public.erp_membership_renewals WHERE cafe_id=p_cafe AND membership_id=m.id)<>1 OR EXISTS(SELECT 1 FROM public.erp_membership_renewals WHERE cafe_id=p_cafe AND membership_id=m.id AND(invoice_id IS NOT NULL OR activated_at IS NOT NULL)) THEN RAISE EXCEPTION 'العميل والباقة مرتبطان باشتراك مصدر أو مفعل ولا يمكن نقلهما';END IF;
+  SELECT * INTO r FROM public.erp_membership_renewals WHERE cafe_id=p_cafe AND membership_id=m.id FOR UPDATE;
+  snapshot:=erp_membership_private.package(p_cafe,package);IF snapshot IS NULL OR NOT(snapshot->>'active')::boolean OR snapshot->>'kind'<>'membership' THEN RAISE EXCEPTION 'باقة العضوية غير متاحة';END IF;
+  IF EXISTS(SELECT 1 FROM public.erp_credit_package_lines l JOIN public.erp_credit_types t ON t.cafe_id=l.cafe_id AND t.id=l.type_id WHERE l.cafe_id=p_cafe AND l.package_id=package AND NOT t.active) THEN RAISE EXCEPTION 'نوع رصيد الباقة غير نشط';END IF;
+  SELECT * INTO d FROM public.bf_invoice_drafts WHERE cafe_id=p_cafe AND id=r.draft_id FOR UPDATE;
+  IF d.id IS NULL OR EXISTS(SELECT 1 FROM public.bf_company_invoices WHERE cafe_id=p_cafe AND draft_id=d.id) THEN RAISE EXCEPTION 'المسودة غير متاحة للتعديل';END IF;
+  IF EXISTS(SELECT 1 FROM public.erp_insurance_invoices WHERE cafe_id=p_cafe AND draft_id=d.id) THEN RAISE EXCEPTION 'ألغ ربط التأمين بالمسودة قبل تغيير اشتراكها';END IF;
+  tax:=coalesce((d.payload#>>'{invoice,lines,0,vatRate}')::numeric,15);total:=(snapshot->>'price')::numeric+round((snapshot->>'price')::numeric*tax/100,2);
+  payload:=d.payload;payload:=jsonb_set(payload,'{invoice,partyId}',to_jsonb(customer));payload:=jsonb_set(payload,'{invoice,lines}',jsonb_build_array(jsonb_build_object('key',1,'productId','','quantity',1,'price',snapshot->'price','name',snapshot->>'name','kind','service','vatRate',tax,'taxCategory',CASE WHEN tax=0 THEN 'O' ELSE 'S' END,'exemptionReason',CASE WHEN tax=0 THEN 'خدمة غير خاضعة للضريبة وفق إعدادات الفواتير' ELSE '' END)));payload:=jsonb_set(payload,'{invoice,discountValue}','0');payload:=jsonb_set(payload,'{invoice,taxInclusive}','false');payload:=jsonb_set(payload,'{invoice,currency}','"SAR"');payload:=jsonb_set(payload,'{invoice,exchangeRate}','1');payload:=jsonb_set(payload,'{invoice,adjustment}','null');
+  IF total=0 THEN UPDATE public.erp_membership_renewals SET draft_id=NULL WHERE cafe_id=p_cafe AND id=r.id;DELETE FROM public.bf_invoice_drafts WHERE cafe_id=p_cafe AND id=d.id;ELSE PERFORM public.brand_finance_save_invoice_draft(p_cafe,d.id,d.revision,payload);END IF;
+  UPDATE public.erp_membership_renewals SET customer_id=customer,package_id=package,package_snapshot=snapshot,invoice_total=total WHERE cafe_id=p_cafe AND id=r.id;
+ END IF;
+ SELECT * INTO first_r FROM public.erp_membership_renewals WHERE cafe_id=p_cafe AND membership_id=m.id AND activated_at IS NOT NULL ORDER BY starts_on,created_at,id LIMIT 1;
+ SELECT * INTO last_r FROM public.erp_membership_renewals WHERE cafe_id=p_cafe AND membership_id=m.id AND activated_at IS NOT NULL ORDER BY ends_on DESC,created_at DESC,id DESC LIMIT 1;
+ IF first_r.id IS NULL THEN IF ends IS NOT NULL THEN RAISE EXCEPTION 'تحدد نهاية العضوية عند تفعيل الاشتراك بعد السداد';END IF;
+ ELSE
+  IF ends IS NULL OR joined>erp_membership_private.end_date(p_cafe,first_r.id) OR ends<last_r.starts_on OR EXISTS(SELECT 1 FROM public.erp_membership_renewals WHERE cafe_id=p_cafe AND membership_id=m.id AND activated_at IS NOT NULL AND id<>last_r.id AND erp_membership_private.end_date(p_cafe,id)>ends) THEN RAISE EXCEPTION 'الفترة الجديدة تتعارض مع مدد الاشتراكات المسجلة';END IF;
+  SELECT coalesce(sum(ends_on-starts_on+1),0)::integer INTO member_extension FROM public.erp_membership_freezes WHERE cafe_id=p_cafe AND renewal_id=last_r.id AND NOT voided AND extend_membership;
+  IF ends-member_extension<(CASE WHEN first_r.id=last_r.id THEN joined ELSE last_r.starts_on END) THEN RAISE EXCEPTION 'نهاية الفترة الأساسية تسبق بدايتها بعد احتساب التوقف';END IF;
+  UPDATE public.erp_membership_renewals SET starts_on=joined WHERE cafe_id=p_cafe AND id=first_r.id;
+  UPDATE public.erp_membership_renewals SET ends_on=ends-member_extension WHERE cafe_id=p_cafe AND id=last_r.id;
+  IF EXISTS(SELECT 1 FROM public.erp_membership_freezes f JOIN public.erp_membership_renewals rr ON rr.cafe_id=f.cafe_id AND rr.id=f.renewal_id WHERE f.cafe_id=p_cafe AND f.membership_id=m.id AND NOT f.voided AND(f.starts_on<rr.starts_on OR f.starts_on>erp_membership_private.end_date(p_cafe,rr.id))) THEN RAISE EXCEPTION 'الفترة الجديدة تستبعد فترة توقف مسجلة';END IF;
+  UPDATE public.erp_credit_charges SET starts_on=joined WHERE cafe_id=p_cafe AND source_kind='membership_renewal' AND source_id=first_r.id;
+  IF EXISTS(SELECT 1 FROM public.erp_credit_allocations a JOIN public.erp_credit_usages u ON u.cafe_id=a.cafe_id AND u.id=a.usage_id JOIN public.erp_credit_charges ch ON ch.cafe_id=a.cafe_id AND ch.id=a.charge_id JOIN public.erp_membership_renewals rr ON rr.cafe_id=ch.cafe_id AND rr.id=ch.source_id WHERE a.cafe_id=p_cafe AND rr.membership_id=m.id AND(u.used_on<rr.starts_on OR u.used_on>erp_membership_private.end_date(p_cafe,rr.id,true))) THEN RAISE EXCEPTION 'الفترة الجديدة تستبعد استهلاك رصيد مسجل';END IF;
+ END IF;
+ UPDATE public.erp_memberships SET customer_id=customer,package_id=package,joined_on=joined,description=coalesce(p_input->>'description',''),revision=revision+1 WHERE cafe_id=p_cafe AND id=m.id;
+ PERFORM erp_membership_private.sync(p_cafe);result:=jsonb_build_object('id',m.id);
+ INSERT INTO public.erp_membership_events(cafe_id,membership_id,record_id,action,actor) VALUES(p_cafe,m.id,m.id,'edit_full',auth.uid());INSERT INTO erp_membership_private.requests VALUES(p_cafe,p_request,auth.uid(),'edit_full',p_input,result);RETURN result;
+END $$;
+REVOKE ALL ON FUNCTION public.erp_memberships_write(uuid,text,jsonb,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.erp_memberships_write(uuid,text,jsonb,uuid) TO authenticated;
+NOTIFY pgrst,'reload schema';
+COMMIT;

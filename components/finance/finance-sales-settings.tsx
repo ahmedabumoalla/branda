@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { BadgePercent, ClipboardList, FileCog, FilePenLine, Filter, Paintbrush, ReceiptText, StickyNote, Tags, Truck, WandSparkles } from "lucide-react";
 import type { FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { FinanceInvoiceSettings } from "./finance-invoice-settings";
+import { FinancePriceLists, navigatePriceLists } from "./finance-price-lists";
+import { FinanceOrderSources } from "./finance-order-sources";
+import { FinanceInvoiceLineNotes } from "./finance-invoice-line-notes";
+import { FinanceInvoiceCustomFields } from "./finance-invoice-custom-fields";
+import { FinanceShipping, navigateShipping, shippingUrlKeys } from "./finance-shipping";
 import styles from "./finance-sales-settings.module.css";
 
 export const salesSettingsGroups = [
@@ -29,10 +34,28 @@ export const salesSettingsGroups = [
 export function FinanceSalesSettings({ slug, settings, snapshot, disabled, onEditInvoices }: {
   slug: string; settings: FinanceSnapshot["settings"]; snapshot: FinanceSnapshot; disabled: boolean; onEditInvoices?: () => void;
 }) {
-  const [invoiceSettings, setInvoiceSettings] = useState(false);
-  if (invoiceSettings) return <FinanceInvoiceSettings key={slug} slug={slug} settings={settings} snapshot={snapshot} canEdit={!!onEditInvoices} disabled={disabled} onBack={() => setInvoiceSettings(false)} onEditTax={onEditInvoices} />;
+  const params = useSearchParams();
+  const invoiceSettings = params.get("settings") === "invoices";
+  const priceLists = params.get("settings") === "price-lists";
+  function openSettings(id: "invoices" | "order-sources" | "item-notes" | "extra-fields") {
+    const url = new URL(window.location.href);
+    url.searchParams.set("settings", id);
+    for (const key of ["priceList", "priceListView", ...shippingUrlKeys]) url.searchParams.delete(key);
+    window.history.pushState(null, "", `${url.pathname}${url.search}`);
+  }
+  function settingsBack() {
+    const url = new URL(window.location.href);
+    for (const key of ["settings", "priceList", "priceListView", ...shippingUrlKeys]) url.searchParams.delete(key);
+    window.history.pushState(null, "", `${url.pathname}${url.search}`);
+  }
+  if (invoiceSettings) return <FinanceInvoiceSettings key={slug} slug={slug} settings={settings} snapshot={snapshot} canEdit={!!onEditInvoices} disabled={disabled} onBack={settingsBack} onEditTax={onEditInvoices} />;
+  if (priceLists) return <FinancePriceLists key={slug} slug={slug} snapshot={snapshot} canEdit={!!onEditInvoices} disabled={disabled} onBack={settingsBack} />;
+  if (params.get("settings") === "order-sources") return <FinanceOrderSources key={slug} slug={slug} canEdit={!!onEditInvoices} disabled={disabled} onBack={settingsBack} />;
+  if (params.get("settings") === "item-notes") return <FinanceInvoiceLineNotes key={slug} slug={slug} canEdit={!!onEditInvoices} disabled={disabled} onBack={settingsBack} />;
+  if (params.get("settings") === "extra-fields") return <FinanceInvoiceCustomFields key={slug} slug={slug} canEdit={!!onEditInvoices} disabled={disabled} onBack={settingsBack} />;
+  if (params.get("settings") === "shipping") return <FinanceShipping key={slug} slug={slug} canEdit={!!onEditInvoices} disabled={disabled} onBack={settingsBack} />;
   return <div className={styles.hub} dir="rtl" aria-label="أقسام إعدادات المبيعات">{salesSettingsGroups.map(group => <section key={group.id} aria-labelledby={`sales-settings-${group.id}`}><h2 id={`sales-settings-${group.id}`}>{group.title}</h2><div className={styles.grid}>{group.cards.map(({ id, title, description, icon: Icon }) => {
     const content = <><Icon size={29} strokeWidth={1.8} aria-hidden="true" /><h3>{title}</h3><p>{description}</p></>;
-    return id === "invoices" ? <button key={id} type="button" className={styles.card} onClick={() => setInvoiceSettings(true)}>{content}</button> : <article key={id} className={styles.card} aria-label={title}>{content}</article>;
+    return id === "invoices" || id === "price-lists" || id === "order-sources" || id === "item-notes" || id === "shipping" || id === "extra-fields" ? <button key={id} type="button" className={styles.card} onClick={() => id === "price-lists" ? navigatePriceLists() : id === "shipping" ? navigateShipping() : openSettings(id)}>{content}</button> : <article key={id} className={styles.card} aria-label={title}>{content}</article>;
   })}</div></section>)}</div>;
 }

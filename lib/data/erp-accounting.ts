@@ -1,0 +1,5 @@
+import 'server-only';
+import {getBrandFinanceContext} from './brand-finance';
+import type {AccountingSnapshot} from '@/lib/erp/accounting';
+export function accountingError(error:{code?:string;message?:string}|null){if(!error)return;if(error.code==='40001')throw new Error('تغيرت البيانات أعد تحميلها');if(error.code==='23505')throw new Error('الكود مستخدم بالفعل');if(error.code==='23503')throw new Error('السجل مرتبط بمعاملات أو مراكز فرعية');if(error.message&&/[\u0600-\u06ff]/.test(error.message)&&error.message.length<400)throw new Error(error.message);throw new Error('تعذر تأكيد العملية المحاسبية');}
+export async function readAccounting(offset=0,slug?:string,id?:string):Promise<AccountingSnapshot>{const{client,cafe}=await getBrandFinanceContext(slug);const[r,auth]=await Promise.all([client.rpc('erp_accounting_read',{p_cafe_id:cafe.id,p_query:{offset,id}}),client.auth.getUser()]);accountingError(r.error);return {...r.data,configuration:{revision:0,journalFields:[],assetFields:[],fiscalMonth:1,...r.data.configuration},slug:cafe.slug,brand:cafe.name,role:cafe.role,userId:auth.data.user?.id||''};}

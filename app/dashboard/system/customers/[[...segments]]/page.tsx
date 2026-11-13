@@ -1,0 +1,2 @@
+import {notFound} from 'next/navigation';import {readErpCustomers} from '@/lib/data/erp-customers';import {CustomersWorkspace} from '@/components/erp/customers/workspace';
+export default async function Page({params,searchParams}:{params:Promise<{segments?:string[]}>;searchParams:Promise<{customer?:string}>}){const [{segments=[]},query,snapshot]=await Promise.all([params,searchParams,readErpCustomers()]);if(segments.length>2)notFound();return <CustomersWorkspace snapshot={snapshot} segments={segments} selectedCustomer={query.customer}/>;}

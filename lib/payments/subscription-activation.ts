@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { brandAllowsNewWork } from '@/lib/data/account-cancellation';
 import { areOnlinePaymentsEnabled } from "@/lib/payments/payment-availability";
 
 export async function activatePaidSubscription(input: {
@@ -32,6 +33,9 @@ export async function activatePaidSubscription(input: {
   });
   if (activationError) throw activationError;
   if (activation?.activated !== true) return false;
+  // The verified payment is already recorded atomically; archive status prevents
+  // a new invoice notification without discarding the historical payment result.
+  if (!await brandAllowsNewWork(input.cafeId)) return true;
   const { data, error } = await admin
     .from("subscriptions")
     .select("id,plan_id,platform_coupon_id,cafe_id,plan_name_snapshot,amount_sar,base_amount_sar,discount_amount_sar,coupon_code_snapshot,created_at,cafes(name,owner_email,tax_number,commercial_register)")

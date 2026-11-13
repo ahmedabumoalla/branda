@@ -15,7 +15,7 @@ export const advancedInvoiceSettingsSchema = z.object({
   discountCapsEnabled: z.boolean(), discountCaps: z.array(z.object({ userId: z.uuid(), percent: z.number().min(0).max(100) }).strict()).max(200),
   advancedPricing: z.boolean(), minimumIncludesTax: z.boolean(),
   productPolicies: z.array(z.object({ productId: z.uuid(), kind: z.enum(["product", "service"]), minimumPrice: amount, vatRate: taxRate, taxCategory: z.enum(["S", "Z", "E", "O"]), exemptionReason: z.string().max(250) }).strict()).max(500),
-  priceListsEnabled: z.boolean(), priceLists: z.array(z.object({ id: z.uuid(), name: z.string().trim().min(1).max(80), active: z.boolean(), prices: z.array(z.object({ productId: z.uuid(), price: amount }).strict()).max(500), partyIds: z.array(z.uuid()).max(500) }).strict()).max(30),
+  priceListsEnabled: z.boolean(), priceLists: z.array(z.object({ id: z.uuid(), name: z.string().trim().min(1).max(80), active: z.boolean(), prices: z.array(z.object({ productId: z.uuid(), catalogSource: z.enum(["menu", "inventory"]).optional(), price: amount }).strict()).max(500), partyIds: z.array(z.uuid()).max(500) }).strict()).max(30),
   adjustmentsEnabled: z.boolean(), adjustments: z.array(z.object({ id: z.uuid(), name: z.string().trim().min(1).max(80), accountId: z.uuid(), kind: z.enum(["addition", "deduction"]), taxable: z.boolean() }).strict()).max(30),
   defaultPaymentKind: z.enum(["cash", "bank", "pos", "credit"]), defaultAccountId: uuidOrEmpty,
   autoApplyCredit: z.boolean(), debitNotesEnabled: z.boolean(),

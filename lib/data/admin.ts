@@ -547,11 +547,14 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
 
   const rows = (cafes ?? []) as Record<string, unknown>[];
   const cafeIds = rows.map((row) => String(row.id)).filter(Boolean);
-  const [featureOverridesByCafeId, subscriptionStates, metricsByCafeId] = await Promise.all([
+  const [featureOverridesByCafeId, subscriptionStates, metricsByCafeId, cancellations] = await Promise.all([
     getCafeFeatureOverridesByCafeIds(cafeIds),
     getAdminBrandSubscriptionStates(cafeIds),
     getBrandDirectoryMetrics(supabase, cafeIds),
+    supabase.from("brand_account_cancellations").select("cafe_id,actor_id,actor_name,cancelled_at,origin,reason").in("cafe_id", cafeIds),
   ]);
+  if (cancellations.error) throw cancellations.error;
+  const cancellationByCafe = new Map((cancellations.data ?? []).map(row => [row.cafe_id, { actorId: row.actor_id, actorName: row.actor_name, cancelledAt: row.cancelled_at, origin: "user" as const, reason: row.reason }]));
 
   return Promise.all(
     rows.map(async (row) => {
@@ -603,7 +606,8 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
         commercialRegister: settings?.commercial_register ? String(settings.commercial_register) : undefined,
         maroofCertificate: settings?.maroof_certificate ? String(settings.maroof_certificate) : undefined,
         ...subscription,
-        status: normalizeCafeStatus(row.status),
+        status: cancellationByCafe.has(cafeId) ? "ملغى بطلب المستخدم" as const : normalizeCafeStatus(row.status),
+        cancellation: cancellationByCafe.get(cafeId),
         totalRevenue,
         totalOrders: ordersCount,
         customersCount,

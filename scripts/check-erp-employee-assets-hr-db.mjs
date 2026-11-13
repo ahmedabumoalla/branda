@@ -1,0 +1,42 @@
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';import {spawnSync} from 'node:child_process';
+const folder='output/employee-assets-hr';mkdirSync(folder,{recursive:true});let source=readFileSync('scripts/check-erp-employee-assets-db.mjs','utf8');
+const anchor="  await db.exec(await readFile('supabase/migrations/20261113091145_erp_employee_assets.sql','utf8'));";
+if(!source.includes(anchor))throw new Error('Custody migration fixture anchor changed');
+source=source.replace(anchor,anchor+`
+ await db.exec("CREATE TABLE branches(id uuid PRIMARY KEY,cafe_id uuid,name text,active boolean DEFAULT true,deleted_at timestamptz,UNIQUE(id,cafe_id))");
+ await db.exec(await readFile('supabase/migrations/20261113083421_erp_organization.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261113075342_erp_tasks.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261113092500_erp_hr.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261113093906_erp_roles.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261113104629_erp_employee_asset_hr_profiles.sql','utf8'));
+`);
+const extra=String.raw`
+ await login(owner);const profile=crypto.randomUUID(),foreignProfile=crypto.randomUUID();
+ await db.query("INSERT INTO erp_hr_employees(id,cafe_id,code,first_name,last_name,payload) VALUES($1,$2,'HR1','No login','Employee','{}'),($3,$4,'HR2','Other','Employee','{}')",[profile,cafe,foreignProfile,other]);
+ const authCount=await scalar('SELECT count(*)::int FROM auth.users');
+ const hrAsset=(await save({...p,code:'HR1',serial:'HR-SERIAL',holderKind:'employee',holderUserId:'',holderEmployeeId:profile,assignedAt:new Date().toISOString()})).id;
+ let current=(await read(hrAsset)).records[0];eq(current.holder_employee_id,profile,'custody assigned to HR profile without login');eq(current.holder_user_id,null,'HR recipient does not become synthetic auth user');eq(await scalar('SELECT count(*)::int FROM auth.users'),authCount,'assignment creates no auth users');
+ eq((await read(hrAsset)).employees.some(x=>x.id===profile&&x.userId===null),true,'no-login employee in custody lookup');
+ eq((await scalar('SELECT erp_employee_asset_read($1,null,\'\',$2)',[cafe,profile])).total,1,'HR profile recipient filter works');
+ await fail(()=>save({...p,code:'HR-X',serial:'HR-X',holderKind:'employee',holderEmployeeId:foreignProfile}),'cross-tenant HR recipient rejected');
+ await fail(()=>save({...p,code:'HR-Y',serial:'HR-Y',holderKind:'employee',holderEmployeeId:profile,holderUserId:owner}),'conflicting profile and user recipients rejected');
+ await act(hrAsset,'maintenance');current=(await read(hrAsset)).records[0];eq(current.holder_employee_id,null,'maintenance releases current profile custody');eq(current.maintenance_previous.holder_employee_id,profile,'maintenance snapshots former HR holder');
+ await act(hrAsset,'restore_maintenance');eq((await read(hrAsset)).records[0].holder_employee_id,profile,'maintenance return restores same HR recipient');
+ await fail(()=>db.query('DELETE FROM erp_hr_employees WHERE id=$1',[profile]),'active custody prevents deleting employee profile');
+ await act(hrAsset,'return');eq((await read(hrAsset)).records[0].holder_employee_id,null,'return clears HR assignment');
+ await act(hrAsset,'assign',{holderKind:'employee',holderEmployeeId:profile,holderUserId:''});
+ const original=(await read(id)).records[0];eq(original.holder_employee_id,null,'legacy custody remains linked by original user model');
+ // A new financial unit is linked and synchronized without touching its ledger value
+ await scalar('SELECT erp_asset_save($1,$2,null,0,true)',[cafe,{...ap,code:'F-HR',units:[{...ap.units[0],serial:'HR-UNIT'}]}]);
+ const physical=await scalar('SELECT id FROM erp_asset_units WHERE cafe_id=$1 AND status=\'in_service\' AND id NOT IN(SELECT financial_unit_id FROM erp_employee_assets WHERE financial_unit_id IS NOT NULL) LIMIT 1',[cafe]);
+ if(physical){const physicalData=(await db.query('SELECT * FROM erp_asset_units WHERE id=$1',[physical])).rows[0];const linkedHr=(await save({...p,code:'HR-UNIT',serial:'HR-UNIT',financialUnitId:physical,holderKind:'employee',holderUserId:'',holderEmployeeId:profile,assignedAt:new Date().toISOString()})).id;
+ eq(await scalar('SELECT employee_profile_id FROM erp_asset_units WHERE id=$1',[physical]),profile,'financial unit stores HR profile separately');eq(await scalar('SELECT employee_id FROM erp_asset_units WHERE id=$1',[physical]),null,'financial unit retains nullable legacy auth holder');
+ await fail(()=>db.query('UPDATE erp_asset_units SET employee_profile_id=null WHERE id=$1',[physical]),'direct financial unit edit cannot bypass custody');
+ const financial=await scalar('SELECT erp_asset_read($1,$2)',[cafe,physicalData.asset_id]);eq(financial.units.find(x=>x.id===physical).employee_profile_name,'No login Employee','financial unit detail resolves HR recipient name');
+ await act(linkedHr,'return');eq(await scalar('SELECT employee_profile_id FROM erp_asset_units WHERE id=$1',[physical]),null,'custody return synchronizes financial unit recipient');
+ }else throw new Error('Financial unit fixture missing');
+ await db.query('UPDATE erp_hr_employees SET active=false WHERE id=$1',[profile]);await fail(()=>act(hrAsset,'assign',{holderKind:'employee',holderEmployeeId:profile,holderUserId:''}),'inactive HR recipient cannot receive new assignment');
+ eq(Number(await scalar('SELECT sum(debit-credit) FROM bf_journal WHERE cafe_id=$1',[cafe])),0,'HR custody extension leaves financial journal balanced');
+ await db.query("UPDATE bf_staff SET role='manager' WHERE cafe_id=$1 AND user_id=$2",[cafe,reviewer]);const role=crypto.randomUUID();await db.query("INSERT INTO erp_roles(cafe_id,id,name,kind,active,permissions,blocked) VALUES($1,$2,'Restricted custody','user',true,$3,'[]')",[cafe,role,{custody:{read:true,create:false,update:false,delete:false,approve:false,files:false,settings:false}}]);await db.query('INSERT INTO erp_role_assignments(cafe_id,id,role_id,user_id) VALUES($1,$2,$3,$4)',[cafe,crypto.randomUUID(),role,reviewer]);await login(reviewer);eq((await read()).canWrite,false,'role read wrapper retained after HR migration');await fail(()=>save({...p,code:'DENIED',serial:'DENIED'}),'custom role guard retained in patched save RPC');await fail(()=>act(hrAsset,'note'),'custom role guard retained in patched movement RPC');
+`;
+source=source.replace("  console.log(JSON.stringify({suite:'erp-employee-assets-db'",extra+"  console.log(JSON.stringify({suite:'erp-employee-assets-hr-db'");source=source.replace('console.error(e.message, e.where || e.position)','console.error(e.stack, e.where || e.position)');const file=folder+'/fixture.mjs';writeFileSync(file,source);const result=spawnSync(process.execPath,[file],{encoding:'utf8',maxBuffer:8*1024*1024});process.stdout.write(result.stdout||'');process.stderr.write(result.stderr||'');if(result.status!==0)process.exitCode=1;

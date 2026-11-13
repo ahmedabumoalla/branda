@@ -1,0 +1,25 @@
+const fs=require('node:fs'),path=require('node:path'),ts=require('typescript'),assert=require('node:assert/strict');
+const folder=path.resolve('.codex-tmp/erp-payroll-tests');fs.mkdirSync(folder,{recursive:true});
+for(const name of ['attendance-expression','custom-fields','payroll','payroll-export']){const code=ts.transpileModule(fs.readFileSync(`lib/erp/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;fs.writeFileSync(path.join(folder,name+'.js'),code);}
+const {calculateSalary,payrollExpression,salaryComponentSchema,payrollContractSchema,payslipSchema}=require(path.join(folder,'payroll.js'));
+let checks=0;const eq=(a,b,label)=>{assert.deepEqual(a,b,label);checks++;},reject=(fn,label)=>{assert.throws(fn,label);checks++;};
+eq(calculateSalary([{code:'housing',kind:'earning',amount:100},{code:'deduction',kind:'deduction',amount:50}],1000).net,1050,'fixed earnings and deductions');
+eq(calculateSalary([{code:'housing',kind:'earning',amount:0,formula:'basic * 0.25'},{code:'transport',kind:'earning',amount:0,formula:'housing * 0.1'}],1000).net,1275,'ordered component references');
+eq(calculateSalary([{code:'memo',kind:'earning',amount:500,referenceOnly:true},{code:'allowance',kind:'earning',amount:0,formula:'memo * 0.1'}],1000).net,1050,'reference-only component is not paid twice');
+eq(calculateSalary([{code:'overtime_pay',kind:'earning',amount:0,formula:'overtime / 60 * 20',condition:'worked > 0'}],1000,{worked:480,overtime:90}).net,1030,'attendance formula and condition');
+eq(calculateSalary([{code:'allowance',kind:'earning',amount:100,condition:'worked > 0'}],1000).net,1000,'false condition omits component');
+reject(()=>calculateSalary([{code:'one',kind:'earning',amount:0,formula:'two + 1'},{code:'two',kind:'earning',amount:10}],100),'forward dependency cannot become zero');
+reject(()=>calculateSalary([{code:'basic',kind:'earning',amount:10}],100),'reserved variable cannot be shadowed');
+reject(()=>calculateSalary([{code:'deduct',kind:'deduction',amount:101}],100),'negative net pay rejected');
+reject(()=>calculateSalary([{code:'amount',kind:'earning',amount:0,formula:'basic / 0'}],100),'division by zero rejected');
+reject(()=>payrollExpression('process.exit()'),'no JS execution');reject(()=>payrollExpression('pg_sleep(1)'),'no SQL execution');reject(()=>payrollExpression('basic;DROP TABLE staff'),'no statement injection');
+const component={id:null,revision:0,name:'Housing',code:'housing',kind:'earning',active:true,accountId:null,referenceOnly:false,method:'amount',amount:100,formula:'',condition:''};eq(salaryComponentSchema.safeParse(component).success,true,'component schema');eq(salaryComponentSchema.safeParse({...component,amount:-1}).success,false,'negative component rejected');
+const employee=crypto.randomUUID(),contract={employeeId:employee,code:'C1',startDate:'2026-01-01',endDate:'2026-12-31',joinDate:'2026-01-01',probationEnd:'2026-03-31',signDate:null,currency:'SAR',exchangeRate:1,frequency:'monthly',basic:1000,lines:[]};
+eq(payrollContractSchema.safeParse(contract).success,true,'contract schema');eq(payrollContractSchema.safeParse({...contract,endDate:'2025-01-01'}).success,false,'contract date order');eq(payrollContractSchema.safeParse({...contract,exchangeRate:2}).success,false,'SAR exchange rate fixed');
+eq(payslipSchema.safeParse({employeeId:employee,postingDate:'2026-11-13',from:'2026-11-01',to:'2026-11-30',basic:1000,lines:[]}).success,true,'payslip defaults');
+const {payrollExportRows}=require(path.join(folder,'payroll-export.js'));
+const mapped={settings:{mudad:{basic:['basic'],housing:['housing'],transport:['transport']}},employees:[{id:employee,code:'E1'}]};
+const exportRecord={employeeId:employee,name:'Employee',code:'PS1',status:'approved',total:1300,payload:{currency:'SAR',calculation:{basic:1000,lines:[{componentId:'housing',amount:200},{componentId:'transport',amount:100}]}}};
+eq(payrollExportRows(mapped,[exportRecord])[0].slice(-4),['1000.00','200.00','100.00','1300.00'],'mapped export uses actual approved values');
+eq(payrollExportRows(mapped,[{...exportRecord,status:'draft'}]).length,0,'draft salaries never exported as payable');
+console.log(JSON.stringify({passed:true,checks}));

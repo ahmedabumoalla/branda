@@ -1,0 +1,14 @@
+"use client";
+import {useSystemFormat} from '@/components/erp/settings/preferences';
+import {useState} from 'react';
+import {getErpAccountingCostReport} from '@/app/actions/erp-accounting';
+import {ledgerAmount} from '@/lib/finance/ledger';
+import type {AccountingSnapshot,AccountingCostReport} from '@/lib/erp/accounting';
+import {TemplatePrintChooser} from '../templates/template-print-chooser';
+import s from '../erp.module.css';
+export function AccountingCostReportView({data,today}:{data:AccountingSnapshot;today:string}){const erpDisplay=useSystemFormat();
+ const[from,setFrom]=useState(today.slice(0,4)+'-01-01'),[to,setTo]=useState(today),[center,setCenter]=useState(''),[result,setResult]=useState<AccountingCostReport|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ async function load(){setBusy(true);setError('');try{const r=await getErpAccountingCostReport(data.slug,from,to,center||null);if(r.ok)setResult(r.data);else setError(r.message);}catch{setError('تعذر الاتصال أعد المحاولة');}finally{setBusy(false);}}
+ const table={head:['المركز','الافتتاحي','مدين','دائن','الختامي'],rows:(result?.rows||[]).map(r=>[r.code+' — '+r.name,erpDisplay.amount(r.opening,ledgerAmount),erpDisplay.amount(r.debit,ledgerAmount),erpDisplay.amount(r.credit,ledgerAmount),erpDisplay.amount(r.closing,ledgerAmount)])};
+ return <section className={s.panel}><h2 className={s.panelTitle}>تقرير مراكز التكلفة</h2><form className={s.filters} onSubmit={e=>{e.preventDefault();void load();}}><label className={s.field}><span>من *</span><input required type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label className={s.field}><span>إلى *</span><input required type="date" min={from} value={to} onChange={e=>setTo(e.target.value)}/></label><label className={s.field}><span>المركز وفروعه</span><select value={center} onChange={e=>setCenter(e.target.value)}><option value="">الكل</option>{data.costCenters.map(c=><option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}</select></label><button className={s.primary} disabled={busy}>عرض التقرير</button></form><p className={`${s.muted} ${s.body}`}>يشمل توزيع القيود المرحلة والعكس بحسب تاريخ كل حركة بالريال</p>{error&&<p className={s.error} role="alert">{error}</p>}{result&&<><div className={s.tableScroll}><table className={s.table}><thead><tr>{table.head.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{table.rows.map((row,i)=><tr key={i}>{row.map((v,j)=><td key={j}>{v}</td>)}</tr>)}</tbody></table></div>{!table.rows.length&&<p className={s.empty}>لا توجد مراكز مطابقة</p>}<div className={s.body}><TemplatePrintChooser kind="accounting_report" slug={data.slug} values={{العلامة:data.brand,العنوان:'تقرير مراكز التكلفة',التاريخ:result.to,الوصف:`${result.from} — ${result.to}`}} table={table}/></div></>}</section>;
+}

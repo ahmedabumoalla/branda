@@ -1,0 +1,12 @@
+"use server";
+import {branchRpc} from '@/lib/data/erp-branches';
+import {branchInput} from '@/lib/erp/branches';
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import { getBrandFinanceContext } from "@/lib/data/brand-finance";
+import { creditError } from "@/lib/data/erp-credits";
+import { creditChargeSchema,creditPackageSchema,creditTypeSchema,creditUsageSchema } from "@/lib/erp/credits";
+import { actionResult } from "@/lib/platform/action-result";
+const remove=z.object({id:z.uuid(),revision:z.number().int().positive()}).strict();
+export async function purchaseCreditPackage(slug:string,input:unknown,request:string){return actionResult(async()=>{const parsed=z.object({customerId:z.uuid(),packageId:z.uuid(),invoiceDate:z.iso.date()}).strict().safeParse(branchInput(input));if(!parsed.success||!z.uuid().safeParse(request).success)throw new Error("راجع العميل والباقة وتاريخ الفاتورة");const c=await getBrandFinanceContext(slug),r=await branchRpc(c.client,c.cafe.id,'erp_credit_purchase',{p_cafe:c.cafe.id,p_customer:parsed.data.customerId,p_package:parsed.data.packageId,p_date:parsed.data.invoiceDate,p_request:request},input);creditError(r.error);revalidatePath('/dashboard/system/credits','layout');revalidatePath(`/finance/${slug}/system/credits`,'layout');return r.data as {id:string;invoiceId:string|null;draftId:string|null};},'تعذر تأكيد شراء الباقة');}
+export async function mutateErpCredit(slug:string,action:string,input:unknown,request:string){return actionResult(async()=>{const schemas={type:creditTypeSchema,package:creditPackageSchema,charge:creditChargeSchema,usage:creditUsageSchema,type_delete:remove,package_delete:remove,charge_delete:remove,usage_delete:remove};if(!Object.hasOwn(schemas,action)||!z.uuid().safeParse(request).success)throw new Error("الإجراء غير صالح");const parsed=schemas[action as keyof typeof schemas].safeParse(branchInput(input));if(!parsed.success)throw new Error(parsed.error.issues.find(i=>/[\u0600-\u06ff]/.test(i.message))?.message??"راجع بيانات الرصيد");const c=await getBrandFinanceContext(slug);const r=await branchRpc(c.client,c.cafe.id,"erp_credits_write",{p_cafe:c.cafe.id,p_action:action,p_input:parsed.data,p_request:request},input);creditError(r.error);revalidatePath("/dashboard/system/credits","layout");revalidatePath(`/finance/${slug}/system/credits`,"layout");return r.data as {id:string;revision:number;deleted?:boolean};},"تعذر تأكيد عملية الأرصدة");}

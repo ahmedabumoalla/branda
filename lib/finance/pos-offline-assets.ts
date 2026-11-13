@@ -23,10 +23,22 @@ export async function prepareOfflineAssets(snapshot: FinanceSnapshot) {
   });
   const cache = await caches.open(`branda-pos-media-${posScope(snapshot)}`);
   // Bounded concurrency prevents a large menu from blocking the cashier or exhausting connections.
-  const urls = [...new Set(snapshot.products.map(product => product.imageUrl).filter((url): url is string => !!url && ["http:", "https:"].includes(new URL(url, location.origin).protocol)))];
+  const urls = [...new Map(snapshot.products.filter(product => product.imageUrl && ["http:", "https:"].includes(new URL(product.imageUrl, location.origin).protocol)).map(product => [product.imageFallbackUrl ?? product.imageUrl!, { url: product.imageUrl!, key: product.imageFallbackUrl ?? product.imageUrl! }])).values()];
   let failed = 0, index = 0;
-  await Promise.all(Array.from({ length: Math.min(4, urls.length) }, async () => {
-    while (index < urls.length) { const url = urls[index++]; try { const old = await cache.match(url); if (old) continue; const external = new URL(url, location.origin).origin !== location.origin; const response = await fetch(url, { mode: external ? "no-cors" : "same-origin", signal: AbortSignal.timeout(15000) }); if (!response.ok && response.type !== "opaque") throw Error(); await cache.put(url, response); } catch { failed++; } }
+  await Promise.all(Array.from({ length: Math.min(2, urls.length) }, async () => {
+    while (index < urls.length) {
+      const { url, key } = urls[index++];
+      // Visible images and cashier interactions get priority over offline prefetch.
+      await new Promise<void>(resolve => { if ("requestIdleCallback" in window) window.requestIdleCallback(() => resolve(), { timeout: 2000 }); else setTimeout(resolve, 100); });
+      try {
+        const old = await cache.match(key); if (old) continue;
+        const external = new URL(url, location.origin).origin !== location.origin;
+        const response = await fetch(url, { mode: external ? "no-cors" : "same-origin", priority: "low", signal: AbortSignal.timeout(15000) });
+        if (!response.ok && response.type !== "opaque") throw Error();
+        await cache.put(key, response);
+        await cache.put(`${location.origin}/__pos-image-time/${encodeURIComponent(new URL(key, location.origin).href)}`, new Response(String(Date.now())));
+      } catch { failed++; }
+    }
   }));
   let brand = await cachedReceiptBrand(snapshot);
   try {

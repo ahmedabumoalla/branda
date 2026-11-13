@@ -5,16 +5,17 @@
   --invoice-paper: #ffffff;
   --invoice-wash: #f8f6f1;
   --invoice-line: #e8e2d7;
+  --invoice-refund: #a02d25;
   display: grid;
-  gap: 22px;
+  gap: 28px;
   min-width: 0;
   color: var(--invoice-ink);
 }
-.topbar, .actions, .pagination, .searchFooter, .resultsBar, .tabs, .searchHeading, .history { display: flex; align-items: center; gap: 10px; }
-.topbar { justify-content: space-between; flex-wrap: wrap; padding: 14px 18px; background: var(--invoice-paper); border: 1px solid var(--invoice-line); border-radius: 12px; }
+.topbar, .actions, .pagination, .searchFooter, .searchHeading, .history { display: flex; align-items: center; gap: 10px; }
+.topbar { justify-content: space-between; flex-wrap: wrap; padding: 10px 18px; margin-bottom: -8px; background: var(--invoice-paper); border: 0; border-radius: 0; }
 .actions { flex-wrap: wrap; }
 .selectionToolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; min-width: 0; }
-.selectionControl { display: flex; align-items: center; border: 1px solid var(--invoice-line); border-radius: 7px; background: var(--invoice-wash); }
+.selectionControl { display: flex; align-items: center; border: 1px solid var(--invoice-line); border-radius: 2px; background: var(--invoice-wash); }
 .selectionCheckbox { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .selectionCheckbox input { width: 18px; height: 18px; accent-color: var(--invoice-ink); cursor: pointer; }
 .selectionControl > .iconButton { border: 0; border-inline-start: 1px solid var(--invoice-line); border-start-start-radius: 0; border-end-start-radius: 0; background: transparent; }
@@ -23,15 +24,15 @@
 .selectionMenu svg { color: #85601e; }
 .selectionHint { margin: 6px 10px 8px; font-size: 11px; line-height: 1.8; color: var(--invoice-muted); }
 .selectionCount { font-size: 11px; color: var(--invoice-ink); background: #faf3e2; padding: 6px 9px; border-radius: 5px; font-variant-numeric: tabular-nums; }
-.primary, .secondary, .iconButton, .searchButton, .rowButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--invoice-line); font-size: 12px; font-weight: 700; cursor: pointer; }
+.primary, .secondary, .iconButton, .searchButton, .rowButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 15px; border-radius: 2px; border: 1px solid var(--invoice-line); font-size: 12px; font-weight: 700; cursor: pointer; }
 .primary { background: var(--invoice-ink); border-color: var(--invoice-ink); color: var(--invoice-paper); }
 .primary svg { color: var(--invoice-gold); }
 .addContainer { position: relative; }
 .splitButton { display: flex; align-items: stretch; }
 .splitButton > .primary { border-start-end-radius: 0; border-end-end-radius: 0; }
-.addToggle { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 10px; background: var(--invoice-ink); color: var(--invoice-gold); border: 1px solid var(--invoice-ink); border-inline-start-color: #5b503d; border-start-end-radius: 8px; border-end-end-radius: 8px; cursor: pointer; }
-.addMenu { position: absolute; inset-block-start: calc(100% + 7px); inset-inline-end: 0; z-index: 30; width: min(290px, calc(100vw - 56px)); padding: 5px; border: 1px solid var(--invoice-line); border-radius: 10px; background: var(--invoice-paper); box-shadow: 0 12px 32px #28231b20; }
-.addMenu > button { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 48px; padding: 12px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--invoice-ink); text-align: start; font-size: 12px; cursor: pointer; }
+.addToggle { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 10px; background: var(--invoice-ink); color: var(--invoice-gold); border: 1px solid var(--invoice-ink); border-inline-start-color: #5b503d; border-start-end-radius: 2px; border-end-end-radius: 2px; cursor: pointer; }
+.addMenu { position: absolute; inset-block-start: calc(100% + 7px); inset-inline-end: 0; z-index: 30; width: min(290px, calc(100vw - 56px)); padding: 5px; border: 1px solid var(--invoice-line); border-radius: 0; background: var(--invoice-paper); box-shadow: 0 12px 32px #28231b20; }
+.addMenu > button { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 48px; padding: 12px 10px; border: 0; border-radius: 2px; background: transparent; color: var(--invoice-ink); text-align: start; font-size: 12px; cursor: pointer; }
 .addMenu > button:disabled { opacity: 1; color: var(--invoice-muted); cursor: not-allowed; }
 .addMenu > button > svg { flex-shrink: 0; }
 .addMenu > button > small { margin-inline-start: auto; white-space: nowrap; font-size: 9px; padding: 3px 5px; border: 1px solid var(--invoice-line); border-radius: 4px; }
@@ -48,16 +49,16 @@
 .manager :is(button, input, select):focus-visible { outline: 2px solid var(--invoice-gold); outline-offset: 3px; }
 .pagination { flex-wrap: wrap; font-size: 12px; color: var(--invoice-muted); font-variant-numeric: tabular-nums; }
 .pagination > span:first-child { margin-inline-end: 10px; }
-.pageNumber { background: var(--invoice-wash); border: 1px solid var(--invoice-line); padding: 12px 16px; border-radius: 6px; }
-.searchPanel { background: var(--invoice-paper); border: 1px solid var(--invoice-line); border-radius: 12px; overflow: hidden; }
-.searchHeading { padding: 15px 22px; background: var(--invoice-wash); border-bottom: 1px solid var(--invoice-line); }
+.pageNumber { background: var(--invoice-wash); border: 1px solid var(--invoice-line); padding: 12px 16px; border-radius: 2px; }
+.searchPanel { background: var(--invoice-paper); border: 1px solid var(--invoice-line); border-radius: 0; overflow: hidden; }
+.searchHeading { padding: 14px 16px; background: var(--invoice-wash); border-bottom: 1px solid var(--invoice-line); }
 .searchHeading svg { color: var(--invoice-muted); }
 .searchHeading h2 { margin: 0; font-size: 14px; font-weight: 800; }
-.searchBody { display: grid; gap: 18px; padding: 24px 22px 18px; }
+.searchBody { display: grid; gap: 14px; padding: 16px; }
 .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; width: min(100%, 780px); }
 .fields[hidden] { display: none; }
 .fields label { display: grid; gap: 9px; min-width: 0; font-size: 12px; font-weight: 700; color: var(--invoice-muted); }
-.fields :is(input, select) { width: 100%; min-width: 0; min-height: 46px; background: var(--invoice-paper); border: 1px solid var(--invoice-line); border-radius: 7px; padding: 10px 12px; font-size: 14px; color: var(--invoice-ink); }
+.fields :is(input, select) { width: 100%; min-width: 0; min-height: 44px; background: var(--invoice-paper); border: 1px solid var(--invoice-line); border-radius: 2px; padding: 10px 12px; font-size: 14px; color: var(--invoice-ink); }
 .fields input::placeholder { color: var(--invoice-muted); font-size: 12px; }
 .basicAdvanced { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .advancedFields { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; border: 0; min-width: 0; align-items: start; row-gap: 22px; }
@@ -71,23 +72,16 @@
 .advancedFields :is(input, select):disabled { color: var(--invoice-muted); background: var(--invoice-wash); cursor: not-allowed; }
 @media (min-width: 641px) and (max-width: 1100px) { .advancedFields, .basicAdvanced { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .searchFooter { justify-content: space-between; flex-wrap: wrap; }
-.resultsBar { justify-content: space-between; flex-wrap: wrap; padding: 9px 12px; background: var(--invoice-paper); border: 1px solid var(--invoice-line); border-radius: 10px; }
-.tabs { gap: 4px; flex-wrap: wrap; }
-.resultsLabel { font-size: 12px; font-weight: 800; margin-inline: 6px 10px; }
-.tabs button { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 44px; padding: 8px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--invoice-muted); font-size: 11px; font-weight: 700; cursor: pointer; }
-.tabs button[aria-pressed="true"] { background: var(--invoice-ink); color: var(--invoice-paper); }
-.tabs button span { font-variant-numeric: tabular-nums; padding: 2px 5px; background: var(--invoice-wash); color: var(--invoice-ink); border-radius: 4px; }
-.tabs button small { font-size: 9px; font-weight: 500; }
-.sortButton { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 44px; padding: 8px; border: 0; border-radius: 7px; background: transparent; color: var(--invoice-muted); font-size: 12px; cursor: pointer; }
+.sortButton { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 44px; padding: 8px; border: 0; border-radius: 2px; background: transparent; color: var(--invoice-muted); font-size: 12px; cursor: pointer; }
 .sortButton > span { font-size: 11px; color: var(--invoice-ink); }
 .sortCheck { margin-inline-start: auto; }
 .moreMenu > button[aria-pressed="true"] { background: #faf3e2; font-weight: 700; }
-.empty { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 22px; background: #fff8e9; border: 1px solid var(--invoice-gold); border-radius: 10px; color: var(--invoice-ink); }
+.empty { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 22px; background: #fff8e9; border: 1px solid var(--invoice-gold); border-radius: 0; color: var(--invoice-ink); }
 .empty > svg { color: #85601e; flex-shrink: 0; }
 .empty > div { flex: 1; min-width: min(220px, 100%); }
 .empty strong { font-size: 14px; }
 .empty p { margin: 7px 0 0; font-size: 12px; line-height: 1.8; color: var(--invoice-muted); }
-.tableWrap { min-width: 0; max-width: 100%; overflow: auto; border: 1px solid var(--invoice-line); border-radius: 12px; background: var(--invoice-paper); }
+.tableWrap { min-width: 0; max-width: 100%; overflow: auto; border: 1px solid var(--invoice-line); border-radius: 0; background: var(--invoice-paper); }
 .table { width: 100%; border-collapse: collapse; text-align: start; white-space: nowrap; font-size: 12px; }
 .table th { text-align: start; padding: 14px 18px; background: var(--invoice-wash); color: var(--invoice-muted); font-weight: 700; }
 .table td { padding: 13px 18px; border-top: 1px solid var(--invoice-line); }
@@ -98,13 +92,14 @@
 .status { display: inline-block; padding: 6px 9px; border-radius: 5px; background: #f8edcf; color: #70521d; font-size: 11px; }
 .status[data-paid="true"] { background: #edf5ee; color: #2d6341; }
 .basicFields { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.invoiceList { min-width: 0; background: var(--invoice-paper); border: 1px solid var(--invoice-line); border-radius: 10px; }
+.invoiceList { min-width: 0; background: var(--invoice-paper); border: 1px solid var(--invoice-line); border-radius: 0; }
 .listTable { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; text-align: start; font-size: 12px; }
 .listTable th { padding: 8px 14px; font-weight: 500; color: var(--invoice-muted); background: var(--invoice-wash); text-align: start; }
-.listTable td { padding: 16px 14px; border-block-start: 1px solid var(--invoice-line); vertical-align: middle; }
+.listTable td { padding: 10px 14px; border-block-start: 1px solid var(--invoice-line); vertical-align: middle; }
 .listTable tbody tr[data-selected="true"] { background: var(--invoice-wash); }
 .identityColumn { width: auto; }
-.listTable .creatorColumn { width: 25%; text-align: center; }
+.listTable .creatorColumn { width: 22%; text-align: center; }
+.listTable .stateColumn { width: 12%; text-align: center; }
 .listTable .amountColumn { width: 24%; text-align: end; }
 .menuColumn { width: 100px; }
 .invoiceIdentity { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -115,9 +110,12 @@
 .invoiceMeta { color: var(--invoice-muted); font-size: 12px; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: 4px; }
 .invoiceCreator { overflow-wrap: anywhere; }
 .invoiceAmounts { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.invoiceStatuses { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
 .invoiceAmount { color: var(--invoice-ink); font-size: 16px; font-weight: 800; }
 .invoiceAmounts .status { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px; font-size: 10px; }
 .invoiceAmounts .status[data-partial="true"] { color: #9a450e; background: #fff1e3; }
+.invoiceAmounts .status[data-returned="true"] { color: var(--invoice-ink); background: var(--invoice-wash); }
+.invoiceRefund { font-size: 11px; color: var(--invoice-refund); }
 .invoiceDue { font-size: 11px; color: var(--invoice-ink); }
 .rowMenuContainer { position: relative; display: flex; justify-content: flex-end; }
 .invoiceMenuToggle { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--invoice-line); border-radius: 5px; background: var(--invoice-wash); color: var(--invoice-ink); cursor: pointer; }
@@ -141,7 +139,6 @@
   .fields { grid-template-columns: minmax(0, 1fr); gap: 15px; }
   .searchBody, .searchHeading { padding: 16px; }
   .empty { align-items: flex-start; padding: 18px; }
-  .resultsBar { padding: 8px; }
   .listTable, .listTable tbody { display: block; }
   .listTable thead { display: block; }
   .listTable thead tr { display: flex; justify-content: flex-end; background: var(--invoice-wash); }
@@ -150,6 +147,7 @@
   .listTable tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) 56px; padding: 12px; gap: 8px; border-block-start: 1px solid var(--invoice-line); }
   .listTable td { width: auto; min-width: 0; padding: 0; border: 0; }
   .listTable .identityColumn { grid-column: 1; grid-row: 1; }
+  .listTable .stateColumn { display: none; }
   .listTable .creatorColumn { grid-column: 1; grid-row: 2; text-align: start; padding-inline-start: 42px; }
   .listTable .amountColumn { grid-column: 1 / -1; grid-row: 3; padding-inline-start: 42px; }
   .listTable tbody .menuColumn { grid-column: 2; grid-row: 1 / 3; }

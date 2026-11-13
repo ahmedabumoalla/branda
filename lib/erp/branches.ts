@@ -1,0 +1,22 @@
+import {z} from 'zod';
+export const branchScopeSchema=z.object({branchId:z.uuid().nullable(),revision:z.number().int().min(0)});
+export type BranchScope=z.infer<typeof branchScopeSchema>;
+export const branchResourceKinds={customer:'العملاء',supplier:'الموردون',item:'المنتجات والخدمات',cost_center:'مراكز التكلفة',unit_template:'قوالب الوحدات',account:'الحسابات'} as const;
+export const branchInputSchema=z.object({id:z.uuid(),revision:z.number().int().min(0),name:z.string().trim().min(1).max(160),address:z.string().max(1000),city:z.string().max(100),phone:z.string().max(40),hours:z.string().max(1000),lat:z.number().finite().min(-90).max(90).nullable(),lng:z.number().finite().min(-180).max(180).nullable(),active:z.boolean(),code:z.string().trim().max(60),email:z.union([z.email(),z.literal('')]),taxNumber:z.string().max(40),registration:z.string().max(80),note:z.string().max(5000)}).refine(p=>(p.lat===null)===(p.lng===null),'أكمل خط العرض والطول معًا');
+export type BranchInput=z.infer<typeof branchInputSchema>;
+export const branchSettingsSchema=z.object({revision:z.number().int().min(0),mainBranchId:z.uuid(),shareCustomers:z.boolean(),shareProducts:z.boolean(),shareSuppliers:z.boolean(),shareCostCenters:z.boolean(),shareUnitTemplates:z.boolean(),specifyAccounts:z.boolean()});
+export type BranchSettings=z.infer<typeof branchSettingsSchema>;
+export const branchCommandSchema=z.discriminatedUnion('action',[
+ z.object({action:z.literal('save'),payload:branchInputSchema}),z.object({action:z.literal('settings'),payload:branchSettingsSchema}),
+ z.object({action:z.literal('select'),payload:z.object({id:z.uuid().nullable(),revision:z.number().int().min(0)})}),
+ z.object({action:z.literal('delete'),payload:z.object({id:z.uuid(),revision:z.number().int().positive()})}),
+ z.object({action:z.literal('members'),payload:z.object({id:z.uuid(),revision:z.number().int().positive(),employeeIds:z.array(z.uuid()).max(1000)})}),
+ z.object({action:z.literal('resource'),payload:z.object({id:z.uuid(),kind:z.enum(['customer','supplier','item','cost_center','unit_template','account']),branchIds:z.array(z.uuid()).max(1000),expectedBranchIds:z.array(z.uuid()).max(1000)})}),
+]);
+export type BranchCommand=z.infer<typeof branchCommandSchema>;
+export type BranchRecord={id:string;name:string;address:string|null;city:string|null;phone:string|null;lat:number|null;lng:number|null;hours:Record<string,string>|null;active:boolean;is_primary:boolean;erp_revision:number;details:{code?:string;email?:string;tax_number?:string;registration?:string;note?:string}};
+export type BranchContext={requiresSelection?:boolean;branches:Pick<BranchRecord,'id'|'name'|'active'|'is_primary'>[];scope:BranchScope&{name?:string|null};canAll:boolean;slug:string};
+export type BranchSnapshot=Omit<BranchContext,'branches'>&{brand:string;branches:BranchRecord[];settings:Partial<BranchSettings>;members:{branch_id:string;employee_id:string}[];employees:{id:string;name:string;branchId:string|null;active:boolean}[];resources:{kind:keyof typeof branchResourceKinds;record_id:string;branch_id:string}[];catalog:{kind:keyof typeof branchResourceKinds;id:string;name:string}[];events:{id:string;branch_id:string|null;action:string;created_at:string}[];documents:{id:string;number:number;kind:string;total:number;created_at:string;branch_id:string}[];canWrite:boolean;canCreate:boolean;canUpdate:boolean;canDelete:boolean;canSettings:boolean;canFiles:boolean};
+export function branchEditorValue(record?:BranchRecord):BranchInput{return{id:record?.id??crypto.randomUUID(),revision:record?.erp_revision??0,name:record?.name??'',address:record?.address??'',city:record?.city??'',phone:record?.phone??'',hours:record?.hours?.summary??record?.hours?.default??'',lat:record?.lat===null||record?.lat===undefined?null:Number(record.lat),lng:record?.lng===null||record?.lng===undefined?null:Number(record.lng),active:record?.active??true,code:record?.details.code??'',email:record?.details.email??'',taxNumber:record?.details.tax_number??'',registration:record?.details.registration??'',note:record?.details.note??''};}
+export function branchInput<T>(input:T):T{if(!input||typeof input!=='object'||Array.isArray(input))return input;const {branchScope:_,...rest}=input as Record<string,unknown>;void _;return rest as T;}
+export function branchScopeOf(input:unknown){const value=input&&typeof input==='object'&&!Array.isArray(input)?(input as Record<string,unknown>).branchScope:undefined;return value===undefined||value===null?null:branchScopeSchema.parse(value);}

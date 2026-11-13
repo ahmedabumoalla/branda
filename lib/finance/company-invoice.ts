@@ -4,7 +4,7 @@ export type CompanyProduct = {
   vatRate: number; category: string; brand: string; barcode: string;
   stockTracked: boolean; itemId: string | null; quantity: number; notes: string;
 };
-export type CompanyLine = { key: number; productId: string; quantity: number; price?: number; description?: string; discount?: number; discountKind?: "amount" | "percent"; vatRate?: number; name?: string; kind?: "product" | "service"; taxCategory?: "S" | "Z" | "E" | "O"; exemptionReason?: string };
+export type CompanyLine = { key: number; productId: string; catalogSource?: "menu" | "inventory"; unitName?: string; unitFactor?: number; quantity: number; price?: number; description?: string; discount?: number; discountKind?: "amount" | "percent"; vatRate?: number; name?: string; kind?: "product" | "service"; taxCategory?: "S" | "Z" | "E" | "O"; exemptionReason?: string };
 export type CompanyAdjustment = { amount: number; kind: "addition" | "deduction"; taxable: boolean };
 export const moneyRound = (n: number) => Math.sign(n) * Math.round((Math.abs(n) + Number.EPSILON * Math.max(1, Math.abs(n))) * 100) / 100;
 
@@ -48,7 +48,7 @@ export function companyAmounts(lines: CompanyLine[], products: { id: string; pri
   return { rows, subtotal, discount: moneyRound(subtotal - after + documentDiscount), tax: moneyRound(rows.reduce((a, b) => a + b.tax, 0)), total: moneyRound(rows.reduce((a, b) => a + b.total, 0)), adjustment: adjustmentTotals };
 }
 
-export function parseCompanyTable(text: string, products: { id: string; name: string; price: number; sku?: string }[], startKey: number): CompanyLine[] {
+export function parseCompanyTable(text: string, products: { id: string; name: string; price: number; sku?: string; catalogSource?: "inventory"; unitName?: string; unitFactor?: number; kind?: "product" | "service"; vatRate?: number; taxCategory?: "S" | "Z" | "E" | "O"; exemptionReason?: string }[], startKey: number): CompanyLine[] {
   const rows = text.trim().split(/\r?\n/).filter(row => row.trim());
   if (!rows.length || rows.length > 100) throw new Error("أدخل من سطر واحد إلى ١٠٠ سطر");
   return rows.map((row, i) => {
@@ -57,6 +57,7 @@ export function parseCompanyTable(text: string, products: { id: string; name: st
     if (matches.length !== 1) throw new Error(`السطر ${i + 1}: اختر اسمًا أو رمزًا يطابق منتجًا واحدًا`);
     const quantity = Number(quantityText), price = priceText === undefined || priceText === "" ? matches[0].price : Number(priceText);
     if (extra.length || !Number.isFinite(quantity) || quantity <= 0 || quantity > 9999 || !Number.isFinite(price) || price < 0 || price > 10000000) throw new Error(`راجع الكمية والسعر في السطر ${i + 1}`);
-    return { key: startKey + i, productId: matches[0].id, quantity, price };
+    const product = matches[0];
+    return { key: startKey + i, productId: product.id, quantity, price, ...(product.catalogSource === "inventory" ? { catalogSource: product.catalogSource, unitName: product.unitName, unitFactor: product.unitFactor, kind: product.kind, vatRate: product.vatRate, taxCategory: product.taxCategory, exemptionReason: product.exemptionReason } : {}) };
   });
 }

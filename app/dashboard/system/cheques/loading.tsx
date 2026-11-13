@@ -1,0 +1,1 @@
+export default function Loading(){return <div dir="rtl" role="status" className="p-8 text-sm">جار تحميل الشيكات</div>;}

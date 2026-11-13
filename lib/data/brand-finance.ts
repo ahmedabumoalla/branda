@@ -1,21 +1,23 @@
+import { inventoryImageUrl, isInventoryImagePath } from "@/lib/finance/inventory-catalog";
 import "server-only";
 import { cache } from "react";
 import { getActiveUser } from "@/lib/auth/active-user";
 import { getFinanceCashierMaintenance } from "@/lib/data/finance-cashier-maintenance";
 import { canFinanceOperation, type FinanceRole } from "@/lib/finance/permissions";
+import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { requireOwnerCafeContext } from "@/lib/data/cafes";
+import { erpRequestSlug } from "@/lib/erp/request-context";
+import { financeProductMedia } from "@/lib/finance/product-media-server";
+import type { FinanceCommandResult, FinanceHistory, FinanceProduct, FinanceSnapshot } from "@/lib/finance/brand-finance";
+import { getFinanceMaintenanceActor, resetFinanceBalances } from "./finance-shifts";
 import { after } from "next/server";
 import { dispatchShiftAlerts } from "./finance-shift-alerts";
 import { prepareFinancePosCustomerPayload } from "@/lib/finance/pos-customer-server";
 import { dispatchFinancePosCustomerMessages } from "./finance-pos-customer-messages";
-import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
-import { requireOwnerCafeContext } from "@/lib/data/cafes";
-import { isOwnedMenuAsset } from "@/lib/menu/standalone-menu";
-import type { FinanceCommandResult, FinanceHistory, FinanceProduct, FinanceSnapshot } from "@/lib/finance/brand-finance";
-import { inventoryImageUrl, isInventoryImagePath } from "@/lib/finance/inventory-catalog";
 
 const commandSchema = z.object({
-  operation: z.enum(["shift_purchase", "supplier_payout", "sale", "purchase", "refund", "refund_approve", "refund_reject", "party", "account", "item", "warehouse", "stock_adjust", "stock_transfer", "treasury", "settlement", "shift_open", "shift_close", "shift_handover", "shift_accept", "settings", "staff", "journal"]),
+  operation: z.enum(["opening_balances", "supplier_payout", "shift_purchase", "shift_variance_settle", "finance_reset", "sale", "purchase", "refund", "refund_approve", "refund_reject", "party", "account", "item", "warehouse", "stock_adjust", "stock_transfer", "treasury", "settlement", "shift_open", "shift_close", "shift_handover", "shift_accept", "settings", "staff", "journal"]),
   requestId: z.uuid(), payload: z.record(z.string(), z.unknown()),
 });
 
@@ -31,7 +33,8 @@ export const getBrandFinanceContext = cache(async (slug?: string) => {
   const client = await createClient();
   const user = await getActiveUser(client);
   if (!user) throw new Error("سجل الدخول للوصول إلى برندة المالية");
-  const target = slug ? z.string().trim().min(1).max(120).regex(/^[a-z0-9-]+$/).parse(slug) : (await requireOwnerCafeContext()).slug;
+  const scopedSlug = slug ?? erpRequestSlug();
+  const target = scopedSlug ? z.string().trim().min(1).max(120).regex(/^[a-z0-9-]+$/).parse(scopedSlug) : (await requireOwnerCafeContext()).slug;
   const { data, error } = await client.rpc("brand_finance_context", { p_slug: target });
   throwIfFinanceUnavailable(error);
   if (error) throw new Error("لا تملك صلاحية المالية لهذه العلامة أو أن الباقة غير مفعلة");
@@ -39,25 +42,30 @@ export const getBrandFinanceContext = cache(async (slug?: string) => {
 });
 
 export async function getBrandFinanceSnapshot(slug?: string): Promise<FinanceSnapshot> {
-  const { client, cafe } = await getBrandFinanceContext(slug);
+  return readBrandFinanceSnapshot(await getBrandFinanceContext(slug));
+}
+
+/** Reuse authority only within the same server request, never from a client payload. */
+export async function readBrandFinanceSnapshot({ client, cafe }: Awaited<ReturnType<typeof getBrandFinanceContext>>): Promise<FinanceSnapshot> {
   const { data, error } = await client.rpc("brand_finance_snapshot", { p_cafe_id: cafe.id });
   if (error) throw new Error("تعذر تحميل المالية حاول مجددا");
   const snapshot = data as FinanceSnapshot;
-  snapshot.canManageCashiers = snapshot.canAdminister || !!(await getFinanceCashierMaintenance(cafe.id));
+  const [cashierMaintenance, resetActor, products] = await Promise.all([
+    snapshot.canAdminister ? Promise.resolve(null) : getFinanceCashierMaintenance(cafe.id),
+    getFinanceMaintenanceActor(cafe.id),
+    financeProductMedia(cafe, snapshot.products as (FinanceProduct & { imageStoragePath?: string | null })[]),
+  ]);
+  snapshot.canManageCashiers = snapshot.canAdminister || !!cashierMaintenance;
   snapshot.items = snapshot.items.map(item => ({ ...item, imageUrl: isInventoryImagePath(item.image_path, cafe.id) ? inventoryImageUrl(item.image_path, cafe.slug) : null }));
-  const products = snapshot.products as (FinanceProduct & { imageStoragePath?: string | null })[];
-  // The authenticated media endpoint refreshes signatures throughout long shifts.
-  snapshot.products = products.map(({ imageStoragePath, ...product }) => ({ ...product,
-    imageUrl: imageStoragePath ? (isOwnedMenuAsset(imageStoragePath, cafe.id)
-      ? `/api/finance/${encodeURIComponent(cafe.slug)}/media?path=${encodeURIComponent(imageStoragePath)}` : null) : product.imageUrl,
-  }));
+  snapshot.canResetBalances = !!resetActor;
+  snapshot.products = products;
   return snapshot;
 }
 
 export async function executeBrandFinanceCommand(input: unknown, slug?: string): Promise<FinanceCommandResult> {
   const command = commandSchema.parse(input);
   if (JSON.stringify(command.payload).length > 100_000) throw new Error("بيانات العملية أكبر من الحد المسموح");
-  if (command.operation === "party" && (command.payload.kind === "customer" || Object.hasOwn(command.payload, "details"))) {
+  if (command.operation === "party" && command.payload.kind === "customer") {
     const phone = typeof command.payload.phone === "string" ? command.payload.phone.trim() : "";
     if (!phone) throw new Error("أدخل رقم جوال العميل");
     if (phone.length > 30) throw new Error("رقم الجوال يجب ألا يتجاوز ٣٠ حرفًا");
@@ -73,6 +81,7 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
     return result.data as FinanceCommandResult;
   }
   if (!canFinanceOperation(cafe.role, command.operation)) throw new Error("لا تملك صلاحية تنفيذ هذه العملية");
+  if (command.operation === "finance_reset") return resetFinanceBalances(cafe.id, command.payload, command.requestId);
   const butcherSale = command.operation === "sale" && cafe.businessCategory === "butcher_shops";
   if (butcherSale) {
     // This category never enrolls, stamps, pages or messages a customer at checkout
@@ -80,7 +89,7 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
     delete command.payload.redeemRewardId;
     delete command.payload.pagerFeedbackHash;
   } else if (command.operation === "sale") prepareFinancePosCustomerPayload(command.payload, command.requestId);
-  const customerDetails = command.operation === "party" && Object.hasOwn(command.payload, "details");
+  const customerDetails = command.operation === "party" && command.payload.kind === "customer" && Object.hasOwn(command.payload, "details");
   const { data, error } = customerDetails
     ? await client.rpc("brand_finance_save_customer", { p_cafe_id: cafe.id, p_payload: command.payload, p_request_id: command.requestId })
     : await client.rpc("brand_finance_execute", { p_cafe_id: cafe.id, p_operation: command.operation, p_payload: command.payload, p_request_id: command.requestId });

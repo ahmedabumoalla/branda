@@ -8,19 +8,11 @@ import styles from "./finance-invoices.module.css";
 
 type Filters = { customer: string; number: string; from: string; to: string; item: string; currency: string; min: string; max: string; payment: string; createdFrom: string; createdTo: string; customerType: string; creator: string; shift: string };
 const emptyFilters: Filters = { customer: "", number: "", from: "", to: "", item: "", currency: "", min: "", max: "", payment: "all", createdFrom: "", createdTo: "", customerType: "", creator: "", shift: "" };
-const tabs = [
-  { id: "all", label: "الكل" },
-  { id: "overdue", label: "متأخر", unavailable: true },
-  { id: "due", label: "مستحقة الدفع" },
-  { id: "unpaid", label: "غير مدفوعة" },
-  { id: "paid", label: "مدفوعة" },
-  { id: "draft", label: "مسودة", unavailable: true },
-  { id: "overpaid", label: "مدفوع بالزيادة", unavailable: true },
-];
 const remaining = (document: FinanceDocument) => document.refunded ? 0 : document.outstanding;
 const collected = (document: FinanceDocument) => document.refunded ? 0 : Math.max(0, document.total - (document.refunded_total ?? 0) - document.outstanding);
-const paymentStatus = (document: FinanceDocument) => document.refunded || (document.refunded_total ?? 0) > 0 || document.sync_status === "queued" || document.sync_status === "conflict"
+const invoicePaymentStatus = (document: FinanceDocument) => document.sync_status === "queued" || document.sync_status === "conflict"
   ? financeDocumentStatus(document) : remaining(document) > .009 ? collected(document) >= .01 ? "مدفوعة جزئيًا" : "غير مدفوعة" : "مدفوعة";
+const paymentStatus = (document: FinanceDocument) => document.refunded || (document.refunded_total ?? 0) > 0 ? financeDocumentStatus(document) : invoicePaymentStatus(document);
 const sortOptions = [
   { id: "customer", label: "العميل" },
   { id: "created", label: "تاريخ الإنشاء" },
@@ -41,7 +33,6 @@ export function FinanceInvoices({ documents, parties, staff = [], shifts = [], c
   const [draft, setDraft] = useState<Filters>(emptyFilters);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [advanced, setAdvanced] = useState(false);
-  const [status, setStatus] = useState("all");
   const [sort, setSort] = useState<InvoiceSort>("created");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [sortOpen, setSortOpen] = useState(false);
@@ -87,7 +78,8 @@ export function FinanceInvoices({ documents, parties, staff = [], shifts = [], c
     || (value === "unpaid" && remaining(document) > .009 && collected(document) < .01)
     || (value === "partial" && remaining(document) > .009 && collected(document) >= .01)
     || (value === "paid" && !document.refunded && remaining(document) <= .009)
-    || (value === "returned" && (document.refunded || (document.refunded_total ?? 0) > .009));
+    || (value === "returned" && document.refunded)
+    || (value === "partially-returned" && !document.refunded && (document.refunded_total ?? 0) > .009);
   const matching = sales.filter(document => {
     const date = dateFormat.format(new Date(document.created_at));
     return (!filters.customer || (filters.customer === "cash" ? !document.party_id : document.party_id === filters.customer))
@@ -101,7 +93,7 @@ export function FinanceInvoices({ documents, parties, staff = [], shifts = [], c
       && (!filters.creator || document.created_by === filters.creator) && (!filters.shift || document.shift_id === filters.shift)
       && statusMatch(document, filters.payment);
   });
-  const results = matching.filter(document => statusMatch(document, status)).sort((a, b) => {
+  const results = matching.sort((a, b) => {
     const direction = sortDirection === "asc" ? 1 : -1;
     const comparison = sort === "customer" ? partyName(a.party_id).localeCompare(partyName(b.party_id), "ar", { numeric: true })
       : sort === "payment" ? paymentStatus(a).localeCompare(paymentStatus(b), "ar")
@@ -124,7 +116,7 @@ export function FinanceInvoices({ documents, parties, staff = [], shifts = [], c
     setSelectionOpen(false);
     selectionToggle.current?.focus();
   }
-  function reset() { setDraft(emptyFilters); setFilters(emptyFilters); setStatus("all"); setPage(0); setSelected([]); }
+  function reset() { setDraft(emptyFilters); setFilters(emptyFilters); setPage(0); setSelected([]); }
   function setField(field: keyof Filters, value: string) { setDraft(previous => ({ ...previous, [field]: value })); }
   function dateRange(label: string, fromKey: "from" | "createdFrom", toKey: "to" | "createdTo") {
     const today = dateFormat.format(new Date());
@@ -188,17 +180,17 @@ export function FinanceInvoices({ documents, parties, staff = [], shifts = [], c
         {selectedCount > 0 && <span className={styles.selectionCount} role="status">{selectedCount} فاتورة محددة</span>}
       </div>
       <div className={styles.actions}>
-        <button type="button" className={styles.iconButton} title="تحديث الفواتير" aria-label="تحديث الفواتير" disabled={pending} onClick={onRefresh}><RefreshCw size={17} className={pending ? styles.spin : undefined} /></button>
-        <button type="button" className={styles.secondary} disabled={!exportRows.length} onClick={exportInvoices}><ArrowDownToLine size={16} aria-hidden="true" />{selected.length ? `تصدير المحدد (${exportRows.length})` : "تصدير"}</button>
-        {(onSettings || onReports) && <div className={styles.addContainer} ref={moreContainer}
+        <div className={styles.addContainer} ref={moreContainer}
           onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setMoreOpen(false); }}
           onKeyDown={event => { if (event.key === "Escape" && moreOpen) { event.preventDefault(); setMoreOpen(false); moreToggle.current?.focus(); } }}>
           <button type="button" ref={moreToggle} className={styles.iconButton} aria-label="المزيد من خيارات الفواتير" aria-expanded={moreOpen} aria-controls={moreMenuId} onClick={() => { setMoreOpen(!moreOpen); setAddOpen(false); }}><MoreHorizontal size={20} aria-hidden="true" /></button>
           {moreOpen && <div id={moreMenuId} className={`${styles.addMenu} ${styles.moreMenu}`} role="group" aria-label="المزيد من خيارات الفواتير">
             {onSettings && <button type="button" onClick={() => { setMoreOpen(false); onSettings(); }}><Settings size={17} aria-hidden="true" /><span>الإعدادات</span></button>}
-            {onReports && <button type="button" onClick={() => { setMoreOpen(false); onReports(); }}><PieChart size={17} aria-hidden="true" /><span>تقارير الفواتير</span></button>}
+            <button type="button" disabled={!exportRows.length} onClick={() => { setMoreOpen(false); exportInvoices(); }}><ArrowDownToLine size={16} aria-hidden="true" /><span>{selected.length ? `تصدير المحدد (${exportRows.length})` : "تصدير"}</span></button>
+            <button type="button" disabled={pending} onClick={() => { setMoreOpen(false); onRefresh(); }}><RefreshCw size={17} aria-hidden="true" className={pending ? styles.spin : undefined} /><span>{pending ? "جار تحديث الفواتير" : "تحديث الفواتير"}</span></button>
           </div>}
-        </div>}
+        </div>
+        {onReports && <button type="button" className={styles.iconButton} title="تقارير الفواتير" aria-label="تقارير الفواتير" onClick={() => { setMoreOpen(false); setAddOpen(false); onReports(); }}><PieChart size={20} aria-hidden="true" /></button>}
         {onCreate && <div className={styles.addContainer} ref={addContainer}
           onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setAddOpen(false); }}
           onKeyDown={event => { if (event.key === "Escape" && addOpen) { event.preventDefault(); setAddOpen(false); addToggle.current?.focus(); } }}>
@@ -214,13 +206,13 @@ export function FinanceInvoices({ documents, parties, staff = [], shifts = [], c
         </div>}
       </div>
     </div>
-    <form className={styles.searchPanel} onSubmit={event => { event.preventDefault(); setFilters(draft); setStatus("all"); setPage(0); setSelected([]); }}>
+    <form className={styles.searchPanel} onSubmit={event => { event.preventDefault(); setFilters(draft); setPage(0); setSelected([]); }}>
       <div className={styles.searchHeading}><h2>بحث</h2></div>
       <div className={styles.searchBody}>
         <div className={`${styles.fields} ${styles.basicFields}`}>
           <label>العميل<select value={draft.customer} onChange={event => setDraft({ ...draft, customer: event.target.value })}><option value="">أي عميل</option><option value="cash">عميل نقدي</option>{parties.filter(party => party.kind === "customer").map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></label>
           <label>رقم الفاتورة<input inputMode="numeric" placeholder="أدخل رقم الفاتورة" value={draft.number} onChange={event => setDraft({ ...draft, number: event.target.value })} /></label>
-          <label>حالة الدفع<select value={draft.payment} onChange={event => setField("payment", event.target.value)}><option value="all">أي</option><option value="due">مستحقة الدفع</option><option value="unpaid">غير مدفوعة</option><option value="partial">مدفوعة جزئيًا</option><option value="paid">مدفوعة</option><option value="returned">مرتجعة كليًا أو جزئيًا</option></select></label>
+          <label>حالة الدفع<select value={draft.payment} onChange={event => setField("payment", event.target.value)}><option value="all">أي</option><option value="unpaid">غير مدفوعة</option><option value="partial">مدفوعة جزئيًا</option><option value="paid">مدفوعة</option><option value="returned">مرتجع</option><option value="partially-returned">مرتجع جزئيًا</option><option value="due">مستحقة الدفع</option></select></label>
         </div>
         <fieldset id="invoice-advanced-search" className={`${styles.fields} ${styles.advancedFields}`} hidden={!advanced} disabled={!advanced}>
           <legend className={styles.srOnly}>فلاتر البحث المتقدم</legend>
@@ -246,22 +238,20 @@ export function FinanceInvoices({ documents, parties, staff = [], shifts = [], c
         </div>
       </div>
     </form>
-    <div className={styles.resultsBar}>
-      <div className={styles.tabs} role="group" aria-label="حالة الفواتير"><span className={styles.resultsLabel}>النتائج</span>{tabs.map(tab => <button type="button" key={tab.id} disabled={tab.unavailable} title={tab.unavailable ? "غير مفعّل حاليًا" : undefined} aria-pressed={status === tab.id} onClick={() => { setStatus(tab.id); setFilters(previous => ({ ...previous, payment: "all" })); setDraft(previous => ({ ...previous, payment: tab.id })); setPage(0); setSelected([]); }}>{tab.label}{tab.unavailable ? <small>غير مفعّل</small> : <span>{matching.filter(document => statusMatch(document, tab.id)).length}</span>}</button>)}</div>
-
-    </div>
     {!results.length ? <div className={styles.empty} role="status"><FileText size={22} aria-hidden="true" /><div><strong>{sales.length ? "لا توجد فواتير تطابق البحث" : "لا توجد فواتير مبيعات حتى الآن"}</strong><p>{sales.length ? "جرّب تغيير العميل أو رقم الفاتورة أو إلغاء الفلاتر" : "ابدأ بإضافة أول فاتورة وستظهر تفاصيلها وحالة سدادها هنا"}</p></div>{sales.length ? <button type="button" className={styles.secondary} onClick={reset}>إلغاء الفلاتر</button> : onCreate && <button type="button" className={styles.primary} disabled={disabled} onClick={onCreate}>إضافة فاتورة</button>}</div>
       : <div className={styles.invoiceList}><table className={styles.listTable}><caption className={styles.srOnly}>سجل فواتير المبيعات</caption><thead><tr>
-        <th scope="col" className={styles.identityColumn}>رقم الفاتورة</th><th scope="col" className={styles.creatorColumn}>أُنشئ بواسطة</th><th scope="col" className={styles.amountColumn}>المبلغ</th><th scope="col" className={styles.menuColumn}>{sortControl}</th>
+        <th scope="col" className={styles.identityColumn}>رقم الفاتورة</th><th scope="col" className={styles.creatorColumn}>أُنشئ بواسطة</th><th scope="col" className={styles.stateColumn}>الحالة</th><th scope="col" className={styles.amountColumn}>المبلغ</th><th scope="col" className={styles.menuColumn}>{sortControl}</th>
       </tr></thead><tbody>{rows.map(document => {
         const partial = !document.refunded && remaining(document) > .009 && collected(document) >= .01;
+        const refundedTotal = document.refunded_total ?? (document.refunded ? document.total : 0);
         return <tr key={document.id} data-selected={selected.includes(document.id)} tabIndex={0} aria-label={`فتح تفاصيل الفاتورة ${document.display_number || document.number}`} onClick={event => { if (!(event.target as HTMLElement).closest("button,a,input,label,select,textarea")) onReceipt(document.id); }} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onReceipt(document.id); } }}>
           <td className={styles.identityColumn}><div className={styles.invoiceIdentity}>
             <label className={styles.invoiceSelect}><input type="checkbox" aria-label={`تحديد فاتورة ${document.display_number || document.number}`} checked={selected.includes(document.id)} onChange={() => setSelected(previous => previous.includes(document.id) ? previous.filter(id => id !== document.id) : [...previous, document.id])} /></label>
             <button type="button" className={styles.invoiceLink} aria-label={`عرض فاتورة ${document.display_number || document.number} للعميل ${partyName(document.party_id)}`} onClick={() => onReceipt(document.id)}><strong>{partyName(document.party_id)}</strong><span className={styles.invoiceMeta}><bdi>#{document.display_number || String(document.number).padStart(6, "0")}</bdi><span aria-hidden="true"> – </span><time dateTime={document.created_at} dir="ltr">{invoiceDate(document.created_at)}</time></span></button>
           </div></td>
           <td className={styles.creatorColumn}><span className={styles.mobileLabel}>أُنشئ بواسطة</span><span className={styles.invoiceCreator}>{creatorName(document.created_by)}</span></td>
-          <td className={styles.amountColumn}><div className={styles.invoiceAmounts}><strong className={styles.invoiceAmount}><Numeric value={document.total} money /></strong><span className={styles.status} data-partial={partial} data-paid={!document.refunded && remaining(document) <= .009}>{partial && <CircleAlert size={12} aria-hidden="true" />}{paymentStatus(document)}</span><span className={styles.invoiceDue}>المبلغ المستحق: <Numeric value={remaining(document)} money /></span></div></td>
+          <td className={styles.stateColumn} />
+          <td className={styles.amountColumn}><div className={styles.invoiceAmounts}><strong className={styles.invoiceAmount}><Numeric value={document.total} money /></strong><div className={styles.invoiceStatuses}>{!document.refunded && <span className={styles.status} data-partial={partial} data-paid={remaining(document) <= .009}>{partial && <CircleAlert size={12} aria-hidden="true" />}{invoicePaymentStatus(document)}</span>}{(document.refunded || refundedTotal > .009) && <span className={styles.status} data-returned="true">{document.refunded ? "مرتجع" : "مرتجع جزئيًا"}</span>}</div>{refundedTotal > .009 && <span className={styles.invoiceRefund}>مرتجع: <Numeric value={refundedTotal} money /></span>}{remaining(document) > .009 && <span className={styles.invoiceDue}>المبلغ المستحق: <Numeric value={remaining(document)} money /></span>}</div></td>
           <td className={styles.menuColumn}><div className={styles.rowMenuContainer} ref={rowOpen === document.id ? rowContainer : undefined}
             onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setRowOpen(null); }}
             onKeyDown={event => { if (event.key === "Escape" && rowOpen === document.id) { event.preventDefault(); event.stopPropagation(); setRowOpen(null); event.currentTarget.querySelector<HTMLButtonElement>("button")?.focus(); } }}>

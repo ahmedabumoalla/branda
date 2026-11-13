@@ -1,0 +1,28 @@
+import{readFile,writeFile,mkdir}from'node:fs/promises';import{spawnSync}from'node:child_process';
+const source=await readFile('scripts/check-erp-purchase-tracking-db.mjs','utf8');
+const marker=" console.log(JSON.stringify({suite:'erp-purchase-tracking-db',checks,purchaseTrackingChecks:checks-purchaseTrackingBaseline,baselineChecks:purchaseTrackingBaseline,passed:true,runtime:process.version}));";
+const tests=String.raw`
+ { const lifecycleBaseline=checks;await db.exec(await readFile('supabase/migrations/20261113134000_erp_inventory_lifecycle.sql','utf8'));
+ await write('settings',{...(await read()).settings.payload,bundlesEnabled:true,showAvailableStock:true,countByDate:true},'',(await read()).settings.revision);
+ const rawA=(await write('item',tracked('BUNDLE-A','quantity'))).id,rawB=(await write('item',tracked('BUNDLE-B','quantity'))).id;
+ const parent=(await write('item',{...tracked('BUNDLE-PARENT','quantity'),payload:{bundleComponents:[{itemId:rawA,quantity:2},{itemId:rawB,quantity:1}]}})).id;
+ const receipt=(await write('document',input('receipt',[{itemId:rawA,quantity:10,factor:1,unitName:'Piece',unitCost:2},{itemId:rawB,quantity:10,factor:1,unitName:'Piece',unitCost:3}]))).id;await action(receipt,'post');
+ const request=(await write('document',input('request',[{itemId:rawA,quantity:2,factor:1,unitName:'Piece',unitCost:0}],{payload:{reserveStock:true}}))).id;await action(request,'submit');
+ eq(Number((await read()).items.find(x=>x.id===rawA).reserved),2,'pending request reserves real available stock');
+ eq(Number((await read()).items.find(x=>x.id===rawA).available),8,'available excludes reservation');
+ const issue=(await write('document',input('issue',[{itemId:rawA,quantity:9,factor:1,unitName:'Piece',unitCost:0}]))).id;await fail(()=>action(issue,'post'),'another issue cannot consume reserved balance');
+ await action(request,'fulfill',{kind:'issue'});eq(Number((await read()).items.find(x=>x.id===rawA).reserved),0,'fulfillment releases reservation atomically');eq(Number((await read()).items.find(x=>x.id===rawA).quantity),8,'fulfillment consumes own reservation');
+ const bundlePayload={bundleItemId:parent,bundleQuantity:1};const assembly=(await write('document',input('assembly',[{itemId:rawA,quantity:2,factor:1,unitName:'Piece',unitCost:2},{itemId:rawB,quantity:1,factor:1,unitName:'Piece',unitCost:3}],{payload:bundlePayload}))).id;
+ await action(assembly,'post');eq(Number((await read()).items.find(x=>x.id===parent).quantity),1,'assembly creates physical parent');eq(Number(await scalar('select value from bf_stock where cafe_id=$1 and item_id=$2 and warehouse_id=$3',[scope,parent,wh])),7,'assembly carries actual material cost');eq(Number((await read()).items.find(x=>x.id===rawA).quantity),6,'assembly consumes components');
+ await action(assembly,'reverse');eq(Number((await read()).items.find(x=>x.id===parent).quantity),0,'assembly reversal removes parent');eq(Number((await read()).items.find(x=>x.id===rawA).quantity),8,'assembly reversal restores original quantities');
+ const assembly2=(await write('document',input('assembly',[{itemId:rawA,quantity:2,factor:1,unitName:'Piece',unitCost:2},{itemId:rawB,quantity:1,factor:1,unitName:'Piece',unitCost:3}],{payload:bundlePayload}))).id;await action(assembly2,'post');
+ const disassembly=(await write('document',input('disassembly',[{itemId:rawA,quantity:2,factor:1,unitName:'Piece',unitCost:2},{itemId:rawB,quantity:1,factor:1,unitName:'Piece',unitCost:3}],{payload:bundlePayload}))).id;await action(disassembly,'post');eq(Number((await read()).items.find(x=>x.id===rawA).quantity),8,'disassembly restores component balance');eq(Number(await scalar('select sum(value)from bf_stock where cafe_id=$1 and item_id=any($2::uuid[])',[scope,[parent,rawA,rawB]])),46,'assembly and disassembly preserve warehouse value');
+ const counted=(await write('item',tracked('ASOF-COUNT','quantity'))).id;const day=new Date(Date.now()-86400000).toISOString().slice(0,10);
+ const oldReceipt=(await write('document',input('receipt',[{itemId:counted,quantity:10,factor:1,unitName:'Piece',unitCost:2}],{effectiveOn:day}))).id;await action(oldReceipt,'post');
+ const laterIssue=(await write('document',input('issue',[{itemId:counted,quantity:2,factor:1,unitName:'Piece',unitCost:0}]))).id;await action(laterIssue,'post');
+ const count=(await write('document',input('stocktake',[{itemId:counted,quantity:0,factor:1,unitName:'Piece',unitCost:2,countedQuantity:9}],{effectiveOn:day}))).id;
+ eq(Number((await read()).documents.find(x=>x.id===count).lines[0].expected_quantity),10,'dated count uses historical quantity');await action(count,'finish_count');await action(count,'post');eq(Number((await read()).items.find(x=>x.id===counted).quantity),7,'dated shortage preserves subsequent issue');
+ eq(Number(await scalar('select count(*)from erp_inventory_private.reservation_context')),0,'transaction reservation context cleared');
+ console.log(JSON.stringify({suite:'erp-inventory-lifecycle-db',passed:true,checks,lifecycleChecks:checks-lifecycleBaseline,baselineChecks:lifecycleBaseline,runtime:process.version})); }
+`;
+if(!source.includes(marker))throw Error('Purchase tracking fixture changed');await mkdir('output/inventory-lifecycle-verification',{recursive:true});const file='output/inventory-lifecycle-verification/runner.mjs';await writeFile(file,source.replace(marker,()=>tests).replaceAll('output/purchase-tracking-verification','output/inventory-lifecycle-verification'));const r=spawnSync(process.execPath,[file],{encoding:'utf8',maxBuffer:20e6});await writeFile('output/inventory-lifecycle-verification/sql.log',(r.stdout||'')+(r.stderr||''));console.log(r.stdout);if(r.status){console.error(r.stderr?.slice(-4000));process.exitCode=1;}

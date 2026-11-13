@@ -121,10 +121,12 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
     const visible = () => { if (document.visibilityState === "visible") void sync(); };
     window.addEventListener("online", online); window.addEventListener("offline", offline); document.addEventListener("visibilitychange", visible);
     window.addEventListener("branda:pos-session-locked", locked);
-    const timer = setInterval(() => void sync(), 15_000);
+    const timer = setInterval(() => { if (document.visibilityState === "visible" || pendingSales(current.current.sales).length) void sync(); }, 15_000);
     return () => { alive.current = false; clearInterval(timer); channel.current?.close(); channel.current = null; window.removeEventListener("online", online); window.removeEventListener("offline", offline); document.removeEventListener("visibilitychange", visible); window.removeEventListener("branda:pos-session-locked", locked); };
   }, [initialSnapshot, offlineEntry, reload, scope, sync]);
-  useEffect(() => { if (ready) void sync(); }, [ready, sync]);
+  // Server-rendered data has just passed authorization; do not immediately fetch it again.
+  // Restored offline sessions and unsent receipts still synchronize without delay.
+  useEffect(() => { if (ready && (offlineEntry || pendingSales(current.current.sales).length)) void sync(); }, [ready, sync, offlineEntry]);
 
   async function execute(operation: FinanceFormOperation, payload: Record<string, unknown>): Promise<FinanceCommandResult | null> {
     if (busy.current || blocked || !ready) return null;

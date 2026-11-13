@@ -6,6 +6,7 @@ import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { canFinance } from "@/lib/finance/permissions";
 import { actionResult } from "@/lib/platform/action-result";
 import type { InvoiceDetail } from "@/lib/finance/invoice-management";
+import { withInvoiceLineNotes } from "@/lib/data/invoice-line-notes";
 
 const change = z.discriminatedUnion("action", [
   z.object({ action: z.literal("sync"), ids: z.array(z.uuid()).min(1).max(500) }).strict(),
@@ -20,7 +21,8 @@ export async function readInvoiceDetailAction(id: string, slug: string) {
     if (!canFinance(cafe.role, "reports")) throw new Error("لا تملك صلاحية عرض تفاصيل الفواتير");
     const { data, error } = await client.rpc("brand_finance_invoice_detail", { p_cafe_id: cafe.id, p_id: z.uuid().parse(id) });
     if (error || !data) throw new Error("تعذر تحميل تفاصيل الفاتورة");
-    return data as InvoiceDetail;
+    const detail = data as InvoiceDetail;
+    return detail.invoice ? { ...detail, invoice: await withInvoiceLineNotes(client, cafe.id, detail.invoice) } : detail;
   }, "تعذر تحميل تفاصيل الفاتورة");
 }
 

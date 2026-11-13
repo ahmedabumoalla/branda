@@ -1,0 +1,7 @@
+import {notFound} from 'next/navigation';
+import {z} from 'zod';
+import {readWorkflows} from '@/lib/data/erp-workflows';
+import {readOptionalDocumentTemplates} from '@/lib/data/erp-templates';
+import {WorkflowWorkspace} from '@/components/erp/workflows/workspace';
+export const dynamic='force-dynamic';
+export default async function Page({params}:{params:Promise<{segments?:string[]}>}){const {segments=[]}=await params;if(segments.length>3||segments[0]&&!['new','settings'].includes(segments[0])&&!z.uuid().safeParse(segments[0]).success||segments[1]&&!['new','settings'].includes(segments[1])&&!z.uuid().safeParse(segments[1]).success||segments[2]&&(segments[1]!=='settings'||!['general','fields','statuses','actions','permissions'].includes(segments[2])))notFound();const initial=await readWorkflows(),type=initial.types.find(x=>x.id===segments[0]);if(segments[0]&&!['new','settings'].includes(segments[0])&&!type)notFound();if((segments[0]==='new'||segments[0]==='settings'||segments[1]==='settings')&&!initial.canConfigure)notFound();if(segments[1]==='new'&&!type?.canCreate)notFound();if(segments[1]&&z.uuid().safeParse(segments[1]).success&&!initial.records.some(x=>x.id===segments[1]&&x.typeId===type?.id))notFound();const templates=await readOptionalDocumentTemplates('workflow',initial.slug);return <WorkflowWorkspace key={segments.join('/')} initial={initial} segments={segments} templates={templates}/>}

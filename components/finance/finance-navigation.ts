@@ -2,7 +2,7 @@ import { canFinance } from "@/lib/finance/permissions";
 import { BookOpen, Boxes, Clock3, Landmark, LayoutDashboard, Printer, ReceiptText, Settings2, ShoppingBag, UserRoundCog, Users } from "lucide-react";
 
 export const financeSections = [
-  { id: "overview", label: "نظرة عامة", icon: LayoutDashboard },
+  { id: "overview", label: "نظرة مالية", icon: LayoutDashboard },
   { id: "sales", label: "المبيعات", icon: ReceiptText },
   { id: "purchases", label: "المشتريات", icon: ShoppingBag },
   { id: "parties", label: "العملاء والموردون", icon: Users },
@@ -22,7 +22,7 @@ export type FinanceMenuEntry = {
   label: string;
   section: FinanceSection;
   party?: "customer" | "supplier";
-  view?: "items" | "movements" | "create" | "returns" | "payments" | "sales-settings" | "quotes" | "quote-create";
+  view?: "items" | "movements" | "create" | "returns" | "payments" | "sales-settings" | "quotes" | "quote-create" | "credit-notes" | "recurring";
   unavailable?: boolean;
 };
 
@@ -33,9 +33,9 @@ export const financeMenuGroups: { id: string; label: string; icon: typeof BookOp
     { id: "sales-create", label: "إنشاء فاتورة", section: "sales", view: "create" },
     { id: "quotes", label: "إدارة عروض الأسعار", section: "sales", view: "quotes" },
     { id: "quote-create", label: "إنشاء عرض سعر", section: "sales", view: "quote-create" },
-    { id: "credit-notes", label: "إشعارات دائنة", section: "sales", unavailable: true },
+    { id: "credit-notes", label: "إشعارات دائنة", section: "sales", view: "credit-notes" },
     { id: "sales-returns", label: "الفواتير المرتجعة", section: "sales", view: "returns" },
-    { id: "recurring", label: "الفواتير الدورية", section: "sales", unavailable: true },
+    { id: "recurring", label: "الفواتير الدورية", section: "sales", view: "recurring" },
     { id: "sales-payments", label: "مدفوعات العملاء", section: "sales", view: "payments" },
     { id: "sales-settings", label: "إعدادات المبيعات", section: "sales", view: "sales-settings" },
   ] },
@@ -76,8 +76,10 @@ export function resolveFinanceParty(value: string | null) {
 }
 
 export function resolveFinanceMenuEntry(section: FinanceSection, party: string | null, view: string | null) {
+  if (section === "sales" && ["recurring", "recurring-create", "recurring-detail"].includes(view ?? "")) return "recurring";
+  if (section === "sales" && ["credit-notes", "credit-create", "credit-note"].includes(view ?? "")) return "credit-notes";
   if (section === "sales" && (view === "quotes" || view === "quote-create")) return view;
-  if (section === "sales") return view === "create" ? "sales-create" : view === "returns" ? "sales-returns" : view === "payments" ? "sales-payments" : view === "sales-settings" ? "sales-settings" : "sales";
+  if (section === "sales") return view === "create" ? "sales-create" : view === "returns" || view === "return-detail" ? "sales-returns" : ["payments", "payment-detail", "payment-edit", "payment-delete"].includes(view ?? "") ? "sales-payments" : view === "sales-settings" ? "sales-settings" : "sales";
   if (section === "parties") return party === "customer" ? "customers" : party === "supplier" ? "suppliers" : "parties";
   if (section === "inventory") return view === "movements" ? "movements" : "inventory";
   return section;

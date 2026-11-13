@@ -1,0 +1,10 @@
+import 'server-only';
+import {getBrandFinanceContext,readBrandFinanceSnapshot} from '@/lib/data/brand-finance';
+import {branchScopeOf,type BranchSnapshot,type BranchContext} from '@/lib/erp/branches';
+import type {FinanceSnapshot} from '@/lib/finance/brand-finance';
+export function branchError(e:{code?:string;message?:string}|null){if(!e)return;if(e.code==='40001')throw new Error('تغير السجل أو فرع العمل أعد تحميل الصفحة');if(e.code==='42501')throw new Error(e.message&&/[\u0600-\u06ff]/.test(e.message)?e.message:'لا تملك صلاحية الفرع المطلوبة');if(e.message&&e.message.length<300&&/[\u0600-\u06ff]/.test(e.message))throw new Error(e.message);throw new Error('تعذر إكمال عملية الفرع');}
+export async function readBranches(slug?:string):Promise<BranchSnapshot>{const c=await getBrandFinanceContext(slug);const r=await c.client.rpc('erp_branches_read',{p_cafe:c.cafe.id});branchError(r.error);return{...r.data,slug:c.cafe.slug,brand:c.cafe.name};}
+export async function readBranchContext(slug?:string):Promise<BranchContext>{const c=await getBrandFinanceContext(slug);const r=await c.client.rpc('erp_branch_context',{p_cafe:c.cafe.id});branchError(r.error);return{...r.data,slug:c.cafe.slug};}
+export async function branchRpc(client:Awaited<ReturnType<typeof getBrandFinanceContext>>['client'],cafe:string,name:string,args:Record<string,unknown>,input:unknown){return client.rpc('erp_branch_execute',{p_cafe:cafe,p_function:name,p_arguments:args,p_scope:branchScopeOf(input)});}
+export async function readErpBranchFinanceSnapshot(slug?:string):Promise<FinanceSnapshot>{return branchFinanceSnapshot(await getBrandFinanceContext(slug));}
+export async function branchFinanceSnapshot(context:Awaited<ReturnType<typeof getBrandFinanceContext>>):Promise<FinanceSnapshot>{const client=new Proxy(context.client,{get(target,key,receiver){if(key==='rpc')return (name:string,args:Record<string,unknown>)=>target.rpc(name==='brand_finance_snapshot'?'erp_branch_finance_snapshot':name,args);return Reflect.get(target,key,receiver)}});return readBrandFinanceSnapshot({...context,client});}

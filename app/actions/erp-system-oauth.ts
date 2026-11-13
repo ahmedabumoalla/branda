@@ -1,0 +1,5 @@
+'use server';
+import {oauthAuthorizationSchema,oauthScopeList,readOAuthClient,oauthCode,oauthHash} from '@/lib/erp/settings-oauth';
+import {systemSettingsContext,systemSettingsError} from '@/lib/data/erp-settings';
+import {actionResult} from '@/lib/platform/action-result';
+export async function consentSystemOAuth(slug:string,input:unknown,accept:boolean){return actionResult(async()=>{const p=oauthAuthorizationSchema.parse(input),scopes=oauthScopeList(p.scope),c=await systemSettingsContext(slug),client=await readOAuthClient(p.client_id);if(!client.redirectUris.includes(p.redirect_uri))throw new Error('عنوان العودة غير مسجل');const url=new URL(p.redirect_uri);url.searchParams.set('state',p.state);if(accept===true){const code=oauthCode(),r=await c.client.rpc('erp_system_oauth_consent',{p_cafe:c.cafe.id,p_client:p.client_id,p_redirect:p.redirect_uri,p_challenge:p.code_challenge,p_scopes:scopes,p_code_hash:oauthHash(code)});systemSettingsError(r.error);url.searchParams.set('code',code);}else url.searchParams.set('error','access_denied');return{redirect:url.toString()};},'تعذر تأكيد الاتصال');}

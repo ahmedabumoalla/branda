@@ -17,10 +17,10 @@ import { FinanceOperationForm, type FinanceForm } from "./finance-operation-form
 import { Empty, Field, financeDate, financeDocumentStatus, Numeric } from "./finance-ui";
 import { FinanceRefundRequests } from "./finance-refund-requests";
 import { FinanceReceiptDialog } from "./finance-receipt-dialog";
+import { createFinanceReceiptPreview } from "@/lib/finance/receipt-preview";
 import { FinancePosFullscreen } from "./finance-pos-fullscreen";
 import { FinancePosActions } from "./finance-pos-actions";
 import shiftStyles from "./finance-pos-shift-controls.module.css";
-import { createFinanceReceiptPreview } from "@/lib/finance/receipt-preview";
 import { FinancePosCustomerField, FinancePosPager, financePosCustomerNotice, usePosCustomer } from "./finance-pos-customer";
 import { usePosFinance } from "./use-pos-finance";
 import { FinancePosOfflineStatus } from "./finance-pos-offline-status";
@@ -44,6 +44,15 @@ function CartProductImage({ src }: { src: string | null }) {
       ? <Image src={src} alt="" width={44} height={44} unoptimized loading="lazy" onError={() => setFailed(true)} />
       : <ImageIcon size={20} />}
   </span>;
+}
+
+export function PosProductImage({ product }: { product: FinanceProduct }) {
+  const [fallback, setFallback] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const src = fallback ? product.imageFallbackUrl : product.imageUrl;
+  if (!src || failed) return <span className={styles.productPlaceholder}><ImageIcon size={30} aria-hidden="true" /></span>;
+  return <Image className={styles.productImage} src={src} alt="" width={360} height={300} unoptimized loading="lazy" decoding="async"
+    onError={() => { if (!fallback && product.imageFallbackUrl && product.imageFallbackUrl !== src) setFallback(true); else setFailed(true); }} />;
 }
 
 export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry = false }: { initialSnapshot: FinanceSnapshot; slug?: string; dashboardHref?: "/dashboard/finance"; offlineEntry?: boolean }) {
@@ -90,15 +99,27 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
   const cartCount = butcher ? `${cart.length} صنف` : `${cart.reduce((sum, line) => sum + line.quantity, 0)} قطعة`;
   const subtotal = previewFinanceTotals(lines.map(line => ({ quantity: line.quantity, price: line.product.price })), 0, data.settings.vat_rate, data.settings.tax_inclusive).subtotal;
   const pricesChanged = lines.some(line => line.priceChanged);
+  const needsShift = !shift && !butcher;
+  const checkoutBlocker = pending ? "جار حفظ العملية انتظر حتى تكتمل"
+    : stale ? error || "لم يكتمل تجهيز الكاشير حدّث المزامنة قبل الدفع"
+    : loggingOut ? "جار تسجيل الخروج"
+    : !cart.length ? "أضف منتجًا إلى السلة لبدء الدفع"
+    : pricesChanged ? "اعتمد السعر الجديد للأصناف المتغيرة قبل الدفع"
+    : shift?.supervisor_paused ? "الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع"
+    : needsShift && outgoing ? "الوردية بانتظار الاستلام أكمل تسليمها قبل بدء وردية جديدة"
+    : needsShift && data.initialized === false ? "يجب تسجيل الأرصدة الافتتاحية من إدارة الوردية قبل بدء البيع"
+    : needsShift && incoming.length > 1 ? "اختر الوردية المطلوب استلامها من إدارة الوردية أعلى الصفحة"
+    : "";
+  const checkoutHint = checkoutBlocker || (needsShift ? "ابدأ الوردية لإكمال الدفع ستبقى أصناف السلة محفوظة أثناء هذه الخطوة" : "");
   const discount = financeDiscount(subtotal, discountValue, discountKind);
   const totals = previewFinanceTotals(lines.map((line) => ({ quantity: line.quantity, price: line.product.price })), discount, data.settings.vat_rate, data.settings.tax_inclusive);
   const categories = [...new Set(data.products.filter((product) => product.available).map((product) => product.category))].filter(Boolean);
   const products = data.products.filter((product) => product.available && (!category || product.category === category) && product.name.toLocaleLowerCase("ar").includes(query.trim().toLocaleLowerCase("ar")));
+  const printId = printQueue[0];
+  const printDocument = printId ? data.documents.find((document) => document.id === printId || state.offline.sales.some((sale) => sale.id === printId && sale.document.id === document.id)) : undefined;
   const accounts = data.accounts.filter((account) => account.active && account.kind === paymentKind && (paymentKind !== "cash" || (shift ? account.id === shift.account_id : butcher && account.is_cashier_drawer && account.availableWithoutShift !== false && !data.shifts.some(row => row.account_id === account.id && row.status !== "closed"))));
   const paymentAccountId = getPrimaryFinanceAccount(accounts)?.id;
   const receipt = data.documents.find((document) => document.id === receiptId || state.offline.sales.some((sale) => sale.id === receiptId && sale.document.id === document.id));
-  const printId = printQueue[0];
-  const printDocument = printId ? data.documents.find((document) => document.id === printId || state.offline.sales.some((sale) => sale.id === printId && sale.document.id === document.id)) : undefined;
   const history = data.documents.filter((document) => document.kind === "sale" && (data.canManage || (butcher && document.created_by === data.userId) || data.shifts.some((item) => item.id === document.shift_id && item.user_id === data.userId)));
   const invoiceMessages = useFinanceInvoiceMessages({ scope: `${data.cafe.id}:${data.userId}`, slug: data.cafe.slug, documentIds: butcher ? [] : history.filter(document => !document.sync_status || document.sync_status === "synced").map(document => document.id), visible: showHistory && !butcher });
   const open = (next: FinanceForm) => { state.clearFeedback(); setLocalError(""); setForm(next); };
@@ -150,11 +171,23 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
       setShowCheckout(false);
     } catch (cause) { setLocalError(cause instanceof Error ? cause.message : "تعذر تجهيز معاينة الإيصال"); }
   }
+  function beginCheckout() {
+    if (checkoutBlocker) return;
+    setLocalError("");
+    if (needsShift) {
+      open(incoming.length === 1
+        ? { operation: "shift_accept", title: "عد النقدية وتأكيد الاستلام", values: { shiftId: incoming[0].id } }
+        : { operation: "shift_open", title: "بدء وردية لإكمال الدفع" });
+      return;
+    }
+    setShowCheckout(true);
+  }
   async function checkout() {
     if (disabled) return;
     setLocalError("");
     if (pricesChanged) { setLocalError("تغيّر سعر أحد الأصناف اعتمد السعر الجديد في السلة قبل التحصيل"); return; }
     if (!shift && !butcher) { setLocalError("ابدأ وردية مالية قبل تسجيل المبيعات"); return; }
+    if (shift?.supervisor_paused) { setLocalError("الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع"); return; }
     if (!cart.length || lines.length !== cart.length || lines.some((line) => !line.product.available || !Number.isFinite(line.quantity) || line.quantity <= 0 || line.quantity > 9999)) { setLocalError("راجع أصناف السلة والكميات قبل التحصيل"); return; }
     if (!warehouseId) { setLocalError("اختر مستودع البيع"); return; }
     if (discount < 0 || discount > subtotal || (discountKind === "percent" && discountValue > 100)) { setLocalError("الخصم يجب ألا يتجاوز قيمة المبيعات"); return; }
@@ -175,15 +208,15 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
       </div>
       <div className={`${styles.posHeaderTools} ${shiftStyles.headerTools}`}>
       <div className={shiftStyles.controls} aria-label="إدارة الوردية">
-        {!shift && !outgoing && (incoming.length ? incoming.map(item => <button key={item.id} type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut} title={data.accounts.find(account => account.id === item.account_id)?.name ?? "صندوق الكاشير"} onClick={() => open({ operation: "shift_accept", title: "عد النقدية وتأكيد الاستلام", values: { shiftId: item.id } })}><Plus size={16} aria-hidden="true" />استلام وبدء وردية</button>) : <button type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut} onClick={() => open({ operation: "shift_open", title: "بدء وردية جديدة" })}><Plus size={16} aria-hidden="true" />بدء وردية جديدة</button>)}
+        {!shift && !outgoing && (incoming.length ? incoming.map(item => <button key={item.id} type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut} title={data.accounts.find(account => account.id === item.account_id)?.name ?? "صندوق الكاشير"} onClick={() => open({ operation: "shift_accept", title: "عد النقدية وتأكيد الاستلام", values: { shiftId: item.id } })}><Plus size={16} aria-hidden="true" />استلام وبدء وردية</button>) : <button type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut || data.initialized === false} onClick={() => open({ operation: "shift_open", title: "بدء وردية جديدة" })}><Plus size={16} aria-hidden="true" />بدء وردية جديدة</button>)}
         {shift ? <button type="button" className={shiftStyles.end} disabled={disabled || loggingOut || cart.length > 0} title={cart.length ? "احفظ السلة أو أفرغها قبل إنهاء الوردية" : "عد النقدية وحدد جهة التسليم لإقفال الوردية"} onClick={() => open({ operation: "shift_close", title: slug && !butcher ? "إنهاء الوردية وتسجيل الخروج" : "إنهاء الوردية", values: { shiftId: shift.id } })}><LogOut size={16} aria-hidden="true" />إنهاء الوردية</button> : slug && <button type="button" className={shiftStyles.exit} disabled={pending || loggingOut || !!outgoing || cart.length > 0} onClick={finishLogout}><LogOut size={16} aria-hidden="true" />خروج</button>}
       </div>
       {!butcher && <FinancePosPager slug={slug ?? data.cafe.slug} refreshKey={pagerRefreshKey} />}
       <FinancePosActions details={shift && <><span>{data.accounts.find((account) => account.id === shift.account_id)?.name ?? "الصندوق"}</span><span>بداية الوردية {financeDate(shift.opened_at)}</span><span>نقدية متوقعة <Numeric value={shift.expected_cash} money /></span></>}>
       <div className={styles.actions} aria-label="أدوات الكاشير والوردية">
         {shift && <button type="button" className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "supplier_payout", title: "سداد مورد من الصندوق", values: { shiftId: shift.id } })}>سداد الموردين</button>}
-        {shift && <button type="button" className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "shift_purchase", title: "فاتورة مشتريات", values: { shiftId: shift.id } })}>فاتورة مشتريات</button>}
         <button className={styles.secondary} onClick={() => setShowHistory(true)}>سجل المبيعات</button>
+        {shift && <button className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "shift_purchase", title: "فاتورة مشتريات", values: { shiftId: shift.id } })}>فاتورة مشتريات</button>}
         {data.canManage && <Link href={dashboardHref ?? (slug ? `/finance/${slug}` : "/dashboard/finance")} className={styles.secondary}><ArrowRight size={16} />الإدارة المالية</Link>}
       </div>
       </FinancePosActions>
@@ -198,12 +231,13 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
     {customerNotice && <div className={styles.notice} role="status">{customerNotice}</div>}
     {(localError || error) && !form && <div className={styles.error} role="alert">{localError || error}</div>}
     {stale && <div className={styles.notice}>توقف تسجيل العمليات حتى تحديث الأرصدة العملية المحفوظة لا تحتاج إلى تكرار</div>}
+    {data.initialized === false && <div className={styles.shiftSetup}><div><strong>الأرصدة الافتتاحية لم تسجل بعد</strong><p className={styles.muted}>يُسجل مالك العلامة النقدية الموجودة وأرصدة الشبكة قبل بدء أول وردية</p></div>{data.canInitialize && <button type="button" className={styles.primary} disabled={disabled} onClick={() => open({ operation: "opening_balances", title: "الأرصدة الافتتاحية" })}>تسجيل الأرصدة الافتتاحية</button>}</div>}
       <section aria-label="منتجات المنيو">
         {!products.length ? <div className={styles.panel}><Empty title={data.products.length ? "لا توجد أصناف مطابقة" : "المنيو خالٍ من الأصناف"}>{data.products.length ? "جرّب اسمًا آخر أو اختر جميع الأصناف" : "أضف منتجات العلامة وصورها وأسعارها من إدارة المنيو"}</Empty></div> : <div className={styles.products}>{products.map((product) => {
           const quantity = cart.filter((line) => line.productId === product.id).reduce((sum, line) => sum + line.quantity, 0);
           const stock = quantityAvailable(product);
           return <button type="button" key={product.id} className={styles.product} disabled={disabled || quantity >= 9999} aria-label={`إضافة ${product.name} بسعر ${financeMoney(product.price)}`} onClick={() => addProduct(product)}>
-            {product.imageUrl ? <Image className={styles.productImage} src={product.imageUrl} alt="" width={360} height={300} unoptimized loading="lazy" /> : <span className={styles.productPlaceholder}><ImageIcon size={30} aria-hidden="true" /></span>}
+            <PosProductImage key={product.imageUrl} product={product} />
             {quantity > 0 && <span className={styles.productQuantity}>{quantity}</span>}<span className={styles.productBody}><span className={styles.productName}>{product.name}</span><span className={styles.productPrice}>{butcher ? <bdi>{new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(product.price)}</bdi> : <Numeric value={product.price} />}<small> ر س</small>{butcher && product.butcherDetails?.units[0] && <small> / {product.butcherDetails.units[0].label}</small>}</span>{product.stockTracked && <span className={stock <= 0 ? styles.negative : styles.muted}>{`رصيد المخزون ${stock}`}</span>}</span>
           </button>;
         })}</div>}
@@ -217,7 +251,8 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
         </div>
         <section className={checkoutStyles.dock} aria-label="ملخص الدفع الثابت">
           <div className={checkoutStyles.amountCard}><div className={checkoutStyles.amountCaption}><span>الإجمالي المستحق</span><small>{cartCount}</small></div><div className={checkoutStyles.amount}><bdi dir="ltr">{new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totals.total)}</bdi><small>ر س</small></div></div>
-          <button type="button" className={styles.primary} disabled={disabled || pricesChanged || !cart.length || (!shift && !butcher) || shift?.supervisor_paused} onClick={() => { setLocalError(""); setShowCheckout(true); }}>الدفع وإصدار الإيصال<ArrowRight size={18} aria-hidden="true" /></button>
+          {checkoutHint && <p id="pos-checkout-hint" className={checkoutStyles.hint} role="status">{checkoutHint}</p>}
+          <button type="button" className={styles.primary} disabled={!!checkoutBlocker} aria-describedby={checkoutHint ? "pos-checkout-hint" : undefined} onClick={beginCheckout}>{needsShift && !checkoutBlocker ? "بدء الوردية ومتابعة الدفع" : "الدفع وإصدار الإيصال"}<ArrowRight size={18} aria-hidden="true" /></button>
           <div className={checkoutStyles.utilities}>
             <button type="button" className={styles.secondary} disabled={disabled || !cart.length} onClick={() => { setCart([]); setDiscountValue(0); setLocalError(""); }}><Trash2 size={15} aria-hidden="true" />إفراغ السلة</button>
             <div className={shiftStyles.syncTools}><button type="button" className={styles.iconButton} disabled={pending || state.offline.syncing || loggingOut} aria-label="تحديث ومزامنة الكاشير" title="تحديث ومزامنة الكاشير" onClick={state.refresh}><RefreshCw size={18} aria-hidden="true" /></button><FinancePosOfflineStatus state={state.offline} /></div>
@@ -240,7 +275,8 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
     <Modal open={showCheckout} title="الدفع وإصدار الإيصال" onClose={() => { if (!pending) setShowCheckout(false); }} panelClassName={checkoutStyles.dialog} footer={<div className={checkoutStyles.footer}>
       <div className={checkoutStyles.amountCard}><div className={checkoutStyles.amountCaption}><span>الإجمالي المستحق</span><small>{cartCount}</small></div><div className={checkoutStyles.amount}><bdi dir="ltr">{new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totals.total)}</bdi><small>ر س</small></div></div>
       <div className={checkoutStyles.footerActions}>
-        <button type="button" className={styles.primary} disabled={disabled || pricesChanged || !cart.length || (!shift && !butcher) || shift?.supervisor_paused} onClick={checkout}>{pending ? "جار تسجيل العملية" : "تأكيد الاستلام وإصدار إيصال"}<Check size={17} aria-hidden="true" /></button>
+        {checkoutHint && <p className={checkoutStyles.hint} role="status">{checkoutHint}</p>}
+        <button type="button" className={styles.primary} disabled={!!checkoutBlocker || needsShift} onClick={checkout}>{pending ? "جار تسجيل العملية" : "تأكيد الاستلام وإصدار إيصال"}<Check size={17} aria-hidden="true" /></button>
         <button type="button" className={styles.secondary} disabled={pending || !lines.length} onClick={previewReceipt}><Eye size={18} aria-hidden="true" />معاينة الإيصال</button>
       </div>
     </div>}>
@@ -269,7 +305,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
           {paymentKind === "bank" && <p className={styles.notice} style={{ marginTop: 14 }}>تحقق من وصول التحويل البنكي قبل تسجيل البيع</p>}
         </section></div>
     </Modal>
-    <Modal open={!!form} title={form?.title ?? "الوردية"} onClose={() => { if (!pending && !operationBusy) setForm(null); }} panelClassName={["refund", "shift_purchase"].includes(form?.operation ?? "") ? styles.invoicePanel : "flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"}>{form && <FinanceOperationForm key={form.operation} form={form} snapshot={data} pending={pending} error={error} onInventoryBusyChange={setOperationBusy} onInventorySaved={state.applyInventoryCatalog} onInventoryUnitsChanged={state.applyInventoryUnits} onCancel={() => setForm(null)} onSubmit={async (operation, payload) => { const saved = await state.execute(operation, payload); if (saved) { setForm(null); if (operation === "shift_close" && slug && !butcher) await finishLogout(); if (operation === "refund" && saved.status !== "pending") setReceiptId(saved.id); } return !!saved; }} />}</Modal>
+    <Modal open={!!form} title={form?.title ?? "الوردية"} onClose={() => { if (!pending && !operationBusy) setForm(null); }} panelClassName={["refund", "shift_purchase"].includes(form?.operation ?? "") ? styles.invoicePanel : styles.shiftDialog}>{form && <FinanceOperationForm key={form.operation} form={form} snapshot={data} pending={pending} error={error} onInventoryBusyChange={setOperationBusy} onInventorySaved={state.applyInventoryCatalog} onInventoryUnitsChanged={state.applyInventoryUnits} onCancel={() => setForm(null)} onSubmit={async (operation, payload) => { const saved = await state.execute(operation, payload); if (saved) { setForm(null); if (operation === "shift_close" && slug && !butcher) await finishLogout(); if (operation === "refund" && saved.status !== "pending") setReceiptId(saved.id); } return !!saved; }} />}</Modal>
     <Modal open={showHistory} title="سجل المبيعات" onClose={() => setShowHistory(false)} panelClassName="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">{!butcher && <div className={styles.actions}><button type="button" className={styles.secondary} disabled={invoiceMessages.loading || !history.length} onClick={() => void invoiceMessages.refresh()}><RefreshCw size={16} aria-hidden="true" />تحديث حالة الرسائل</button></div>}{data.truncated && <p className={styles.notice}>يعرض السجل أحدث العمليات المتاحة</p>}{!history.length ? <Empty title="لا توجد مبيعات مسجلة" /> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>المستند</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th>{!butcher && <th>واتساب</th>}<th>الإجراء</th></tr></thead><tbody>{history.map((document) => <tr key={document.id}><td>{document.number ? `#${document.number}` : document.local_reference}{document.sync_status && document.sync_status !== "synced" && <small className={styles.muted}> بانتظار المزامنة</small>}</td><td>{financeDate(document.created_at)}</td><td><Numeric value={document.total} money /></td><td>{financeDocumentStatus(document)}</td>{!butcher && <td><FinanceInvoiceMessageStatus entry={invoiceMessages.entries[document.id]} offline={document.sync_status === "queued" || document.sync_status === "conflict"} /></td>}<td><div className={styles.actions}><button className={styles.secondary} onClick={() => { setShowHistory(false); setReceiptId(document.id); }}>الإيصال</button>{!document.refunded && (!document.sync_status || document.sync_status === "synced") && <button className={styles.danger} disabled={disabled} onClick={() => { setShowHistory(false); open({ operation: "refund", title: `مرتجع مبيعات #${document.number}`, values: { documentId: document.id } }); }}>إرجاع</button>}</div></td></tr>)}</tbody></table></div>}</Modal>
     {receiptPreview && <FinanceReceiptDialog preview receiptBrand={state.offline.brand} document={receiptPreview} snapshot={data} onClose={() => setReceiptPreview(null)} />}
     {printDocument && printer.ready && <FinanceReceiptDialog key={`${data.cafe.id}:automatic:${printId}`} document={printDocument} snapshot={data} receiptBrand={state.offline.brand} autoPrint={printer.autoEnabled} backgroundAutoPrint autoPrintKey={printId} onPrint={printer.handler(printId, true)} onClose={() => setPrintQueue((queue) => queue.filter((id) => id !== printId))} />}

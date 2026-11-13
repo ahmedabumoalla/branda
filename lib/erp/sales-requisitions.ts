@@ -1,0 +1,10 @@
+import {z} from 'zod';
+import {trackingRowSchema,type TrackingMode,type TrackingRow} from './inventory-tracking';
+import type {BranchScope} from './branches';
+export const salesRequisitionCommandSchema=z.object({action:z.enum(['deliver','receive_return']),requestId:z.uuid(),payload:z.object({id:z.uuid(),revision:z.number().int().positive(),date:z.iso.date(),note:z.string().trim().max(5000).default(''),lines:z.array(z.object({id:z.uuid(),quantity:z.number().finite().positive().max(1e6).multipleOf(.001),tracking:z.array(trackingRowSchema).max(1000).default([])})).min(1).max(100).refine(lines=>new Set(lines.map(l=>l.id)).size===lines.length,'لا تكرر السطر')})});
+export type SalesRequisitionLine={id:string;itemId:string;name:string;quantity:number;delivered:number;cancelled:number;pending:number;unit:string;saleUnit:string;factor:number;trackingMode:TrackingMode};
+export type SalesRequisition={id:string;revision:number;invoiceId:string;number:number;customer:string;warehouseId:string;warehouse:string;date:string;lines:SalesRequisitionLine[]};
+export type SalesRequisitionReturn={id:string;revision:number;requestId:string;refundId:string;number:number;sourceLineId:string;quantity:number;cancelled:number;lines:{id:string;quantity:number;received:number;cost:number;releaseId:string;name:string;unit:string}[]};
+export type SalesRequisitionSnapshot={slug:string;canApprove:boolean;branchScope?:BranchScope;requests:SalesRequisition[];returns:SalesRequisitionReturn[];releases:{id:string;sourceLineId:string;documentId:string;quantity:number;cost:number;returnReserved:number;date:string}[];receipts:{id:string;returnLineId:string;documentId:string;quantity:number;cost:number;date:string}[]};
+export type RequisitionQuantity={quantity:number;tracking:TrackingRow[]};
+export function requisitionState(lines:SalesRequisitionLine[]){if(lines.some(l=>Number(l.pending)>0))return lines.some(l=>Number(l.delivered)>0)?'مسلم جزئيًا':'بانتظار التسليم';return lines.every(l=>Number(l.cancelled)===Number(l.quantity))?'ملغى بالمرتجع':'مكتمل';}

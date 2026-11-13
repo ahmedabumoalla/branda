@@ -354,6 +354,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
               <KeyRound className="h-6 w-6" />
               تغيير كلمة المرور
             </h2>
+            <a href="/account/cancel" className="mt-4 inline-block rounded-xl border border-[#c9a99c] px-4 py-2 text-sm font-bold text-[#873c32]">إلغاء حساب علامة وأرشفة بياناتها</a>
 
             <form onSubmit={changePassword} className="mt-5 grid gap-4">
               <PasswordField

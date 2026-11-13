@@ -1,4 +1,5 @@
 import "server-only";
+import { brandSlugAllowsNewWork } from '@/lib/data/account-cancellation';
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGreenApiFinanceReceiptConfigured, sendGreenApiFinanceReceipt } from "@/lib/whatsapp/green-api";
@@ -44,7 +45,9 @@ export async function dispatchFinancePosCustomerMessages(cafeId?: string) {
     let status: "queued" | "rejected" | "unknown" = "rejected";
     let messageId: string | undefined;
     let errorCode = "customer_receipt_invalid";
-    if (parsed.success) {
+    const allowed = parsed.success && await brandSlugAllowsNewWork(parsed.data.slug);
+    if (parsed.success && !allowed) errorCode = 'brand_archived_before_dispatch';
+    if (parsed.success && allowed) {
       if (parsed.data.loyaltyStatus === "stamped" && parsed.data.cardCode) walletCodes.add(parsed.data.cardCode);
       let pdf: Uint8Array | undefined;
       const renderStarted = Date.now();
@@ -58,7 +61,10 @@ export async function dispatchFinancePosCustomerMessages(cafeId?: string) {
       }
       errorCode = "customer_receipt_render_failed";
       if (pdf) {
-        try {
+        if (!await brandSlugAllowsNewWork(parsed.data.slug)) {
+          errorCode = 'brand_archived_before_dispatch';
+          if(parsed.data.cardCode)walletCodes.delete(parsed.data.cardCode);
+        } else try {
           const result = await sendGreenApiFinanceReceipt({ phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data), pdf, invoiceNumber: parsed.data.receipt.number });
           status = result.status; messageId = result.providerMessageId;
           errorCode = result.errorCode ?? `customer_message_${status}`;

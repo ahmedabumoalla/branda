@@ -189,7 +189,7 @@ export function DashboardAppLayout({
     <ResponsiveAppShell
       variant="dashboard"
       mobileTitle={maintenanceSession ? "لوحة التحكم — وضع الصيانة" : "لوحة التحكم"}
-      desktopSidebarWidth={sidebarCollapsed ? "72px" : "252px"}
+      desktopSidebarWidth={sidebarCollapsed ? "64px" : (pathname === "/dashboard/finance" || pathname.startsWith("/dashboard/system/")) ? "210px" : "240px"}
       sidebar={(close) => (
         <DashboardSidebar
           snapshot={guard.snapshot}

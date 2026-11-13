@@ -1,0 +1,1 @@
+.portal{max-width:1300px;margin:auto;min-height:100vh}.portal table{min-width:600px}.portal button{min-height:44px}@media print{.screen{display:none!important}.portal{padding:0;background:white;min-height:0}.portal table{min-width:0;font-size:11px}.portal table tr{break-inside:avoid}.portal section{border:0}.portal :global(a){text-decoration:none}@page{size:A4;margin:12mm}}

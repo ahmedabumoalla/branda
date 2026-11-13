@@ -1,0 +1,23 @@
+const fs=require('fs'),path=require('path'),ts=require('typescript'),assert=require('node:assert/strict'),Module=require('module');
+const folder=path.resolve('.codex-tmp/erp-commission-tests');fs.mkdirSync(folder,{recursive:true});
+function compile(source,name){const code=ts.transpileModule(fs.readFileSync(source,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText.replace('require("@/lib/finance/company-invoice")','require("./company-invoice.cjs")');fs.writeFileSync(path.join(folder,name+'.cjs'),code);return require(path.join(folder,name+'.cjs'));}
+compile('lib/finance/company-invoice.ts','company-invoice');const {calculateCommission,commissionRuleSchema}=compile('lib/erp/commissions.ts','commissions');
+let checks=0;const eq=(actual,expected,label)=>{assert.deepEqual(actual,expected,label);checks++;};
+const person=crypto.randomUUID(),product=crypto.randomUUID(),base={id:null,revision:0,name:'Commission',active:true,description:'',targetType:'revenue',targetAmount:100,type:'flat',tierType:'fixed',interpolation:'steps',items:[{id:crypto.randomUUID(),kind:'product',targets:[product],amount:5,amountType:'percentage'}],tiers:[],staffIds:[person],roles:[],departmentIds:[],branchIds:[]};
+const line={id:crypto.randomUUID(),documentId:crypto.randomUUID(),number:'1',productId:product,category:'Materials',name:'Item',quantity:1,net:15,employeeId:person,issuedAt:'2026-11-13'};
+eq(commissionRuleSchema.safeParse(base).success,true,'valid reference flat rule');eq(calculateCommission(base,[line]).total,.75,'reference sale 15 and five percent gives 0.75');
+eq(calculateCommission(base,[{...line,productId:crypto.randomUUID()}]).total,0,'ineligible product contributes nothing');
+eq(calculateCommission({...base,items:[...base.items,{id:crypto.randomUUID(),kind:'all',targets:[],amount:25,amountType:'percentage'}]},[line]).total,.75,'specific product wins overlap without double counting');
+eq(calculateCommission({...base,items:[{...base.items[0],amountType:'fixed',amount:50}]},[{...line,quantity:4}]).total,50,'fixed amount paid per eligible invoice line');
+const tier={...base,type:'tiers',targetAmount:10000,interpolation:'linear',items:[{...base.items[0],amount:100}],tiers:[{target:60,value:400},{target:100,value:2000}]};
+eq(calculateCommission(tier,[{...line,net:6500}]).total,600,'reference linear 65 percent between 60 and 100 gives 600');
+eq(calculateCommission({...tier,interpolation:'steps'},[{...line,net:6500}]).total,400,'step calculation uses achieved threshold');
+eq(calculateCommission({...tier,interpolation:'steps'},[{...line,net:5999}]).total,0,'unmet first step gives zero');
+eq(calculateCommission(tier,[{...line,net:15000}]).total,2000,'linear calculation caps at final tier');
+eq(calculateCommission({...tier,targetType:'volume',targetAmount:10},[{...line,quantity:6.5}]).total,600,'quantity goals use units');
+eq(calculateCommission({...tier,tierType:'percentage',tiers:[{target:0,value:5},{target:100,value:10}]},[{...line,net:10000}]).total,1000,'percentage tier applies to eligible achievement');
+eq(commissionRuleSchema.safeParse({...base,staffIds:[]}).success,false,'must assign rule');
+eq(commissionRuleSchema.safeParse({...tier,tiers:[{target:60,value:1},{target:60,value:2}]}).success,false,'duplicate tier rejected');
+eq(commissionRuleSchema.safeParse({...base,targetAmount:0}).success,false,'zero target rejected');
+eq(commissionRuleSchema.safeParse({...base,items:[{...base.items[0],amount:NaN}]}).success,false,'NaN rejected');
+console.log(JSON.stringify({passed:true,checks,scope:'Commission flat, linear and stepped calculation using reference examples and authorization input constraints'}));

@@ -1,0 +1,25 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),ts=require('typescript'),React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+function load(file,mocks={}){const exports={};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;new Function('require','exports',code)(name=>{if(name in mocks)return mocks[name];if(name==='@/components/erp/branches/context')return {withBranchScope:(input,snapshot)=>({...input,branchScope:snapshot?.branchScope??null})};if(name.endsWith('.css'))return new Proxy({},{get:(_,key)=>key});if(name.startsWith('@/')||name.startsWith('./')){const base=name.startsWith('@/')?name.slice(2):path.join(path.dirname(file),name);return load(fs.existsSync(base+'.ts')?base+'.ts':base+'.tsx',mocks)}return require(name)},exports);return exports;}
+let checks=0;const eq=(a,b,label)=>{assert.deepEqual(a,b,label);checks++};
+const domain=load('lib/erp/installments.ts');
+const schedule={amount:33.33,start:'2028-01-31',frequency:'monthly',note:''};
+eq(domain.invoiceInstallments(100,schedule).map(r=>r.amount),[33.33,33.33,33.33,.01],'cent remainder preserved');
+eq(domain.invoiceInstallments(100,schedule).map(r=>r.date),['2028-01-31','2028-02-29','2028-03-31','2028-04-30'],'leap year month end');
+const rows=domain.invoiceInstallmentBalances({total:100,outstanding:30,refunded_total:40},{...schedule,amount:25});eq(rows.reduce((sum,r)=>sum+r.remaining,0),30,'refund-aware balances match total debt');eq(rows.map(r=>r.cancelled),[0,0,15,25],'credit cancels last installments');
+eq(domain.invoiceInstallments(100,{...schedule,start:'2026-02-31'}),[],'invalid calendar date rejected');
+eq(domain.installmentCommandSchema.safeParse({action:'collect',payload:{amount:-1}}).success,false,'malformed negative collection rejected');
+const id='00000000-0000-4000-8000-000000000001',agreement={id,number:7,invoiceNumber:'INV-7',customerId:id,customerName:'<img src=x onerror=alert(1)>',total:100,outstanding:70,paid:30,refundedTotal:0,refunded:false,createdAt:'2026-11-13T08:00:00Z',schedule:{...schedule,amount:25},nextDue:'2028-02-29',status:'partial',row:null};
+const templates=[{id,kind:'installment_agreement',name:'Agreement',layout:{active:true,isDefault:true}},{id:id.replace(/1$/,'2'),kind:'installment_receipt',name:'Receipt',layout:{active:true,isDefault:true}}];
+const filters={mode:'agreements',query:'',status:'all',from:'',to:'',sort:'newest',offset:0,limit:30};
+const actions={readErpInstallments:async()=>({ok:false,message:'offline'}),readErpInstallmentDetail:async()=>({ok:false,message:'offline'}),mutateErpInstallments:async()=>({ok:false,message:'offline'})};
+const {InstallmentWorkspace}=load('components/erp/installments/installment-workspace.tsx',{'@/app/actions/erp-installments':actions,'next/link':({href,children,...props})=>React.createElement('a',{href,...props},children),'@/components/finance/company-invoice-files':{CompanyInvoiceFiles:()=>null},'@/components/erp/templates/document-template-print':{DocumentTemplatePrint:()=>null}});
+const initial={items:[agreement],total:1,canWrite:true,templates,accounts:[],collectors:[],actorId:id};
+const html=renderToStaticMarkup(React.createElement(InstallmentWorkspace,{initial,slug:'brand',brand:'Brand',initialFilters:filters}));
+assert(html.includes('section=parties')&&html.includes('view=customer'),'customer links target existing finance customer route');checks++;
+assert(html.includes('section=sales')&&html.includes('view=invoice'),'invoice link targets sales');checks++;
+assert(!html.includes('<img src=x')&&html.includes('&lt;img'),'customer-authored text escaped in lists');checks++;
+const settingsHtml=renderToStaticMarkup(React.createElement(InstallmentWorkspace,{initial,slug:'brand',brand:'Brand',initialFilters:filters,settingsPage:true}));assert(settingsHtml.includes('kind=installment_agreement')&&settingsHtml.includes('kind=installment_receipt'),'settings use shared template routes');checks++;
+let printProps;const {InstallmentPrint}=load('components/erp/installments/installment-print.tsx',{'@/components/erp/templates/document-template-print':{DocumentTemplatePrint:props=>{printProps=props;return null}}});
+renderToStaticMarkup(React.createElement(InstallmentPrint,{record:{agreement,rows},template:templates[0],brand:'Brand',slug:'brand'}));eq(printProps.table.rows.length,4,'agreement print includes full schedule');eq(printProps.values['رقم_الفاتورة'],'INV-7','real invoice number used in shared template');
+renderToStaticMarkup(React.createElement(InstallmentPrint,{record:{agreement,rows},template:templates[1],brand:'Brand',slug:'brand',row:rows[2]}));eq(printProps.table.rows.length,1,'receipt print scopes selected installment');eq(printProps.values['رقم_القسط'],'3','receipt variable identity');
+console.log(JSON.stringify({passed:true,checks,at:new Date().toISOString(),scope:'Installment rounding/calendar/allocation, server validation, rendered links/escaping and shared print integration'}));

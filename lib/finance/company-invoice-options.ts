@@ -1,7 +1,7 @@
 export type InvoiceDeposit = { kind: "amount" | "percent"; value: number; paid: boolean };
 export type InvoiceDelivery = { confirmed: boolean; date: string };
 export type InvoiceFile = { id: string; name: string; size: number };
-export type ShippingMode = "none" | "main" | "secondary";
+export type ShippingMode = "auto" | "none" | "main" | "secondary";
 export const COMPANY_FILE_BUCKET = "branda-company-invoice-files";
 export const COMPANY_FILE_LIMIT = 8 * 1024 * 1024;
 
@@ -11,6 +11,7 @@ export function invoiceDepositAmount(total: number, deposit: InvoiceDeposit) {
 
 export function invoiceShippingAddress(details: Record<string, string> | undefined, mode: ShippingMode) {
   if (mode === "none") return "";
+  if (mode === "auto") mode = ["shippingStreet", "shippingCity", "shippingCountry"].every(key => details?.[key]?.trim()) ? "secondary" : "main";
   return ["buildingNumber", "street", "district", "city", "postalCode", "country"].map(key => details?.[mode === "secondary" ? "shipping" + key[0].toUpperCase() + key.slice(1) : key]).filter(Boolean).join(" ");
 }
 

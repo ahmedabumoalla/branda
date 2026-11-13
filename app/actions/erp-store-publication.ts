@@ -1,0 +1,6 @@
+"use server";
+import { getBrandFinanceContext } from "@/lib/data/brand-finance";
+import { storeRpcError } from "@/lib/data/erp-store";
+import { storePublicationInput, type StorePublication } from "@/lib/erp/store-public";
+export async function readStorePublication():Promise<StorePublication>{const {client,cafe}=await getBrandFinanceContext();if(cafe.role!=="owner")throw new Error("النشر متاح للمالك فقط");const {data,error}=await client.rpc("erp_store_publish",{p_cafe:cafe.id,p_action:"read"});storeRpcError(error);return data as StorePublication;}
+export async function updateStorePublication(action:"publish"|"unpublish",input:unknown){try{if(!["publish","unpublish"].includes(action))throw new Error("عملية غير صالحة");const parsed=storePublicationInput.parse(input);const {client,cafe}=await getBrandFinanceContext();if(cafe.role!=="owner")throw new Error("النشر متاح للمالك فقط");const {data,error}=await client.rpc("erp_store_publish",{p_cafe:cafe.id,p_action:action,p_input:parsed});if(error?.code==="22023")throw new Error("راجع الصفحات المحددة وروابط القائمة وأسماء حقول النماذج");storeRpcError(error);return{ok:true as const,data:data as StorePublication};}catch(error){return{ok:false as const,message:error instanceof Error?error.message:"تعذر تحديث النشر"};}}

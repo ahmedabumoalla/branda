@@ -17,6 +17,7 @@ import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import type { AppNotification } from "@/lib/mock/notifications";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
 import { LOCO_BRAND_SLUG } from "@/lib/whatsapp/brand-connection-types";
+import shell from "./dashboard-sidebar.module.css";
 
 type SidebarProps = {
   snapshot?: DashboardShellSnapshot;
@@ -55,6 +56,7 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
   const isGifts = settings.businessCategory === "gifts_flowers";
   const ToggleIcon = collapsed ? ChevronsLeft : ChevronsRight;
   const toggleLabel = collapsed ? "توسيع القائمة الجانبية" : "طي القائمة الجانبية";
+  const integrated = (pathname === "/dashboard/finance" || pathname.startsWith("/dashboard/system/")) && !collapsed;
 
   // The shared package catalog also defines desktop, collapsed and mobile navigation.
   // Wait for account context; never flash guessed package permissions.
@@ -72,39 +74,39 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
 
   const exitLabel = onEndMaintenance ? (isEndingMaintenance ? "جاري إنهاء الصيانة" : "إنهاء وضع الصيانة") : "تسجيل الخروج";
 
-  return <aside dir="rtl" className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-[#E5B85C]/15 text-[#F8EFE7] shadow-[-18px_0_60px_rgba(0,0,0,0.56)] transition-colors"
+  return <aside dir="rtl" className={`sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-[#E5B85C]/15 text-[#F8EFE7] shadow-[-18px_0_60px_rgba(0,0,0,0.56)] transition-colors ${integrated ? shell.integrated : ""}`}
     style={{ background: "radial-gradient(circle at 100% 0%, rgba(229, 184, 92, 0.12), transparent 26%), linear-gradient(180deg, #11100E 0%, #090908 54%, #0D0C0A 100%)" }}>
-    <div className={`border-b border-white/10 ${collapsed ? "px-2 py-3" : "px-3 py-3"}`}>
+    <div className={`${shell.brandHeader} border-b border-white/10 ${collapsed ? "px-2 py-3" : "px-3 py-3"}`}>
       <div className={`flex items-center ${collapsed ? "flex-col gap-2" : "justify-between gap-3"}`}>
         <div className={collapsed ? "flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-white/[0.08] ring-1 ring-white/10" : "min-w-0"}>
-          <BarndaksaLogo variant="dark" width={collapsed ? 36 : 116} height={collapsed ? 20 : 46} priority className={collapsed ? "scale-90" : ""} />
+          <BarndaksaLogo variant="dark" width={collapsed ? 36 : 116} height={collapsed ? 20 : 46} priority className={collapsed ? "scale-90" : shell.brandLogo} />
         </div>
         <button type="button" onClick={() => onCollapsedChange?.(!collapsed)} aria-label={toggleLabel} title={toggleLabel}
           className="flex h-8 w-8 shrink-0 items-center justify-center border border-[#E5B85C]/25 bg-[#E5B85C]/10 text-[#FFD77E] shadow-[0_0_22px_rgba(229,184,92,0.10)] transition hover:border-[#FFD77E]/55 hover:bg-[#E5B85C]/20 hover:text-white">
           <ToggleIcon className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </div>
-      {!collapsed && <p className="mt-1 text-right text-[11px] font-normal text-[#A99A90]">لوحة تحكم برندة</p>}
+      {!collapsed && <p className={`${shell.brandCaption} mt-1 text-right text-[11px] font-normal text-[#A99A90]`}>لوحة تحكم برندة</p>}
     </div>
 
-    {!collapsed && <div className="mx-3 mt-3 border border-white/[0.08] border-r-[#E5B85C]/35 bg-white/[0.025] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_42px_rgba(0,0,0,0.22)]">
-      <div className="flex items-center gap-2.5">
-        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden bg-[#FCF8F3] shadow-md ring-1 ring-[#E5B85C]/25">
+    {!collapsed && <div className={`${shell.identity} mx-3 mt-3 border border-white/[0.08] border-r-[#E5B85C]/35 bg-white/[0.025] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_42px_rgba(0,0,0,0.22)]`}>
+      <div className={`${shell.identityMain} flex items-center gap-2.5`}>
+        <div className={`${shell.cafeLogo} relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden bg-[#FCF8F3] shadow-md ring-1 ring-[#E5B85C]/25`}>
           <CafeLogo name={cafeName} logoUrl={cafeLogoUrl} size="sm" className="!shadow-none" />
         </div>
         <div className="min-w-0 flex-1 text-right">
-          <p className="truncate text-[10px] font-normal text-[#A99A90]">بطاقة العلامة التجارية</p>
-          <h2 className="mt-0.5 truncate text-[14px] font-semibold text-white">{cafeName}</h2>
-          {settings.ownerName && <p className="mt-0.5 truncate text-[10px] font-normal text-[#8F8176]">{settings.ownerName}</p>}
+          <p className={`${shell.identityCaption} truncate text-[10px] font-normal text-[#A99A90]`}>بطاقة العلامة التجارية</p>
+          <h2 className={`${shell.cafeName} mt-0.5 truncate text-[14px] font-semibold text-white`} title={cafeName}>{cafeName}</h2>
+          {settings.ownerName && <p className={`${shell.ownerName} mt-0.5 truncate text-[10px] font-normal text-[#8F8176]`}>{settings.ownerName}</p>}
         </div>
       </div>
-      {navigation.subscription && <SubscriptionCountdown subscription={navigation.subscription} />}
-      {servicesAvailable && <div className="mt-2.5 flex gap-1.5"><NotificationsPanel live={isSalon} initialNotifications={notifications} className="[&>button]:h-8 [&>button]:w-8 [&>button]:rounded-lg [&>button]:border-white/10 [&>button]:bg-white/[0.06]" /></div>}
+      {navigation.subscription && <div className={shell.subscription}><SubscriptionCountdown subscription={navigation.subscription} /></div>}
+      {servicesAvailable && <div className={`${shell.notifications} mt-2.5 flex gap-1.5`}><NotificationsPanel live={isSalon} initialNotifications={notifications} className="[&>button]:h-8 [&>button]:w-8 [&>button]:rounded-lg [&>button]:border-white/10 [&>button]:bg-white/[0.06]" /></div>}
     </div>}
 
-    <nav aria-label="قائمة العلامة" className={`flex-1 space-y-1 ${collapsed ? "px-2 py-3" : "px-2.5 py-3"}`}>
-      {links.map(({ feature, access }) => {
-        if (feature.id === "finance" && access?.effectiveEnabled) return <FinanceSidebarMenu key={feature.id} slug={settings.cafeSlug} collapsed={collapsed} onExpand={() => onCollapsedChange?.(false)} onNavigate={onNavigate} />;
+    <nav aria-label="قائمة العلامة" className={`${shell.navigation} flex-1 space-y-1 ${collapsed ? "px-2 py-3" : "px-2.5 py-3"}`}>
+      {links.filter(({ feature, access }) => feature.id === "finance" && access?.effectiveEnabled).map(({ feature }) => <FinanceSidebarMenu key={feature.id} collapsed={collapsed} onExpand={() => onCollapsedChange?.(false)} onNavigate={onNavigate} cafeSlug={settings.cafeSlug} isSalon={isSalon} isGifts={isGifts} enabledFeatures={links.filter(link => link.access?.effectiveEnabled).map(link => link.feature.id)} />)}
+      {links.filter(({ feature }) => feature.id !== "finance").map(({ feature, access }) => {
         const Icon = feature.id === "menu" ? (isSalon ? Scissors : Package) : feature.id === "loyalty" ? Star : feature.id === "offers" ? Gift : feature.id === "pager" ? BellRing : feature.id === "marketing_campaigns" ? Megaphone : feature.id === "finance" ? WalletCards : Settings;
         const title = isGifts && feature.id === "menu" ? "المنتجات والخدمات" : isGifts && feature.id === "settings" ? "إعدادات المتجر" : isSalon && feature.id === "menu" ? "الخدمات والمنتجات" : isSalon && feature.id === "settings" ? "إعدادات الصالون" : feature.sidebarLabel ?? feature.titleAr;
         const locked = !access?.effectiveEnabled;

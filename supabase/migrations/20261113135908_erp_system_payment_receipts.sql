@@ -1,0 +1,31 @@
+BEGIN;
+CREATE TABLE erp_settings_private.payment_proofs(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),cafe_id uuid NOT NULL,integration_id uuid NOT NULL,provider text NOT NULL,provider_id text NOT NULL,invoice_id uuid NOT NULL,amount numeric(18,2) NOT NULL CHECK(amount>0),currency text NOT NULL,fingerprint text NOT NULL,verified_at timestamptz NOT NULL DEFAULT now(),actor uuid NOT NULL,used_at timestamptz,receipt_id uuid,FOREIGN KEY(cafe_id,integration_id) REFERENCES public.erp_system_integrations(cafe_id,id),FOREIGN KEY(cafe_id,invoice_id) REFERENCES public.bf_documents(cafe_id,id),FOREIGN KEY(cafe_id,receipt_id) REFERENCES public.bf_documents(cafe_id,id),UNIQUE(cafe_id,provider,provider_id));
+CREATE FUNCTION public.erp_system_payment_proof(p_cafe uuid,p_integration uuid,p_revision integer,p_actor uuid,p_provider_id text,p_invoice uuid,p_amount numeric,p_currency text,p_fingerprint text) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$DECLARE i public.erp_system_integrations;proof erp_settings_private.payment_proofs;BEGIN
+ SELECT * INTO i FROM public.erp_system_integrations WHERE cafe_id=p_cafe AND id=p_integration AND revision=p_revision AND channel='payment' AND enabled AND verification='verified' FOR SHARE;
+ IF i.id IS NULL OR coalesce((i.config->>'sandbox')::boolean,false) OR p_provider_id IS NULL OR p_amount IS NULL OR p_currency IS NULL OR p_fingerprint IS NULL OR NOT EXISTS(SELECT 1 FROM public.cafes WHERE id=p_cafe AND owner_user_id=p_actor AND deleted_at IS NULL) OR p_provider_id!~'^[A-Za-z0-9_-]{5,100}$' OR p_amount<=0 OR p_amount>1e9 OR p_amount<>round(p_amount,2) OR p_currency NOT IN('SAR','USD','EUR','GBP','AED') OR p_fingerprint!~'^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'بيانات تأكيد الدفع غير صالحة';END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_cafe::text||i.provider||p_provider_id,0));
+ SELECT * INTO proof FROM erp_settings_private.payment_proofs WHERE cafe_id=p_cafe AND provider=i.provider AND provider_id=p_provider_id FOR UPDATE;
+ IF proof.id IS NOT NULL THEN IF proof.integration_id<>p_integration OR proof.actor<>p_actor OR proof.invoice_id<>p_invoice OR proof.amount<>p_amount OR proof.currency<>p_currency THEN RAISE EXCEPTION 'عملية الدفع مرتبطة بفاتورة أو مبلغ مختلف';END IF;IF proof.used_at IS NULL THEN UPDATE erp_settings_private.payment_proofs SET verified_at=now(),fingerprint=p_fingerprint WHERE id=proof.id;END IF;RETURN proof.id;END IF;
+ INSERT INTO erp_settings_private.payment_proofs(cafe_id,integration_id,provider,provider_id,invoice_id,amount,currency,fingerprint,actor) VALUES(p_cafe,p_integration,i.provider,p_provider_id,p_invoice,p_amount,p_currency,p_fingerprint,p_actor) RETURNING id INTO proof.id;RETURN proof.id;
+END $$;
+CREATE FUNCTION public.erp_system_payment_collect(p_cafe uuid,p_proof uuid,p_request uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$DECLARE proof erp_settings_private.payment_proofs;i public.erp_system_integrations;invoice public.bf_company_invoices;rate numeric;amount numeric;result jsonb;BEGIN
+ PERFORM erp_settings_private.authorize(p_cafe);IF p_request IS NULL THEN RAISE EXCEPTION 'معرف العملية مطلوب';END IF;
+ SELECT * INTO proof FROM erp_settings_private.payment_proofs WHERE cafe_id=p_cafe AND id=p_proof FOR UPDATE;
+ IF proof.id IS NULL OR proof.actor<>auth.uid() THEN RAISE EXCEPTION 'تأكيد الدفع غير متاح' USING ERRCODE='42501';END IF;
+ IF proof.used_at IS NOT NULL THEN RETURN jsonb_build_object('id',proof.receipt_id,'reused',true);END IF;
+ IF proof.verified_at<now()-interval '2 minutes' THEN RAISE EXCEPTION 'انتهى تأكيد المزود أعد التحقق';END IF;
+ SELECT * INTO i FROM public.erp_system_integrations WHERE cafe_id=p_cafe AND id=proof.integration_id AND enabled AND verification='verified' FOR SHARE;
+ SELECT * INTO invoice FROM public.bf_company_invoices WHERE cafe_id=p_cafe AND document_id=proof.invoice_id;
+ IF i.id IS NULL OR coalesce((i.config->>'sandbox')::boolean,false) OR invoice.document_id IS NULL OR coalesce(invoice.snapshot->>'currency','SAR')<>proof.currency OR nullif(i.config->>'accountId','') IS NULL THEN RAISE EXCEPTION 'راجع الفاتورة وعملتها وحساب التحصيل';END IF;
+ rate:=coalesce((invoice.snapshot->>'exchangeRate')::numeric,1);IF rate<=0 THEN RAISE EXCEPTION 'سعر صرف الفاتورة غير صالح';END IF;amount:=round(proof.amount*rate,2);
+ result:=public.brand_finance_execute(p_cafe,'settlement',jsonb_build_object('documentId',proof.invoice_id,'accountId',i.config->>'accountId','amount',amount,'note','تحصيل موثق من '||i.provider||' — '||proof.provider_id),p_request);
+ UPDATE erp_settings_private.payment_proofs SET used_at=now(),receipt_id=(result->>'id')::uuid WHERE id=p_proof;
+ INSERT INTO public.erp_system_events(cafe_id,actor,action,target) VALUES(p_cafe,auth.uid(),'payment_collect',proof.invoice_id::text);RETURN result;
+END $$;
+ALTER TABLE erp_settings_private.payment_proofs ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON erp_settings_private.payment_proofs FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON FUNCTION public.erp_system_payment_proof(uuid,uuid,integer,uuid,text,uuid,numeric,text,text),public.erp_system_payment_collect(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.erp_system_payment_proof(uuid,uuid,integer,uuid,text,uuid,numeric,text,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.erp_system_payment_collect(uuid,uuid,uuid) TO authenticated;
+NOTIFY pgrst,'reload schema';
+COMMIT;

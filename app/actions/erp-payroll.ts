@@ -1,0 +1,13 @@
+"use server";
+import {branchRpc} from '@/lib/data/erp-branches';
+import {branchInput} from '@/lib/erp/branches';
+import {revalidatePath} from 'next/cache';
+import {readPayroll,writePayroll} from '@/lib/data/erp-payroll';
+import {getBrandFinanceContext} from '@/lib/data/brand-finance';
+import {readAssetSpreadsheet} from '@/lib/data/erp-assets-import';
+import {payrollContractSchema,payslipSchema} from '@/lib/erp/payroll';
+import {z} from 'zod';
+export async function getErpPayroll(slug:string){try{return {ok:true as const,data:await readPayroll(slug)};}catch(error){return {ok:false as const,message:error instanceof Error?error.message:'تعذر تحميل المرتبات'};}}
+export async function mutateErpPayroll(input:unknown,requestId:string,slug:string){try{const data=await writePayroll(input,requestId,slug);revalidatePath('/dashboard/system/payroll','layout');revalidatePath('/dashboard/finance');return {ok:true as const,data};}catch(error){return {ok:false as const,message:error instanceof Error?error.message:'تعذر حفظ المرتبات'};}}
+export async function previewPayrollImport(form:FormData,slug:string){try{const current=await readPayroll(slug);if(!current.canWrite)throw new Error('لا تملك صلاحية الاستيراد');const file=form.get('file');if(!(file instanceof File))throw new Error('اختر ملف الاستيراد');return {ok:true as const,rows:await readAssetSpreadsheet(file,String(form.get('delimiter')||','))};}catch(error){return {ok:false as const,message:error instanceof Error?error.message.replace('مائة أصل','مائة سجل'):'تعذر قراءة الملف'};}}
+export async function importPayrollRows(kind:'contract'|'payslip',rows:unknown,requestId:string,slug:string){try{if(!['contract','payslip'].includes(kind)||!z.uuid().safeParse(requestId).success)throw new Error('طلب الاستيراد غير صالح');const parsed=z.array(kind==='contract'?payrollContractSchema:payslipSchema).min(1).max(100).safeParse(Array.isArray(rows)?rows:(branchInput(rows) as {rows:unknown}).rows);if(!parsed.success)throw new Error('راجع حقول جميع الصفوف قبل الاستيراد');const {client,cafe}=await getBrandFinanceContext(slug);const result=await branchRpc(client,cafe.id,'erp_payroll_import',{p_cafe_id:cafe.id,p_kind:kind,p_rows:parsed.data,p_request_id:requestId},rows);if(result.error)throw new Error(result.error.message&&/[\u0600-\u06ff]/.test(result.error.message)?result.error.message:'تعذر استيراد الصفوف ولم يُحفظ أي سجل');revalidatePath('/dashboard/system/payroll','layout');return {ok:true as const,data:result.data as {ids:string[];count:number}};}catch(error){return {ok:false as const,message:error instanceof Error?error.message:'تعذر الاستيراد'};}}

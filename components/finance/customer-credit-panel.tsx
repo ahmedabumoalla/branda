@@ -8,7 +8,7 @@ import { canFinance } from "@/lib/finance/permissions";
 import { Field, Numeric, financeDate } from "./finance-ui";
 import css from "./finance.module.css";
 
-export function CustomerCreditPanel({ partyId, snapshot, disabled, onClose, onChanged, onInvoice }: { partyId: string; snapshot: FinanceSnapshot; disabled: boolean; onClose: () => void; onChanged: () => void; onInvoice: (id: string) => void }) {
+export function CustomerCreditPanel({ partyId, snapshot, disabled, onClose, onChanged, onInvoice }: { partyId: string; snapshot: Pick<FinanceSnapshot, "cafe" | "role" | "accounts" | "documents">; disabled: boolean; onClose: () => void; onChanged: () => void; onInvoice: (id: string) => void }) {
   const [attempt, setAttempt] = useState(0), [loaded, setLoaded] = useState<{ key: string; data?: CustomerCreditState; enabled?: boolean; error?: string } | null>(null);
   const [action, setAction] = useState<"receive" | "refund" | "unapply">("receive"), [amount, setAmount] = useState(""), [account, setAccount] = useState(""), [note, setNote] = useState(""), [payment, setPayment] = useState("");
   const [review, setReview] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(""), [message, setMessage] = useState("");
@@ -24,7 +24,7 @@ export function CustomerCreditPanel({ partyId, snapshot, disabled, onClose, onCh
   const current = loaded?.key === key ? loaded : null, data = current?.data;
   const blocked = disabled || busy || !data || !canFinance(snapshot.role, "accounting_write");
   const accounts = snapshot.accounts.filter(item => item.active && !item.is_cashier_drawer && ["cash", "bank", "pos"].includes(item.kind));
-  const kinds = { receive: "إضافة رصيد مقدم", refund: "إعادة رصيد للعميل", apply: "استخدام الرصيد في فاتورة", unapply: "إلغاء استخدام الرصيد" };
+  const kinds = { credit_note: "إشعار دائن", receive: "إضافة رصيد مقدم", refund: "إعادة رصيد للعميل", apply: "استخدام الرصيد في فاتورة", unapply: "إلغاء استخدام الرصيد" };
   function validate() {
     if (note.trim().length < 3) return "أدخل بيانًا للعملية من ثلاثة أحرف على الأقل";
     if (action === "unapply") return data?.applications.some(row => row.paymentId === payment && row.reversible) ? "" : "اختر دفعة رصيد قابلة للإلغاء";

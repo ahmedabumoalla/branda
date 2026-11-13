@@ -65,5 +65,6 @@ function RequestDetails({ request, snapshot }: { request: FinanceRefundRequest; 
       <div><div className={styles.balanceLine}><span>قيمة المرتجع</span><Numeric value={request.total} money /></div><div className={styles.balanceLine}><span>تخفيض الآجل</span><Numeric value={Math.max(0, request.total - request.paid)} money /></div><div className={styles.balanceLine}><strong>المبلغ المعاد للعميل</strong><Numeric value={request.paid} money /></div></div>
     </div>
     <div className={styles.notice}><strong>سبب المرتجع</strong><p>{request.payload.note}</p>{request.rejection_reason && <><strong>سبب الرفض</strong><p>{request.rejection_reason}</p></>}</div>
+    {request.payload.deferStock && <p className={styles.notice}>هذا الطلب يفصل استلام البضاعة عن تسوية المبلغ بعد الاعتماد أكّد الاستلام من تبويب الأذون المخزنية في الفاتورة المرتجعة</p>}
   </>;
 }

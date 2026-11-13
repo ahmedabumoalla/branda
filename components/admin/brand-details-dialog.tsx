@@ -19,6 +19,7 @@ import { BrandDeletionControl } from "./brand-deletion-control";
 import type { BrandDeletionResult } from "@/lib/data/brand-deletion";
 import { lockPageScroll } from "@/lib/ui/page-scroll-lock";
 import { BrandOwnerWelcome } from "./brand-owner-welcome";
+import { BrandArchiveFiles } from "./brand-archive-files";
 import { SubscriptionDeadlineEditor } from "./subscription-deadline-editor";
 import { formatSaudiDeadline } from "@/lib/platform/subscription-deadline";
 
@@ -184,6 +185,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
   return <>
     <BrandDialog title="ملف العلامة التجارية" close={close} busy={welcomePending || deadlinePending || planBusy}>
       <div className={s.overview}>
+        {cafe.cancellation && <BrandArchiveFiles cafeId={cafe.id} />}
         <div className={s.identity}>
           <div className={s.avatar}>{cafe.logoUrl
             // eslint-disable-next-line @next/next/no-img-element
@@ -199,7 +201,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
           <div><Users aria-hidden="true" /><span><strong>{cafe.customersCount ?? 0}</strong><small>عميل مسجل</small></span></div>
           <div><CircleDollarSign aria-hidden="true" /><span><strong>{formatSar(cafe.totalRevenue)}</strong><small>إجمالي إيراد الطلبات</small></span></div>
         </div>
-        <BrandOwnerWelcome cafe={cafe} disabled={maintenancePending} onBusyChange={setWelcomePending} onUpdated={onUpdated} />
+        {cafe.cancellation ? <section className={s.dataList} aria-label="سجل إلغاء الحساب"><h3>أُلغي الحساب بطلب المستخدم وأُرشفت بياناته</h3><DataList items={[["صاحب طلب الإلغاء", cafe.cancellation.actorName || cafe.ownerName], ["معرف صاحب الطلب", cafe.cancellation.actorId], ["وقت الإلغاء", new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh" }).format(new Date(cafe.cancellation.cancelledAt))], ["مصدر الإلغاء", "طلب المستخدم من حساب المالك"], ["سبب الإلغاء", cafe.cancellation.reason || "لم يذكر سببًا"]]} /><p>جميع تفاصيل العلامة محفوظة في الأرشيف ولا يمكن حذفها أو إعادة تفعيلها من أدوات الحالة المعتادة</p></section> : <BrandOwnerWelcome cafe={cafe} disabled={maintenancePending} onBusyChange={setWelcomePending} onUpdated={onUpdated} />}
         <div className={s.sectionLabel}><h3>إدارة العلامة</h3><span>اختر قسمًا لعرض التفاصيل والتحكم</span></div>
         <div className={s.actionGrid}>{sections.map(({ id, title, description, icon: Icon }) => <button type="button" key={id} className={s.actionTile}
           aria-haspopup="dialog" disabled={welcomePending} onClick={() => setSection(id)}>
@@ -208,7 +210,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         <footer className={s.overviewFooter}><span>حساب الصيانة <b dir="ltr">{cafe.maintenanceAccountNumber || "غير مضاف"}</b></span>
           <div className={s.maintenanceActions}>
             <button type="button" className={s.textButton} disabled={!cafe.maintenanceAccountNumber} onClick={copyAccount}><Copy aria-hidden="true" />نسخ الرقم</button>
-            <button type="button" className={`${s.primaryButton} ${s.maintenanceButton}`} disabled={maintenancePending || welcomePending || !cafe.maintenanceAccountNumber} aria-busy={maintenancePending} onClick={enterMaintenance}>
+            <button type="button" className={`${s.primaryButton} ${s.maintenanceButton}`} disabled={Boolean(cafe.cancellation) || maintenancePending || welcomePending || !cafe.maintenanceAccountNumber} aria-busy={maintenancePending} onClick={enterMaintenance}>
               <Wrench aria-hidden="true" />{maintenancePending ? "جارٍ الدخول إلى وضع الصيانة" : "دخول وضع الصيانة"}
             </button>
           </div>
@@ -224,10 +226,10 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         {section === "account" && <>
           <SectionHeading icon={UserRound}>بيانات الحساب والمالك</SectionHeading>
           <DataList items={[["اسم العلامة", cafe.name], ["الرابط المختصر", cafe.slug], ["اسم المالك", cafe.ownerName], ["البريد الإلكتروني", cafe.ownerEmail], ["بريد الدخول", cafe.ownerLoginEmail], ["الوصول لكلمة المرور", cafe.passwordAccessNote], ["جوال المالك", cafe.ownerPhone], ["تاريخ الانضمام", cafe.createdAt]]} />
-          <button type="button" className={s.primaryButton} disabled={statusPending || deletionPending} onClick={async () => { setStatusPending(true); try { await toggleStatus(); } finally { setStatusPending(false); } }}>{statusPending ? "جارٍ تحديث الحالة…" : cafe.status === "نشط" ? "إيقاف العلامة" : "تفعيل العلامة"}</button>
-          <BrandDeletionControl cafeId={cafe.id} name={cafe.name} slug={cafe.slug} disabled={statusPending} onBusyChange={setDeletionPending} onDeleted={onDeleted} />
+          {!cafe.cancellation && <><button type="button" className={s.primaryButton} disabled={statusPending || deletionPending} onClick={async () => { setStatusPending(true); try { await toggleStatus(); } finally { setStatusPending(false); } }}>{statusPending ? "جارٍ تحديث الحالة…" : cafe.status === "نشط" ? "إيقاف العلامة" : "تفعيل العلامة"}</button>
+          <BrandDeletionControl cafeId={cafe.id} name={cafe.name} slug={cafe.slug} disabled={statusPending} onBusyChange={setDeletionPending} onDeleted={onDeleted} /></>}
         </>}
-        {section === "plan" && <>
+        {section === "plan" && <fieldset disabled={Boolean(cafe.cancellation)}>
           <div className={s.planCard}><CreditCard aria-hidden="true" /><span>الباقات الحالية<strong>{assignedPlans.length ? `${assignedPlans.length} باقة` : "بدون باقة"}</strong></span><span className={cafe.hasActivePlan ? s.active : s.inactive}>{cafe.subscriptionStatus ?? (cafe.hasActivePlan ? "فعال" : "غير فعال")}</span></div>
           {!!assignedPlans.length && <>
             <p id={`${planFieldId}-remove-hint`} className={s.planNote}>ألغ تحديد الباقات التي تريد إيقافها ثم احفظ التغييرات</p>
@@ -254,10 +256,10 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
             <div className={s.planSubmit}><button type="button" className={s.primaryButton} disabled={planBusy || deadlinePending || !!removalSelection.ids.length || selectionStale || !cafe.subscriptionRevision || !planSelection.ids.length} onClick={addPlans}>{addingPlans ? "جار تفعيل الباقات" : "تفعيل الباقات المحددة"}</button><span>{planSelection.ids.length ? `${planSelection.ids.length} باقة محددة` : "اختر باقة واحدة أو أكثر"}</span></div>
             {planError && <p className={s.planError} role="alert">{planError}</p>}<p className={s.planMessage} role="status">{planMessage}</p>
           </section>
-        </>}
-        {section === "services" && services}
+        </fieldset>}
+        {section === "services" && <fieldset disabled={Boolean(cafe.cancellation)}>{services}</fieldset>}
         {section === "pager" && <PagerBrandPanel key={cafe.id} cafeId={cafe.id} />}
-        {section === "menu" && <StandaloneMenuControl cafe={cafe} plans={plans} />}
+        {section === "menu" && <fieldset disabled={Boolean(cafe.cancellation)}><StandaloneMenuControl cafe={cafe} plans={plans} /></fieldset>}
         {section === "operations" && <BrandOperationsPanel key={cafe.id} brandId={cafe.id} />}
         {section === "analytics" && <><BrandAnalyticsPanel key={cafe.id} brandId={cafe.id} /><div className={s.analyticsGrid}>{stats.map(({ label, value, icon: Icon }) => <div key={label}><Icon aria-hidden="true" /><span>{label}</span><strong>{value}</strong></div>)}</div>{activity}</>}
         {section === "support" && <>

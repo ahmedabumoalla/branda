@@ -1,0 +1,6 @@
+import "server-only";
+import {getBrandFinanceContext} from "./brand-finance";
+import {type ErpMyPermissions,type ErpRolesSnapshot} from "@/lib/erp/roles";
+export function roleError(error:{code?:string;message?:string}|null){if(!error)return;if(error.code==="23503")throw new Error("الدور مرتبط بمستخدمين أزل التعيينات قبل حذفه");if(error.code==="23505")throw new Error("اسم الدور أو تعيين الحساب مستخدم بالفعل");if(error.code==="40001")throw new Error("تغيرت البيانات أعد تحميل الصفحة");if(error.message&&/[\u0600-\u06ff]/.test(error.message)&&error.message.length<300)throw new Error(error.message);throw new Error("تعذر إدارة الأدوار والصلاحيات");}
+export async function readErpRoles(slug?:string):Promise<ErpRolesSnapshot>{const {client,cafe}=await getBrandFinanceContext(slug);if(cafe.role!=="owner")throw new Error("إدارة الأدوار متاحة لمالك العلامة فقط");const r=await client.rpc("erp_roles",{p_cafe_id:cafe.id});roleError(r.error);return{...r.data,slug:cafe.slug};}
+export async function readMyErpPermissions(slug?:string):Promise<ErpMyPermissions>{const {client,cafe}=await getBrandFinanceContext(slug);const r=await client.rpc("erp_my_permissions",{p_cafe_id:cafe.id});roleError(r.error);return r.data as ErpMyPermissions;}

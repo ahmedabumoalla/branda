@@ -1,0 +1,29 @@
+.page { min-width: 0; gap: 16px; }
+.page > section, .page .panel, .page .editor { border-radius: 0; background: var(--finance-paper, #fffefa); }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.title h2 { font-size: 16px; font-weight: 700; }
+.title > span { font-size: 12px; }
+.title > button { padding: 6px; min-height: 36px; border-radius: 0; }
+.toolbar { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 0; padding: 12px 18px; border-bottom: 1px solid var(--finance-line, #e8e1d5); }
+.toolbar > button { border-radius: 0; border: 1px solid var(--finance-line, #e8e1d5); padding: 8px 11px; min-height: 38px; font-size: 12px; background: var(--finance-paper, #fffefa); color: var(--finance-ink, #29251e); margin-inline-end: -1px; }
+.toolbar > button:hover:not(:disabled) { background: var(--finance-cream, #f5f2eb); }
+.filterActions { justify-content: flex-end; border-top: 0; }
+.page :is(input,select), .page button { border-radius: 0; }
+.editor { width: min(100%, 760px); justify-self: center; }
+.editor > div:last-child { grid-template-columns: 1fr; }
+.filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.inlinePrice { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; width: 190px; }
+.inlinePrice input { width: 120px; min-height: 44px; border: 1px solid var(--finance-line, #e8e1d5); border-radius: 8px; padding: 8px; background: var(--finance-paper, #fffefa); color: var(--finance-ink, #29251e); }
+.inlinePrice > button { padding: 8px; }
+.inlinePrice small { flex-basis: 100%; }
+.code { display: block; max-width: 240px; overflow-wrap: anywhere; white-space: normal; font-size: 12px; }
+.dialog { display: flex; flex-direction: column; max-height: 90dvh; width: min(100%, 850px); border-radius: 18px; background: var(--finance-paper, #fffefa); color: var(--finance-ink, #29251e); box-shadow: 0 20px 60px #29251e33; overflow: hidden; }
+.modalBody, .modalForm { display: grid; gap: 20px; min-width: 0; }
+.activity { display: grid; gap: 18px; }
+.changes { display: grid; gap: 10px; padding-block: 12px; }
+.changes li { display: grid; gap: 5px; font-size: 12px; overflow-wrap: anywhere; }
+.changes del { color: var(--finance-muted, #706656); }
+.changes ins { text-decoration: none; background: var(--finance-cream, #f5f2eb); padding: 2px 4px; }
+.modalBody :is(input, select, button):focus-visible { outline: 2px solid var(--finance-accent, #96702e); outline-offset: 3px; }
+@media (max-width: 640px) { .filters { grid-template-columns: 1fr; } .dialog { max-height: 94dvh; } .inlinePrice { width: 175px; } .inlinePrice input { width: 105px; } }

@@ -1,4 +1,5 @@
 import "server-only";
+import { brandAllowsNewWork } from '@/lib/data/account-cancellation';
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createLoyaltySessionToken, loyaltyIdentityHash } from "@/lib/auth/loyalty-session-token";
 import { isGreenApiLoyaltyWelcomeReady, sendGreenApiCustomerMessage, sendGreenApiLoyaltyWelcome } from "@/lib/whatsapp/green-api";
@@ -29,6 +30,7 @@ export async function dispatchStampCardLinks(limit = 2) {
       if (saveError || !saved) throw new Error("stamp_card_link_result_unavailable");
       result.processed++; result[status]++;
     };
+    if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
     if (job.googleIssued) {
       let saved: boolean;
       try { saved = await getGoogleWalletSaveState({ cafeId: job.cafeId, cardId: job.cardId }); }
@@ -38,6 +40,7 @@ export async function dispatchStampCardLinks(limit = 2) {
     let outcome: Awaited<ReturnType<typeof sendGreenApiLoyaltyWelcome>>;
     try {
       const input = { phone: job.phone, message: stampCardLinkMessage(job) };
+      if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
       outcome = job.cafeId === LOCO_CAFE_ID
         ? locoSender ? await sendGreenApiCustomerMessage(locoSender, input) : { status: "rejected" }
         : primaryReady ? await sendGreenApiLoyaltyWelcome(input) : { status: "rejected" };

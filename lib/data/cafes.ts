@@ -117,6 +117,9 @@ export const getOwnerCafeContext = cache(async (): Promise<CafeContext | null> =
     .select("id, slug, name, business_category")
     .eq("owner_user_id", user.id)
     .is("deleted_at", null)
+    .neq("status", "archived")
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (owned) {
@@ -131,8 +134,10 @@ export const getOwnerCafeContext = cache(async (): Promise<CafeContext | null> =
 
   const { data: member } = await supabase
     .from("cafe_members")
-    .select("role, cafes(id, slug, name, business_category)")
+    .select("role, cafes!inner(id, slug, name, business_category)")
     .eq("user_id", user.id)
+    .neq("cafes.status", "archived")
+    .is("cafes.deleted_at", null)
     .limit(1)
     .maybeSingle();
 

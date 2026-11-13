@@ -99,7 +99,7 @@ export function SalesCashierLogin({ slug }: { slug?: string } = {}) {
       <details className={styles.help}><summary>{t("مساعدة الدخول")}</summary>
         <p className={styles.hint}>{t(mode === "reset" ? "تحقق برمز واتساب ثم اختر كلمة مرور جديدة لحسابك" : "ادخل بكلمة مرورك أو برمز واتساب إلى رقمك المسجل لدى العلامة")}</p>
         {mode === "password" && <p className={styles.hint}>{t("إذا كان حسابك مسجلًا كعميل استخدم كلمة مروره الحالية أو رمز واتساب كلمة المرور المحددة عند إضافتك ككاشير لا تغيّر كلمة حسابك السابق")}</p>}
-        <div className={styles.helpLinks}>{slug && <Link className={styles.switchLink} href={`/finance/${encodeURIComponent(slug)}/login?access=team`}>{t("دخول الفريق المالي")}</Link>}<Link href="/login" className={styles.switchLink}>{t("العودة إلى تسجيل الدخول العام")}</Link></div>
+        <div className={styles.helpLinks}>{slug && <Link className={styles.switchLink} href={`/finance/${encodeURIComponent(slug)}/login?access=management`}>{t("دخول الإدارة المالية")}</Link>}<Link href="/login" className={styles.switchLink}>{t("العودة إلى تسجيل الدخول العام")}</Link></div>
       </details>
       </div>
     </section>

@@ -1,0 +1,18 @@
+/* Compact reference geometry belongs only to the integrated finance workspace. */
+.subscription { display: contents; }
+@media (max-width: 1023px) {
+  .integrated.integrated { box-shadow: none; }
+}
+@media (min-width: 1024px) {
+  .integrated { box-shadow: -2px 0 7px rgb(0 0 0 / 12%); }
+  .integrated .brandHeader { height: 49px; padding: 7px 12px; flex-shrink: 0; }
+  .integrated .brandLogo { width: 78px !important; max-height: 34px; }
+  .integrated .brandCaption { display: none; }
+  .integrated .identity { display: flex; align-items: center; gap: 6px; min-height: 60px; margin: 0; padding: 10px 12px; border: 0; border-bottom: 1px solid rgb(229 184 92 / 20%); background: transparent; box-shadow: none; flex-shrink: 0; }
+  .integrated .identityMain { flex: 1; min-width: 0; gap: 8px; }
+  .integrated .cafeLogo { height: 30px; width: 30px; box-shadow: none; }
+  .integrated .identityCaption, .integrated .ownerName, .integrated .subscription { display: none; }
+  .integrated .cafeName { margin: 0; font-size: 12px; font-weight: 500; line-height: 1.7; }
+  .integrated .notifications { margin: 0; flex-shrink: 0; }
+  .integrated .navigation { padding: 0; }
+}

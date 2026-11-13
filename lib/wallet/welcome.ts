@@ -1,4 +1,5 @@
 import "server-only";
+import { brandAllowsNewWork } from '@/lib/data/account-cancellation';
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGreenApiLoyaltyWelcomeReady, sendGreenApiCustomerMessage, sendGreenApiLoyaltyWelcome } from "@/lib/whatsapp/green-api";
 import { selectLocoLoyaltySender } from "@/lib/whatsapp/customer-routing";
@@ -31,7 +32,8 @@ export async function dispatchWalletWelcomes(cardId?: string, limit = 1) {
     let outcome: Awaited<ReturnType<typeof sendGreenApiLoyaltyWelcome>>;
     try {
       const input = { phone: job.phone, message: walletWelcomeMessage(job) };
-      if (job.cafeId === LOCO_CAFE_ID) {
+      if (!await brandAllowsNewWork(job.cafeId)) outcome = { status: 'rejected' };
+      else if (job.cafeId === LOCO_CAFE_ID) {
         outcome = locoSender ? await sendGreenApiCustomerMessage(locoSender, input) : { status: "rejected" };
       } else {
         outcome = primaryReady ? await sendGreenApiLoyaltyWelcome(input) : { status: "rejected" };

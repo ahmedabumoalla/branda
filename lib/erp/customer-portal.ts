@@ -1,0 +1,10 @@
+import {z} from 'zod';
+import type {CreditCharge,CreditUsage,CreditPackage,CreditType} from './credits';
+import type {Membership} from './memberships';
+import type {InsuranceSnapshot} from './insurance';
+export const portalPermissionLabels={invoices:'الفواتير وحالة السداد',statement:'كشف الحساب والرصيد المالي',appointments:'المواعيد المشتركة مع العميل',memberships:'العضويات والاستحقاق',credits:'الأرصدة الخدمية'} as const;
+export const portalSettingsSchema=z.object({revision:z.number().int().min(0),enabled:z.boolean(),permissions:z.object({invoices:z.boolean(),statement:z.boolean(),appointments:z.boolean(),memberships:z.boolean(),credits:z.boolean()}).strict()}).strict();
+export type CustomerPortalSettings=z.infer<typeof portalSettingsSchema>;
+export type CustomerOptions={portal:CustomerPortalSettings;canSettings:boolean;canPriceGroup:boolean;profiles:{id:string;name:string;phone:string}[];links:{customerId:string;profileId:string|null;enabled:boolean;priceListId:string|null;revision:number}[];priceListsEnabled:boolean;priceLists:{id:string;name:string;active:boolean;partyIds:string[]}[]};
+export type CustomerServices={memberships?:Membership[];packages?:CreditPackage[];charges?:CreditCharge[];usages?:CreditUsage[];types?:CreditType[];insurance?:InsuranceSnapshot};
+export type CustomerPortalData={customer:{id:string;name:string};permissions:CustomerPortalSettings['permissions'];invoices?:{id:string;number:string;date:string;total:number;outstanding:number;refunded:number;document?:{seller:{name:string;vatNumber:string;address:string};currency:string;total:number;tax:number;discount:number;lines:{name:string;quantity:number;price:number;tax:number;total:number}[]}}[];statement?:{date:string;number:number;kind:string;debit:number;credit:number;balance:number}[];balance?:number;appointments?:{id:string;startsAt:string;duration:number;action:string;status:string}[];memberships?:{id:string;number:number;packageName:string;joinedOn:string;endsOn:string|null;status:Membership['status']}[];credits?:{id:string;type:string;unit:string;quantity:number;remaining:number;startsOn:string;expiresOn:string|null;available:boolean}[]};

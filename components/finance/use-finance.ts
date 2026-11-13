@@ -1,10 +1,10 @@
 "use client";
+import { inventoryProductsAfterSave, type FinanceInventoryUnit } from "@/lib/finance/inventory-catalog";
 
 import { useRef, useState } from "react";
 import { executeBrandFinanceAction, fetchBrandFinanceAction, fetchBrandFinanceHistoryAction } from "@/app/actions/brand-finance";
 import { createFinanceStaffAccountAction, createSalesCashierAccountAction } from "@/app/actions/finance-access";
 import type { FinanceCommand, FinanceCommandResult, FinanceDocument, FinanceItem, FinanceJournalLine, FinanceMovement, FinanceSnapshot } from "@/lib/finance/brand-finance";
-import { inventoryProductsAfterSave, type FinanceInventoryUnit } from "@/lib/finance/inventory-catalog";
 import type { FinanceFormOperation } from "./finance-operation-form";
 
 export function useFinance(initialSnapshot: FinanceSnapshot, slug?: string) {

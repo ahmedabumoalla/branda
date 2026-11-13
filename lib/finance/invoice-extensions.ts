@@ -1,7 +1,7 @@
 import { z } from "zod";
 export const customerCreditStateSchema = z.object({
   balance: z.number().finite().nonnegative(),
-  entries: z.array(z.object({ id: z.uuid(), kind: z.enum(["receive", "refund", "apply", "unapply"]), amount: z.number().finite(), createdAt: z.string(), documentId: z.uuid().nullable(), note: z.string() })),
+  entries: z.array(z.object({ id: z.uuid(), kind: z.enum(["receive", "refund", "apply", "unapply", "credit_note"]), amount: z.number().finite(), createdAt: z.string(), documentId: z.uuid().nullable(), note: z.string() })),
   applications: z.array(z.object({ paymentId: z.uuid(), documentId: z.uuid(), invoiceNumber: z.number().optional(), displayNumber: z.string().optional(), amount: z.number().finite(), reversible: z.boolean() })),
 });
 export type CustomerCreditState = z.infer<typeof customerCreditStateSchema>;

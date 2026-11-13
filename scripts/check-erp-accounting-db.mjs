@@ -1,0 +1,103 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
+const {PGlite}=await import(pathToFileURL(path.join(tmpdir(),'branda-loyalty-sql-tests/node_modules/@electric-sql/pglite/dist/index.js')).href);
+const db=new PGlite();
+const owner=crypto.randomUUID(), outsider=crypto.randomUUID(), manager=crypto.randomUUID(), cafe=crypto.randomUUID(), other=crypto.randomUUID();
+let count=0;
+const eq=(a,b,label)=>{assert.deepEqual(a,b,label);count++;};
+const scalar=async(sql,args=[])=>Object.values((await db.query(sql,args)).rows[0])[0];
+const login=async(id)=>db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[id||'']);
+const execute=(action,data,request=crypto.randomUUID(),scope=cafe)=>scalar('SELECT erp_payroll_write($1,$2,$3,$4)',[scope,action,data,request]);
+const read=(id=null,scope=cafe)=>scalar('SELECT erp_payroll_read($1)',[scope]);
+const reject=async(fn,label)=>{await assert.rejects(fn,label);count++;};
+try {
+ await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS; CREATE SCHEMA auth; CREATE SCHEMA platform_access_private;
+ CREATE TABLE auth.users(id uuid PRIMARY KEY,email text); CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+ CREATE TABLE profiles(id uuid PRIMARY KEY,status text DEFAULT 'active',role text DEFAULT 'customer');
+ CREATE TABLE cafes(id uuid PRIMARY KEY,slug text,name text,owner_user_id uuid,status text DEFAULT 'active',deleted_at timestamptz,enabled boolean DEFAULT true);
+ CREATE TABLE menu_categories(id uuid PRIMARY KEY,cafe_id uuid,name text);
+ CREATE TABLE menu_products(id uuid PRIMARY KEY,cafe_id uuid,name text,price numeric,available boolean DEFAULT true,deleted_at timestamptz,category_id uuid,image_url text,image_storage_path text,sort_order integer DEFAULT 0);
+ CREATE FUNCTION platform_access_private.service_enabled(c uuid,f text) RETURNS boolean LANGUAGE sql AS $$ SELECT enabled AND f='finance' FROM public.cafes WHERE id=c $$;
+ GRANT USAGE ON SCHEMA auth TO authenticated,anon; GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated,anon;`);
+ await db.query('INSERT INTO auth.users(id,email) VALUES($1,\'owner@example.test\'),($2,\'outsider@example.test\'),($3,\'manager@example.test\')',[owner,outsider,manager]);
+ await db.exec('INSERT INTO profiles(id) SELECT id FROM auth.users');
+ await db.query("INSERT INTO cafes(id,slug,name,owner_user_id) VALUES($1,'tasks-a','Tasks A',$2),($3,'tasks-b','Tasks B',$4)",[cafe,owner,other,outsider]);
+ await db.exec(await readFile('supabase/migrations/20261023195232_brand_finance_operations.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261023214839_brand_finance_invoice_tax.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261023220344_brand_finance_partial_refunds.sql','utf8'));
+ await db.exec("ALTER TABLE bf_staff DROP CONSTRAINT bf_staff_role_check;ALTER TABLE bf_staff ADD CHECK(role IN('manager','cashier','accountant','warehouse','auditor'));DO $$ DECLARE src text;BEGIN SELECT pg_get_functiondef('public.brand_finance_execute(uuid,text,jsonb,uuid)'::regprocedure) INTO src;EXECUTE replace(src,'public.brand_finance_execute(','brand_finance_private.execute_before_treasury(');END $$;");
+ await db.exec(await readFile('supabase/migrations/20261109185151_finance_ledger_pilot.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261113075249_erp_manufacturing.sql','utf8'));
+
+ await db.exec(await readFile('supabase/migrations/20261113083421_erp_organization.sql','utf8'));
+ await login(owner);
+
+ await db.exec(await readFile('supabase/migrations/20261113075342_erp_tasks.sql','utf8'));
+ await db.exec("CREATE TABLE branches(id uuid PRIMARY KEY,cafe_id uuid,name text,active boolean DEFAULT true,deleted_at timestamptz,UNIQUE(id,cafe_id));CREATE SCHEMA storage;CREATE TABLE storage.buckets(id text PRIMARY KEY,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);CREATE TABLE storage.objects(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),bucket_id text,name text,metadata jsonb,UNIQUE(bucket_id,name));ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;GRANT USAGE ON SCHEMA storage TO authenticated;GRANT SELECT,INSERT,DELETE ON storage.objects TO authenticated;");
+ await db.exec(await readFile('supabase/migrations/20261113081149_erp_files.sql','utf8'));
+ await db.exec(`DO $$ DECLARE source text;BEGIN source:=pg_get_functiondef('public.erp_file_delete_access(text)'::regprocedure);EXECUTE replace(source,'RETURN true;','IF current_setting(''erp.test.prior_guard'',true)=''deny'' THEN RETURN false;END IF;RETURN true;');END $$;`);
+ await db.exec(await readFile('supabase/migrations/20261113083259_erp_assets.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261113085052_erp_templates.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261113092500_erp_hr.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261113084552_erp_commissions.sql','utf8'));
+
+ await db.exec(await readFile('supabase/migrations/20261113093203_erp_attendance.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261113093906_erp_roles.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261113101514_erp_role_operational_domains.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261113095500_erp_payroll.sql','utf8'));
+
+
+// Included by the isolated SQL runner after the real dependencies are loaded.
+const initialLedger=await scalar("SELECT md5(pg_get_functiondef('public.brand_finance_gl_execute(uuid,text,jsonb,uuid)'::regprocedure))");
+await db.exec(await readFile('supabase/migrations/20261113105600_erp_accounting.sql','utf8'));
+eq(await scalar("SELECT md5(pg_get_functiondef('public.brand_finance_gl_execute(uuid,text,jsonb,uuid)'::regprocedure))"),initialLedger,'existing ledger RPC unchanged');
+const ar=()=>scalar('SELECT erp_accounting_read($1)',[cafe]);
+const aw=(action,data,request=crypto.randomUUID())=>scalar('SELECT erp_accounting_write($1,$2,$3,$4)',[cafe,action,data,request]);
+eq((await ar()).drafts.length,0,'accounting available outside legacy pilot');eq(await scalar('SELECT brand_finance_private.gl_enabled($1)',[cafe]),false,'legacy rollout unchanged');
+await scalar('SELECT erp_asset_read($1)',[cafe]);
+const expense=await scalar("SELECT id FROM bf_accounts WHERE cafe_id=$1 AND kind='expense' ORDER BY code LIMIT 1",[cafe]),equity=await scalar("SELECT id FROM bf_accounts WHERE cafe_id=$1 AND kind='equity' ORDER BY code LIMIT 1",[cafe]);
+const center=await aw('cost_center',{id:null,revision:0,code:'CC1',name:'Center one',active:true,isGroup:false,parentId:null});eq((await ar()).costCenters[0].id,center.id,'cost center readback');
+const group=await aw('cost_center',{id:null,revision:0,code:'ROOT',name:'Group',active:true,isGroup:true,parentId:null});await reject(()=>aw('cost_center',{id:group.id,revision:1,code:'ROOT',name:'Group',active:true,isGroup:true,parentId:group.id}),'self parent rejected');
+await aw('settings',{revision:1,makerChecker:false,reason:'Independent test setting'});
+const today=await scalar('SELECT current_date::text'),journal={title:'Multi-currency journal',date:today,note:'Reviewed',currency:'USD',exchangeRate:3.75,lines:[{accountId:expense,debit:100,credit:0,memo:'Expense',costCenters:[{id:center.id,percentage:100}]},{accountId:equity,debit:0,credit:100,memo:'Equity',costCenters:[]}],customValues:{}};
+const request=crypto.randomUUID();let draft=await aw('save',journal,request);eq((await aw('save',journal,request)).id,draft.id,'journal metadata retry idempotent');eq(draft.lines[0].debit,375,'currency converted to actual SAR ledger');
+eq((await ar()).metadata[draft.id].currency,'USD','original currency retained');eq(Number(await scalar('SELECT percentage FROM erp_accounting_allocations WHERE draft_id=$1',[draft.id])),100,'line allocation persisted');
+eq((await scalar('SELECT erp_accounting_read($1,$2)',[cafe,{offset:100,id:draft.id}])).drafts[0].id,draft.id,'direct record remains readable outside first page');
+await reject(()=>aw('save',{...journal,id:draft.id,revision:1,lines:[{...journal.lines[0],costCenters:[{id:center.id,percentage:80}]},journal.lines[1]]}),'partial allocation rejected atomically');eq((await ar()).drafts[0].revision,1,'failed allocation rolls back core draft revision');
+for(const action of ['submit','approve','post'])draft=await aw(action,{id:draft.id,revision:draft.revision});eq(draft.status,'posted','real core posting lifecycle');
+eq(Number(await scalar('SELECT sum(debit-credit) FROM bf_journal WHERE document_id=$1',[draft.document_id])),0,'actual journal balanced');eq(Number(await scalar('SELECT debit FROM bf_journal WHERE document_id=$1 AND account_id=$2',[draft.document_id,expense])),375,'real converted posted amount');
+let costs=await scalar('SELECT erp_accounting_cost_report($1,$2,$2,$3)',[cafe,today,center.id]);eq(Number(costs.rows[0].debit),375,'cost report uses posted converted amount');eq(Number(costs.rows[0].closing),375,'cost balance follows allocation');
+const audit=await scalar("SELECT erp_accounting_detail($1,'events',$2)",[cafe,center.id]);eq(audit[0].action,'cost_center','center activity is recorded');
+await reject(()=>aw('cost_center_delete',{id:center.id,revision:1}),'used center protected');await reject(()=>aw('save',{...journal,id:draft.id,revision:draft.revision}),'posted journal immutable');
+draft=await aw('reverse',{id:draft.id,revision:draft.revision,date:today,reason:'Correction after review'});eq(draft.status,'reversed','actual ledger reversal');eq(Number(await scalar('SELECT sum(debit-credit) FROM bf_journal WHERE document_id=ANY($1::uuid[]) AND account_id=$2',[[draft.document_id,draft.reversal_document_id],expense])),0,'reversal restores expense');
+costs=await scalar('SELECT erp_accounting_cost_report($1,$2,$2,$3)',[cafe,today,center.id]);eq(Number(costs.rows[0].credit),375,'cost report includes actual reversal');eq(Number(costs.rows[0].closing),0,'reversal restores cost balance');
+await reject(()=>aw('cost_center',{...center,parentId:null,isGroup:false,name:'No revision',revision:undefined}),'missing center revision cannot bypass concurrency');
+const required={id:'external_reference',label:'External reference',type:'text',required:true,unique:true,options:[]};
+const config={revision:1,journalFields:[required],assetFields:[required],fiscalMonth:1};await aw('configuration',config);
+await reject(()=>aw('configuration',config),'stale settings rejected');
+eq((await scalar('SELECT erp_asset_read($1)',[cafe])).customFields[0].id,required.id,'asset reads expose configured custom fields');
+let missing=await aw('save',{...journal,title:'Missing field'});await reject(()=>aw('submit',{id:missing.id,revision:missing.revision}),'required fields enforced on journal submission');
+missing=await aw('save',{...journal,id:missing.id,revision:missing.revision,customValues:{external_reference:'REF-ONE'}});
+await reject(()=>aw('save',{...journal,customValues:{external_reference:'REF-ONE'}}),'unique journal field server enforced');
+await reject(()=>aw('configuration',{...config,revision:2,fiscalMonth:2}),'fiscal calendar cannot invalidate issued journal numbers');
+await reject(()=>scalar("SELECT erp_accounting_private.validate_asset_values($1,'{}',$2,$3,'asset')",[[required],cafe,crypto.randomUUID()]),'required asset custom field enforced');
+const yesterday=await scalar("SELECT (current_date-1)::text");
+await db.exec('CREATE TABLE IF NOT EXISTS public.bf_cash_handovers(id uuid,cafe_id uuid,shift_id uuid);CREATE TABLE IF NOT EXISTS public.bf_cash_handover_receipts(cafe_id uuid,handover_id uuid);');
+await aw('period_close',{from:yesterday,to:yesterday,revision:0,reason:'Completed day reviewed'});
+await reject(()=>aw('save',{...journal,date:yesterday,customValues:{external_reference:'CLOSED'}}),'closed date blocks journal creation');
+await reject(()=>db.query("INSERT INTO public.bf_documents(cafe_id,kind,note,created_by,created_at) VALUES($1,'journal','Blocked',$2,($3::date+time '12:00') AT TIME ZONE 'Asia/Riyadh')",[cafe,owner,yesterday]),'closed date applies to other posting paths');
+await aw('period_reopen',{from:yesterday,to:yesterday,revision:1,reason:'Reopen for reviewed adjustment'});eq((await ar()).periods[0].closed,false,'reopen allows reviewed period');
+await login(outsider);await reject(ar,'tenant boundary');await login(owner);
+await login(outsider);await scalar('SELECT erp_asset_read($1)',[other]);
+await scalar('SELECT erp_accounting_write($1,$2,$3,$4)',[other,'configuration',{revision:0,journalFields:[],assetFields:[],fiscalMonth:12},crypto.randomUUID()]);
+const otherExpense=await scalar("SELECT id FROM bf_accounts WHERE cafe_id=$1 AND kind='expense' LIMIT 1",[other]),otherEquity=await scalar("SELECT id FROM bf_accounts WHERE cafe_id=$1 AND kind='equity' LIMIT 1",[other]);
+const fiscalDraft=await scalar('SELECT erp_accounting_write($1,$2,$3,$4)',[other,'save',{...journal,date:'2026-11-13',lines:[{...journal.lines[0],accountId:otherExpense,costCenters:[]},{...journal.lines[1],accountId:otherEquity}]},crypto.randomUUID()]);eq(fiscalDraft.fiscal_year,2025,'journal numbering follows configured fiscal year');
+await login(owner);
+eq(await scalar("SELECT has_function_privilege('anon','public.erp_accounting_write(uuid,text,jsonb,uuid)','EXECUTE')"),false,'anonymous writes denied');
+eq(await scalar("SELECT has_function_privilege('authenticated','erp_accounting_private.gl_execute(uuid,text,jsonb,uuid)','EXECUTE')"),false,'private core clone not exposed');
+console.log(JSON.stringify({passed:true,checks:count}));
+
+}catch(error){console.error(JSON.stringify({passed:false,checks:count,message:error.message,code:error.code,where:error.where,position:error.position}));process.exitCode=1;}finally{await db.close();}

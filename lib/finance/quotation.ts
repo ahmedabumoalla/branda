@@ -12,7 +12,7 @@ export const quotePayloadSchema = z.object({
 }).strict().refine(value => !value.validUntil || value.validUntil >= value.date, { message: "تاريخ انتهاء العرض يسبق تاريخ العرض" });
 export type QuotePayload = z.infer<typeof quotePayloadSchema>;
 export type QuoteRecord = {
-  id: string; number: number; revision: number; payload: QuotePayload;
+  id: string; number: number; displayNumber?: string; revision: number; payload: QuotePayload;
   customerName: string; warehouseName: string; lines: { productId: string; name: string }[];
   total: number; subtotal: number; discount: number; tax: number;
   createdAt: string; updatedAt: string; invoiceDraftId: string | null;
@@ -38,7 +38,7 @@ export function quotePreview(payload: QuotePayload, names: { brand: string; cust
   const amounts = quoteAmounts(payload.document);
   return { brand: names.brand, customer: names.customer || "لم يُحدد العميل", taxNumber: "", thermal: payload.document.template === "thermal",
     note: [payload.document.invoice.note, ...payload.document.extraFields.map(f => `${f.title}: ${f.value}`)].filter(Boolean).join("\n"),
-    ...amounts, quote: { number: saved?.number, date: payload.date, validUntil: payload.validUntil, warehouse: names.warehouse, draft: payload.status === "draft" },
+    ...amounts, quote: { number: saved?.number, displayNumber: saved?.displayNumber, date: payload.date, validUntil: payload.validUntil, warehouse: names.warehouse, draft: payload.status === "draft" },
     lines: payload.document.invoice.lines.map((line, index) => ({ ...amounts.rows[index], quantity: line.quantity, description: line.description, name: names.products.find(p => p.id === line.productId)?.name || "لم يُحدد الصنف" })),
   };
 }

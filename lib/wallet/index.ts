@@ -1,4 +1,5 @@
 import "server-only";
+import { brandAllowsNewWork } from '@/lib/data/account-cancellation';
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getWalletReadiness } from "./config";
 import { issueApplePass as generateApplePass, pushAppleDevice } from "./apple";
@@ -20,12 +21,14 @@ async function trackIssuedPass(member: WalletMember, provider: "apple" | "google
 }
 
 export async function issueApplePass(member: WalletMember) {
+  if (!await brandAllowsNewWork(member.card.cafeId)) throw new Error('BRAND_ARCHIVED');
   const pass = await generateApplePass(member);
   await trackIssuedPass(member, "apple");
   return pass;
 }
 
 export async function issueGoogleSaveUrl(member: WalletMember) {
+  if (!await brandAllowsNewWork(member.card.cafeId)) throw new Error('BRAND_ARCHIVED');
   const url = await generateGoogleSaveUrl(member);
   await trackIssuedPass(member, "google");
   return url;
@@ -95,6 +98,7 @@ async function pushRegistrations(cafeId: string, cardId?: string, promotionJobId
 }
 
 async function syncMember(member: WalletMember, previous?: WalletDeliveryResult): Promise<WalletDeliveryResult> {
+  if (!await brandAllowsNewWork(member.card.cafeId)) return skipped();
   const result = skipped();
   const readiness = getWalletReadiness();
   const { data: passes, error } = await createAdminClient().from("wallet_passes").select("provider,updated_at,apple_last_served_update").eq("card_id", member.card.id).eq("cafe_id", member.card.cafeId);
@@ -170,6 +174,7 @@ export async function syncWalletCardByCode(code: string) {
 
 async function deliverBrandMessage(cafeId: string, title: string, body: string, messageId: string, previous?: WalletDeliveryResult) {
   const result = skipped();
+  if (!await brandAllowsNewWork(cafeId)) return result;
   if (!featureCodesAllow(await getCafeFeatureCodes(cafeId), "loyalty")) return result;
   const readiness = getWalletReadiness();
   const passes: { provider: string; card_id: string }[] = [];
@@ -218,6 +223,11 @@ export async function retryWalletNotificationJobs(limit = 10, cardIds?: string[]
   const { loadWalletMemberByCode } = await import("@/lib/data/loyalty-experience");
   let processed = 0;
   async function processJob(job: NonNullable<typeof jobs>[number]) {
+    if (!await brandAllowsNewWork(job.cafe_id)) {
+      const stopped = await db.from('wallet_notification_jobs').update({status:'failed',claimed_at:null,last_error:'brand_archived_before_dispatch',updated_at:new Date().toISOString()}).eq('id',job.id).eq('cafe_id',job.cafe_id).eq('status','processing');
+      if(stopped.error)throw new Error('wallet_archive_outcome_unavailable');
+      processed++;return;
+    }
     let result = skipped();
     const state = job.delivery_state && typeof job.delivery_state === "object" ? job.delivery_state as WalletDeliveryResult : undefined;
     try {

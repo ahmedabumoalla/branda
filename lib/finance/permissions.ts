@@ -19,11 +19,14 @@ export function canFinance(role: string, capability: FinanceCapability): boolean
   return Object.hasOwn(grants, role) && grants[role as FinanceRole].includes(capability);
 }
 const operations: Record<string, FinanceCapability> = {
+  // Unpublished local operations retain their narrower downstream authorization.
+  opening_balances: "settings_manage", shift_variance_settle: "settings_manage",
+  shift_purchase: "pos", finance_reset: "shifts_manage",
   settings: "settings_manage", staff: "staff_manage",
   item: "inventory_write", warehouse: "inventory_write", stock_adjust: "inventory_write", stock_transfer: "inventory_write",
   purchase: "accounting_write", party: "accounting_write", account: "treasury_write", journal: "accounting_write", treasury: "treasury_write", settlement: "accounting_write",
   refund_approve: "settings_manage", refund_reject: "settings_manage",
-  sale: "pos", shift_open: "pos", shift_close: "pos", shift_handover: "pos", shift_accept: "pos", supplier_payout: "pos", shift_purchase: "pos",
+  sale: "pos", shift_open: "pos", shift_close: "pos", shift_handover: "pos", shift_accept: "pos", supplier_payout: "pos",
 };
 export function canFinanceOperation(role: string, operation: string): boolean {
   if (operation === "refund") return canFinance(role, "accounting_write") || canFinance(role, "pos");

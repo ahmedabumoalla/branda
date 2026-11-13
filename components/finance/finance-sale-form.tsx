@@ -1,16 +1,27 @@
 "use client";
 
+import {CustomerPriceListSuggestion} from '@/components/erp/customers/price-list-suggestion';
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { ChevronDown, CircleHelp, Eye, FileText, Plus, Save, Trash2 } from "lucide-react";
+import { ChevronDown, CircleHelp, Eye, Plus, Save, Trash2 } from "lucide-react";
 import { Modal } from "@/components/dashboard/ui/modal";
 import { FinanceCustomerForm } from "./finance-customer-form";
 import { CompanyInvoiceLines } from "./company-invoice-lines";
 import { InvoiceLinePricing, useInvoicePricingContext } from "./company-invoice-pricing";
+import { useInventorySalesCatalog } from "./use-inventory-sales-catalog";
+import { inventoryUnitPrice, type InvoiceCatalogProduct } from "@/lib/finance/inventory-sales";
 import { invoicePolicyLine } from "./company-invoice-policy";
 import { CompanyInvoiceFiles } from "./company-invoice-files";
 import { listInvoiceFilesAction } from "@/app/actions/finance-invoice-files";
 import { invoiceDepositAmount, invoiceOptionsNote, invoiceShippingAddress, type InvoiceDelivery, type InvoiceDeposit, type InvoiceFile, type ShippingMode } from "@/lib/finance/company-invoice-options";
 import { listInvoiceDraftsAction, openInvoiceDraftAction, saveInvoiceDraftAction } from "@/app/actions/finance-invoice-drafts";
+import { useInvoiceOrderSource } from "./use-invoice-order-source";
+import { useInvoiceLineNotes } from "./use-invoice-line-notes";
+import { useInvoiceShippingCharge } from "./use-invoice-shipping-charge";
+import { useInvoiceCustomFields } from "./use-invoice-custom-fields";
+import { InvoiceCustomFieldValues } from "./invoice-custom-field-values";
+import { InvoiceShippingChargeEditor } from "./invoice-shipping-charge-editor";
+import { invoiceShippingAmounts } from "@/lib/finance/invoice-shipping-amounts";
+import { canFinance } from "@/lib/finance/permissions";
 import { getFinanceInvoiceSettings } from "@/app/actions/finance-invoice-settings";
 import { defaultInvoiceSettings, invoiceSettingsMoney, type InvoiceSettings } from "@/lib/finance/invoice-settings";
 import { companyInvoiceIssuerAction, findCompanyInvoiceAction, issueCompanyInvoiceAction, sendCompanyInvoiceEmailAction, sendCompanyInvoiceWhatsAppAction } from "@/app/actions/finance-company-invoices";
@@ -21,6 +32,7 @@ import { getPrimaryFinanceAccount, type FinanceSnapshot } from "@/lib/finance/br
 import { Field, Numeric } from "./finance-ui";
 import styles from "./finance.module.css";
 import editor from "./finance-sale-form.module.css";
+import reference from "./finance-sale-reference.module.css";
 
 type Invoice = Omit<InvoiceDraftPayload["invoice"], "paymentKind"> & { paymentKind: string };
 
@@ -72,6 +84,8 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
   initialCustomerId?: string;
 }) {
   const [invoice, setInvoice] = useState<Invoice>({ lines: [{ key: 1, productId: "", quantity: 1 }], warehouseId: data.warehouses.find(item => item.active)?.id ?? "", partyId: data.parties.find(party => party.id === initialCustomerId && party.kind === "customer" && party.active)?.id ?? "", paymentKind: "cash", accountId: "", discountKind: "amount", discountValue: 0, discountEnabled: false, vatRate: data.settings.vat_rate, taxInclusive: data.settings.tax_inclusive, note: "" });
+  const inventoryCatalog = useInventorySalesCatalog(data.cafe.slug);
+  const invoiceProducts: InvoiceCatalogProduct[] = [...data.products, ...inventoryCatalog.products];
   const [settingsAttempt, setSettingsAttempt] = useState(0);
   const settingsKey = JSON.stringify([data.cafe.slug, settingsAttempt]);
   const [settingsResult, setSettingsResult] = useState<{ key: string; settings?: InvoiceSettings; nextNumber?: number | null; error?: string } | null>(null);
@@ -110,13 +124,14 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
   }, []);
   const [details, setDetails] = useState<"discount" | "deposit" | "shipping" | "delivery" | "attachments">("discount");
   const [deposit, setDeposit] = useState<InvoiceDeposit>({ kind: "amount", value: 0, paid: false });
-  const [shipping, setShipping] = useState<ShippingMode>("none");
+  const [shipping, setShipping] = useState<ShippingMode>("auto");
   const [delivery, setDelivery] = useState<InvoiceDelivery>({ confirmed: false, date: "" });
   const [files, setFiles] = useState<InvoiceFile[]>([]);
   const [filesBusy, setFilesBusy] = useState(false);
   const [extraFields, setExtraFields] = useState<{ key: number; title: string; value: string }[]>([]);
   const extraKey = useRef(0);
   const draftIdentity = useRef({ id: "", revision: 0 });
+  const [draftRenderId, setDraftRenderId] = useState(initialDraftId ?? "");
   const draftLock = useRef(false);
   const [draftBusy, setDraftBusy] = useState(!!initialDraftId);
   const [draftNotice, setDraftNotice] = useState("");
@@ -124,6 +139,15 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
   const [drafts, setDrafts] = useState<InvoiceDraftSummary[]>([]);
   const [draftChoice, setDraftChoice] = useState("");
   const [initialDraftLoaded, setInitialDraftLoaded] = useState(!initialDraftId);
+  const orderSource = useInvoiceOrderSource(data.cafe.slug, initialDraftId);
+  const loadOrderSource = orderSource.loadDraft;
+  const lineNotes = useInvoiceLineNotes(data.cafe.slug, initialDraftId);
+  const loadLineNotes = lineNotes.loadDraft;
+  const shippingCharge = useInvoiceShippingCharge(data.cafe.slug, initialDraftId);
+  const loadShippingCharge = shippingCharge.loadDraft;
+  const customFields = useInvoiceCustomFields(data.cafe.slug, initialDraftId);
+  const loadCustomFields = customFields.loadDraft;
+  const [customFilesBusy, setCustomFilesBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -154,6 +178,8 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
   };
   const saveDraft = async (issue = false) => {
     if (draftLock.current || disabled || (issue && !issueReady)) return;
+    const customError = customFields.validate(issue);
+    if (customError) { setLocalError(customError); return; }
     draftLock.current = true; setDraftBusy(true); setLocalError(""); setDraftNotice("");
     try {
       if (!draftIdentity.current.id) draftIdentity.current.id = crypto.randomUUID();
@@ -163,6 +189,15 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
       } }, data.cafe.slug);
       if (!result.ok) { setLocalError(result.message); return; }
       draftIdentity.current = result.data;
+      setDraftRenderId(result.data.id);
+      const sourceSaved = await orderSource.save(result.data.id, result.data.revision);
+      if (!sourceSaved.ok) { setLocalError(sourceSaved.message); return; }
+      const notesSaved = await lineNotes.save(result.data.id, result.data.revision, invoice.lines.map(line => line.key));
+      if (!notesSaved.ok) { setLocalError(notesSaved.message); return; }
+      const shippingSaved = await shippingCharge.save(result.data.id, result.data.revision);
+      if (!shippingSaved.ok) { setLocalError(shippingSaved.message); return; }
+      const customSaved = await customFields.save(result.data.id, result.data.revision);
+      if (!customSaved.ok) { setLocalError(customSaved.message); return; }
       setDraftNotice("تم حفظ المسودة يمكنك فتحها لاحقًا من المسودات المحفوظة");
       if (issue) {
         const posted = await issueCompanyInvoiceAction({ ...result.data, expectedTotal: totals.total }, data.cafe.slug);
@@ -199,6 +234,8 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
       if (!library.ok) { setLocalError(library.message); return; }
       const restored = draft.payload.attachments.map(id => library.data.find(file => file.id === id));
       if (restored.some(file => !file)) { setLocalError("تعذر استعادة أحد المستندات المرتبطة بالمسودة"); return; }
+      const linked = await Promise.all([loadOrderSource(draft.id), loadLineNotes(draft.id), loadShippingCharge(draft.id), loadCustomFields(draft.id)]);
+      if (!linked.every(Boolean)) return;
       setFiles(restored as InvoiceFile[]); setDeposit(draft.payload.deposit); setShipping(draft.payload.shipping); setDelivery(draft.payload.delivery);
       setInvoice(draft.payload.invoice); setTemplate(draft.payload.template); setExtraFields(draft.payload.extraFields);
       setDeliveryMethod(draft.payload.deliveryMethod); setSupplyDate(draft.payload.supplyDate || new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh" }).format(new Date()));
@@ -206,11 +243,12 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
       setIssued(posted.data);
       extraKey.current = Math.max(0, ...draft.payload.extraFields.map(field => field.key));
       draftIdentity.current = { id: draft.id, revision: draft.revision };
+      setDraftRenderId(draft.id);
       setInitialDraftLoaded(true);
       setDraftsOpen(false); setDraftNotice("تم فتح المسودة لإكمال التعديل");
     } catch { setLocalError("تعذر فتح المسودة أعد المحاولة"); }
     finally { draftLock.current = false; setDraftBusy(false); }
-  }, [data.cafe.slug]);
+  }, [data.cafe.slug, loadOrderSource, loadLineNotes, loadShippingCharge, loadCustomFields]);
 
   useEffect(() => {
     if (!initialDraftId) return;
@@ -221,7 +259,7 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
     return () => { active = false; };
   }, [initialDraftId, data.cafe.slug, restoreDraft]);
 
-  const disabled = pending || stale || draftBusy || filesBusy || !!issued || !initialDraftLoaded || !settingsReady;
+  const disabled = pending || stale || draftBusy || filesBusy || customFilesBusy || !!issued || !initialDraftLoaded || !settingsReady || (invoice.lines.some(line => line.catalogSource === "inventory") && !inventoryCatalog.ready) || !orderSource.ready || !lineNotes.ready || !shippingCharge.ready || !customFields.ready;
   const issuerReady = !!issuer.name.trim() && /^3[0-9]{13}3$/.test(issuer.vatNumber) && issuer.address.trim().length >= 8;
   const currency = invoice.currency ?? "SAR";
   const exchangeRate = invoice.exchangeRate && Number.isFinite(invoice.exchangeRate) && invoice.exchangeRate > 0 ? invoice.exchangeRate : 1;
@@ -229,9 +267,9 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
   const exchangeConflict = !!configuredCurrency && !settings.advanced.showExchangeRate && exchangeRate !== configuredCurrency.rate;
   const priceLists = settings.advanced.priceLists.filter(list => list.active && (!list.partyIds.length || list.partyIds.includes(invoice.partyId)));
   const selectedPriceList = settings.advanced.priceListsEnabled ? priceLists.find(list => list.id === invoice.priceListId) : undefined;
-  const pricedProducts = data.products.map(product => ({ ...product, price: moneyRound((selectedPriceList?.prices.find(item => item.productId === product.id)?.price ?? product.price) / exchangeRate) }));
+  const pricedProducts = invoiceProducts.map(product => ({ ...product, price: moneyRound((selectedPriceList?.prices.find(item => item.productId === product.id)?.price ?? product.price) / exchangeRate) }));
   const selectableProducts = pricedProducts.map(product => {
-    const kind = settings.advanced.productPolicies.find(item => item.productId === product.id)?.kind ?? "product";
+    const kind = product.catalogSource === "inventory" ? product.kind ?? "product" : settings.advanced.productPolicies.find(item => item.productId === product.id)?.kind ?? "product";
     const allowed = !settings.advanced.excludedCategories.includes(product.category) && (settings.advanced.activityKind === "both" || (kind === "product" ? settings.advanced.activityKind === "products" : settings.advanced.activityKind === "services"));
     return { ...product, available: product.available && allowed };
   });
@@ -240,15 +278,20 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
   const adjustmentType = settings.advanced.adjustments.find(item => item.id === invoice.adjustment?.typeId);
   const adjustment = invoice.adjustment?.amount && adjustmentType ? { amount: invoice.adjustment.amount, kind: adjustmentType.kind, taxable: adjustmentType.taxable } : undefined;
   const effectiveLines = invoice.lines.map(line => invoicePolicyLine(line, settings.advanced));
-  const totals = companyAmounts(effectiveLines, pricedProducts, invoice.discountEnabled === false ? 0 : invoice.discountValue, invoice.discountKind, invoice.vatRate ?? data.settings.vat_rate, invoice.taxInclusive ?? data.settings.tax_inclusive, adjustment);
+  const itemTotals = companyAmounts(effectiveLines, pricedProducts, invoice.discountEnabled === false ? 0 : invoice.discountValue, invoice.discountKind, invoice.vatRate ?? data.settings.vat_rate, invoice.taxInclusive ?? data.settings.tax_inclusive, adjustment);
+  const shippingTotals = invoiceShippingAmounts(shippingCharge.selection, exchangeRate);
+  const totals = { ...itemTotals, tax: moneyRound(itemTotals.tax + shippingTotals.tax), total: moneyRound(itemTotals.total + shippingTotals.total) };
   const depositAmount = invoiceDepositAmount(totals.total, deposit);
   const creditAvailable = pricingContext.data?.creditBalance ?? 0;
   const creditApplied = invoice.applyCredit ? moneyRound(Math.min(totals.total, creditAvailable / exchangeRate)) : 0;
   const cashPaid = deposit.value > 0 ? deposit.paid ? depositAmount : 0 : invoice.paymentKind === "credit" ? 0 : moneyRound(Math.max(0, totals.total - creditApplied));
   const paid = moneyRound(cashPaid + creditApplied);
   const lineTotals = totals.rows;
-  const sarTotals = { tax: moneyRound(lineTotals.reduce((sum, row) => sum + moneyRound(row.tax * exchangeRate), 0)), total: moneyRound(lineTotals.reduce((sum, row) => sum + moneyRound(row.net * exchangeRate) + moneyRound(row.tax * exchangeRate), 0)) };
-  const issueReady = issuerReady && !!pricingContext.data && !pricingContext.error && !pricingContext.loading && !!configuredCurrency && !exchangeConflict && paid <= totals.total && totals.total >= 0 && totals.rows.every(row => row.net >= 0) && (invoice.exchangeRate === undefined || invoice.exchangeRate > 0);
+  const codServiceLineIndices = effectiveLines.flatMap((line, index) => line.productId === shippingCharge.context?.codServiceId && settings.advanced.productPolicies.some(policy => policy.productId === line.productId && policy.kind === "service") ? [index] : []);
+  const codGross = moneyRound(codServiceLineIndices.reduce((sum, index) => sum + moneyRound(lineTotals[index].price * invoice.lines[index].quantity), 0));
+  const shippingLineLimit = shippingTotals.amount > 0 && invoice.lines.length > 99;
+  const sarTotals = { tax: moneyRound(lineTotals.reduce((sum, row) => sum + moneyRound(row.tax * exchangeRate), 0) + shippingTotals.sar.tax), total: moneyRound(lineTotals.reduce((sum, row) => sum + moneyRound(row.net * exchangeRate) + moneyRound(row.tax * exchangeRate), 0) + shippingTotals.sar.total) };
+  const issueReady = issuerReady && !!pricingContext.data && !pricingContext.error && !pricingContext.loading && !!configuredCurrency && !exchangeConflict && !shippingLineLimit && paid <= totals.total && totals.total >= 0 && totals.rows.every(row => row.net >= 0) && (invoice.exchangeRate === undefined || invoice.exchangeRate > 0);
   const savedNote = [invoice.note.trim(), ...extraFields.filter(field => field.title.trim() || field.value.trim()).map(field => `${field.title.trim()}: ${field.value.trim()}`)].filter(Boolean).join("\n");
   const patch = (values: Partial<Invoice>) => { setLocalError(""); setInvoice(current => ({ ...current, ...values })); };
   const customer = data.parties.find(party => party.id === invoice.partyId);
@@ -259,7 +302,7 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
     if (invoice.priceListId && !selectedPriceList) { setLocalError("قائمة الأسعار المحفوظة غير متاحة لهذا العميل اختر قائمة صالحة أو أسعار الكتالوج"); return; }
     patch({ lines: invoice.lines.map(line => {
       const product = selectableProducts.find(item => item.id === line.productId && item.available);
-      return product ? { ...line, price: product.price } : line;
+      return product ? { ...line, price: inventoryUnitPrice(product, line.unitName) } : line;
     }) });
   };
   const shareIssued = async () => {
@@ -289,7 +332,9 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
       const blob = await createCompanyInvoicePreviewPdf({
         brand: data.cafe.name, customer: customer?.name || "لم يُحدد العميل", taxNumber: customer?.tax_number || "",
         thermal: template === "thermal", currency, exchangeRate, decimalDisplay: settings.decimalDisplay, sar: sarTotals, cashPaid, creditApplied, note: [savedNote, optionsNote].filter(Boolean).join("\n"), ...totals, paid,
-        lines: invoice.lines.map((line, index) => ({ ...lineTotals[index], name: data.products.find(product => product.id === line.productId)?.name || line.name || "لم يُحدد الصنف", quantity: line.quantity })),
+        shippingCharge: shippingCharge.selection ? { ...shippingCharge.selection, ...shippingTotals } : undefined,
+        codServiceLineIndices,
+        lines: invoice.lines.map((line, index) => ({ ...lineTotals[index], name: invoiceProducts.find(product => product.id === line.productId)?.name || line.name || "لم يُحدد الصنف", description: line.description, unitName: line.unitName, notes: lineNotes.values[line.key] ?? [], quantity: line.quantity })),
       });
       if (pdfRequest.current === request) setPdfUrl(URL.createObjectURL(blob));
     } catch {
@@ -298,9 +343,11 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
   };
 
   if (!data.canManage) return <p role="alert" className={styles.error}>لا تملك صلاحية إضافة فاتورة من الإدارة المالية</p>;
-  return <><form inert={customerOpen || previewOpen || draftsOpen} className={`${styles.form} ${styles.invoiceForm} ${editor.editor}`} onInvalidCapture={event => {
+  return <><form inert={customerOpen || previewOpen || draftsOpen} className={`${styles.form} ${styles.invoiceForm} ${editor.editor} ${reference.form}`} onInvalidCapture={event => {
     const input = event.target;
     if (!(input instanceof HTMLInputElement || input instanceof HTMLSelectElement)) return;
+    const collapsed = input.closest("details:not([open])");
+    if (collapsed instanceof HTMLDetailsElement) collapsed.open = true;
     const hiddenPanel = input.closest<HTMLElement>("[hidden][data-invoice-details]");
     if (!hiddenPanel) return;
     event.preventDefault();
@@ -318,9 +365,15 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
       <div className={styles.actions}><button type="submit" className={styles.primary} disabled={disabled || !issueReady}><Save size={16} aria-hidden="true" />{draftBusy ? "جار تنفيذ الطلب" : issued ? `فاتورة رقم ${issued.displayNumber || issued.number}` : deliveryMethod === "whatsapp" ? "إصدار وإرسال بالواتساب" : deliveryMethod === "email" || deliveryMethod === "both" ? "إصدار وإرسال بالبريد" : "إصدار الفاتورة"}</button><button type="button" className={styles.secondary} disabled={pending || draftBusy || filesBusy} onClick={onCancel}>{issued ? "العودة للفواتير" : "إلغاء"}</button></div>
     </div>
     {(localError || error) && <p className={styles.error} role="alert">{localError || error}</p>}
+    {orderSource.loading ? <p className={styles.notice} role="status">جار تحميل مصادر الطلب</p> : orderSource.error && <div><p className={styles.error} role="alert">{orderSource.error}</p><button type="button" className={styles.secondary} onClick={() => void orderSource.retry()}>إعادة تحميل مصدر الطلب</button></div>}
+    {lineNotes.loading ? <p className={styles.notice} role="status">جار تحميل ملاحظات البنود</p> : lineNotes.error && <div><p className={styles.error} role="alert">{lineNotes.error}</p><button type="button" className={styles.secondary} onClick={() => void lineNotes.retry()}>إعادة تحميل ملاحظات البنود</button></div>}
+    {shippingCharge.loading ? <p className={styles.notice} role="status">جار تحميل خيارات الشحن</p> : shippingCharge.error && <div><p className={styles.error} role="alert">{shippingCharge.error}</p><button type="button" className={styles.secondary} onClick={() => void shippingCharge.retry()}>إعادة تحميل خيارات الشحن</button></div>}
+    {customFields.loading ? <p className={styles.notice} role="status">جار تحميل حقول الفاتورة</p> : customFields.error && <div><p className={styles.error} role="alert">{customFields.error}</p><button type="button" className={styles.secondary} disabled={customFilesBusy || draftBusy} onClick={() => { if (window.confirm("إعادة التحميل تستبدل تعديلات الحقول غير المحفوظة هل تريد المتابعة؟")) void customFields.retry(); }}>إعادة تحميل حقول الفاتورة</button></div>}
+    {!inventoryCatalog.ready && (inventoryCatalog.error ? <div role="alert"><p className={styles.error}>{inventoryCatalog.error}</p><button type="button" className={styles.secondary} onClick={inventoryCatalog.retry}>إعادة تحميل أصناف المخزون</button></div> : <p role="status">جار تحميل أصناف المخزون</p>)}
     {!settingsReady && (currentSettings?.error ? <div><p className={styles.error} role="alert">{currentSettings.error}</p><button type="button" className={styles.secondary} onClick={() => setSettingsAttempt(value => value + 1)}>إعادة تحميل إعدادات الفواتير</button></div> : <p className={styles.notice} role="status">جار تحميل إعدادات الفواتير</p>)}
     {settingsReady && !issued && (pricingContext.loading ? <p className={styles.notice} role="status">جار تحميل سياسات الأسعار ورصيد العميل قبل الإصدار</p> : pricingContext.error && <div><p className={styles.error} role="alert">{pricingContext.error}</p><button type="button" className={styles.secondary} onClick={pricingContext.retry}>إعادة تحميل الأسعار والرصيد</button></div>)}
     {paid > totals.total && <p className={styles.error} role="alert">الدفعة المحصلة تتجاوز المتبقي بعد استخدام رصيد العميل عدّل الدفعة أو ألغ استخدام الرصيد</p>}
+    {shippingLineLimit && <p className={styles.error} role="alert">الفاتورة التي تحتوي رسوم شحن تقبل حتى ٩٩ بندًا احذف بندًا أو أزل رسوم الشحن قبل الإصدار</p>}
     {!initialDraftLoaded && <button type="button" className={styles.secondary} disabled={draftBusy} onClick={() => { setDraftBusy(true); void restoreDraft(initialDraftId!); }}>{draftBusy ? "جار فتح الفاتورة المحفوظة" : "إعادة فتح الفاتورة المحفوظة"}</button>}
     {draftNotice && <p className={styles.notice} role="status">{draftNotice}</p>}
     {issued && <button type="button" className={styles.secondary} disabled={draftBusy} onClick={async () => { if (draftLock.current) return; draftLock.current = true; setDraftBusy(true); setLocalError(""); try { await deliverIssued(issued.id); } catch { setLocalError("تعذر تأكيد الإرسال الفاتورة محفوظة"); } finally { draftLock.current = false; setDraftBusy(false); } }}>إرسال الفاتورة بالواتساب</button>}
@@ -329,38 +382,38 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
     {stale && <p className={styles.notice}>حدّث الأرصدة قبل حفظ فاتورة جديدة</p>}
     <fieldset disabled={disabled} className={styles.invoiceLayout}>
       <div className={styles.invoiceMain}>
-      <section className={`${styles.invoiceSection} ${editor.template}`} aria-label="قالب الفاتورة"><span className={editor.templateLabel}><FileText size={20} aria-hidden="true" />فاتورة جديدة</span><Field label="قالب الفاتورة" hint="قالب الوقت يتطلب إضافة حقول الساعات ولم يُفعّل بعد"><select value={template} onChange={event => setTemplate(event.target.value as "standard" | "thermal")}><option value="standard">التصميم الافتراضي للفاتورة</option><option value="time" disabled>التصميم الافتراضي للوقت — غير مفعّل</option><option value="thermal">فاتورة حرارية</option></select></Field></section>
-      <div className={editor.metadata}>
+      <section className={`${styles.invoiceSection} ${editor.template}`} aria-label="قالب الفاتورة"><Field label="قالب الفاتورة"><select value={template} onChange={event => setTemplate(event.target.value as "standard" | "thermal")}><option value="standard">التصميم الافتراضي للفاتورة</option><option value="time" disabled>التصميم الافتراضي للوقت — غير مفعّل</option><option value="thermal">فاتورة حرارية</option></select></Field></section>
+      <div className={`${editor.metadata} ${reference.metadata}`}>
       <section className={styles.invoiceSection} aria-label="العميل والمستودع">
-      <h3 className={styles.invoiceHeading}>بيانات العميل</h3>
       <div className={editor.customerFields}>
-        <Field label="الطريقة" hint={deliveryMethod === "email" || deliveryMethod === "both" ? "يُرسل ملف الفاتورة إلى البريد المحفوظ للعميل بعد الإصدار" : "يُرسل ملف الفاتورة الصادرة إلى جوال العميل المسجّل"}><select value={deliveryMethod} onChange={event => setDeliveryMethod(event.target.value as InvoiceDraftPayload["deliveryMethod"])}><option value="print">طباعة</option><option value="email">إرسال بالبريد الإلكتروني</option><option value="both">طباعة وإرسال بالبريد</option><option value="whatsapp">أرسل عبر الواتساب</option></select></Field>
-        <div className={editor.helpLine}><InvoiceHelp text="يُختار رقم العلامة المربوط عندما يكون متاحًا أو رقم برندة ثم الرقم الاحتياطي قبل إرسال الفاتورة قبول الطلب لا يؤكد وصوله إلى العميل" /><span>طريقة تسليم الفاتورة</span></div>
-        <div className={styles.invoiceCustomer}><Field label="العميل"><select value={invoice.partyId} required onChange={event => patch({ partyId: event.target.value })}><option value="">اختر الفرد أو الشركة</option>{data.parties.filter(party => party.active && party.kind === "customer").map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field><button type="button" className={styles.secondary} onClick={() => setCustomerOpen(true)}><Plus size={16} aria-hidden="true" />إضافة عميل</button></div>
-        {customer && <p className={styles.notice}>نوع الفاتورة: {invoiceTypeLabel}</p>}
+        <div className={reference.customerRow}><Field label="الطريقة" hint={deliveryMethod === "print" ? undefined : deliveryMethod === "whatsapp" ? "يُرسل الملف إلى جوال العميل بعد الإصدار" : "يُرسل الملف إلى بريد العميل بعد الإصدار"}><select value={deliveryMethod} onChange={event => setDeliveryMethod(event.target.value as InvoiceDraftPayload["deliveryMethod"])}><option value="print">طباعة</option><option value="email">إرسال بالبريد الإلكتروني</option><option value="both">طباعة وإرسال بالبريد</option><option value="whatsapp">أرسل عبر الواتساب</option></select></Field><InvoiceHelp text="اختر الطباعة أو إرسال الفاتورة بعد إصدارها لا يؤكد قبول طلب الإرسال وصول الملف إلى العميل" /></div>
+        <div className={reference.customerRow}><Field label="العميل"><select value={invoice.partyId} required onChange={event => patch({ partyId: event.target.value })}><option value="">اختر الفرد أو الشركة</option>{data.parties.filter(party => party.active && party.kind === "customer").map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field><button type="button" className={styles.secondary} onClick={() => setCustomerOpen(true)}><Plus size={16} aria-hidden="true" />جديد</button></div>
+        <div className={reference.customerRow}><Field label="العملة"><select value={currency} onChange={event => { const selected = settings.advanced.currencies.find(item => item.code === event.target.value); if (selected) patch({ currency: selected.code, exchangeRate: selected.rate }); }}>
+            {settings.advanced.currencies.map(item => <option key={item.code} value={item.code}>{item.code}</option>)}
+            {!settings.advanced.currencies.some(item => item.code === currency) && <option value={currency}>{currency} — عملة محفوظة غير متاحة</option>}
+          </select></Field></div>
+        <details className={reference.customerExtra}><summary>المستودع وبيانات التوريد</summary><div>
+        {customer && <p className={styles.muted}>نوع الفاتورة: {invoiceTypeLabel}</p>}
         <Field label="مستودع البيع"><select value={invoice.warehouseId} required onChange={event => patch({ warehouseId: event.target.value })}><option value="">اختر المستودع</option>{data.warehouses.filter(item => item.active).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+        <Field label="تاريخ التوريد"><input type="date" required value={supplyDate} onChange={event => setSupplyDate(event.target.value)} /></Field>
+        <Field label="أنشئت بواسطة"><input readOnly value={data.staff.find(person => person.user_id === data.userId)?.name || "المستخدم الحالي"} /></Field>
+        </div></details>
       </div>
       </section>
       <section className={styles.invoiceSection} aria-label="بيانات الفاتورة">
-        <h3 className={styles.invoiceHeading}>بيانات الفاتورة</h3>
         <div className={editor.documentFields}>
-          <Field label="رقم الفاتورة" hint="يُحجز الرقم عند الإصدار ولا يمكن تغييره بعده"><input readOnly={!settings.advanced.numbering.manual || !!issued} value={issued ? issued.displayNumber || String(issued.number) : invoice.manualNumber ?? ""} maxLength={40} placeholder={`${settings.advanced.numbering.prefix}${String(currentSettings?.nextNumber ?? settings.advanced.numbering.next).padStart(settings.advanced.numbering.padding, "0")}`} onChange={event => { if (settings.advanced.numbering.manual) patch({ manualNumber: event.target.value }); }} /></Field>
+          <Field label="رقم الفاتورة"><input title="يُحجز الرقم عند الإصدار ولا يمكن تغييره بعده" readOnly={!settings.advanced.numbering.manual || !!issued} value={issued ? issued.displayNumber || String(issued.number) : invoice.manualNumber ?? ""} maxLength={40} placeholder={`${settings.advanced.numbering.prefix}${String(currentSettings?.nextNumber ?? settings.advanced.numbering.next).padStart(settings.advanced.numbering.padding, "0")}`} onChange={event => { if (settings.advanced.numbering.manual) patch({ manualNumber: event.target.value }); }} /></Field>
           {!settings.advanced.numbering.manual && !!invoice.manualNumber && <button type="button" className={styles.secondary} onClick={() => patch({ manualNumber: "" })}>استخدام الترقيم التلقائي</button>}
           <Field label="تاريخ الفاتورة"><input readOnly value="وقت الحفظ بتوقيت الرياض" /></Field>
-          <Field label="تاريخ الإصدار" hint="الإصدار بتاريخ الحفظ حاليًا"><input readOnly value="يُحدد عند الحفظ" /></Field>
-          <Field label="تاريخ التوريد"><input type="date" required value={supplyDate} onChange={event => setSupplyDate(event.target.value)} /></Field>
-          <Field label="أنشئت بواسطة"><input readOnly value={data.staff.find(person => person.user_id === data.userId)?.name || "المستخدم الحالي"} /></Field>
-          <Field label="مسؤول مبيعات" hint="تعيين مسؤول مستقل أو متعدد غير مفعّل"><select disabled defaultValue=""><option value="">لم يُعيّن</option><option>متعدد</option></select></Field>
-          <Field label="العملة"><select value={currency} onChange={event => { const selected = settings.advanced.currencies.find(item => item.code === event.target.value); if (selected) patch({ currency: selected.code, exchangeRate: selected.rate }); }}>
-            {settings.advanced.currencies.map(item => <option key={item.code} value={item.code}>{item.code}</option>)}
-            {!settings.advanced.currencies.some(item => item.code === currency) && <option value={currency}>{currency} — عملة محفوظة غير متاحة</option>}
-          </select></Field>
+          <Field label="مسؤول مبيعات"><select title="تعيين مسؤول مستقل أو متعدد غير مفعّل" disabled defaultValue=""><option value="">غير مفعّل</option><option>متعدد</option></select></Field>
+          <Field label="مصدر الطلب" hint={orderSource.context?.settings.required ? "مطلوب عند إصدار الفاتورة" : undefined}><select value={orderSource.selected ?? ""} required={orderSource.context?.settings.required} onChange={event => orderSource.choose(event.target.value)}><option value="">لا شيء</option>{orderSource.context?.settings.sources.filter(source => source.active || source.id === orderSource.selected).map(source => <option key={source.id} value={source.id} disabled={!source.active}>{source.name}{source.active ? "" : " — غير نشط"}</option>)}{orderSource.selected && !orderSource.context?.settings.sources.some(source => source.id === orderSource.selected) && <option value={orderSource.selected} disabled>مصدر محفوظ غير متاح</option>}</select></Field>
+          <Field label="تاريخ الإصدار"><input readOnly value="يُحدد عند الحفظ" /></Field>
+          <Field label="شروط الدفع"><input disabled placeholder="غير مفعّل حاليًا" /></Field>
+
           {(settings.advanced.showExchangeRate || currency !== "SAR") && <Field label="سعر الصرف" hint={`ريال سعودي لكل وحدة ${currency}`}><input type="number" min="0.000001" max="1000000" step="0.000001" required readOnly={currency === "SAR" || !settings.advanced.showExchangeRate} value={invoice.exchangeRate ?? 1} onChange={event => { if (currency !== "SAR" && settings.advanced.showExchangeRate) patch({ exchangeRate: Number(event.target.value) }); }} /></Field>}
           {exchangeConflict && <div><p className={styles.notice}>سعر الصرف المحفوظ يختلف عن السعر المسموح حاليًا استخدم السعر الحالي قبل الإصدار</p><button type="button" className={styles.secondary} onClick={() => { if (configuredCurrency) patch({ exchangeRate: configuredCurrency.rate }); }}>استخدام سعر الصرف الحالي</button></div>}
           {(settings.advanced.customStatusesEnabled || invoice.statusId) && <Field label="حالة الفاتورة المخصصة"><select value={invoice.statusId ?? ""} onChange={event => patch({ statusId: event.target.value })}><option value="">بدون حالة مخصصة</option>{settings.advanced.customStatusesEnabled && settings.advanced.statuses.map(status => <option key={status.id} value={status.id}>{status.name}</option>)}{invoice.statusId && (!settings.advanced.customStatusesEnabled || !settings.advanced.statuses.some(status => status.id === invoice.statusId)) && <option value={invoice.statusId}>حالة محفوظة غير متاحة</option>}</select></Field>}
-          <Field label="شروط الدفع" hint="غير مفعّل حاليًا"><input disabled placeholder="عدد الأيام" /></Field>
         </div>
-        <div className={editor.helpLine}><InvoiceHelp text="شروط الدفع تحدد عدد الأيام من تاريخ الإصدار حتى استحقاق الفاتورة تحديد إصدار مؤجل أو أجل استحقاق مستقل غير مفعّل حاليًا" /><span>تاريخ الإصدار وشروط الدفع</span></div>
         {extraFields.map((field, index) => <div className={editor.extraField} key={field.key}>
           <Field label={`عنوان إضافي ${index + 1}`}><input maxLength={60} placeholder="عنوان إضافي" value={field.title} onChange={event => setExtraFields(current => current.map(item => item.key === field.key ? { ...item, title: event.target.value } : item))} /></Field>
           <Field label={`بيانات إضافية ${index + 1}`}><input maxLength={200} placeholder="بيانات إضافية" value={field.value} onChange={event => setExtraFields(current => current.map(item => item.key === field.key ? { ...item, value: event.target.value } : item))} /></Field>
@@ -372,13 +425,13 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
       </div>
       <section className={`${styles.invoiceSection} ${styles.invoiceItems}`} aria-label="أصناف الفاتورة">
       <div className={styles.invoiceSectionHeader}><h3 className={styles.invoiceHeading}>أصناف الفاتورة <span className={styles.badge}>{invoice.lines.length}</span></h3><span className={styles.muted}>المبالغ بعملة {currency}</span></div>
-      {(settings.advanced.priceListsEnabled || invoice.priceListId) && <div className={styles.fields}><Field label="قائمة الأسعار" hint="تطبيق القائمة يستبدل أسعار البنود المسجلة فقط بعد اختيارك"><select value={invoice.priceListId ?? ""} onChange={event => patch({ priceListId: event.target.value })}><option value="">أسعار الكتالوج</option>{settings.advanced.priceListsEnabled && priceLists.map(list => <option key={list.id} value={list.id}>{list.name}</option>)}{invoice.priceListId && !selectedPriceList && <option value={invoice.priceListId}>قائمة محفوظة غير متاحة لهذا العميل</option>}</select></Field><button type="button" className={styles.secondary} onClick={applySelectedPrices}>تطبيق أسعار القائمة على البنود</button></div>}
+      {(settings.advanced.priceListsEnabled || invoice.priceListId) && <div className={styles.fields}><CustomerPriceListSuggestion className={styles.secondary} slug={data.cafe.slug} customerId={invoice.partyId} lists={priceLists} selected={invoice.priceListId} disabled={disabled} onChoose={id=>patch({priceListId:id})}/><Field label="قائمة الأسعار" hint="تطبيق القائمة يستبدل أسعار البنود المسجلة فقط بعد اختيارك"><select value={invoice.priceListId ?? ""} onChange={event => patch({ priceListId: event.target.value })}><option value="">أسعار الكتالوج</option>{settings.advanced.priceListsEnabled && priceLists.map(list => <option key={list.id} value={list.id}>{list.name}</option>)}{invoice.priceListId && !selectedPriceList && <option value={invoice.priceListId}>قائمة محفوظة غير متاحة لهذا العميل</option>}</select></Field><button type="button" className={styles.secondary} onClick={applySelectedPrices}>تطبيق أسعار القائمة على البنود</button></div>}
       {currency !== "SAR" && <p className={styles.muted}>الأسعار المكتوبة بعملة الفاتورة تغيير العملة لا يحوّل البنود المحفوظة تلقائيًا أعد اختيار الصنف أو طبّق قائمة الأسعار لتحديث سعره</p>}
       {!settings.allowLineEditing && <p className={styles.muted}>تمنع إعدادات الفواتير تعديل سعر المنتج ووصفه يمكنك تعديل الكمية وإعادة اختيار المنتج نفسه لاستعادة سعره المسجل ومسح الوصف المخصص</p>}
       {settings.discountMode === "invoice" && <p className={styles.muted}>الخصم متاح على الفاتورة فقط أزل أي خصم محفوظ على البنود قبل الإصدار</p>}
       {!settings.allowBelowCost && <p className={styles.muted}>يتحقق الإصدار من التكلفة الفعلية ويمنع البيع دونها بعد الخصم أو عند عدم توفر تكلفة مؤكدة</p>}
-      <CompanyInvoiceLines lines={invoice.lines} products={selectableProducts} vatRate={invoice.vatRate ?? 0} disabled={disabled} amounts={lineTotals} onChange={lines => patch({ lines })} allowLineEditing={settings.allowLineEditing} allowLineDiscount={settings.discountMode !== "invoice"} decimalDisplay={settings.decimalDisplay} currency={currency} allowFreeItems={settings.allowLineEditing} advanced={settings.advanced} productHint={settingsReady && settings.priceHints === "last" ? productId => <InvoiceLinePricing productId={productId} context={pricingContext} settings={settings} currency={currency} exchangeRate={exchangeRate} /> : undefined} summary={<section className={editor.totals} aria-label="ملخص الفاتورة">
-        <div className={styles.balanceLine}><span>المجموع الفرعي</span><span className={styles.numeric}>{invoiceSettingsMoney(totals.subtotal, settings.decimalDisplay, currency)}</span></div>{totals.discount > 0 && <div className={styles.balanceLine}><span>الخصم</span><span className={styles.numeric}>{invoiceSettingsMoney(totals.discount, settings.decimalDisplay, currency)}</span></div>}{totals.tax > 0 && <div className={styles.balanceLine}><span>الضريبة</span><span className={styles.numeric}>{invoiceSettingsMoney(totals.tax, settings.decimalDisplay, currency)}</span></div>}<div className={styles.balanceLine}><strong>الإجمالي</strong><strong><span className={styles.numeric}>{invoiceSettingsMoney(totals.total, settings.decimalDisplay, currency)}</span></strong></div>
+      <CompanyInvoiceLines lines={invoice.lines} products={selectableProducts} vatRate={invoice.vatRate ?? 0} disabled={disabled} amounts={lineTotals} onChange={lines => patch({ lines })} lineNotes={{ enabled: !!lineNotes.context?.enabled, options: lineNotes.context?.notes ?? [], values: lineNotes.values, onChange: lineNotes.change, onSaveCustom: canFinance(data.role, "settings_manage") ? lineNotes.saveCustom : undefined }} allowLineEditing={settings.allowLineEditing} allowLineDiscount={settings.discountMode !== "invoice"} decimalDisplay={settings.decimalDisplay} currency={currency} allowFreeItems={settings.allowLineEditing} advanced={settings.advanced} productHint={settingsReady && settings.priceHints === "last" ? (productId, line) => <InvoiceLinePricing unitRatio={line.catalogSource === "inventory" ? (line.unitFactor ?? 1) / (invoiceProducts.find(product => product.id === productId)?.unitFactor ?? 1) : 1} productId={productId} context={pricingContext} settings={settings} currency={currency} exchangeRate={exchangeRate} /> : undefined} summary={<section className={editor.totals} aria-label="ملخص الفاتورة">
+        <div className={styles.balanceLine}><span>المجموع الفرعي</span><span className={styles.numeric}>{invoiceSettingsMoney(totals.subtotal, settings.decimalDisplay, currency)}</span></div>{totals.discount > 0 && <div className={styles.balanceLine}><span>الخصم</span><span className={styles.numeric}>{invoiceSettingsMoney(totals.discount, settings.decimalDisplay, currency)}</span></div>}{totals.tax > 0 && <div className={styles.balanceLine}><span>الضريبة</span><span className={styles.numeric}>{invoiceSettingsMoney(totals.tax, settings.decimalDisplay, currency)}</span></div>}{shippingCharge.selection && <div className={styles.balanceLine}><span>الشحن</span><span className={styles.numeric}>{invoiceSettingsMoney(shippingTotals.amount, settings.decimalDisplay, currency)}</span></div>}<div className={styles.balanceLine}><strong>الإجمالي</strong><strong><span className={styles.numeric}>{invoiceSettingsMoney(totals.total, settings.decimalDisplay, currency)}</span></strong></div>
         {adjustment && <div className={styles.balanceLine}><span>{adjustmentType?.name || "التسوية"}</span><span className={styles.numeric}>{invoiceSettingsMoney(totals.adjustment.total, settings.decimalDisplay, currency)}</span></div>}
         {deposit.value > 0 && <div className={styles.balanceLine}><span>الدفعة المقدمة المطلوبة</span><span className={styles.numeric}>{invoiceSettingsMoney(depositAmount, settings.decimalDisplay, currency)}</span></div>}
         {creditApplied > 0 && <div className={styles.balanceLine}><span>من رصيد العميل</span><span className={styles.numeric}>{invoiceSettingsMoney(creditApplied, settings.decimalDisplay, currency)}</span></div>}
@@ -421,7 +474,7 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
         <div className={editor.compactFields}><Field label="الدفعة المقدمة"><input type="number" min="0" step="0.01" max={deposit.kind === "percent" ? 100 : totals.total} value={deposit.value} disabled={!settings.allowDeposits} onChange={event => { if (!settings.allowDeposits) return; const value = Number(event.target.value); setDeposit(current => ({ ...current, value })); patch({ paymentKind: value > 0 && deposit.paid ? "cash" : "credit", accountId: "" }); }} /></Field><Field label="نوع الدفعة"><select value={deposit.kind} disabled={!settings.allowDeposits} onChange={event => { if (settings.allowDeposits) setDeposit(current => ({ ...current, kind: event.target.value === "percent" ? "percent" : "amount" })); }}><option value="amount">المبلغ</option><option value="percent">نسبة مئوية (%)</option></select></Field><label className={styles.check}><input type="checkbox" role="switch" checked={deposit.paid} disabled={!deposit.value || !settings.allowDeposits} onChange={event => { if (!settings.allowDeposits) return; setDeposit(current => ({ ...current, paid: event.target.checked })); patch({ paymentKind: event.target.checked ? "cash" : "credit", accountId: "" }); }} />مدفوع بالفعل</label><InvoiceHelp text="أدخل الدفعة المقدمة المطلوبة وفعّل مدفوع بالفعل فقط عند تحصيلها يُسجل المبلغ المحصل ويُخصم من المتبقي عند إصدار الفاتورة" /></div>
         {deposit.value > 0 && <p className={styles.muted}>الدفعة المقدمة <span className={styles.numeric}>{invoiceSettingsMoney(depositAmount, settings.decimalDisplay, currency)}</span> — {deposit.paid ? "محصلة عند الإصدار" : "غير محصلة"}</p>}
       </div>
-      <div hidden={details !== "shipping"} data-invoice-details="shipping" className={editor.optionPanel}><div className={editor.compactFields}><Field label="بيانات الشحن"><select value={shipping} onChange={event => setShipping(event.target.value as ShippingMode)}><option value="none">لا تظهر</option><option value="main">أظهر بيانات العميل الأساسية</option><option value="secondary">أظهر عنوان العميل الثانوي</option></select></Field><InvoiceHelp text="يظهر العنوان المختار في قسم الشحن إلى في الفاتورة ويُحفظ كما هو وقت الإصدار" /></div>{shipping !== "none" && <p className={styles.muted}>{shippingAddress || "أكمل العنوان المختار في بيانات العميل قبل الإصدار"}</p>}</div>
+      <div hidden={details !== "shipping"} data-invoice-details="shipping" className={editor.optionPanel}><div className={editor.compactFields}><Field label="بيانات الشحن"><select value={shipping} onChange={event => setShipping(event.target.value as ShippingMode)}><option value="auto">آلي</option><option value="none">لا تظهر</option><option value="main">أظهر عنوان العميل</option><option value="secondary">أظهر عنوان العميل الثانوي</option></select></Field><InvoiceHelp text="يظهر العنوان المختار في قسم الشحن إلى في الفاتورة ويُحفظ كما هو وقت الإصدار" /></div>{shipping !== "none" && <p className={styles.muted}>{shippingAddress || "أكمل العنوان المختار في بيانات العميل قبل الإصدار"}</p>}<InvoiceShippingChargeEditor resource={shippingCharge} disabled={disabled} /></div>
       <div hidden={details !== "delivery"} data-invoice-details="delivery" className={editor.optionPanel}><div className={editor.compactFields}><label className={styles.check}><input type="checkbox" role="switch" checked={delivery.confirmed} onChange={event => setDelivery({ confirmed: event.target.checked, date: event.target.checked ? new Date().toISOString() : "" })} />تأكيد التسليم</label><Field label="تاريخ التسليم" hint="بتوقيت الرياض"><input type="datetime-local" disabled={!delivery.confirmed} required={delivery.confirmed} value={delivery.date ? new Date(new Date(delivery.date).getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16) : ""} onChange={event => setDelivery(current => ({ ...current, date: event.target.value ? `${event.target.value}:00+03:00` : "" }))} /></Field></div></div>
       <div hidden={details !== "attachments"} data-invoice-details="attachments"><CompanyInvoiceFiles slug={data.cafe.slug} files={files} onChange={setFiles} disabled={pending || stale || draftBusy || !!issued} onBusyChange={setFilesBusy} /></div>
       </div>
@@ -441,6 +494,7 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
           <Field label="رقم المعرّف" hint="غير مفعّل حاليًا"><input disabled placeholder="مرجع عملية الدفع" /></Field>
         </div> : <p className={styles.muted}>فاتورة آجلة على العميل المحدد ويمكن تسجيل دفعة بعد الحفظ</p>}
       </section>
+      {customFields.settings && <InvoiceCustomFieldValues key={`${data.cafe.slug}-${draftRenderId}`} slug={data.cafe.slug} settings={customFields.settings} settingsRevision={customFields.context!.settingsRevision} values={customFields.values} disabled={disabled} onChange={customFields.change} onBusyChange={setCustomFilesBusy} />}
       <div className={editor.bottomActions}><span className={styles.muted}>{!issuerReady && !issued ? "يمكن حفظ المسودة الآن ويتاح الإصدار بعد تجهيز بيانات المنشأة" : "بعد الإصدار تُحفظ نسخة ثابتة من الفاتورة ويُسجل أثرها المالي والمخزني"}</span><button type="submit" className={styles.primary} disabled={disabled || !issueReady}>{draftBusy ? "جار تنفيذ الطلب" : issued ? `فاتورة رقم ${issued.displayNumber || issued.number}` : deliveryMethod === "whatsapp" ? "إصدار وإرسال بالواتساب" : deliveryMethod === "email" || deliveryMethod === "both" ? "إصدار وإرسال بالبريد" : "إصدار الفاتورة"}</button></div>
     </fieldset>
   </form><div onKeyDown={event => event.stopPropagation()}>
@@ -457,7 +511,9 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
       <div className={editor.previewHeader}><div><h3>{data.cafe.name}</h3><p>فاتورة شركات</p></div><span className={styles.badge}>معاينة غير محفوظة</span></div>
       <p>العميل: {data.parties.find(party => party.id === invoice.partyId)?.name || "لم يُحدد العميل"}</p>
       {customer?.tax_number && <p>الرقم الضريبي: <bdi>{customer.tax_number}</bdi></p>}
-      <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الخصم</th><th>الضريبة</th><th>الإجمالي</th></tr></thead><tbody>{invoice.lines.map((line, index) => <tr key={line.key}><td>{data.products.find(product => product.id === line.productId)?.name || line.name || "لم يُحدد الصنف"}</td><td><Numeric value={line.quantity} /></td><td><span className={styles.numeric}>{invoiceSettingsMoney(lineTotals[index].price, settings.decimalDisplay, currency)}</span></td><td><span className={styles.numeric}>{invoiceSettingsMoney(lineTotals[index].discount, settings.decimalDisplay, currency)}</span></td><td><span className={styles.numeric}>{invoiceSettingsMoney(lineTotals[index].tax, settings.decimalDisplay, currency)}</span></td><td><span className={styles.numeric}>{invoiceSettingsMoney(lineTotals[index].total, settings.decimalDisplay, currency)}</span></td></tr>)}</tbody></table></div>
+      <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الخصم</th><th>الضريبة</th><th>الإجمالي</th></tr></thead><tbody>{invoice.lines.map((line, index) => codServiceLineIndices.includes(index) ? null : <tr key={line.key}><td>{invoiceProducts.find(product => product.id === line.productId)?.name || line.name || "لم يُحدد الصنف"}{line.description && <p className={editor.previewNote}>{line.description}</p>}{lineNotes.values[line.key]?.map(note => <p className={editor.previewNote} key={note}>{note}</p>)}</td><td><Numeric value={line.quantity} /></td><td><span className={styles.numeric}>{invoiceSettingsMoney(lineTotals[index].price, settings.decimalDisplay, currency)}</span></td><td><span className={styles.numeric}>{invoiceSettingsMoney(lineTotals[index].discount, settings.decimalDisplay, currency)}</span></td><td><span className={styles.numeric}>{invoiceSettingsMoney(lineTotals[index].tax, settings.decimalDisplay, currency)}</span></td><td><span className={styles.numeric}>{invoiceSettingsMoney(lineTotals[index].total, settings.decimalDisplay, currency)}</span></td></tr>)}</tbody></table></div>
+      {codServiceLineIndices.length > 0 && <div className={styles.balanceLine}><span>رسوم الدفع عند الاستلام</span><span className={styles.numeric}>{invoiceSettingsMoney(codGross, settings.decimalDisplay, currency)}</span></div>}
+      {shippingCharge.selection && <div className={styles.balanceLine}><span>الشحن: {shippingCharge.selection.name}</span><span className={styles.numeric}>{invoiceSettingsMoney(shippingTotals.amount, settings.decimalDisplay, currency)}</span></div>}
       <div className={styles.balanceLine}><span>إجمالي الفاتورة</span><strong><span className={styles.numeric}>{invoiceSettingsMoney(totals.total, settings.decimalDisplay, currency)}</span></strong></div>
       <div className={styles.balanceLine}><span>مدفوع</span><span className={styles.numeric}>{invoiceSettingsMoney(paid, settings.decimalDisplay, currency)}</span></div><div className={styles.balanceLine}><span>المبلغ المستحق</span><span className={styles.numeric}>{invoiceSettingsMoney(totals.total - paid, settings.decimalDisplay, currency)}</span></div>{[savedNote, optionsNote].filter(Boolean).map((note, index) => <p key={index} className={editor.previewNote}>{note}</p>)}
       <button type="button" className={styles.secondary} onClick={closePreview}>العودة للتعديل</button>

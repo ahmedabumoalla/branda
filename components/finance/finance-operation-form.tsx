@@ -12,6 +12,7 @@ import { SalesCashierForm } from "./sales-cashier-form";
 import { FinanceSupplierPayoutForm } from "./finance-supplier-payout-form";
 import { FinanceCashHandoverForm } from "./finance-cash-handover-form";
 import { FinanceInventoryItemForm, type InventorySaved } from "./finance-inventory-item-form";
+import { FinanceOpeningBalancesForm, FinanceShiftForm } from "./finance-shift-forms";
 import { FinancePosPurchaseForm } from "./finance-pos-purchase-form";
 
 export type FinanceFormOperation = FinanceOperation | "staff_create" | "sales_cashier_create";
@@ -31,8 +32,6 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
   const [staffMode, setStaffMode] = useState(operation === "staff_create" ? "new" : "existing");
   const [localError, setLocalError] = useState("");
   const [lastCompletedDay] = useState(() => new Date(Date.now()-86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Riyadh"}));
-  const [receivedCount, setReceivedCount] = useState("");
-  const [received, setReceived] = useState(false);
   const [stockMode, setStockMode] = useState("adjust");
   const [stockItem, setStockItem] = useState(String(values.itemId ?? ""));
   const [stockWarehouse, setStockWarehouse] = useState(String(values.warehouseId ?? snapshot.warehouses.find((warehouse) => warehouse.active)?.id ?? ""));
@@ -44,21 +43,24 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
   const selectAccounts = (name: string, list = liquidAccounts, required = true, label = "الحساب") => <Field label={label}><select name={name} required={required} defaultValue={String(values[name] ?? (required && list.length && list.every(account => account.kind === list[0].kind) ? getPrimaryFinanceAccount(list)?.id : "") ?? "")}><option value="">اختر الحساب</option>{list.map((account) => <option value={account.id} key={account.id}>{account.name} · {accountKindNames[account.kind]}</option>)}</select></Field>;
   const selectWarehouse = (name = "warehouseId", label = "المستودع") => <Field label={label}><select name={name} required defaultValue={String(values[name] ?? activeWarehouses[0]?.id ?? "")}><option value="">اختر المستودع</option>{activeWarehouses.map((warehouse) => <option value={warehouse.id} key={warehouse.id}>{warehouse.name}</option>)}</select></Field>;
   const selectParty = (kind?: "customer" | "supplier" | "employee", required = false) => <Field label={kind === "supplier" ? "المورد" : kind === "employee" ? "الموظف" : "الطرف المرتبط"}><select name="partyId" required={required} defaultValue={String(values.partyId ?? "")}><option value="">بدون طرف</option>{snapshot.parties.filter((party) => party.active && (!kind || party.kind === kind)).map((party) => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>;
-  const amount = (name: string, label: string, defaultValue = 0, min = 0) => <Field label={label}><input name={name} type="number" inputMode="decimal" step="0.01" min={min} max="999999999" required onChange={operation === "shift_accept" && name === "countedCash" ? event => { setReceivedCount(event.target.value); setReceived(false); } : undefined} defaultValue={name === "openingCash" || (operation === "shift_accept" && name === "countedCash") ? "" : Number(values[name] ?? defaultValue)} /></Field>;
+  const amount = (name: string, label: string, defaultValue = 0, min = 0) => <Field label={label}><input name={name} type="number" inputMode="decimal" step="0.01" min={min} max="999999999" required defaultValue={name === "openingCash" || (operation === "shift_accept" && name === "countedCash") ? "" : Number(values[name] ?? defaultValue)} /></Field>;
   const note = <Field label="البيان"><textarea name="note" maxLength={500} required={["refund", "stock_adjust", "stock_transfer", "journal", "treasury"].includes(operation)} defaultValue={String(values.note ?? "")} placeholder="سبب العملية أو مرجعها" /></Field>;
 
   if (operation === "supplier_payout") return <FinanceSupplierPayoutForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
-  if (operation === "shift_purchase") return <FinancePosPurchaseForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} onBusyChange={onInventoryBusyChange} onInventorySaved={onInventorySaved} onInventoryUnitsChanged={onInventoryUnitsChanged} />;
   if (operation === "shift_open" || operation === "shift_close") return <FinanceCashHandoverForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
   if (operation === "sales_cashier_create") return (snapshot.canAdminister || snapshot.canManageCashiers) ? <SalesCashierForm pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} /> : <p className={styles.notice}>إضافة الكاشيرات متاحة لمالك العلامة</p>;
   if (operation === "refund") return <FinanceRefundForm document={snapshot.documents.find(document => document.id === values.documentId)} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
+  if (operation === "shift_purchase") return <FinancePosPurchaseForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} onBusyChange={onInventoryBusyChange} onInventorySaved={onInventorySaved} onInventoryUnitsChanged={onInventoryUnitsChanged} />;
+  if (["shift_open", "shift_close", "shift_accept", "shift_handover", "supplier_payout"].includes(operation)) return <FinanceShiftForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
+  if (operation === "opening_balances" || operation === "finance_reset") return <FinanceOpeningBalancesForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
+
   if (operation === "item") return <FinanceInventoryItemForm snapshot={snapshot} item={snapshot.items.find(item => item.id === values.id)} onBusyChange={onInventoryBusyChange} onUnitsChanged={onInventoryUnitsChanged} onCancel={onCancel} onSaved={(item, units) => { onInventorySaved?.(item, units); onCancel(); }} />;
 
   return <>{editingItem && canFinance(snapshot.role, "inventory_write") && <FinanceInventoryItemForm snapshot={{ ...snapshot, ...catalog }} item={catalog.items.find(item => item.id === editingItem.id)} onBusyChange={onInventoryBusyChange} onUnitsChanged={units => { setCatalog(previous => ({ ...previous, units })); onInventoryUnitsChanged?.(units); }} onCancel={closeItemEditor} onSaved={(item, units) => { setCatalog(previous => ({ items: [...previous.items.filter(row => row.id !== item.id), item], units })); setLines(previous => previous.map(line => line.key === editingItem.row ? { ...line, itemId: item.id } : line)); onInventorySaved?.(item, units); closeItemEditor(); }} />}
   <div hidden={!!editingItem}><form className={styles.form} onSubmit={async (event) => {
+
     event.preventDefault(); if (pending || editingItem) return;
     setLocalError("");
-    if (operation === "shift_accept" && (!received || receivedCount === "")) { setLocalError("عد النقدية وأكد استلامها قبل بدء الوردية"); return; }
     const data = new FormData(event.currentTarget);
     const payload: Record<string, unknown> = { ...values };
     for (const [key, value] of data) payload[key] = String(value).trim();
@@ -113,10 +115,9 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
           {operation === "stock_adjust" && stockMode === "count" ? <Field label="الكمية المعدودة فعليًا" hint={`الرصيد المسجل ${snapshot.stock.find((stock) => stock.item_id === stockItem && stock.warehouse_id === stockWarehouse)?.quantity ?? 0}`}><input name="countedQuantity" type="number" inputMode="decimal" required min="0" max="99999999" step="0.001" /></Field> : <Field label={operation === "stock_adjust" ? "التغير في الكمية" : "الكمية المنقولة"} hint={operation === "stock_adjust" ? "قيمة موجبة للإضافة وسالبة للعجز أو التلف" : undefined}><input name="quantity" type="number" inputMode="decimal" required min={operation === "stock_transfer" ? .001 : -99999999} max="99999999" step="0.001" /></Field>}
         </div>{note}
       </>}
-      {operation === "treasury" && <><div className={styles.fields}><Field label="نوع العملية"><select name="kind" value={treasuryKind} onChange={(event) => setTreasuryKind(event.target.value)}><option value="receipt">سند قبض</option><option value="expense">سند صرف</option><option value="transfer">تحويل بين الحسابات أو تسليم عهدة</option><option value="opening">رصيد افتتاحي</option></select></Field>{selectAccounts("accountId", liquidAccounts, true, treasuryKind === "transfer" ? "من حساب" : "الحساب")}{treasuryKind === "transfer" && selectAccounts("toAccountId", liquidAccounts, true, "إلى حساب")}{amount("amount", "المبلغ", 0, .01)}{selectParty()}</div>{note}</>}
+      {operation === "treasury" && <><div className={styles.fields}><Field label="نوع العملية"><select name="kind" value={treasuryKind} onChange={(event) => setTreasuryKind(event.target.value)}><option value="receipt">سند قبض</option><option value="expense">سند صرف</option><option value="transfer">تحويل بين الحسابات أو تسليم عهدة</option></select></Field>{selectAccounts("accountId", liquidAccounts, true, treasuryKind === "transfer" ? "من حساب" : "الحساب")}{treasuryKind === "transfer" && selectAccounts("toAccountId", liquidAccounts, true, "إلى حساب")}{amount("amount", "المبلغ", 0, .01)}{selectParty()}</div>{note}</>}
       {operation === "settlement" && <><p className={styles.notice}>تسجيل دفعة مرتبطة بالمستند وتخفيض الرصيد المستحق</p><div className={styles.fields}>{selectAccounts("accountId")}{amount("amount", "مبلغ التسوية", Number(values.remaining ?? 0), .01)}</div>{note}</>}
       {(operation === "shift_handover" || operation === "shift_accept") && <>
-        {operation === "shift_accept" && receivedCount !== "" && <label className={styles.check}><input type="checkbox" required checked={received} onChange={event => setReceived(event.target.checked)} />أؤكد استلام النقدية المعدودة بمبلغ <bdi dir="ltr">{Number(receivedCount).toFixed(2)}</bdi> ر س</label>}
         {operation !== "shift_accept" && typeof values.expectedCash === "number" && <div className={styles.notice}>النقدية المتوقعة <strong><Numeric value={values.expectedCash} money /></strong></div>}
         <div className={styles.fields}>{amount("countedCash", operation === "shift_accept" ? "النقدية المستلمة فعليًا" : "النقدية المعدودة فعليًا")}{operation === "shift_handover" && <Field label="تسليم إلى"><select name="toUserId" required defaultValue=""><option value="">اختر المستلم</option>{snapshot.staff.filter((staff) => staff.active && staff.user_id !== snapshot.userId).map((staff) => <option key={staff.user_id} value={staff.user_id}>{staff.name}</option>)}</select></Field>}</div>{note}
       </>}

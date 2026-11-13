@@ -1,0 +1,9 @@
+import {notFound} from 'next/navigation';
+import {readSystemSettings,systemSettingsContext} from '@/lib/data/erp-settings';
+import {systemSettingsSections,type SystemSettingsSection} from '@/lib/erp/settings';
+import {SystemSettingsWorkspace} from '@/components/erp/settings/workspace';
+import {getFinanceInvoiceSettings} from '@/app/actions/finance-invoice-settings';
+import {defaultSystemProducts} from '@/lib/erp/settings-products';
+import {readBrandFinanceSnapshot} from '@/lib/data/brand-finance';
+export const dynamic='force-dynamic';
+export default async function Page({params}:{params:Promise<{segments?:string[]}>}){const {segments=[]}=await params,section=segments[0]||'account';if(segments.length>1||!Object.hasOwn(systemSettingsSections,section))notFound();const initial=await readSystemSettings();let finance=null;let products=defaultSystemProducts;if(['payments','taxes','numbering','general'].includes(section)){const context=await systemSettingsContext(initial.slug),[state,snapshot]=await Promise.all([getFinanceInvoiceSettings(initial.slug),readBrandFinanceSnapshot(context)]);if(!state.ok)throw new Error(state.message);finance={state:state.data,accounts:snapshot.accounts,settings:snapshot.settings};if(section==='taxes'){const result=await context.client.rpc('erp_system_product_configuration',{p_cafe:context.cafe.id});if(result.error)throw new Error('تعذر تحميل ضرائب المنتجات');products=result.data;}if(section==='numbering'){const numbers=await context.client.rpc('erp_system_numbering',{p_cafe:context.cafe.id});if(numbers.error)throw new Error('تعذر تحميل الترقيم');initial.numbering=numbers.data;}}return <SystemSettingsWorkspace key={section+JSON.stringify([initial.general.revision,initial.appearance.revision,initial.appsRevision])} initial={initial} section={section as SystemSettingsSection} finance={finance} products={products}/>;}

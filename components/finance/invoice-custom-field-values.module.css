@@ -1,0 +1,26 @@
+.section { padding: 22px 0; border-top: 1px solid var(--border, #e5e1dc); color: var(--text, #292620); }
+.section h3 { margin: 0 0 20px; font-size: 15px; font-weight: 600; }
+.fields { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px 0; }
+.break { flex-basis: 100%; height: 0; margin: -8px 0; }
+.field { box-sizing: border-box; width: 60%; padding-inline-end: 18px; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.field[data-size="xs"] { width: 20%; } .field[data-size="sm"] { width: 40%; } .field[data-size="lg"] { width: 80%; } .field[data-size="xl"] { width: 100%; }
+.field > label { font-size: 13px; font-weight: 500; }
+.field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .field select, .field textarea { width: 100%; min-width: 0; border: 1px solid var(--border, #dcd6cf); border-radius: 3px; padding: 9px 10px; font: inherit; font-size: 13px; background: var(--surface, #fff); color: inherit; min-height: 40px; box-sizing: border-box; }
+.field textarea { min-height: 90px; resize: vertical; } .field select[multiple] { min-height: 112px; }
+.field input[type="checkbox"], .choices input, .rating input { accent-color: var(--primary, #74553d); }
+.field > input[type="checkbox"] { align-self: flex-start; width: 18px; height: 18px; }
+.field small { font-size: 11px; color: var(--text-muted, #6f6a65); }
+.field small:empty { display: none; } .required, .field .error { color: #a72d27; }
+.field :focus-visible { outline: 2px solid var(--primary, #74553d); outline-offset: 2px; }
+.choices { display: flex; flex-direction: column; gap: 9px; } .choices label { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+.rating { display: flex; gap: 4px; align-items: center; color: var(--primary, #74553d); }
+.rating label { position: relative; display: flex; padding: 6px; cursor: pointer; } .rating input { position: absolute; opacity: 0; width: 100%; height: 100%; inset: 0; }
+.rating label:focus-within { outline: 2px solid currentColor; } .rating button { border: 0; background: none; padding: 8px; font-size: 20px; color: inherit; }
+.inputGroup { display: flex; align-items: center; gap: 8px; } .inputGroup span { font-size: 12px; }
+.separator, .staticContent { width: 100%; } .separator { display: flex; align-items: center; gap: 10px; font-size: 14px; } .separator hr { flex: 1; border: 0; border-top: 1px solid var(--border, #ded8d1); }
+.staticContent { line-height: 1.8; font-size: 14px; overflow-wrap: anywhere; } .staticContent ul { list-style: disc; padding-inline-start: 24px; } .staticContent ol { list-style: decimal; padding-inline-start: 24px; } .staticContent a { color: var(--primary, #74553d); text-decoration: underline; }
+.file { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; } .file button, .upload { border: 1px solid var(--border, #dcd6cf); padding: 8px 10px; min-height: 36px; background: var(--surface, #fff); color: inherit; border-radius: 3px; font: inherit; font-size: 12px; }
+.file > div { display: flex; gap: 6px; align-items: center; } .upload { display: flex; gap: 8px; align-items: center; position: relative; overflow: hidden; cursor: pointer; }
+.upload input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; } .upload:focus-within { outline: 2px solid var(--primary, #74553d); outline-offset: 2px; }
+.file button:disabled, .field :disabled { opacity: .65; cursor: not-allowed; }
+@media (max-width: 640px) { .field[data-size] { width: 100%; padding-inline-end: 0; } .file button, .upload { min-height: 44px; } }

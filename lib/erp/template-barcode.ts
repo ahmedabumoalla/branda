@@ -1,0 +1,4 @@
+import "server-only";
+import JsBarcode from "jsbarcode";
+import sharp from "sharp";
+export async function templateBarcodeImage(value:string){if(!/^[\x20-\x7e]{1,80}$/.test(value))throw new Error("قيمة الباركود يجب أن تحتوي على حروف إنجليزية أو أرقام حتى 80 حرفًا");const encoded:{encodings?:{data:string}[]}={};JsBarcode(encoded,value,{format:"CODE128",displayValue:false});const data=encoded.encodings?.map(e=>e.data).join("")??"";if(!data||data.length>2000)throw new Error("تعذر إنشاء الباركود");const bars=[...data].map((v,i)=>v==="1"?`<rect x="${20+i*2}" y="10" width="2" height="80"/>`:"").join("");const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${data.length*2+40}" height="100"><rect width="100%" height="100%" fill="white"/><g fill="black">${bars}</g></svg>`;return "data:image/png;base64,"+(await sharp(Buffer.from(svg)).png().toBuffer()).toString("base64");}

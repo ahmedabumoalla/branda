@@ -13,9 +13,64 @@
   padding: clamp(16px, 2.5vw, 36px);
   font-family: inherit;
 }
+.shiftFieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 18px; }
+.shiftDialog { display: flex; flex-direction: column; width: 100%; min-width: 0; max-width: 960px; max-height: min(94dvh, calc(100dvh - 32px)); overflow: hidden; border-radius: 24px; background: white; box-shadow: 0 28px 90px #39251b30; }
+.shiftDialog :is(input, select, textarea) { min-width: 0; max-width: 100%; }
+.shiftDialog button:disabled, .invoicePanel button:disabled { opacity: .5; cursor: not-allowed; }
+.shiftDialog :is(button, input, select, textarea, a):focus-visible, .invoicePanel :is(button, input, select, textarea, a):focus-visible { outline: 3px solid #a36b22; outline-offset: 3px; }
+.shiftSummaryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 12px; }
+.shiftSummaryGrid > div, .shiftTotal { min-width: 0; display: grid; align-content: center; gap: 10px; padding: 16px; border: 1px solid var(--finance-line, #e6dacb); border-radius: 14px; background: var(--finance-cream, #f7f2ea); }
+.shiftSummaryGrid span, .shiftTotal > span { color: var(--finance-muted, #78675c); font-size: 12px; }
+.shiftSummaryGrid strong { font-size: 15px; overflow-wrap: anywhere; }
+.shiftTotal strong { font-size: 25px; }
+.shiftSetup { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px; padding: 22px; border: 1px solid var(--finance-line); border-radius: 18px; background: var(--finance-paper); margin-bottom: 18px; }
+.shiftSetup > div { min-width: 0; }
+.shiftClickableRow { cursor: pointer; }
+.shiftClickableRow td:first-child { min-width: 180px; }
+.shiftSaleSummary { display: flex; justify-content: space-between; align-items: center; gap: 16px; cursor: pointer; padding: 18px; min-height: 64px; }
+.shiftSaleSummary small { display: block; color: var(--finance-muted); font-size: 12px; margin-top: 6px; }
+.shiftFilename { overflow-wrap: anywhere; min-width: 0; }
+.purchaseTable { min-width: 640px; }
+.purchaseTable td:first-child { min-width: 230px; width: 44%; }
+.purchaseTable td:nth-child(2), .purchaseTable td:nth-child(3) { width: 110px; }
+.purchaseTable :is(input, select) { width: 100%; min-height: 44px; padding: 9px; border: 1px solid var(--finance-line); border-radius: 9px; background: white; font-size: 16px; color: var(--finance-ink); }
+.purchaseInline { display: flex; align-items: center; gap: 6px; min-height: 44px; color: var(--finance-accent); font-size: 12px; font-weight: 700; }
+.barcodeVideo { width: 100%; max-height: 55dvh; border-radius: 14px; object-fit: cover; background: #211b17; }
+.shiftHighlight { border-radius: 16px; padding: 22px; background: #39251b; color: #fffdf9; }
+.shiftHighlight > span { color: #e6c78e; font-size: 12px; }
+.shiftHighlight h3 { font-size: 23px; font-weight: 800; margin: 8px 0; }
+.shiftHighlight p { margin: 0; }
+.shiftUnsold { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 8px; }
+.shiftUnsold > div { display: flex; justify-content: space-between; gap: 12px; min-width: 0; padding: 12px; border-bottom: 1px solid var(--finance-line); font-size: 13px; }
+.shiftUnsold > div > span:first-child { overflow-wrap: anywhere; }
+.shiftReportPreview { padding: 18px; border: 1px solid var(--finance-line); border-radius: 14px; background: #f1ece4; overflow: auto; }
+.shiftReportPaper { max-width: 320px; margin: auto; padding: 18px; background: white; color: #161616; font-size: 12px; }
+.shiftReportPaper [data-receipt-header] { text-align: center; border-bottom: 1px dashed #888; padding-bottom: 12px; }
+.shiftReportPaper [data-receipt-header] img { margin: 0 auto 8px; max-height: 80px; object-fit: contain; }
+.shiftReportPaper h3 { font-size: 19px; font-weight: 800; }
+.shiftReportPaper [data-receipt-meta] { padding: 10px 0; border-bottom: 1px dashed #888; }
+.shiftReportPaper [data-receipt-row] { display: flex; justify-content: space-between; gap: 14px; padding: 6px 0; }
+.shiftReportPaper [data-receipt-row] > :last-child { flex-shrink: 0; }
+.shiftReportPaper [data-receipt-footer] { border-top: 1px dashed #888; text-align: center; margin-top: 12px; padding-top: 10px; }
+@media (max-width: 639px) {
+  .shiftDialog > :first-child { padding: 16px; }
+  .shiftDialog > :first-child h2 { font-size: 21px; }
+  .shiftDialog > :nth-child(2) { padding: 16px; }
+  .shiftDialog :is(input, select, textarea) { font-size: 16px; }
+  .shiftSummaryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shiftSummaryGrid > div { padding: 12px; }
+  .shiftSetup { padding: 16px; }
+  .shiftSetup .actions { width: 100%; }
+  .shiftSetup .actions button { flex: 1; }
+  .shiftReportPreview { padding: 8px; }
+}
 .header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
-.invoiceManagementPage { background: #f5f3ee; }
-.invoiceManagementHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.invoiceManagementPage { --document-gutter: clamp(16px, 2.5vw, 36px); background: #f5f3ee; padding: 0 var(--document-gutter) var(--document-gutter); }
+.invoiceManagementHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; min-height: 45px; margin: 0 calc(-1 * var(--document-gutter)) 0; padding: 8px var(--document-gutter); background: var(--finance-ink); color: var(--finance-paper); }
+.invoiceManagementHeader > div { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.invoiceManagementHeader .eyebrow { margin: 0; color: #e5b85c; font-size: 12px; }
+.invoiceManagementHeader .panelTitle { margin: 0; font-size: 13px; color: inherit; }
+.invoiceManagementHeader > .muted { color: var(--finance-paper); }
 .eyebrow { display: flex; align-items: center; gap: 8px; color: var(--finance-accent); font-weight: 700; font-size: 12px; margin: 0 0 9px; }
 .title { font-size: clamp(26px, 3vw, 38px); font-weight: 800; line-height: 1.35; margin: 0; letter-spacing: -.7px; }
 .subtitle { font-size: 13px; line-height: 1.8; color: var(--finance-muted); margin: 8px 0 0; }
@@ -268,7 +323,6 @@
   .posLayout > .cart { position: relative; top: auto; height: 100%; min-height: 0; max-height: 100%; }
   .cartBody { flex: 1 1 0; }
 }
-@media (min-width: 1500px) { .products { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 1150px) { .posLayout { grid-template-columns: minmax(0, 1fr) 320px; } .products { grid-template-columns: repeat(2, minmax(0, 1fr)); } .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 780px) { .header { align-items: flex-start; flex-direction: column; gap: 16px; } .twoColumns, .posLayout { grid-template-columns: minmax(0, 1fr); } .cart { position: static; } .products { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cartLines { max-height: none; } .metric { padding: 16px; } .panelHeader, .panelBody { padding: 16px; } }
 @media (max-width: 480px) { .products { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .fields { grid-template-columns: minmax(0, 1fr); } .rowFields { grid-template-columns: minmax(0, 1fr) 76px; } .rowFields > :first-child { grid-column: 1 / -1; } .metricValue { font-size: 23px; } .metrics { gap: 8px; } .actions { width: 100%; } .actions > :is(a,button) { flex: 1; } }
@@ -310,6 +364,14 @@
  .cartBody { flex: 1 1 0; }
  .cart > .panelHeader { padding: 10px 12px; }
  .posHeader .posShiftMeta { display: flex; margin-inline-start: 0; }
+}
+@media (min-width: 1280px) {
+ .posCatalog .products { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+ .posCatalog .product { border-radius: 10px; }
+ .posCatalog .productImage, .posCatalog .productPlaceholder { height: auto; aspect-ratio: 1.2; }
+ .posCatalog .productBody { padding: 8px; gap: 4px; }
+ .posCatalog .productName { font-size: 12px; line-height: 1.5; min-height: 36px; overflow-wrap: anywhere; }
+ .posCatalog .productPrice { font-size: 14px; line-height: 1.5; }
 }
 @media (prefers-reduced-motion: reduce) { .page *, .page *::before, .page *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 @media print { .page { background: white; padding: 0; } .noPrint { display: none !important; } .printOnly { display: block; } .receipt { padding: 0; width: 80mm; } }

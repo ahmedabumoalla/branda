@@ -11,6 +11,7 @@ export const accountKindNames: Record<FinanceAccountKind, string> = {
   cash: "نقدية", bank: "بنك", pos: "نقاط بيع", employee: "عهد موظفين", receivable: "ذمم العملاء",
   payable: "ذمم الموردين", inventory: "مخزون", revenue: "إيرادات", expense: "مصروفات", equity: "حقوق الملكية",
   vat_input: "ضريبة مدخلات", vat_output: "ضريبة مخرجات",
+  fixed_asset: "أصول ثابتة", accumulated_depreciation: "مجمع الإهلاك",
 };
 export const documentKindNames: Record<string, string> = {
   sale: "مبيعات", purchase: "مشتريات", refund: "مرتجع", receipt: "سند قبض", expense: "سند صرف",

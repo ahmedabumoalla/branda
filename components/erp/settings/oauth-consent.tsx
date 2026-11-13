@@ -1,0 +1,6 @@
+'use client';
+import {useState,useTransition} from 'react';
+import {consentSystemOAuth} from '@/app/actions/erp-system-oauth';
+import {apiResources} from '@/lib/erp/settings';
+import s from './settings.module.css';
+export function SystemOAuthConsent({slug,brand,client,request,scopes}:{slug:string;brand:string;client:{name:string;redirectUris:string[]};request:Record<string,string>;scopes:string[]}){const[busy,start]=useTransition(),[error,setError]=useState('');const submit=(accept:boolean)=>start(async()=>{const result=await consentSystemOAuth(slug,request,accept);if(result.ok)location.assign(result.data.redirect);else setError(result.message);});return <main dir="rtl" className={s.workspace}><section className={s.card}><h1>السماح باتصال المساعد</h1><p>يطلب {client.name} قراءة البيانات التالية من {brand}</p><p dir="ltr">{new URL(request.redirect_uri).host}</p><ul>{scopes.map(scope=><li key={scope}>{apiResources[scope.split(':')[0] as keyof typeof apiResources]}</li>)}</ul><p>راجع اسم التطبيق وعنوان العودة قبل الموافقة ويمكنك إلغاء الاتصال من إعدادات المساعد في أي وقت</p>{error&&<p role="alert">{error}</p>}<div className={s.inline}><button className={s.primary} disabled={busy} onClick={()=>submit(true)}>السماح بالقراءة</button><button className={s.button} disabled={busy} onClick={()=>submit(false)}>رفض</button></div></section></main>;}

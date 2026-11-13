@@ -70,6 +70,7 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
   const [exportMessage, setExportMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const exportPending = useRef(false);
   const active = cafes.filter(cafe => cafe.status === "نشط").length;
+  const cancelled = cafes.filter(cafe => Boolean(cafe.cancellation)).length;
   const subscribed = cafes.filter(cafe => cafe.hasActivePlan).length;
   const revenue = cafes.reduce((sum, cafe) => sum + cafe.totalRevenue, 0);
   const term = query.trim().toLocaleLowerCase();
@@ -124,7 +125,7 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
   };
   const stats = [
     { label: "إجمالي العلامات", value: cafes.length, hint: "علامة مسجلة على المنصة", icon: Building2 },
-    { label: "العلامات النشطة", value: active, hint: `${number.format(cafes.length - active)} علامة موقوفة`, icon: Check },
+    { label: "العلامات النشطة", value: active, hint: `${number.format(cafes.length - active)} علامة غير نشطة`, icon: Check },
     { label: "الاشتراكات الفعالة", value: subscribed, hint: `${number.format(cafes.length - subscribed)} بدون اشتراك فعال`, icon: Layers3 },
     { label: "إجمالي إيراد الطلبات", value: revenue, hint: "عبر جميع العلامات", icon: CircleDollarSign, currency: true },
   ];
@@ -141,7 +142,7 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
           <label className={s.select}><span>الاشتراك</span><select aria-label="حالة الاشتراك" value={subscription} onChange={event => { setSubscription(event.target.value); setPage(1); }}><option value="all">كل الاشتراكات</option><option value="active">اشتراك فعال</option><option value="inactive">بدون اشتراك فعال</option></select></label>
           <label className={s.select}><span>الترتيب</span><select aria-label="ترتيب العلامات" value={sort} onChange={event => { setSort(event.target.value); setPage(1); }}><option value="default">الترتيب الافتراضي</option><option value="name">حسب الاسم</option><option value="products">الأكثر منتجات</option></select></label>
         </div>
-        <div className={s.filterRow}><div className={s.statusFilters} role="group" aria-label="حالة العلامة">{[["all", "كل العلامات", cafes.length], ["نشط", "النشطة", active], ["موقوف", "الموقوفة", cafes.length - active]].map(([value, label, count]) => <button key={value} type="button" aria-pressed={status === value} onClick={() => { setStatus(String(value)); setPage(1); }}>{label}<span>{number.format(Number(count))}</span></button>)}</div>{hasFilters && <button type="button" className={s.reset} onClick={reset}>مسح التصفية</button>}</div>
+        <div className={s.filterRow}><div className={s.statusFilters} role="group" aria-label="حالة العلامة">{[["all", "كل العلامات", cafes.length], ["نشط", "النشطة", active], ["موقوف", "الموقوفة", cafes.length - active - cancelled], ["ملغى بطلب المستخدم", "الملغاة والمؤرشفة", cancelled]].map(([value, label, count]) => <button key={value} type="button" aria-pressed={status === value} onClick={() => { setStatus(String(value)); setPage(1); }}>{label}<span>{number.format(Number(count))}</span></button>)}</div>{hasFilters && <button type="button" className={s.reset} onClick={reset}>مسح التصفية</button>}</div>
         {visible.length > 0 ? <>
           <div className={s.desktopTable} role="region" aria-label="جدول العلامات التجارية" tabIndex={0}><table><caption className={s.srOnly}>العلامات التجارية وباقاتها ومؤشرات نشاطها</caption><thead><tr>{["العلامة ورقم الصيانة", "الباقة والاشتراك", "المنتجات", "النشاط والخدمات", "حالة العلامة", "الإدارة"].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visible.map(cafe => <tr key={cafe.id}>
             <td><BrandIdentity cafe={cafe} onManage={onManage} /></td><td><BrandPlanSummary cafe={cafe} plans={plans} /></td><td><span className={s.productCount}>{number.format(cafe.productsCount ?? 0)}</span><span className={s.productLabel}>منتج</span></td><td><BrandActivity cafe={cafe} /></td><td><BrandStatus cafe={cafe} /></td><td><ManageButton cafe={cafe} onManage={onManage} /></td>

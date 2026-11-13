@@ -6,6 +6,7 @@ export const invoiceDraftSchema = z.object({
   invoice: z.object({
     lines: z.array(z.object({
       key: z.number().int().nonnegative(), productId: reference,
+      catalogSource: z.enum(["menu", "inventory"]).optional(), unitName: z.string().max(30).optional(), unitFactor: z.number().finite().positive().max(1e6).optional(),
       quantity: z.number().finite().min(0).max(9999), price: amount.optional(),
       description: z.string().max(500).optional(), discount: amount.optional(),
       discountKind: z.enum(["amount", "percent"]).optional(), vatRate: z.number().min(0).max(100).optional(),
@@ -25,7 +26,7 @@ export const invoiceDraftSchema = z.object({
   issuer: z.object({ name: z.string().max(160), vatNumber: z.string().max(15), address: z.string().max(500) }).strict().optional(),
   supplyDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   deposit: z.object({ kind: z.enum(["amount", "percent"]), value: amount, paid: z.boolean() }).strict().default({ kind: "amount", value: 0, paid: false }),
-  shipping: z.enum(["none", "main", "secondary"]).default("none"),
+  shipping: z.enum(["auto", "none", "main", "secondary"]).default("none"),
   delivery: z.object({ confirmed: z.boolean(), date: z.union([z.iso.datetime({ offset: true }), z.literal("")]) }).strict().default({ confirmed: false, date: "" }),
   attachments: z.array(z.uuid()).max(20).default([]),
   extraFields: z.array(z.object({ key: z.number().int().nonnegative(), title: z.string().max(100), value: z.string().max(500) }).strict()).max(5),

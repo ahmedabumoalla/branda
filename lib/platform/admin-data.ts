@@ -73,7 +73,8 @@ export type PlatformCafe = {
   planRemainingDays?: number | null;
   hasActivePlan?: boolean;
   subscriptionStatus?: string;
-  status: "نشط" | "موقوف";
+  cancellation?: import("@/lib/account/cancellation").BrandCancellation;
+  status: "نشط" | "موقوف" | "ملغى بطلب المستخدم";
   totalRevenue: number;
   totalOrders: number;
   customersCount: number;

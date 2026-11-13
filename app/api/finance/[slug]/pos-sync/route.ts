@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { executeBrandFinanceCommand, getBrandFinanceSnapshot } from "@/lib/data/brand-finance";
+import { executeBrandFinanceCommand, getBrandFinanceSnapshot, readBrandFinanceSnapshot, type getBrandFinanceContext } from "@/lib/data/brand-finance";
 
 const headers = { "Cache-Control": "private, no-store", Vary: "Cookie" };
 const fail = (message: string, kind: "auth" | "conflict" | "retry", status: number) => NextResponse.json({ ok: false, kind, message }, { status, headers });
@@ -12,13 +12,14 @@ async function authorize(slug: string) {
   const { data, error } = await client.rpc("brand_finance_context", { p_slug: slug });
   if (error?.code === "42501") return null;
   if (error) throw new Error("unavailable");
-  return { user, cafe: data as { id: string } };
+  return { client, user, cafe: data as Awaited<ReturnType<typeof getBrandFinanceContext>>["cafe"] };
 }
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
-    if (!await authorize(slug)) return fail("سجل الدخول مجددًا لإكمال المزامنة بيانات الجهاز محفوظة", "auth", 401);
-    return NextResponse.json({ ok: true, snapshot: await getBrandFinanceSnapshot(slug) }, { headers });
+    const context = await authorize(slug);
+    if (!context) return fail("سجل الدخول مجددًا لإكمال المزامنة بيانات الجهاز محفوظة", "auth", 401);
+    return NextResponse.json({ ok: true, snapshot: await readBrandFinanceSnapshot(context) }, { headers });
   } catch { return fail("الخدمة غير متاحة مؤقتًا ستستأنف المزامنة تلقائيًا", "retry", 503); }
 }
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {

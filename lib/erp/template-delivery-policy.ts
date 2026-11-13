@@ -1,0 +1,3 @@
+export function deliveryHttpState(status:number):"failed"|"unknown" {return status>=400&&status<500&&![408,409,429].includes(status)?"failed":"unknown";}
+export function normalizeTemplatePhone(input:string){let value=input.replace(/[^0-9]/g,"");if(value.startsWith("00"))value=value.slice(2);if(/^05\d{8}$/.test(value))value="966"+value.slice(1);return /^[1-9]\d{7,14}$/.test(value)?"+"+value:null;}
+export function templatePlainText(html:string){const entities:Record<string,string>={amp:"&",lt:"<",gt:">",quot:'"',"#39":"'",nbsp:" "};return html.replace(/<[^>]*>/g," ").replace(/&(amp|lt|gt|quot|#39|nbsp);/g,(_,key)=>entities[key]).replace(/\s+/g," ").trim();}

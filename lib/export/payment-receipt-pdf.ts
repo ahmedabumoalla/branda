@@ -21,7 +21,7 @@ export function buildPaymentReceiptPdf(data: PaymentReceiptData, thermal: boolea
   autoTable(pdf, {
     startY: 12, margin: { left: margin, right: margin, top: 12, bottom: 12 },
     head: [[data.brand, title]],
-    body: [[data.paymentNumber, "رقم عملية الدفع"], [data.invoiceNumber, "رقم الفاتورة"], [date, "تاريخ الدفع"], [data.customer, "العميل"], [data.method, "طريقة الدفع"], [data.account, "الحساب"], [data.actor, "بواسطة"], ...(data.reference ? [[data.reference, "رقم معرف"]] : []), [data.amount.toFixed(2) + " SAR", data.refund ? "المبلغ المسترد" : "المبلغ المدفوع"], ...(data.note ? [[data.note, "ملاحظات"]] : [])],
+    body: [[data.paymentNumber, "رقم عملية الدفع"], [data.invoiceNumber, "رقم الفاتورة"], [date, "تاريخ الدفع"], [data.customer, "العميل"], [data.method, "طريقة الدفع"], [data.account, "الحساب"], [data.actor, "بواسطة"], ...(data.reference ? [[data.reference, "رقم معرف"]] : []), [data.amount.toFixed(2) + " ريال سعودي", data.refund ? "المبلغ المسترد" : "المبلغ المدفوع"], ...(data.note ? [[data.note, "ملاحظات"]] : [])],
     styles: { font: "Tajawal", fontSize: thermal ? 9 : 12, halign: "right", cellPadding: thermal ? 2 : 4, overflow: "linebreak", textColor: [40, 35, 27] },
     headStyles: { fillColor: [40, 35, 27], textColor: [255, 255, 255], fontStyle: "bold" },
     columnStyles: { 1: { cellWidth: thermal ? 26 : 52 } }, alternateRowStyles: { fillColor: [248, 246, 241] }, theme: "striped", rowPageBreak: "avoid",

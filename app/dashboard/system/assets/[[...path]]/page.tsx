@@ -1,0 +1,5 @@
+import {notFound} from "next/navigation";
+import {readAssets} from "@/lib/data/erp-assets";
+import {AssetWorkspace} from "@/components/erp/assets/asset-workspace";
+export const dynamic="force-dynamic";
+export default async function AssetPage({params,searchParams}:{params:Promise<{path?:string[]}>;searchParams:Promise<Record<string,string|string[]|undefined>>}){const{path=[]}=await params;const q=await searchParams;if(path.length>2||path[1]&&!['edit','copy'].includes(path[1]))notFound();const mode=path[0]==="locations"?"locations":path[0]==="new"?"create":path[1]==="copy"?"copy":path[1]==="edit"?"edit":path[0]?"detail":"list";const id=['edit','detail','copy'].includes(mode)?path[0]:undefined;if(id&&!/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(id))notFound();const query={q:typeof q.q==="string"?q.q.slice(0,150):"",status:typeof q.status==="string"?q.status:"",page:Math.max(1,Math.min(100000,Math.floor(Number(q.page)||1)))};const snapshot=await readAssets({...query,id});if(id&&!snapshot.records.length)notFound();return <AssetWorkspace key={`${mode}-${id}-${snapshot.records[0]?.revision||0}`} mode={mode} snapshot={snapshot} query={query}/>;}

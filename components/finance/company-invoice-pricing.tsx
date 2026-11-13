@@ -22,16 +22,17 @@ export function useInvoicePricingContext(slug: string, partyId: string, productI
   return { data: current?.data, error: current?.error, loading: enabled && !current, retry: () => setAttempt(value => value + 1) };
 }
 
-export function InvoiceLinePricing({ productId, context, settings, currency, exchangeRate }: {
+export function InvoiceLinePricing({ productId, context, settings, currency, exchangeRate, unitRatio = 1 }: {
   productId: string;
   context: ReturnType<typeof useInvoicePricingContext>;
   settings: InvoiceSettings;
   currency: string;
   exchangeRate: number;
+  unitRatio?: number;
 }) {
   if (!productId || settings.priceHints === "hidden") return null;
   const product = context.data?.products.find(item => item.productId === productId);
-  const money = (amount: number) => invoiceSettingsMoney(amount / exchangeRate, settings.decimalDisplay, currency);
+  const money = (amount: number) => invoiceSettingsMoney(amount * unitRatio / exchangeRate, settings.decimalDisplay, currency);
   return <div className={css.lastSalePrice}>
     {context.loading ? <span role="status">جار تحميل مؤشرات السعر</span> : context.error ? <button type="button" onClick={context.retry}>تعذر تحميل مؤشرات السعر أعد المحاولة</button> : !product ? <span>لا تتوفر مؤشرات لهذا الصنف</span> : <>
       {settings.advanced.advancedPricing && <span>الحد الأدنى <strong>{money(product.minimumPrice)}</strong> <small>{settings.advanced.minimumIncludesTax ? "شامل الضريبة" : "غير شامل الضريبة"}</small></span>}

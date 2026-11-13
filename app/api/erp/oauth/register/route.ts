@@ -1,0 +1,6 @@
+import {z} from 'zod';
+import {createAdminClient} from '@/lib/supabase/admin';
+import {oauthRedirectSchema,oauthHash,boundedRequestText} from '@/lib/erp/settings-oauth';
+import {systemApiResponse} from '@/lib/erp/settings-api';
+const schema=z.object({client_name:z.string().trim().min(1).max(100),redirect_uris:z.array(oauthRedirectSchema).min(1).max(5),token_endpoint_auth_method:z.literal('none').optional(),grant_types:z.array(z.enum(['authorization_code','refresh_token'])).optional(),response_types:z.array(z.literal('code')).optional()}).passthrough();
+export async function POST(request:Request){try{const p=schema.parse(JSON.parse(await boundedRequestText(request))),hash=oauthHash(request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim()||request.headers.get('x-real-ip')||'unknown'),r=await createAdminClient().rpc('erp_system_oauth_register',{p_name:p.client_name,p_redirects:p.redirect_uris,p_hash:hash});if(r.error)return systemApiResponse({error:'server_error'},503);if(r.data?.error)return systemApiResponse({error:'temporarily_unavailable'},429);return systemApiResponse({client_id:r.data.id,client_name:r.data.name,redirect_uris:r.data.redirectUris,token_endpoint_auth_method:'none',grant_types:['authorization_code','refresh_token'],response_types:['code']},201);}catch{return systemApiResponse({error:'invalid_client_metadata'},400);}}
