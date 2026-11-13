@@ -19,7 +19,6 @@ import {
   UserRoundCog,
   Settings2,
   Users,
-  BellRing,
 } from "lucide-react";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { logoutBarndaksaAuth } from "@/lib/platform/auth";
@@ -28,8 +27,7 @@ const links = [
   ["الرئيسية", "/admin", Home],
   ["العلامات التجارية", "/admin/cafes", Building2],
   ["العملاء", "/admin/customers", Users],
-  ["عملاء الولاء", "/admin/brand-customers", Users],
-  ["عملاء البيجر", "/admin/pager-customers", BellRing],
+  ["عملاء العلامات التجارية", "/admin/brand-customers", Users],
   ["تحليلات العلامات التجارية", "/admin/brand-analytics", ChartNoAxesCombined],
   ["الحملات التسويقية", "/admin/marketing-campaigns", Megaphone],
   ["العمليات", "/admin/operations", ClipboardList],

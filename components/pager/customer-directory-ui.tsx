@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { BellRing, CreditCard } from "lucide-react";
 import s from "./customer-directory.module.css";
+import customers from "@/components/admin/pages/brand-customers.module.css";
 
 export function CustomerSections({ pager = false }: { pager?: boolean }) {
-  return <nav className={s.tabs} aria-label="أنواع عملاء العلامات"><Link className={s.tab} href="/admin/brand-customers" aria-current={!pager ? "page" : undefined}><CreditCard size={20} aria-hidden="true" />عملاء الولاء</Link><Link className={s.tab} href="/admin/pager-customers" aria-current={pager ? "page" : undefined}><BellRing size={20} aria-hidden="true" />عملاء البيجر</Link></nav>;
+  return <nav className={customers.tabs} aria-label="أنواع عملاء العلامات"><Link className={`${customers.tab} ${customers.customerSection}`} href="/admin/brand-customers" aria-current={!pager ? "page" : undefined}><CreditCard size={20} aria-hidden="true" />عملاء الولاء</Link><Link className={`${customers.tab} ${customers.customerSection}`} href="/admin/brand-customers?view=pager" aria-current={pager ? "page" : undefined}><BellRing size={20} aria-hidden="true" />عملاء البيجر</Link></nav>;
 }
 export function pagerDirectoryUrl(base: string, params: Record<string, string | number | undefined>) {
   const query = new URLSearchParams();
