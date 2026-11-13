@@ -70,7 +70,7 @@ try {
     assert.equal((svg.match(/data-earned="true"/g) || []).length, earned);
     assert(!svg.includes(member.card.cardCode)); assert(!svg.includes(member.card.customerName));
     const google = payload.buildGoogleObject(current, "12345", art.walletArtUrl(current));
-    assert.equal(google.loyaltyPoints.balance.int, 4 - earned); assert.equal(google.secondaryLoyaltyPoints.balance.int, 0); checks += 3;
+    assert.equal(google.loyaltyPoints.balance.string, String(4 - earned)); assert.equal(google.secondaryLoyaltyPoints.balance.int, 0); checks += 3;
     for (const apple of [true, false]) {
       const png = await art.walletStampArtwork(current, 2, apple), meta = await sharp(png).metadata();
       assert.equal(meta.width, apple ? 750 : 1032); assert.equal(meta.height, apple ? 288 : 812);
