@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { butcherPriceAtSale, readButcherDetails } from "@/lib/menu/butcher-products";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
@@ -461,7 +462,7 @@ export async function createPickupOrder(
 
     const { data: product, error: productError } = await supabase
       .from("menu_products")
-      .select("id, name, price, loyalty_points")
+      .select("id, name, price, loyalty_points, butcher_details")
       .eq("id", item.productId)
       .eq("cafe_id", cafe.id)
       .eq("available", true)
@@ -472,6 +473,9 @@ export async function createPickupOrder(
     if (productError) throw productError;
     if (!product) {
       throw new Error(`Invalid or unavailable product for pickup: ${item.productId}`);
+    }
+    if (butcherPriceAtSale({ butcherDetails: readButcherDetails(product.butcher_details) })) {
+      throw new Error("سعر هذا الصنف يحدده الكاشير عند البيع ولا يمكن طلبه بسعر غير محدد");
     }
 
     const unitPrice = Number(product.price ?? 0);

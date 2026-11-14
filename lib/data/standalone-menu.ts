@@ -22,7 +22,7 @@ import { primaryMediaType } from "@/lib/menu/product-media";
 import { giftProductAvailable } from "@/lib/commerce/storefront-cart";
 import { isOwnedMenuAsset, isStandaloneProductVisible, readMenuPriceRange, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 
-const PRODUCT_COLUMNS = "id,cafe_id,category_id,legacy_category,name,description,price,price_options,catalog_kind,calories,preparation_time_minutes,ingredients,available,promo,image_url,image_storage_path,image_gallery,gallery_storage_paths,video_storage_path,media,image_variant,sort_order";
+const PRODUCT_COLUMNS = "id,cafe_id,category_id,legacy_category,name,description,price,price_options,butcher_details,catalog_kind,calories,preparation_time_minutes,ingredients,available,promo,image_url,image_storage_path,image_gallery,gallery_storage_paths,video_storage_path,media,image_variant,sort_order";
 const PAGE_SIZE = 500;
 const SHOWCASE_LOGO_WINDOW_MS = 20 * 60_000;
 
@@ -145,7 +145,7 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
       .filter((item): item is { url: string; alt: string } => Boolean(item.url));
     return {
       id: product.id, name: product.name, category: product.category, categoryId: product.categoryId,
-      description: product.description, price: product.price, priceOptions: product.priceOptions, calories: product.calories,
+      description: product.description, price: product.price, priceOptions: product.priceOptions, butcherDetails: product.butcherDetails, calories: product.calories,
       priceRange: hospitalMenu && !product.priceOptions?.length ? readMenuPriceRange(product.commerceSnapshot, product.price) : undefined,
       catalogKind: product.catalogKind,
       commerceDetails: product.commerceDetails,

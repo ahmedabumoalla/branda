@@ -161,6 +161,10 @@ async function run() {
     if (oldWindow) Object.defineProperty(global, "window", oldWindow); else delete global.window;
     if (oldNavigator) Object.defineProperty(global, "navigator", oldNavigator); else delete global.navigator;
   }
+  const cashierDetails = { meatType: "sheep", origin: null, units: [{ id: "kg", label: "كيلو", priceMode: "cashier", price: 0 }] };
+  const butcher = fakeClient({ businessCategory: "butcher_shops", products: [{ ...fixtureProduct, price: 0, butcher_details: cashierDetails }] });
+  const butcherMenu = await loader(butcher.client)("double-b-bistro");
+  assert.deepEqual(butcherMenu.products[0].butcherDetails, cashierDetails, "Public DTO retains cashier mode so zero placeholder is never shown as a price");
   for (const status of ["active", "published"]) {
     const fake = fakeClient({ status });
     const menu = await loader(fake.client)("double-b-bistro");

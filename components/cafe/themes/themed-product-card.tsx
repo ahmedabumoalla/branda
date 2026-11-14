@@ -5,6 +5,7 @@ import { BadgeCheck, Clock, Coffee, Gift, ShoppingBag, Sparkles } from "lucide-r
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 import { formatSar } from "@/lib/format";
+import { butcherPriceAtSale } from "@/lib/menu/butcher-products";
 import {
   isPromoActive,
   productFinalPrice,
@@ -27,6 +28,7 @@ export function getCollectionGridClass(_collection?: unknown) {
 
 export function ThemedProductCard({ product, experience, href, showPoints = true }: Props) {
   const { theme } = experience;
+  const priceAtSale = butcherPriceAtSale(product);
   const promoOn = product.promo ? isPromoActive(product.promo) : false;
   const finalPrice = productFinalPrice(product.price, product.promo);
   const hasDiscount = promoOn && finalPrice < product.price;
@@ -63,7 +65,7 @@ export function ThemedProductCard({ product, experience, href, showPoints = true
           <Sparkles className="h-3.5 w-3.5 text-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]" />
           <span className="truncate">{category}</span>
         </span>
-        {showPoints ? (
+        {showPoints && !priceAtSale ? (
         <span className="absolute bottom-2.5 left-2.5 inline-flex max-w-[70%] items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] shadow-sm backdrop-blur">
           <BadgeCheck className="h-3.5 w-3.5 text-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]" />
           <span className="truncate">يكسب {earnedPoints} نقطة</span>
@@ -108,7 +110,7 @@ export function ThemedProductCard({ product, experience, href, showPoints = true
           </p>
         ) : null}
 
-        {showPoints ? (
+        {showPoints && !priceAtSale ? (
         <p className={`mt-3 inline-flex w-fit items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px] font-black ${theme.badge}`}>
           <BadgeCheck className="h-3.5 w-3.5" />
           يكسب {earnedPoints} نقطة ولاء
@@ -117,9 +119,9 @@ export function ThemedProductCard({ product, experience, href, showPoints = true
 
         <div className="mt-auto flex items-end justify-between gap-3 pt-4">
           <div>
-            <p className={`text-[10px] font-black ${theme.muted}`}>السعر شامل الضريبة</p>
+            <p className={`text-[10px] font-black ${theme.muted}`}>{priceAtSale ? "السعر" : "السعر شامل الضريبة"}</p>
             <p className="text-xl font-black leading-tight">
-              {hasDiscount ? (
+              {priceAtSale ? <span>السعر يحدد عند البيع</span> : hasDiscount ? (
                 <span className="inline-flex flex-col leading-tight">
                   <span>{formatSar(finalPrice)}</span>
                   <span className="text-xs opacity-60 line-through">{formatSar(product.price)}</span>

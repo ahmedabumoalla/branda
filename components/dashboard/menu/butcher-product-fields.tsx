@@ -44,10 +44,14 @@ export function ButcherProductFields({ value, onChange, disabled, error }: {
             <option value="custom">وحدة أخرى</option>
           </select>
         </label>
-        <label className="min-w-0 text-xs font-black text-[#7A6255]" htmlFor={`butcher-price-${index}`}>السعر ر.س
+        {unit.priceMode === "cashier" ? <p className="min-w-0 pb-3 text-xs font-bold leading-5 text-[#7A6255]">يُدخل السعر عند البيع</p> : <label className="min-w-0 text-xs font-black text-[#7A6255]" htmlFor={`butcher-price-${index}`}>السعر ر.س
           <input id={`butcher-price-${index}`} type="number" inputMode="decimal" required min="0.000001" max="1000000" step="0.000001" dir="ltr" value={unit.price} onChange={event => updateUnit(index, { price: event.target.value })} placeholder={unit.id === "g" ? "0.065" : "65"} className={inputClass} />
-        </label>
+        </label>}
         <button type="button" disabled={value.units.length === 1} onClick={() => onChange({ ...value, units: value.units.filter((_, position) => position !== index) })} aria-label={`حذف وحدة ${unit.label || index + 1}`} className="flex h-12 w-12 items-center justify-center rounded-xl text-[#934833] hover:bg-[#FBF0E9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#934833] disabled:cursor-not-allowed disabled:opacity-40"><Trash2 size={18} aria-hidden="true" /></button>
+        <label className="col-span-3 flex min-h-12 items-start gap-3 py-2 text-xs font-bold leading-6 text-[#5B3825]" htmlFor={`butcher-price-mode-${index}`}>
+          <input id={`butcher-price-mode-${index}`} type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-[#5B3825]" checked={unit.priceMode === "cashier"} onChange={event => updateUnit(index, { priceMode: event.target.checked ? "cashier" : "fixed", price: "" })} />
+          السعر يحدده الكاشير وقت البيع
+        </label>
         {unit.id.startsWith("custom_") && <label className="col-span-3 text-xs font-black text-[#7A6255]" htmlFor={`butcher-label-${index}`}>اسم الوحدة
           <input id={`butcher-label-${index}`} required maxLength={60} value={unit.label} onChange={event => updateUnit(index, { label: event.target.value })} placeholder="مثال: قطعة أو عبوة" className={inputClass} />
         </label>}

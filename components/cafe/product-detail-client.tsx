@@ -131,6 +131,7 @@ export function ProductDetailClient({ slug, id, initialProduct }: Props) {
     );
   }
 
+  const priceAtSale = product.butcherDetails?.units[0]?.priceMode === "cashier";
   const finalPrice = productFinalPrice(product.price, product.promo);
   const hasDiscount = Boolean(product.promo && finalPrice < product.price);
   const categoryLabel = resolveProductCategoryLabel(product);
@@ -234,7 +235,7 @@ export function ProductDetailClient({ slug, id, initialProduct }: Props) {
       ) : null}
 
       <div data-product-field="price" className="premium-product-enter premium-product-enter-price mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="text-3xl font-black sm:text-4xl">{formatSar(finalPrice)}</span>
+        <span className="text-3xl font-black sm:text-4xl">{priceAtSale ? "السعر يحدد عند البيع" : formatSar(finalPrice)}</span>
         {hasDiscount ? (
           <span className={`text-sm font-black line-through sm:text-base ${theme.muted}`}>
             {formatSar(product.price)}

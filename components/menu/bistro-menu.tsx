@@ -50,7 +50,8 @@ function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (pr
   if (!active || (menu.slug === "shahi-w-hail" && !offers.length)) return null;
   const product = menu.products.find((item) => item.id === active.productId && item.available);
   const discountPrice = product && active.discountPercent != null ? Math.round(product.price * (1 - active.discountPercent / 100) * 100) / 100 : null;
-  const displayPrice = discountPrice ?? (product ? productFinalPrice(product.price, product.promo) : null);
+  const priceAtSale = product?.butcherDetails?.units[0]?.priceMode === "cashier";
+  const displayPrice = priceAtSale ? null : discountPrice ?? (product ? productFinalPrice(product.price, product.promo) : null);
 
   return <section className={`${spotlight.section}${menu.slug === "shahi-w-hail" ? ` ${majlis.spotlight}` : ""}`} aria-labelledby="rast-spotlight-title">
     <div className={spotlight.heading}>
@@ -64,7 +65,7 @@ function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (pr
         <p className={spotlight.description} dir="auto">{menuDisplayText(active.description || "خذ لك لحظة واكتشف تفاصيلها على ذوقك")}</p>
         {active.code && <p className={spotlight.code}>كود العرض <b dir="ltr">{active.code}</b></p>}
         <div className={spotlight.bottom}>
-          {product && displayPrice != null && <div className={spotlight.price}>{displayPrice !== product.price && <del>{product.price.toLocaleString("en-US")}</del>}<b dir="ltr">{displayPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b><span>ريال</span></div>}
+          {priceAtSale ? <div className={spotlight.price}>السعر يحدد عند البيع</div> : product && displayPrice != null && <div className={spotlight.price}>{displayPrice !== product.price && <del>{product.price.toLocaleString("en-US")}</del>}<b dir="ltr">{displayPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b><span>ريال</span></div>}
           {product ? <button type="button" className={spotlight.action} onClick={() => onSelect(product)}>اكتشف الصنف<ArrowUpLeft aria-hidden="true" /></button>
             : <a className={spotlight.action} href="#rast-menu-items">تصفح القائمة<ArrowUpLeft aria-hidden="true" /></a>}
         </div>
@@ -95,6 +96,7 @@ function FoodImage({ src, alt, className = "", priority = false, sizes = "(max-w
 }
 
 function Price({ product }: { product: StandaloneMenuProduct }) {
+  if (product.butcherDetails?.units[0]?.priceMode === "cashier") return <span className={s.price}>السعر يحدد عند البيع</span>;
   const final = productFinalPrice(product.price, product.promo);
   const values = product.priceRange ? [product.priceRange.min, product.priceRange.max] : product.priceOptions?.length ? product.priceOptions : [product.price];
   const separator = product.priceRange ? "–" : " / ";

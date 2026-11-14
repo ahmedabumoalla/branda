@@ -418,7 +418,7 @@ function MenuProductEditor({
             : []),
       ],
       imageVariant,
-      price: Number(isButcher ? butcherDraft.units[0]?.price : price) || 0,
+      price: Number(isButcher ? butcherDraft.units[0]?.priceMode === "cashier" ? 0 : butcherDraft.units[0]?.price : price) || 0,
       calories: calories.trim() ? Number(calories) || 0 : undefined,
       loyaltyPoints: 0,
       catalogKind,
@@ -1372,7 +1372,7 @@ function MenuProductEditor({
                     السعر
                   </p>
                   <p className="font-black text-[#3A2117]">
-                    {formatSar(productFinalPrice(previewProduct.price, previewProduct.promo))}
+                    {isButcher && butcherDraft.units[0]?.priceMode === "cashier" ? "السعر يحدد عند البيع" : formatSar(productFinalPrice(previewProduct.price, previewProduct.promo))}
                   </p>
                 </div>
 

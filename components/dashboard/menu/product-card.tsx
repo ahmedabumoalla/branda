@@ -2,6 +2,7 @@
 import { Flower2, Shirt, Scissors, Clock3, ChevronDown, Coffee, Copy, Eye, EyeOff, Flame, Gift, Pencil, Trash2 } from "lucide-react";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { formatSar } from "@/lib/format";
+import { butcherPriceAtSale } from "@/lib/menu/butcher-products";
 import { isPromoActive, promoBadgeText, productFinalPrice, type MenuProduct } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
 import styles from "./menu-dashboard.module.css";
@@ -36,7 +37,7 @@ export function MenuProductCard({ product, busy = false, categoryLabel, freeProd
     </div>
     <div className={styles.priceRow}>
       <div><span className={styles.priceLabel}>{isEvents ? "رسوم الدخول" : isGifts && product.commerceDetails?.optionGroups?.length ? "السعر الأساسي" : "السعر"}</span><div className={styles.priceValues}>
-        <strong className={styles.price}>{isGifts && product.commerceDetails?.quoteOnly ? "حسب الطلب" : formatSar(discounted ? finalPrice : product.price)}</strong>
+        <strong className={styles.price}>{butcherPriceAtSale(product) ? "يحدده الكاشير عند البيع" : isGifts && product.commerceDetails?.quoteOnly ? "حسب الطلب" : formatSar(discounted ? finalPrice : product.price)}</strong>
         {discounted && <del className={styles.originalPrice}>{formatSar(product.price)}</del>}
       </div></div>
       {isEvents ? <span className={styles.secondaryInfo}>السعة {product.eventTicketSettings?.capacity?.toLocaleString("ar-SA") ?? "غير محددة"}<br />{product.eventTicketSettings?.checkinPolicy === "multi_use" ? "دخول متعدد" : "دخول مرة واحدة"}</span>

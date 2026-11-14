@@ -40,6 +40,7 @@ function Photo({ src, alt, eager = false }: { src?: string | null; alt: string; 
 }
 
 function Price({ product }: { product: StandaloneMenuProduct }) {
+  if (product.butcherDetails?.units[0]?.priceMode === "cashier") return <span className={s.price}>السعر يحدد عند البيع</span>;
   const values = product.priceRange ? [product.priceRange.min, product.priceRange.max] : product.priceOptions?.length ? product.priceOptions : [product.price];
   const separator = product.priceRange ? "–" : " / ";
   return <span className={s.price} data-price-range={!!product.priceRange || undefined}><bdi>{values.map(value => productFinalPrice(value, product.promo).toLocaleString("en-US", { maximumFractionDigits: 2 })).join(separator)}</bdi><span>ريال</span>{productFinalPrice(product.price, product.promo) < product.price && <del>{(product.priceRange ? values : [product.price]).map(value => value.toLocaleString("en-US")).join(separator)}</del>}</span>;

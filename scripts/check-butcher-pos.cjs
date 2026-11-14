@@ -23,8 +23,28 @@ const offline = load('lib/finance/pos-offline.ts');
 const product = { id: 'product', name: 'لحم عجل', price: 75, available: true, stockTracked: false, itemId: null, imageUrl: null, category: 'اللحوم', butcherDetails: { meatType: 'calf', origin: 'بلدي', units: [{ id: 'kg', label: 'كيلو', price: 75 }, { id: 'g', label: 'جرام', price: .075 }, { id: 'half', label: 'نصف ذبيحة', price: 800 }] } };
 const snapshot = { cafe: { id: 'cafe', name: 'ملحمة', slug: 'brand', businessCategory: 'butcher_shops' }, userId: 'user', role: 'cashier', canManage: false, warehouses: [{ id: 'warehouse', name: 'المستودع', active: true }], products: [product], shifts: [], accounts: [{ id: 'occupied', kind: 'cash', active: true, is_cashier_drawer: true, availableWithoutShift: false, is_primary: true }, { id: 'cash', kind: 'cash', active: true, is_cashier_drawer: true, availableWithoutShift: true }, { id: 'pos', kind: 'pos', active: true }], stock: [], settings: { vat_rate: 15, tax_inclusive: true }, parties: [], documents: [], staff: [] };
 const receipt = (lines, data = snapshot) => createFinanceReceiptPreview({ lines, settings: data.settings, discount: 0, paymentKind: 'cash', accountId: 'cash', note: '', createdAt: '2026-11-07T12:00:00Z' });
+const cashierProduct = { ...product, price: 0, butcherDetails: { ...product.butcherDetails, units: [{ id: 'quarter', label: 'ربع ذبيحة', price: 0, priceMode: 'cashier' }, { id: 'half', label: 'نصف ذبيحة', price: 800 }] } };
 let checks = 0;
 function test(name, run) { run(); checks++; }
+test('Cashier price is required, bounded and cannot override fixed or non-butcher products', () => {
+  for (const invalid of [undefined, null, '', '450', 0, -1, NaN, Infinity, 1000001, .1234567]) assert.throws(() => selection.financeProductSelection(cashierProduct, 'quarter', true, invalid));
+  assert.equal(selection.financeProductSelection(cashierProduct, 'quarter', true, 450.25).product.price, 450.25);
+  assert.throws(() => selection.financeProductSelection(cashierProduct, 'half', true, 1));
+  assert.throws(() => selection.financeProductSelection(cashierProduct, undefined, false, 1));
+  assert.equal(selection.financeSelectedCartLines([{ productId: product.id, unitId: 'quarter', quantity: 1 }], [cashierProduct], true).length, 0);
+});
+test('Independent cashier prices survive receipt tax and stock calculation', () => {
+  const tracked = { ...cashierProduct, stockTracked: true, itemId: 'meat', stock_components: [{ item_id: 'meat', quantity: 1 }], butcherDetails: { ...cashierProduct.butcherDetails, units: [{ id: 'carcass', label: 'ذبيحة', price: 2000 }, ...cashierProduct.butcherDetails.units] } };
+  const cart = [450.25, 500.5].map(unitPrice => ({ productId: product.id, unitId: 'quarter', quantity: 1, unitPrice, cashierPrice: true }));
+  assert.notEqual(selection.financeCartKey(cart[0]), selection.financeCartKey(cart[1]));
+  const lines = selection.financeSelectedCartLines(cart, [tracked], true);
+  assert(lines.every(line => !line.priceChanged));
+  const doc = receipt(lines); doc.warehouse_id = 'warehouse';
+  assert.equal(doc.total, 950.75); assert.equal(doc.tax, 124.01);
+  assert.deepEqual(doc.lines.map(line => line.unit_price), [450.25, 500.5]);
+  assert(doc.lines.every(line => line.stock_unit_factor === .25));
+  assert.equal(offline.offlineStockDeductions({ ...snapshot, products: [tracked] }, doc).reduce((sum, line) => sum + line.quantity, 0), .5);
+});
 test('Gram pricing keeps six decimals and rounds invoice amount', () => {
   const lines = selection.financeSelectedCartLines([{ productId: product.id, unitId: 'g', quantity: 250 }], [product], true);
   const doc = receipt(lines);
@@ -92,9 +112,31 @@ function harness(data) {
   const state = { snapshot: data, pending: false, stale: false, error: '', message: '', clearFeedback() {}, refresh() {}, offline: { sales: [], ready: true, pending: [] }, execute: async (...args) => { calls.push(args); return { id: 'sale', offline: true }; } };
   const mocks = { react: hooks, 'next/navigation': { useRouter: () => ({ replace() {} }) }, 'next/link': { default: function Link() {}, __esModule: true }, 'next/image': { default: function Image() {}, __esModule: true }, '@/app/actions/finance-access': { logoutFinanceAction() {} }, '@/components/dashboard/ui/modal': { Modal() {} }, './finance-operation-form': { FinanceOperationForm() {} }, './finance-ui': { Empty() {}, Field() {}, Numeric() {}, financeDate: String, financeDocumentStatus: () => '' }, './finance-refund-requests': { FinanceRefundRequests() {} }, './finance-receipt-dialog': { FinanceReceiptDialog() {} }, './finance-pos-fullscreen': { FinancePosFullscreen() {} }, './finance-pos-actions': { FinancePosActions() {} }, './finance-pos-customer': { usePosCustomer: () => customer, FinancePosCustomerField() {}, FinancePosPager() {}, financePosCustomerNotice: () => '' }, './use-pos-finance': { usePosFinance: () => state }, './finance-pos-offline-status': { FinancePosOfflineStatus() {} }, './use-finance-printer': { useFinancePrinter: () => ({ ready: false, autoEnabled: false }) }, './use-finance-invoice-messages': { useFinanceInvoiceMessages: args => { messageLoads.push(args); return { entries: {}, loading: false }; } }, './finance-invoice-message-status': { FinanceInvoiceMessageStatus() {} } };
   const { FinancePOS } = load('components/finance/finance-pos.tsx', mocks);
-  return { calls, messageLoads, render() { index = 0; return FinancePOS({ initialSnapshot: data }); } };
+  return { calls, messageLoads, render() { index = 0; const tree = FinancePOS({ initialSnapshot: data }); return tree.type?.name === 'StandardFinancePOS' ? tree.type(tree.props) : tree; } };
 }
 async function main() {
+  const manual = harness({ ...snapshot, products: [cashierProduct] });
+  const openManual = () => find(manual.render(), node => node.type === 'button' && node.props?.['aria-label'] === `إضافة ${product.name} وتحديد السعر`).props.onClick();
+  const manualInput = hint => find(manual.render(), node => node.type === 'input' && node.props?.['aria-describedby'] === hint);
+  openManual(); manualInput('butcher-quantity-hint').props.onChange({ target: { value: '1' } });
+  for (const value of ['', '0', '-1', '1000001', '.1234567']) {
+    manualInput('butcher-price-hint').props.onChange({ target: { value } });
+    assert.equal(button(manual.render(), 'إضافة إلى الطلب').props.disabled, true);
+  }
+  manualInput('butcher-price-hint').props.onChange({ target: { value: '450.25' } });
+  assert.equal(button(manual.render(), 'إضافة إلى الطلب').props.disabled, false);
+  button(manual.render(), 'إضافة إلى الطلب').props.onClick();
+  openManual(); assert.equal(manualInput('butcher-price-hint').props.value, '', 'Every new selection asks the cashier for its price');
+  manualInput('butcher-quantity-hint').props.onChange({ target: { value: '1' } });
+  manualInput('butcher-price-hint').props.onChange({ target: { value: '500.5' } });
+  button(manual.render(), 'إضافة إلى الطلب').props.onClick();
+  let manualLines = nodes(manual.render()).filter(node => node.type === 'input' && node.props?.['aria-label']?.startsWith('كمية لحم'));
+  assert.equal(manualLines.length, 2);
+  manualLines[0].props.onChange({ target: { value: '2' } });
+  await button(manual.render(), 'تأكيد الاستلام وإصدار إيصال').props.onClick();
+  assert.equal(manual.calls[0][1].expectedTotal, 1401);
+  assert.deepEqual(manual.calls[0][1].lines.map(line => ({ price: line.unitPrice, expected: line.expectedUnitPrice, quantity: line.quantity })), [{ price: 450.25, expected: 450.25, quantity: 2 }, { price: 500.5, expected: 500.5, quantity: 1 }]);
+  checks++;
   const picker = harness(snapshot);
   const openPicker = () => find(picker.render(), node => node.type === 'button' && node.props?.['aria-label']?.startsWith('إضافة لحم')).props.onClick();
   const quantityInput = () => find(picker.render(), node => node.type === 'input' && node.props?.['aria-describedby'] === 'butcher-quantity-hint');

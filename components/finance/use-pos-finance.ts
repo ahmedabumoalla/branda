@@ -143,10 +143,10 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
       validatePosSaleShift(data, payload.shiftId);
       const butcher = isButcherFinance(data);
       if (payload.redeemRewardId && !connected) throw new Error("صرف المكافأة يحتاج اتصالًا للتحقق من عدم استخدامها يمكنك حفظ البيع دون صرفها");
-      const lines = (payload.lines as { productId: string; quantity: number; unitId?: string; expectedUnitPrice: number }[]).map(line => {
+      const lines = (payload.lines as { productId: string; quantity: number; unitId?: string; unitPrice?: number; expectedUnitPrice: number }[]).map(line => {
         const product = data.products.find(product => product.id === line.productId);
         if (!product?.available) throw new Error("الصنف غير متاح حدّث المنتجات وراجع السلة");
-        const selected = financeProductSelection(product, line.unitId, butcher);
+        const selected = financeProductSelection(product, line.unitId, butcher, line.unitPrice);
         validatePosExpectedAmount(line.expectedUnitPrice, selected.product.price, 1_000_000);
         return { ...selected, quantity: line.quantity };
       });

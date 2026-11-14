@@ -15,7 +15,7 @@ import { Modal } from "@/components/dashboard/ui/modal";
 import type { FinanceDocument, FinanceProduct, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { financeMoney, getPrimaryFinanceAccount, previewFinanceTotals } from "@/lib/finance/brand-finance";
 import { getProductStockQuantity } from "@/lib/finance/pos-offline";
-import { butcherStockFactor, financeCartKey, financeProductSelection, financeSelectedCartLines, isButcherFinance, type FinanceCartLine } from "@/lib/finance/pos-product-selection";
+import { butcherStockFactor, financeCartKey, financeProductSelection, financeSelectedCartLines, isButcherFinance, validCashierUnitPrice, type FinanceCartLine } from "@/lib/finance/pos-product-selection";
 import { FinanceOperationForm, type FinanceForm } from "./finance-operation-form";
 import { Empty, Field, financeDate, financeDocumentStatus, Numeric } from "./finance-ui";
 import { FinanceRefundRequests } from "./finance-refund-requests";
@@ -77,6 +77,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
   const [unitProductId, setUnitProductId] = useState<string | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState("");
   const [unitQuantity, setUnitQuantity] = useState("");
+  const [cashierUnitPrice, setCashierUnitPrice] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [discountValue, setDiscountValue] = useState(0);
@@ -102,6 +103,9 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
   const lines = useMemo(() => financeCartLines(cart, data.products, butcher), [cart, data.products, butcher]);
   const unitProduct = data.products.find(product => product.id === unitProductId);
   const selectedUnit = unitProduct?.butcherDetails?.units.find(unit => unit.id === selectedUnitId);
+  const cashierPriced = selectedUnit?.priceMode === "cashier";
+  const selectedPrice = cashierPriced ? Number(cashierUnitPrice) : selectedUnit?.price ?? 0;
+  const unitPriceValid = !cashierPriced || (cashierUnitPrice.trim() !== "" && validCashierUnitPrice(selectedPrice));
   const selectedQuantity = Number(unitQuantity);
   const unitQuantityValid = Number.isFinite(selectedQuantity) && selectedQuantity > 0 && selectedQuantity <= 9999 && Math.abs(selectedQuantity * 1000 - Math.round(selectedQuantity * 1000)) < 0.000001;
   const unitStockCompatible = !unitProduct?.stockTracked || !selectedUnit || butcherStockFactor(unitProduct.butcherDetails!.units[0].id, selectedUnit.id) !== null;
@@ -113,6 +117,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     : stale ? error || "لم يكتمل تجهيز الكاشير حدّث المزامنة قبل الدفع"
     : loggingOut ? "جار تسجيل الخروج"
     : !cart.length ? "أضف منتجًا إلى السلة لبدء الدفع"
+    : lines.length !== cart.length ? "راجع وحدات الأصناف وأسعارها قبل الدفع أو احذف السلة وأضفها مجددًا"
     : lines.some(line => line.product.quoteOnly) ? "يوجد صنف بانتظار اعتماد السعر احذفه من السلة أو اطلب تسعيره من المسؤول"
     : pricesChanged ? "اعتمد السعر الجديد للأصناف المتغيرة قبل الدفع"
     : shift?.supervisor_paused ? "الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع"
@@ -146,28 +151,30 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     }
   }
   function quantityAvailable(product: FinanceProduct) { return getProductStockQuantity(product, data.stock, warehouseId); }
-  function setQuantity(productId: string, quantity: number, unitId?: string, acceptCurrentPrice = false) {
+  function setQuantity(productId: string, quantity: number, unitId?: string, acceptCurrentPrice = false, enteredPrice?: number) {
     if (disabled) return;
     const product = data.products.find((item) => item.id === productId);
     if (!product || !Number.isFinite(quantity) || quantity < 0 || quantity > 9999 || (butcher && Math.abs(quantity * 1000 - Math.round(quantity * 1000)) > 0.000001)) return;
     setLocalError("");
-    const key = financeCartKey({ productId, unitId });
+    const cashierPrice = enteredPrice !== undefined;
+    const key = financeCartKey({ productId, unitId, cashierPrice, unitPrice: enteredPrice });
     let price: number;
-    try { price = financeProductSelection(product, unitId, butcher).product.price; } catch { if (quantity !== 0) return; price = product.price; }
-    setCart((current) => quantity === 0 ? current.filter((item) => financeCartKey(item) !== key) : current.some((item) => financeCartKey(item) === key) ? current.map((item) => financeCartKey(item) === key ? { ...item, quantity, ...(butcher && acceptCurrentPrice ? { unitPrice: price } : {}) } : item) : [...current, { productId, quantity, ...(unitId ? { unitId } : {}), ...(butcher ? { unitPrice: price } : {}) }]);
+    try { price = financeProductSelection(product, unitId, butcher, enteredPrice).product.price; } catch { if (quantity !== 0) return; price = product.price; }
+    setCart((current) => quantity === 0 ? current.filter((item) => financeCartKey(item) !== key) : current.some((item) => financeCartKey(item) === key) ? current.map((item) => financeCartKey(item) === key ? { ...item, quantity, ...(butcher && acceptCurrentPrice ? { unitPrice: price } : {}) } : item) : [...current, { productId, quantity, ...(unitId ? { unitId } : {}), ...(butcher ? { unitPrice: price } : {}), ...(cashierPrice ? { cashierPrice: true } : {}) }]);
   }
   function addProduct(product: FinanceProduct) {
     if (product.quoteOnly) { setLocalError("هذا المنتج بانتظار اعتماد سعره من إدارة المنتجات ويمكنك إرساله كطلب للمعمل"); return; }
     if (butcher && product.butcherDetails?.units.length) {
-      setUnitProductId(product.id); setSelectedUnitId(product.butcherDetails.units[0].id); setUnitQuantity(""); setLocalError("");
+      setUnitProductId(product.id); setSelectedUnitId(product.butcherDetails.units[0].id); setUnitQuantity(""); setCashierUnitPrice(""); setLocalError("");
     } else setQuantity(product.id, (cart.find(line => line.productId === product.id)?.quantity ?? 0) + 1);
   }
   function addSelectedUnit() {
-    if (!unitProduct || !selectedUnit || !unitQuantityValid || !unitStockCompatible) return;
-    const currentQuantity = cart.find(line => line.productId === unitProduct.id && line.unitId === selectedUnit.id)?.quantity ?? 0;
+    if (!unitProduct || !selectedUnit || !unitQuantityValid || !unitPriceValid || !unitStockCompatible) return;
+    const key = financeCartKey({ productId: unitProduct.id, unitId: selectedUnit.id, cashierPrice: cashierPriced, unitPrice: selectedPrice });
+    const currentQuantity = cart.find(line => financeCartKey(line) === key)?.quantity ?? 0;
     const quantity = Math.round((currentQuantity + selectedQuantity) * 1000) / 1000;
     if (quantity > 9999) { setLocalError("الكمية الإجمالية لهذه الوحدة تتجاوز الحد المسموح"); return; }
-    setQuantity(unitProduct.id, quantity, selectedUnit.id, true); setUnitProductId(null);
+    setQuantity(unitProduct.id, quantity, selectedUnit.id, true, cashierPriced ? selectedPrice : undefined); setUnitProductId(null);
   }
   useEffect(() => {
     if (!cart.length) return;
@@ -205,7 +212,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     if (!paymentAccountId) { setLocalError("أضف حساب تحصيل لهذا النوع من المالية ثم حدّث الأرصدة"); return; }
     let customerPayload: Record<string, unknown>;
     try { customerPayload = butcher ? {} : customer.payload(); } catch (cause) { setLocalError(cause instanceof Error ? cause.message : "راجع رقم العميل قبل حفظ الفاتورة"); return; }
-    const saved = await state.execute("sale", { lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity, expectedUnitPrice: line.product.price, ...(line.unitId ? { unitId: line.unitId } : {}) })), expectedTotal: totals.total, discount, accountId: paymentAccountId, ...customerPayload, warehouseId, ...(shift ? { shiftId: shift.id } : {}), note });
+    const saved = await state.execute("sale", { lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity, expectedUnitPrice: line.product.price, ...(line.unitId ? { unitId: line.unitId } : {}), ...(line.unit?.priceMode === "cashier" ? { unitPrice: line.product.price } : {}) })), expectedTotal: totals.total, discount, accountId: paymentAccountId, ...customerPayload, warehouseId, ...(shift ? { shiftId: shift.id } : {}), note });
     if (saved) { setShowCheckout(false); setCart([]); setDiscountValue(0); setNote(""); customer.reset(); setCustomerNotice(financePosCustomerNotice(saved.customer)); setPagerRefreshKey((value) => value + 1); setPrintQueue((queue) => queue.includes(saved.id) ? queue : [...queue, saved.id]); searchRef.current?.focus(); }
   }
 
@@ -248,9 +255,9 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
         {!products.length ? <div className={styles.panel}><Empty title={data.products.length ? "لا توجد أصناف مطابقة" : "المنيو خالٍ من الأصناف"}>{data.products.length ? "جرّب اسمًا آخر أو اختر جميع الأصناف" : "أضف منتجات العلامة وصورها وأسعارها من إدارة المنيو"}</Empty></div> : <div className={styles.products}>{products.map((product) => {
           const quantity = cart.filter((line) => line.productId === product.id).reduce((sum, line) => sum + line.quantity, 0);
           const stock = quantityAvailable(product);
-          return <button type="button" key={product.id} className={styles.product} disabled={disabled || quantity >= 9999 || product.quoteOnly} aria-label={product.quoteOnly ? `${product.name} بانتظار اعتماد السعر` : `إضافة ${product.name} بسعر ${financeMoney(product.price)}`} onClick={() => addProduct(product)}>
+          return <button type="button" key={product.id} className={styles.product} disabled={disabled || quantity >= 9999 || product.quoteOnly} aria-label={product.quoteOnly ? `${product.name} بانتظار اعتماد السعر` : butcher && product.butcherDetails?.units[0]?.priceMode === "cashier" ? `إضافة ${product.name} وتحديد السعر` : `إضافة ${product.name} بسعر ${financeMoney(product.price)}`} onClick={() => addProduct(product)}>
             <PosProductImage key={product.imageUrl} product={product} />
-            {quantity > 0 && <span className={styles.productQuantity}>{quantity}</span>}<span className={styles.productBody}><span className={styles.productName}>{product.name}</span><span className={styles.productPrice}>{product.quoteOnly ? <span className={styles.muted}>{quoteOnlyLabel}</span> : <>{butcher ? <bdi>{new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(product.price)}</bdi> : <Numeric value={product.price} />}<small> ر س</small>{butcher && product.butcherDetails?.units[0] && <small> / {product.butcherDetails.units[0].label}</small>}</>}</span>{product.stockTracked && <span className={stock <= 0 ? styles.negative : styles.muted}>{`رصيد المخزون ${stock}`}</span>}</span>
+            {quantity > 0 && <span className={styles.productQuantity}>{quantity}</span>}<span className={styles.productBody}><span className={styles.productName}>{product.name}</span><span className={styles.productPrice}>{product.quoteOnly ? <span className={styles.muted}>{quoteOnlyLabel}</span> : butcher && product.butcherDetails?.units[0]?.priceMode === "cashier" ? <span className={styles.muted}>تحدد السعر وقت البيع</span> : <>{butcher ? <bdi>{new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(product.price)}</bdi> : <Numeric value={product.price} />}<small> ر س</small>{butcher && product.butcherDetails?.units[0] && <small> / {product.butcherDetails.units[0].label}</small>}</>}</span>{product.stockTracked && <span className={stock <= 0 ? styles.negative : styles.muted}>{`رصيد المخزون ${stock}`}</span>}</span>
           </button>;
         })}</div>}
       </section>
@@ -259,7 +266,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     </div>
       <aside className={`${styles.panel} ${styles.cart}`} aria-label="سلة المبيعات"><div className={styles.panelHeader}><h2 className={styles.panelTitle}><ShoppingBag size={18} style={{ display: "inline", marginInlineEnd: 7 }} aria-hidden="true" />طلب جديد</h2><span className={styles.badge}>{cartCount}</span></div>
         <div className={styles.cartBody} role="region" aria-label="الأصناف المختارة القابلة للتمرير" tabIndex={0}>
-        {!cart.length ? <Empty title="ابدأ بإضافة صنف">اضغط على صورة الصنف لإضافته إلى السلة</Empty> : <div className={styles.cartLines}>{lines.map((line) => <div className={styles.cartLine} key={financeCartKey(line)}><div className={styles.cartLineDetails}><div className={styles.cartProductIdentity}><CartProductImage key={line.product.imageUrl ?? line.productId} src={line.product.imageUrl} /><div><strong>{line.product.name}</strong><small><Numeric value={line.product.price} money unitPrice={!!line.unitId} /> للوحدة</small>{line.priceChanged && <button type="button" className={butcherStyles.acceptPrice} disabled={disabled} onClick={() => setQuantity(line.productId, line.quantity, line.unitId, true)}>اعتماد السعر الجديد <Numeric value={line.currentUnitPrice} unitPrice /></button>}</div></div><div className={styles.quantity} style={{ marginTop: 10 }}><button type="button" disabled={disabled} aria-label={`تقليل كمية ${line.product.name}`} onClick={() => setQuantity(line.productId, Math.max(0, Math.round((line.quantity - 1) * 1000) / 1000), line.unitId)}><Minus size={14} /></button><input type="number" min="0" max="9999" step={butcher ? "0.001" : "1"} inputMode="decimal" disabled={disabled} value={line.quantity} aria-label={`كمية ${line.product.name}`} onChange={(event) => setQuantity(line.productId, Number(event.target.value), line.unitId)} /><button type="button" disabled={disabled || line.quantity >= 9999} aria-label={`زيادة كمية ${line.product.name}`} onClick={() => setQuantity(line.productId, Math.round((line.quantity + 1) * 1000) / 1000, line.unitId)}><Plus size={14} /></button></div></div><div><strong><Numeric value={line.product.price * line.quantity} money /></strong><button className={styles.iconButton} type="button" disabled={disabled} aria-label={`حذف ${line.product.name}`} onClick={() => setQuantity(line.productId, 0, line.unitId)}><Trash2 size={15} /></button></div></div>)}</div>}
+        {!cart.length ? <Empty title="ابدأ بإضافة صنف">اضغط على صورة الصنف لإضافته إلى السلة</Empty> : <div className={styles.cartLines}>{lines.map((line) => <div className={styles.cartLine} key={financeCartKey(line)}><div className={styles.cartLineDetails}><div className={styles.cartProductIdentity}><CartProductImage key={line.product.imageUrl ?? line.productId} src={line.product.imageUrl} /><div><strong>{line.product.name}</strong><small><Numeric value={line.product.price} money unitPrice={!!line.unitId} /> للوحدة</small>{line.priceChanged && <button type="button" className={butcherStyles.acceptPrice} disabled={disabled} onClick={() => setQuantity(line.productId, line.quantity, line.unitId, true, line.cashierPrice ? line.unitPrice : undefined)}>اعتماد السعر الجديد <Numeric value={line.currentUnitPrice} unitPrice /></button>}</div></div><div className={styles.quantity} style={{ marginTop: 10 }}><button type="button" disabled={disabled} aria-label={`تقليل كمية ${line.product.name}`} onClick={() => setQuantity(line.productId, Math.max(0, Math.round((line.quantity - 1) * 1000) / 1000), line.unitId, false, line.cashierPrice ? line.unitPrice : undefined)}><Minus size={14} /></button><input type="number" min="0" max="9999" step={butcher ? "0.001" : "1"} inputMode="decimal" disabled={disabled} value={line.quantity} aria-label={`كمية ${line.product.name}`} onChange={(event) => setQuantity(line.productId, Number(event.target.value), line.unitId, false, line.cashierPrice ? line.unitPrice : undefined)} /><button type="button" disabled={disabled || line.quantity >= 9999} aria-label={`زيادة كمية ${line.product.name}`} onClick={() => setQuantity(line.productId, Math.round((line.quantity + 1) * 1000) / 1000, line.unitId, false, line.cashierPrice ? line.unitPrice : undefined)}><Plus size={14} /></button></div></div><div><strong><Numeric value={line.product.price * line.quantity} money /></strong><button className={styles.iconButton} type="button" disabled={disabled} aria-label={`حذف ${line.product.name}`} onClick={() => setQuantity(line.productId, 0, line.unitId, false, line.cashierPrice ? line.unitPrice : undefined)}><Trash2 size={15} /></button></div></div>)}</div>}
         </div>
         <section className={checkoutStyles.dock} aria-label="ملخص الدفع الثابت">
           <div className={checkoutStyles.amountCard}><div className={checkoutStyles.amountCaption}><span>الإجمالي المستحق</span><small>{cartCount}</small></div><div className={checkoutStyles.amount}><bdi dir="ltr">{new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totals.total)}</bdi><small>ر س</small></div></div>
@@ -272,16 +279,17 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
         </section>
       </aside>
     </div>
-    <Modal open={!!unitProduct} title={unitProduct?.name ?? "وحدة البيع"} onClose={() => setUnitProductId(null)} panelClassName={checkoutStyles.dialog} footer={<button type="button" className={styles.primary} disabled={disabled || !selectedUnit || !unitQuantityValid || !unitStockCompatible} onClick={addSelectedUnit}><Plus size={18} aria-hidden="true" />إضافة إلى الطلب</button>}>
+    <Modal open={!!unitProduct} title={unitProduct?.name ?? "وحدة البيع"} onClose={() => setUnitProductId(null)} panelClassName={checkoutStyles.dialog} footer={<button type="button" className={styles.primary} disabled={disabled || !selectedUnit || !unitQuantityValid || !unitPriceValid || !unitStockCompatible} onClick={addSelectedUnit}><Plus size={18} aria-hidden="true" />إضافة إلى الطلب</button>}>
       <div className={butcherStyles.form}>
         {localError && <p className={styles.error} role="alert">{localError}</p>}
         <fieldset className={butcherStyles.units}><legend>اختر وحدة البيع</legend>{unitProduct?.butcherDetails?.units.map(unit => {
           const compatible = !unitProduct.stockTracked || butcherStockFactor(unitProduct.butcherDetails!.units[0].id, unit.id) !== null;
-          return <button key={unit.id} type="button" className={butcherStyles.unit} aria-pressed={unit.id === selectedUnitId} disabled={!compatible || disabled} title={!compatible ? "هذه الوحدة تحتاج ربط مخزون متوافق" : undefined} onClick={() => { if (unit.id !== selectedUnitId) setUnitQuantity(""); setSelectedUnitId(unit.id); }}><strong className={butcherStyles.unitName}><i className={butcherStyles.selectionMark} aria-hidden="true">{unit.id === selectedUnitId && <Check size={18} strokeWidth={3} />}</i>{unit.label}</strong><span className={butcherStyles.unitPrice}><bdi>{new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(unit.price)}</bdi>ر س</span></button>;
+          return <button key={unit.id} type="button" className={butcherStyles.unit} aria-pressed={unit.id === selectedUnitId} disabled={!compatible || disabled} title={!compatible ? "هذه الوحدة تحتاج ربط مخزون متوافق" : undefined} onClick={() => { if (unit.id !== selectedUnitId) { setUnitQuantity(""); setCashierUnitPrice(""); } setSelectedUnitId(unit.id); }}><strong className={butcherStyles.unitName}><i className={butcherStyles.selectionMark} aria-hidden="true">{unit.id === selectedUnitId && <Check size={18} strokeWidth={3} />}</i>{unit.label}</strong><span className={butcherStyles.unitPrice}>{unit.priceMode === "cashier" ? "تحدد السعر وقت البيع" : <><bdi>{new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(unit.price)}</bdi>ر س</>}</span></button>;
         })}</fieldset>
         <div className={butcherStyles.quantity}><Field label={`الكمية${selectedUnit ? ` بالـ${selectedUnit.label}` : ""}`}><input type="number" inputMode="decimal" min="0.001" max="9999" step="0.001" placeholder="أدخل الكمية" value={unitQuantity} disabled={disabled} aria-invalid={unitQuantity !== "" && !unitQuantityValid} aria-describedby="butcher-quantity-hint" onChange={event => setUnitQuantity(event.target.value)} /></Field><small id="butcher-quantity-hint" className={styles.muted}>يمكن إدخال أجزاء الوحدة حتى ثلاث خانات عشرية</small></div>
         {unitQuantity !== "" && !unitQuantityValid && <p className={styles.error} role="alert">أدخل كمية بين ٠٫٠٠١ و٩٩٩٩ بحد أقصى ثلاث خانات عشرية</p>}
-        <div className={butcherStyles.total}><span>قيمة الصنف</span><Numeric value={unitQuantityValid && selectedUnit ? Math.round((selectedUnit.price * selectedQuantity + Number.EPSILON) * 100) / 100 : 0} money /></div>
+        {cashierPriced && <div className={butcherStyles.quantity}><Field label={`سعر ${selectedUnit.label} بالريال`}><input type="number" inputMode="decimal" min="0.000001" max="1000000" step="0.000001" placeholder="أدخل سعر البيع" value={cashierUnitPrice} disabled={disabled} aria-invalid={cashierUnitPrice !== "" && !unitPriceValid} aria-describedby="butcher-price-hint" onChange={event => setCashierUnitPrice(event.target.value)} /></Field><small id="butcher-price-hint" className={styles.muted}>سعر الوحدة الواحدة وفق إعداد الضريبة المعتمد ويُحفظ في الفاتورة</small>{cashierUnitPrice !== "" && !unitPriceValid && <p className={styles.error} role="alert">أدخل سعرًا أكبر من صفر بحد أقصى مليون ريال وست خانات عشرية</p>}</div>}
+        <div className={butcherStyles.total}><span>قيمة الصنف</span><Numeric value={unitQuantityValid && unitPriceValid && selectedUnit ? Math.round((selectedPrice * selectedQuantity + Number.EPSILON) * 100) / 100 : 0} money /></div>
       </div>
     </Modal>
     <Modal open={showCheckout} title="الدفع وإصدار الإيصال" onClose={() => { if (!pending) setShowCheckout(false); }} panelClassName={checkoutStyles.dialog} footer={<div className={checkoutStyles.footer}>

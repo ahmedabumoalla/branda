@@ -21,7 +21,7 @@ export function menuDisplayText(value: string) {
 
 export type StandaloneMenuProduct = Pick<MenuProduct,
   "id" | "name" | "category" | "categoryId" | "description" | "price" | "priceOptions" |
-  "calories" | "preparationTimeMinutes" | "ingredients" | "available" | "promo" | "commerceDetails"
+  "calories" | "preparationTimeMinutes" | "ingredients" | "available" | "promo" | "commerceDetails" | "butcherDetails"
 > & {
   priceRange?: MenuPriceRange;
   catalogKind?: "service" | "product";

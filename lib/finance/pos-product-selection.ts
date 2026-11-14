@@ -1,8 +1,13 @@
 import type { FinanceProduct, FinanceSnapshot } from "./brand-finance";
 
-export type FinanceCartLine = { productId: string; quantity: number; unitId?: string; unitPrice?: number };
-export const financeCartKey = (line: Pick<FinanceCartLine, "productId" | "unitId">) => `${line.productId}:${line.unitId ?? ""}`;
+export type FinanceCartLine = { productId: string; quantity: number; unitId?: string; unitPrice?: number; cashierPrice?: boolean };
+export const financeCartKey = (line: Pick<FinanceCartLine, "productId" | "unitId" | "unitPrice" | "cashierPrice">) => `${line.productId}:${line.unitId ?? ""}${line.cashierPrice ? `:price:${line.unitPrice}` : ""}`;
 export const isButcherFinance = (snapshot: Pick<FinanceSnapshot, "cafe">) => snapshot.cafe.businessCategory === "butcher_shops";
+
+export function validCashierUnitPrice(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 1_000_000
+    && Math.abs(value * 1_000_000 - Math.round(value * 1_000_000)) < 0.0001;
+}
 
 /** Inventory recipes use the first configured sale unit; unrelated families have no inferred weight. */
 export function butcherStockFactor(baseId: string, unitId: string): number | null {
@@ -14,16 +19,20 @@ export function butcherStockFactor(baseId: string, unitId: string): number | nul
 }
 
 /** Keep selected unit and price together for both preview and durable offline receipts. */
-export function financeProductSelection(product: FinanceProduct, unitId?: string, butcher = false) {
+export function financeProductSelection(product: FinanceProduct, unitId?: string, butcher = false, cashierUnitPrice?: unknown) {
   if (!butcher || !product.butcherDetails?.units.length) {
+    if (cashierUnitPrice !== undefined) throw new Error("هذا الصنف لا يسمح بتحديد السعر وقت البيع");
     if (unitId) throw new Error("وحدة البيع غير متاحة لهذا الصنف حدّث المنتجات");
     return { product, unit: undefined, stockFactor: 1 };
   }
   const unit = product.butcherDetails.units.find(item => item.id === unitId);
   if (!unit || !Number.isFinite(unit.price) || unit.price < 0) throw new Error("اختر وحدة بيع متاحة للصنف");
+  const cashierPriced = unit.priceMode === "cashier";
+  if (cashierPriced && !validCashierUnitPrice(cashierUnitPrice)) throw new Error("أدخل سعر الوحدة أكبر من صفر بحد أقصى مليون ريال وست خانات عشرية");
+  if (!cashierPriced && cashierUnitPrice !== undefined) throw new Error("سعر هذه الوحدة ثابت من إدارة المنتجات");
   const stockFactor = butcherStockFactor(product.butcherDetails.units[0].id, unit.id);
   if (product.stockTracked && stockFactor === null) throw new Error("هذه الوحدة لا تطابق وحدة المخزون اختر وحدة من النوع نفسه");
-  return { product: { ...product, name: `${product.name} · ${unit.label}`, price: unit.price }, unit, stockFactor: stockFactor ?? 1 };
+  return { product: { ...product, name: `${product.name} · ${unit.label}`, price: cashierPriced ? cashierUnitPrice as number : unit.price }, unit, stockFactor: stockFactor ?? 1 };
 }
 
 export function financeSelectedCartLines(cart: FinanceCartLine[], products: FinanceProduct[], butcher = false) {
@@ -31,7 +40,8 @@ export function financeSelectedCartLines(cart: FinanceCartLine[], products: Fina
     const product = products.find(item => item.id === line.productId);
     if (!product) return [];
     try {
-      const selected = financeProductSelection(product, line.unitId, butcher);
+      const cashierPriced = butcher && product.butcherDetails?.units.find(unit => unit.id === line.unitId)?.priceMode === "cashier";
+      const selected = financeProductSelection(product, line.unitId, butcher, cashierPriced && line.cashierPrice ? line.unitPrice : undefined);
       const pinnedPrice = butcher && typeof line.unitPrice === "number" ? line.unitPrice : selected.product.price;
       return [{ ...line, ...selected, product: { ...selected.product, price: pinnedPrice }, currentUnitPrice: selected.product.price, priceChanged: pinnedPrice !== selected.product.price }];
     }
