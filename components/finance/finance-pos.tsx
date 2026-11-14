@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Banknote, CreditCard, Check, Eye, Clock3, ImageIcon, LogOut, Minus, Plus, ReceiptText, RefreshCw, Search, ShoppingBag, Trash2 } from "lucide-react";
 import { logoutFinanceAction } from "@/app/actions/finance-access";
+import { isAldeemCafe } from "@/lib/platform/aldeem";
 import { Modal } from "@/components/dashboard/ui/modal";
 import type { FinanceDocument, FinanceProduct, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { financeMoney, getPrimaryFinanceAccount, previewFinanceTotals } from "@/lib/finance/brand-finance";
@@ -30,6 +31,7 @@ import checkoutStyles from "./finance-pos-checkout.module.css";
 import butcherStyles from "./finance-pos-butcher.module.css";
 
 type CartLine = FinanceCartLine;
+const quoteOnlyLabel = "بانتظار اعتماد السعر";
 export function financeCartLines(cart: CartLine[], products: FinanceProduct[], butcher = false) {
   return financeSelectedCartLines(cart, products, butcher);
 }
@@ -104,6 +106,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
     : stale ? error || "لم يكتمل تجهيز الكاشير حدّث المزامنة قبل الدفع"
     : loggingOut ? "جار تسجيل الخروج"
     : !cart.length ? "أضف منتجًا إلى السلة لبدء الدفع"
+    : lines.some(line => line.product.quoteOnly) ? "يوجد صنف بانتظار اعتماد السعر احذفه من السلة أو اطلب تسعيره من المسؤول"
     : pricesChanged ? "اعتمد السعر الجديد للأصناف المتغيرة قبل الدفع"
     : shift?.supervisor_paused ? "الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع"
     : needsShift && outgoing ? "الوردية بانتظار الاستلام أكمل تسليمها قبل بدء وردية جديدة"
@@ -147,6 +150,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
     setCart((current) => quantity === 0 ? current.filter((item) => financeCartKey(item) !== key) : current.some((item) => financeCartKey(item) === key) ? current.map((item) => financeCartKey(item) === key ? { ...item, quantity, ...(butcher && acceptCurrentPrice ? { unitPrice: price } : {}) } : item) : [...current, { productId, quantity, ...(unitId ? { unitId } : {}), ...(butcher ? { unitPrice: price } : {}) }]);
   }
   function addProduct(product: FinanceProduct) {
+    if (product.quoteOnly) { setLocalError("هذا المنتج بانتظار اعتماد سعره من إدارة المنتجات ويمكنك إرساله كطلب للمعمل"); return; }
     if (butcher && product.butcherDetails?.units.length) {
       setUnitProductId(product.id); setSelectedUnitId(product.butcherDetails.units[0].id); setUnitQuantity(""); setLocalError("");
     } else setQuantity(product.id, (cart.find(line => line.productId === product.id)?.quantity ?? 0) + 1);
@@ -212,6 +216,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
         {shift ? <button type="button" className={shiftStyles.end} disabled={disabled || loggingOut || cart.length > 0} title={cart.length ? "احفظ السلة أو أفرغها قبل إنهاء الوردية" : "عد النقدية وحدد جهة التسليم لإقفال الوردية"} onClick={() => open({ operation: "shift_close", title: slug && !butcher ? "إنهاء الوردية وتسجيل الخروج" : "إنهاء الوردية", values: { shiftId: shift.id } })}><LogOut size={16} aria-hidden="true" />إنهاء الوردية</button> : slug && <button type="button" className={shiftStyles.exit} disabled={pending || loggingOut || !!outgoing || cart.length > 0} onClick={finishLogout}><LogOut size={16} aria-hidden="true" />خروج</button>}
       </div>
       {!butcher && <FinancePosPager slug={slug ?? data.cafe.slug} refreshKey={pagerRefreshKey} />}
+      {!offlineEntry && isAldeemCafe(data.cafe) && <Link className={styles.secondary} href={`/finance/${data.cafe.slug}/lab`}><Plus size={17} aria-hidden="true" />طلب للمعمل</Link>}
       <FinancePosActions details={shift && <><span>{data.accounts.find((account) => account.id === shift.account_id)?.name ?? "الصندوق"}</span><span>بداية الوردية {financeDate(shift.opened_at)}</span><span>نقدية متوقعة <Numeric value={shift.expected_cash} money /></span></>}>
       <div className={styles.actions} aria-label="أدوات الكاشير والوردية">
         {shift && <button type="button" className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "supplier_payout", title: "سداد مورد من الصندوق", values: { shiftId: shift.id } })}>سداد الموردين</button>}
@@ -236,9 +241,9 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
         {!products.length ? <div className={styles.panel}><Empty title={data.products.length ? "لا توجد أصناف مطابقة" : "المنيو خالٍ من الأصناف"}>{data.products.length ? "جرّب اسمًا آخر أو اختر جميع الأصناف" : "أضف منتجات العلامة وصورها وأسعارها من إدارة المنيو"}</Empty></div> : <div className={styles.products}>{products.map((product) => {
           const quantity = cart.filter((line) => line.productId === product.id).reduce((sum, line) => sum + line.quantity, 0);
           const stock = quantityAvailable(product);
-          return <button type="button" key={product.id} className={styles.product} disabled={disabled || quantity >= 9999} aria-label={`إضافة ${product.name} بسعر ${financeMoney(product.price)}`} onClick={() => addProduct(product)}>
+          return <button type="button" key={product.id} className={styles.product} disabled={disabled || quantity >= 9999 || product.quoteOnly} aria-label={product.quoteOnly ? `${product.name} بانتظار اعتماد السعر` : `إضافة ${product.name} بسعر ${financeMoney(product.price)}`} onClick={() => addProduct(product)}>
             <PosProductImage key={product.imageUrl} product={product} />
-            {quantity > 0 && <span className={styles.productQuantity}>{quantity}</span>}<span className={styles.productBody}><span className={styles.productName}>{product.name}</span><span className={styles.productPrice}>{butcher ? <bdi>{new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(product.price)}</bdi> : <Numeric value={product.price} />}<small> ر س</small>{butcher && product.butcherDetails?.units[0] && <small> / {product.butcherDetails.units[0].label}</small>}</span>{product.stockTracked && <span className={stock <= 0 ? styles.negative : styles.muted}>{`رصيد المخزون ${stock}`}</span>}</span>
+            {quantity > 0 && <span className={styles.productQuantity}>{quantity}</span>}<span className={styles.productBody}><span className={styles.productName}>{product.name}</span><span className={styles.productPrice}>{product.quoteOnly ? <span className={styles.muted}>{quoteOnlyLabel}</span> : <>{butcher ? <bdi>{new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(product.price)}</bdi> : <Numeric value={product.price} />}<small> ر س</small>{butcher && product.butcherDetails?.units[0] && <small> / {product.butcherDetails.units[0].label}</small>}</>}</span>{product.stockTracked && <span className={stock <= 0 ? styles.negative : styles.muted}>{`رصيد المخزون ${stock}`}</span>}</span>
           </button>;
         })}</div>}
       </section>

@@ -37,7 +37,7 @@ export default async function OrdersPage() {
         } catch { financeMessage = "تعذر تحميل حسابات المالية حدث الصفحة أو راجع صلاحيات المالية قبل تأكيد التحصيل"; }
       }
       const data = await getOwnerGiftOrders().catch(() => null);
-      return <GiftOrdersPage initialOrders={data?.orders ?? []} initialSettings={data?.settings ?? null} initialHasMore={data?.hasMore ?? false} cafe={{ name: cafe.name, slug: cafe.slug }} finance={finance} financeMessage={financeMessage} configError={data ? undefined : "تعذر تحميل الطلبات حدث الصفحة وحاول مجددًا"} />;
+      return <GiftOrdersPage initialOrders={data?.orders ?? []} initialSettings={data?.settings ?? null} initialHasMore={data?.hasMore ?? false} cafe={{ name: cafe.name, slug: cafe.slug, businessCategory: cafe.businessCategory }} finance={finance} financeMessage={financeMessage} configError={data ? undefined : "تعذر تحميل الطلبات حدث الصفحة وحاول مجددًا"} />;
     }
   }
   if (!isStorefrontEnabled()) redirect("/dashboard");

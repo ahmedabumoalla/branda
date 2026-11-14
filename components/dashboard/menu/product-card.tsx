@@ -14,7 +14,7 @@ type Props = {
 export function MenuProductCard({ product, busy = false, categoryLabel, freeProductLabel, onEdit, onDuplicate, onToggleAvailability, onDelete, businessCategory }: Props) {
   const isEvents = getBusinessCopy(businessCategory).kind === "events";
   const isSalon = businessCategory === "hair_salons";
-  const isGifts = businessCategory === "gifts_flowers" || businessCategory === "clothing_stores";
+  const isGifts = businessCategory === "gifts_flowers" || businessCategory === "clothing_stores" || businessCategory === "retail_stores";
   const promoOn = product.promo != null && isPromoActive(product.promo);
   const finalPrice = productFinalPrice(product.price, product.promo);
   const discounted = promoOn && finalPrice < product.price;

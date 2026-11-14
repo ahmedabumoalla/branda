@@ -20,6 +20,7 @@ export const BUSINESS_CAPABILITIES: Partial<Record<BusinessCategoryId, BusinessC
   butcher_shops: ["menu", "orders", "loyalty", "rewards", "cashier"],
   hair_salons: ["menu", "orders", "loyalty", "rewards", "cashier"],
   gifts_flowers: ["menu", "orders", "loyalty", "rewards", "cashier"],
+  retail_stores: ["menu", "orders", "loyalty", "rewards", "cashier"],
   events_conferences: [
     "tickets",
     "ticket_orders",

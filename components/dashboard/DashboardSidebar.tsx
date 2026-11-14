@@ -55,7 +55,7 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
   const cafeName = settings.cafeName || "العلامة";
   const isSalon = settings.businessCategory === "hair_salons";
   const isFashion = isFawaselStore(settings.cafeSlug);
-  const isGifts = settings.businessCategory === "gifts_flowers" || isFashion;
+  const isGifts = settings.businessCategory === "gifts_flowers" || settings.businessCategory === "retail_stores" || isFashion;
   const ToggleIcon = collapsed ? ChevronsLeft : ChevronsRight;
   const toggleLabel = collapsed ? "توسيع القائمة الجانبية" : "طي القائمة الجانبية";
   const integrated = (pathname === "/dashboard/finance" || pathname.startsWith("/dashboard/system/")) && !collapsed;

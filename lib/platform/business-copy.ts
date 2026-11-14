@@ -1,12 +1,13 @@
 import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 
-export type BusinessKind = "cafe" | "restaurant" | "butcher" | "barbershop" | "events" | "gifts" | "clothing";
+export type BusinessKind = "cafe" | "restaurant" | "butcher" | "barbershop" | "events" | "gifts" | "clothing" | "retail";
 
 export function resolveBusinessKind(
   category?: string | null
 ): BusinessKind {
   if (category === "hair_salons") return "barbershop";
   if (category === "clothing_stores") return "clothing";
+  if (category === "retail_stores") return "retail";
   if (category === "gifts_flowers") return "gifts";
   if (category === "butcher_shops") return "butcher";
   if (category === "restaurants" || category === "restaurant") {
@@ -124,8 +125,8 @@ export function getBusinessCopy(category?: string | null): BusinessCopy {
   if (kind === "butcher") return butcherCopy;
   if (kind === "barbershop") return barbershopCopy;
   if (kind === "events") return eventsCopy;
-  if (kind === "clothing") return {
-    kind: "clothing", categoryId: "clothing_stores", brandNoun: "متجر", casualNoun: "متجر", pageNoun: "صفحة المتجر",
+  if (kind === "clothing" || kind === "retail") return {
+    kind, categoryId: kind === "retail" ? "retail_stores" : "clothing_stores", brandNoun: "متجر", casualNoun: "متجر", pageNoun: "صفحة المتجر",
     itemSingular: "منتج", itemPlural: "المنتجات", menuSearchPlaceholder: "ابحث عن منتج",
     freeRewardName: "مكافأة خاصة", loyaltyUnitSingular: "ختم", loyaltyUnitPlural: "أختام", loyaltyUnitLit: "أختام مكتملة",
   };

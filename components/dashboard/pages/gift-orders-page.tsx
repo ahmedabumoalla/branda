@@ -9,6 +9,7 @@ import { Modal } from "@/components/dashboard/ui/modal";
 import { giftOrderStatusLabel, giftPaymentStatusLabel, type GiftOrder, type GiftOrderCommand, type GiftStoreSettings } from "@/lib/commerce/gift-orders";
 import styles from "./gift-orders-page.module.css";
 import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
+import { isAldeemCafe } from "@/lib/platform/aldeem";
 
 export type GiftOrdersFinance = {
   accounts: { id: string; name: string; kind: string }[];
@@ -17,7 +18,7 @@ export type GiftOrdersFinance = {
 };
 type Props = {
   initialOrders: GiftOrder[]; initialSettings: GiftStoreSettings | null;
-  cafe: { name: string; slug: string }; initialHasMore: boolean;
+  cafe: { name: string; slug: string; businessCategory?: string }; initialHasMore: boolean;
   finance: GiftOrdersFinance | null; financeMessage?: string; configError?: string;
 };
 const money = (value: number) => `${new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 }).format(value)} ر.س`;
@@ -25,7 +26,7 @@ const date = (value: string) => new Intl.DateTimeFormat("ar-SA", { dateStyle: "m
 const defaults: GiftStoreSettings = { enabled: false, deliveryEnabled: true, pickupEnabled: false, deliveryFee: 25, paymentMethods: ["cod"], pickupLocation: "", deliveryNotes: "", bankInstructions: "", vatRate: 0, taxInclusive: true };
 
 export function GiftOrdersPage({ initialOrders, initialSettings, cafe, initialHasMore, finance, financeMessage, configError }: Props) {
-  const retail = isFawaselStore(cafe.slug);
+  const retail = cafe.businessCategory === "retail_stores" || isFawaselStore(cafe.slug) || isAldeemCafe(cafe);
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
   const [settings, setSettings] = useState(initialSettings);
@@ -93,7 +94,7 @@ export function GiftOrdersPage({ initialOrders, initialSettings, cafe, initialHa
     {message && <p role="status" className={styles.success}><Check size={18} aria-hidden="true" />{message}</p>}
     {tab === "settings" ? <SettingsForm key={JSON.stringify(settings)} initial={settings ?? defaults} busy={busy} onSave={save} /> : <section className={styles.orders} aria-label="طلبات المتجر">
       <div className={styles.toolbar}><label className={styles.search}><Search size={19} aria-hidden="true" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="ابحث في هذه الصفحة بالاسم أو الجوال أو رقم الطلب" aria-label="بحث في طلبات الصفحة الحالية" /></label><select aria-label="تصفية حسب حالة الطلب" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">جميع الحالات</option>{Object.entries(giftOrderStatusLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button type="button" className={styles.secondary} disabled={busy} onClick={() => refresh()}><RefreshCw size={17} className={busy ? styles.spin : ""} aria-hidden="true" />تحديث</button></div>
-      {!visible.length ? <div className={styles.empty}><ShoppingBag size={42} strokeWidth={1.2} aria-hidden="true" /><h2>{orders.length ? "لا توجد طلبات مطابقة" : "هنا تبدأ حكاية كل هدية"}</h2><p>{orders.length ? "غيّر البحث أو حالة الطلب لعرض النتائج" : "تظهر طلبات العملاء هنا فور إرسالها من متجرك"}</p>{!settings?.enabled && <button type="button" className={styles.primary} onClick={() => setTab("settings")}>إعداد استقبال الطلبات <ArrowLeft size={17} aria-hidden="true" /></button>}</div> : <div className={styles.orderList}>{visible.map(item => <button type="button" className={styles.orderCard} key={item.id} onClick={() => { setSelected(item.id); setError(""); setMessage(""); }}>
+      {!visible.length ? <div className={styles.empty}><ShoppingBag size={42} strokeWidth={1.2} aria-hidden="true" /><h2>{orders.length ? "لا توجد طلبات مطابقة" : retail ? "طلبات متجرك تبدأ هنا" : "هنا تبدأ حكاية كل هدية"}</h2><p>{orders.length ? "غيّر البحث أو حالة الطلب لعرض النتائج" : "تظهر طلبات العملاء هنا فور إرسالها من متجرك"}</p>{!settings?.enabled && <button type="button" className={styles.primary} onClick={() => setTab("settings")}>إعداد استقبال الطلبات <ArrowLeft size={17} aria-hidden="true" /></button>}</div> : <div className={styles.orderList}>{visible.map(item => <button type="button" className={styles.orderCard} key={item.id} onClick={() => { setSelected(item.id); setError(""); setMessage(""); }}>
         <div className={styles.orderIdentity}><span className={styles.orderIcon}>{item.status === "quote_requested" ? <Leaf size={23} aria-hidden="true" /> : <ShoppingBag size={23} aria-hidden="true" />}</span><span><b>طلب #{item.number}</b><small>{date(item.createdAt)}</small></span></div>
         <div className={styles.customer}><strong>{item.customerName}</strong><span>{item.items.length} {item.items.length === 1 ? "صنف" : "أصناف"} <span aria-hidden="true"> / </span>{item.fulfillment === "delivery" ? "توصيل" : "استلام من المحل"}</span></div>
         <div className={styles.orderState}><span className={styles.badge} data-state={item.status}>{giftOrderStatusLabel[item.status]}</span><small>{giftPaymentStatusLabel[item.paymentStatus]}</small></div>

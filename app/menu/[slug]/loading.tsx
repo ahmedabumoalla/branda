@@ -11,10 +11,13 @@ import { menuLoadingBrand } from "@/lib/menu/loading-brands";
 import { TeaBakeryMenuLoading } from "@/components/menu/tea-bakery-menu-loading";
 import { FawaselLoading } from "@/components/store/fawasel-loading";
 import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
+import { AldeemLoading } from "@/components/store/aldeem-loading";
+import { isAldeemStore } from "@/lib/commerce/aldeem-profile";
 
 export default function MenuLoading() {
   const { slug } = useParams<{ slug: string }>();
   const branches = useSearchParams().getAll("branch");
+  if (isAldeemStore(slug)) return <AldeemLoading />;
   if (isFawaselStore(slug)) return <FawaselLoading />;
   if (slug === "brand-9010051467ed") return <TeaBakeryMenuLoading />;
   const signature = signatureBrand(slug, branches.length === 1 ? branches[0] : undefined);

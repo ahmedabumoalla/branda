@@ -1,4 +1,5 @@
 "use client";
+import { isAldeemCafe } from "@/lib/platform/aldeem";
 import { FinanceShiftMonitor } from "./finance-shift-monitor";
 import { FinanceCashierManagement } from "./finance-cashier-management";
 import { FinancePrinterSettings } from "./finance-printer-settings";
@@ -63,6 +64,7 @@ const FinanceReceiptDialog = dynamic(() => import("./finance-receipt-dialog").th
 const FinanceInventoryReport = dynamic(() => import("./finance-inventory-report").then(module => module.FinanceInventoryReport), { loading: FinanceViewLoading });
 
 const salesCashierLabel = "إضافة كاشير مبيعات";
+const labEntryLabel = "شاشة طلبات المعمل";
 const staffLabel = "إدارة موظف مالي";
 
 export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: FinanceSnapshot; slug?: string }) {
@@ -241,6 +243,7 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
 
   return <div className={`${styles.page} ${isDocumentPage ? styles.invoiceManagementPage : ""}`} dir="rtl">
     {isDocumentPage ? <header className={styles.invoiceManagementHeader}><div><p className={styles.eyebrow}>نظام برندة المتكامل / {isShiftPage ? sections.find(item => item.id === "shifts")?.label : isCustomerDetail ? "العملاء" : isJournalDetail ? "القيود اليومية" : "المبيعات"}</p><h1 className={styles.panelTitle}>{isShiftPage ? sections.find(item => item.id === "shifts")?.label : isCustomerDetail ? "ملف العميل" : isJournalDetail ? "قيد اليومية" : isRecurringInvoicePage ? "الفواتير الدورية" : isSalesReturnPage ? "الفواتير المرتجعة" : isCreditNotePage ? salesView === "credit-create" ? "إنشاء إشعار دائن" : "الإشعارات الدائنة" : isQuotePage ? salesView === "quote-create" ? "إنشاء عرض سعر" : "إدارة عروض الأسعار" : isInvoiceDetail ? "تفاصيل الفاتورة" : isSalesSettings ? "إعدادات المبيعات" : isInvoiceEditor ? "إضافة فاتورة" : "إدارة الفواتير"}</h1></div><span className={styles.muted}>{data.cafe.name}</span></header> : <header className={styles.header}><div><p className={styles.eyebrow}><CircleDollarSign size={16} aria-hidden="true" />نظام برندة المتكامل {data.cafe.name}</p><h1 className={styles.title}>حركة علامتك بالأرقام</h1><p className={styles.subtitle}>المبيعات والمخزون والخزينة في دفتر واحد</p></div><div className={styles.actions}><button className={styles.secondary} onClick={state.refresh} disabled={pending}><RefreshCw size={16} aria-hidden="true" />{pending ? "جار التحديث" : "تحديث الأرصدة"}</button>{allows("sales_cashier_create") && <button type="button" className={styles.secondary} disabled={disabled || !canManageCashiers} aria-describedby={!canManageCashiers ? "cashier-owner-hint" : undefined} onClick={() => { if (canManageCashiers) open({ operation: "sales_cashier_create", title: "إضافة كاشير مبيعات" }); }}><Plus size={16} aria-hidden="true" />إضافة كاشير مبيعات</button>}{canFinance(data.role,"pos") && <Link className={styles.primary} href={posHref}>فتح الكاشير المالي<ArrowLeft size={17} aria-hidden="true" /></Link>}</div></header>}
+    {!isDocumentPage && isAldeemCafe(data.cafe) && <Link href={`/finance/${data.cafe.slug}/lab`} className={styles.secondary}>{labEntryLabel}<ArrowLeft size={16} aria-hidden="true" /></Link>}
     {!isDocumentPage && !canManageCashiers && <p id="cashier-owner-hint" className={styles.muted}>إضافة الكاشيرات متاحة لمالك العلامة</p>}
     {!isDocumentPage && canFinance(data.role,"pos") && <Link href="/cashier/login?type=sales" className={styles.secondary}>صفحة دخول كاشير المبيعات<ArrowLeft size={16} aria-hidden="true" /></Link>}
     {slug && <nav className={styles.navigation} aria-label="أقسام المالية">{sections.filter((item) => financeSectionAllowed(item.id,data.role,canManageCashiers)).map(({ id, label, icon: Icon }) => <button type="button" aria-current={section === id ? "page" : undefined} key={id} className={`${styles.navItem} ${section === id ? styles.navActive : ""}`} onClick={() => { setSection(id); setQuery(""); }}><Icon size={16} aria-hidden="true" />{label}</button>)}</nav>}

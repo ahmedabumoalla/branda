@@ -13,7 +13,7 @@ export type BusinessCategoryId =
   | "furniture"
   | "events_conferences";
 
-export const AVAILABLE_BUSINESS_CATEGORY_IDS = ["cafes_coffee", "restaurants", "butcher_shops", "hair_salons", "gifts_flowers"] as const;
+export const AVAILABLE_BUSINESS_CATEGORY_IDS = ["cafes_coffee", "restaurants", "butcher_shops", "hair_salons", "gifts_flowers", "retail_stores"] as const;
 
 export const BUSINESS_CATEGORIES: {
   id: BusinessCategoryId;
@@ -31,7 +31,7 @@ export const BUSINESS_CATEGORIES: {
   { id: "gifts_flowers", label: "متاجر الهدايا والورود", available: true, dashboardPath: "/dashboard", icon: "Flower2" },
   { id: "clinics_health_centers", label: "العيادات والمراكز الصحية", available: false, dashboardPath: null, icon: "HeartPulse" },
   { id: "gyms_fitness", label: "صالات الرياضة واللياقة البدنية", available: false, dashboardPath: null, icon: "Dumbbell" },
-  { id: "retail_stores", label: "متاجر البيع بالتجزئة", available: false, dashboardPath: null, icon: "ShoppingBag" },
+  { id: "retail_stores", label: "متاجر البيع بالتجزئة والجملة والتصنيع", available: true, dashboardPath: "/dashboard", icon: "ShoppingBag" },
   { id: "clothing_stores", label: "متاجر الملابس", available: false, dashboardPath: null, icon: "Shirt" },
   { id: "furniture", label: "المفروشات", available: false, dashboardPath: null, icon: "Armchair" },
   { id: "events_conferences", label: "الفعاليات والمؤتمرات", available: false, dashboardPath: "/dashboard", icon: "CalendarDays" },

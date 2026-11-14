@@ -20,6 +20,8 @@ import { TeaBakeryMenu } from "@/components/menu/tea-bakery-menu";
 import { JamilaMenu, JAMILA_SLUG } from "@/components/menu/jamila-menu";
 import { FawaselStore } from "@/components/store/fawasel-store";
 import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
+import { AldeemStore } from "@/components/store/aldeem-store";
+import { isAldeemStore } from "@/lib/commerce/aldeem-profile";
 
 export const dynamic = "force-dynamic";
 // Share the preview publication check between metadata and page rendering in one request.
@@ -29,7 +31,7 @@ type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<Record<
 
 export async function generateViewport({ params }: Props): Promise<Viewport> {
   const { slug } = await params;
-  return { themeColor: isFawaselStore(slug) ? "#ff8500" : slug === JAMILA_SLUG ? "#5c5c5c" : "#102019", width: "device-width", initialScale: 1 };
+  return { themeColor: isAldeemStore(slug) ? "#6b347e" : isFawaselStore(slug) ? "#ff8500" : slug === JAMILA_SLUG ? "#5c5c5c" : "#102019", width: "device-width", initialScale: 1 };
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
@@ -42,6 +44,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (loyaltyBrand) return { title: `${loyaltyBrand.identity.name} | الولاء والمكافآت`, description: `انضم إلى برنامج ولاء ${loyaltyBrand.identity.name} واجمع أختامك`, alternates: { canonical: `/loyalty/${loyaltyBrand.identity.slug}/qr` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
+  if (isAldeemStore(menu.slug)) return { title: "خيال الديم | حلا يكمّل حلو أيامك", description: "اكتشف تشكيلة سلسلة خيال الديم للحلويات من الكيك والتشيز والحلا واختَر ما يناسب لحظتك", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (isFawaselStore(menu.slug)) return { title: "فواصل | ستايلك كل يوم", description: "تسوّق أزياء وأحذية وإكسسوارات فواصل واختر تفاصيل إطلالتك وانضم إلى نادي فواصل", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (menu.slug === JAMILA_SLUG && menu.products.length === 0) return {
     title: `${menu.name} | قهوة ومخبوزات`, description: "أهلًا بك في جميلة قهوة ومخبوزات ولحظات جميلة قائمتنا قريبًا",
@@ -66,7 +69,8 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   if (!menu) notFound();
   if (menu.businessCategory === "hair_salons") redirect(`/salon/${menu.slug}`);
   const fawasel = isFawaselStore(menu.slug);
-  const giftStore = menu.businessCategory === "gifts_flowers" || fawasel;
+  const aldeem = isAldeemStore(menu.slug);
+  const giftStore = menu.businessCategory === "gifts_flowers" || fawasel || aldeem;
   const teaBakery = menu.slug === "brand-9010051467ed";
   const jamila = menu.slug === JAMILA_SLUG && menu.products.length === 0;
   const signature = signatureBrand(menu.slug, menu.branch?.slug) || defaultSignatureBrand(menu);
@@ -75,6 +79,11 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;
   // Gallery frames are genuine public menus, without visitor/customer tracking or interactions.
   const storeSettings = giftStore ? await getGiftStoreSettings(menu.slug).catch(() => null) : null;
+  if (aldeem) {
+    const storefront = <AldeemStore menu={menu} settings={storeSettings} loyalty={loyalty} />;
+    if (showcase) return <div inert>{storefront}</div>;
+    return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{storefront}</>;
+  }
   if (fawasel) {
     const storefront = <FawaselStore menu={menu} settings={storeSettings} loyalty={loyalty} />;
     if (showcase) return <div inert>{storefront}</div>;
