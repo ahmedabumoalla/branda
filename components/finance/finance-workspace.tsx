@@ -304,7 +304,7 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
         <Panel title="حركات المخزون">{!data.movements.length ? <Empty title="لا توجد حركة مخزون بعد" /> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>التاريخ</th><th>الصنف</th><th>المستودع</th><th>حركة الكمية</th><th>تكلفة الوحدة</th></tr></thead><tbody>{data.movements.filter((move) => (!warehouseId || move.warehouse_id === warehouseId) && match(itemName(move.item_id))).map((move) => <tr key={move.id}><td>{financeDate(move.created_at)}</td><td>{itemName(move.item_id)}</td><td>{warehouseName(move.warehouse_id)}</td><td className={move.quantity < 0 ? styles.negative : styles.positive}><Numeric value={move.quantity} /></td><td><Numeric value={move.unit_cost} money /></td></tr>)}</tbody></table></div>}</Panel></>}
       </>}
       {section === "treasury" && <FinanceTreasury snapshot={data} slug={slug} onRefresh={state.refresh} />}
-      {section === "printer" && <FinancePrinterSettings brandId={data.cafe.id} />}
+      {section === "printer" && <FinancePrinterSettings brandId={data.cafe.id} businessCategory={data.cafe.businessCategory} />}
       {section === "shifts" && <>
         {canFinance(data.role,"shifts_read") && <FinanceShiftMonitor snapshot={data} slug={slug} onInvoice={showInvoice} onChanged={() => { void state.refresh(); }} />}
         <details className={styles.panel}><summary className={styles.panelTitle}>التسليم وفروقات النقدية</summary>

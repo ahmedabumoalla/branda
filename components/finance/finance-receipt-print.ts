@@ -10,18 +10,19 @@ export function thermalReceiptCss(paper: ReceiptPaper = "auto", origin = "") {
   const fontRoot = new URL("/fonts/", origin || "http://localhost").href;
   return `@font-face{font-family:ReceiptArabic;src:url("${fontRoot}tajawal-regular.ttf") format("truetype");font-weight:400;font-display:block}
 @font-face{font-family:ReceiptArabic;src:url("${fontRoot}tajawal-bold.ttf") format("truetype");font-weight:700;font-display:block}
-@page{size:auto;margin:2mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:white;color:black}
-body{font:12px/1.5 ReceiptArabic,Arial,sans-serif}article[data-finance-receipt]{width:100%;max-width:${paper === "58" ? "54" : "76"}mm;margin:0 auto;overflow-wrap:anywhere}
+@page{size:auto;margin:0}*{box-sizing:border-box}html,body{margin:0;width:100%;min-width:0;background:white;color:black}
+body{padding:3mm 4mm;direction:rtl;text-align:right;font:12px/1.5 ReceiptArabic,Arial,sans-serif}article[data-finance-receipt]{width:100%;max-width:${paper === "58" ? "50" : "72"}mm;min-width:0;margin:0 auto;overflow-wrap:anywhere}
 [data-receipt-header]{text-align:center;padding:2mm 0 3mm;border-bottom:1px dashed #000}
 [data-receipt-header] img{display:block;width:auto;height:auto;max-width:38mm;max-height:22mm;margin:0 auto 2mm;object-fit:contain}
 h3{font-size:17px;line-height:1.3;margin:1mm 0}p{margin:1mm 0}[data-receipt-title]{font-weight:700;font-size:14px}
 [data-receipt-meta]{padding:2mm 0;border-bottom:1px dashed #000}
 [data-receipt-row]{display:flex;justify-content:space-between;gap:2mm;padding:1mm 0;break-inside:avoid}
-[data-receipt-row]>:last-child{flex-shrink:0}[data-receipt-items]{width:100%;border-collapse:collapse;table-layout:fixed;margin:2mm 0}
+[data-receipt-row]>:first-child{min-width:0;flex:1}[data-receipt-row]>:last-child{min-width:0;max-width:52%;flex:0 1 auto;text-align:left}[data-receipt-items]{width:100%;border-collapse:collapse;table-layout:fixed;margin:2mm 0}
 th{text-align:right;font-size:11px;border-bottom:1px solid black}td,th{padding:1.5mm .5mm;vertical-align:top;overflow-wrap:anywhere}
-td{border-bottom:1px dashed #bbb}tr{break-inside:avoid}th:first-child{width:53%}th:nth-child(2){width:15%;text-align:center}td:nth-child(2){text-align:center}th:last-child,td:last-child{text-align:left}
+td{border-bottom:1px dashed #bbb}tr{break-inside:avoid}th:first-child{width:50%}th:nth-child(2){width:18%;text-align:center;white-space:nowrap}td:nth-child(2){text-align:center}th:last-child,td:last-child{text-align:left}
 td small{display:block;font-size:10px}[data-receipt-total]{border-top:1px solid black;border-bottom:2px solid black;font-size:16px;font-weight:700;padding:2mm 0;margin:1mm 0}
 [data-receipt-footer]{text-align:center;border-top:1px dashed #000;margin-top:3mm;padding-top:2mm;font-size:10px}
+[data-receipt-tax-qr]{display:block;width:32mm;height:32mm;max-width:100%;margin:3mm auto;break-inside:avoid}
 [data-receipt-note]{white-space:pre-wrap;margin:2mm 0}[data-receipt-preparation] th:first-child{width:78%}[data-receipt-preparation] td{font-size:16px;font-weight:700;padding:3mm 1mm}
 [data-receipt-preparation] td:last-child{font-size:20px;text-align:center}[data-receipt-preparation] th:last-child{text-align:center}
 article[data-finance-receipt]+article[data-finance-receipt]{break-before:page;page-break-before:always}

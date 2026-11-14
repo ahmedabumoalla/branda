@@ -5,6 +5,7 @@ import { NAQWA_SLUG } from "@/lib/platform/naqwa";
 import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 import { isAldeemCafe } from "@/lib/platform/aldeem";
 import { isHospitalStore } from "@/lib/commerce/hospital-profile";
+import { mindCafeSettingsLink } from "@/lib/platform/mind-navigation";
 
 type SystemItem = { label: string; id?: string; view?: FinanceMenuEntry["view"]; unavailable?: boolean; section?: FinanceSection; href?: string; feature?: string; salonOnly?: boolean; giftsOnly?: boolean; pos?: boolean };
 type SystemGroup = { id: string; label: string; icon: LucideIcon; items: SystemItem[] };
@@ -59,9 +60,9 @@ export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] 
   ];
   if (isAldeemCafe({ slug: cafeSlug })) return integratedSystemGroups.map(group => group.id === "manufacturing" ? { ...group, label: "المعمل والتصنيع", items: [{ label: "شاشة طلبات المعمل", href: "/dashboard/system/lab" }, ...group.items] } : group);
   if (isHospitalStore(cafeSlug)) {
-    const allowed = new Set(["sales", "pos", "store", "customers", "inventory", "purchases", "finance", "accounting", "reports", "settings"]);
+    const allowed = new Set(["sales", "pos", "customers", "inventory", "purchases", "finance", "accounting", "reports", "settings"]);
     return integratedSystemGroups.filter(group => allowed.has(group.id)).map(group => {
-      if (group.id === "store") return { ...group, label: "المنيو وطلبات المستشفى", items: [{ label: "إدارة المنيو", href: "/dashboard/menu", feature: "menu" }, { label: "عرض منيو مايند", href: `/menu/${cafeSlug}`, feature: "menu" }, { label: "طلبات المستشفى", pos: true }] };
+      if (group.id === "settings") return { ...group, items: [mindCafeSettingsLink, ...group.items] };
       if (group.id === "customers") return { ...group, label: "العملاء والمديونيات", items: [{ label: "مديونيات الأطباء والعيادات", section: "parties" }, { label: "إدارة العملاء", href: "/dashboard/system/customers" }, { label: "إضافة عميل", href: "/dashboard/system/customers/new" }] };
       if (group.id === "reports") return { ...group, items: group.items.filter(item => item.section === "reports" || ["sales", "purchases", "accounting", "customers", "inventory"].includes(item.href?.split("/").at(-1) ?? "")) };
       return group;

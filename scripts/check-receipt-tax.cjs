@@ -1,0 +1,27 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const ts = require('typescript');
+const exportsObject = {};
+new Function('require','exports',ts.transpileModule(fs.readFileSync('lib/finance/receipt-tax.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(require,exportsObject);
+const {financeReceiptQr,getFinanceReceiptTaxStatus}=exportsObject;
+const doc={id:'test-invoice',number:42,kind:'sale',total:115,tax:15,created_at:'2026-11-14T12:00:00+03:00',receipt_seller:{name:'ملحمة اختبار',vatNumber:'300000000000003'}};
+const qr=financeReceiptQr(doc),bytes=Buffer.from(qr.payload,'base64'),fields=[];
+for(let i=0;i<bytes.length;){const tag=bytes[i++],size=bytes[i++];fields.push([tag,bytes.subarray(i,i+size).toString('utf8')]);i+=size;}
+assert.deepEqual(fields,[[1,'ملحمة اختبار'],[2,'300000000000003'],[3,'2026-11-14T09:00:00.000Z'],[4,'115.00'],[5,'15.00']]);
+assert.equal(qr.kind,'tax');assert.ok(qr.path.startsWith('M4 4'));assert.ok(qr.size>8);
+assert.equal(getFinanceReceiptTaxStatus({...doc,receipt_seller:null}),'missing_identity');
+assert.equal(financeReceiptQr({...doc,receipt_seller:null}),null);
+const ordinary=financeReceiptQr({...doc,receipt_seller:null,customer_phone:'DO NOT LEAK'},true);
+assert.equal(ordinary.kind,'reference');assert.deepEqual(JSON.parse(ordinary.payload),{type:'receipt',id:'test-invoice',reference:'42'});
+assert.equal(ordinary.payload.includes('DO NOT LEAK'),false);
+assert.equal(getFinanceReceiptTaxStatus({...doc,receipt_seller:{name:'X',vatNumber:'123'}}),'missing_identity');
+assert.equal(getFinanceReceiptTaxStatus({...doc,receipt_seller:{name:'م'.repeat(128),vatNumber:doc.receipt_seller.vatNumber}}),'missing_identity');
+for(const tax of [-1,Infinity,116])assert.equal(getFinanceReceiptTaxStatus({...doc,tax}),'invalid_document');
+assert.equal(getFinanceReceiptTaxStatus({...doc,created_at:'invalid'}),'invalid_document');
+assert.equal(financeReceiptQr({...doc,kind:'purchase'},true),null);
+const local=financeReceiptQr({...doc,local_created_at:'2026-11-13T10:00:00Z'});
+assert.ok(Buffer.from(local.payload,'base64').includes(Buffer.from('2026-11-13T10:00:00.000Z')));
+assert.equal(getFinanceReceiptTaxStatus({...doc,total:0,tax:0}),'ready');
+const source=fs.readFileSync('components/finance/finance-ui.tsx','utf8');
+assert.ok(source.includes('data-receipt-tax-qr'));assert.ok(!source.includes('<p>{taxReady ?'));
+console.log('Receipt QR checks passed: 19 assertions including TLV byte roundtrip, ordinary fallback, privacy, precision and original timestamp');

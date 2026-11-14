@@ -19,7 +19,7 @@ global.document = { addEventListener: (type, listener) => listeners.set(type, li
 try {
   const exported = {};
   const code = ts.transpileModule(fs.readFileSync('components/finance/finance-pos-actions.tsx', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
-  new Function('require', 'exports', code)(name => name === 'react' ? { ...React, useRef: () => ({ current: disclosure }), useEffect: effect => { cleanup = effect(); } } : name.endsWith('.css') ? { __esModule: true, default: new Proxy({}, { get: (_, key) => key }) } : require(name), exported);
+  new Function('require', 'exports', code)(name => name === './finance-pos-locale' ? {useFinancePosLocale:()=>({t:value=>value,language:'ar',dir:'rtl'})} : name === 'react' ? { ...React, useRef: () => ({ current: disclosure }), useEffect: effect => { cleanup = effect(); } } : name.endsWith('.css') ? { __esModule: true, default: new Proxy({}, { get: (_, key) => key }) } : require(name), exported);
   const action = React.createElement('button', { disabled: true }, 'Action');
   const tree = exported.FinancePosActions({ children: action, details: 'Shift details' });
   assert.equal(tree.type, 'details');

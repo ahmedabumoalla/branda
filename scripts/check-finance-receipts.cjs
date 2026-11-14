@@ -5,8 +5,11 @@ const ts = require('typescript');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
 
-function load(file, mocks = {}) {
+function load(file, mocks = {}, modules = new Map()) {
+  const key = path.resolve(file);
+  if (modules.has(key)) return modules.get(key);
   const exports = {};
+  modules.set(key, exports);
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   new Function('require', 'exports', code)(name => {
     if (name in mocks) return mocks[name];
@@ -14,7 +17,7 @@ function load(file, mocks = {}) {
     if (name.endsWith('.css')) return new Proxy({}, { get: (_, key) => key });
     if (name.startsWith('@/') || name.startsWith('./')) {
       const base = name.startsWith('@/') ? name.slice(2) : path.join(path.dirname(file), name);
-      return load(fs.existsSync(base + '.ts') ? base + '.ts' : base + '.tsx', mocks);
+      return load(fs.existsSync(base + '.ts') ? base + '.ts' : base + '.tsx', mocks, modules);
     }
     return require(name);
   }, exports);
@@ -118,9 +121,9 @@ async function main() {
   assert.deepEqual(await response.json(), brand);
 
   const { thermalReceiptCss, printThermalReceipt, claimAutomaticReceiptPrint } = load('components/finance/finance-receipt-print.ts');
-  assert(thermalReceiptCss('auto').includes('@page{size:auto;margin:2mm}'));
-  assert(thermalReceiptCss('58').includes('max-width:54mm'));
-  assert(thermalReceiptCss('80').includes('max-width:76mm'));
+  assert(thermalReceiptCss('auto').includes('@page{size:auto;margin:0}'));
+  assert(thermalReceiptCss('58').includes('max-width:50mm'));
+  assert(thermalReceiptCss('80').includes('max-width:72mm'));
   assert(!thermalReceiptCss('auto').includes('18px'));
   assert(thermalReceiptCss('80').includes('page-break-before:always'));
   let printed = 0, removed = 0, frame, releaseFonts, failFonts = false;
@@ -142,7 +145,7 @@ async function main() {
     assert.equal(printed, 0, 'Printing waits for logo and fonts');
     releaseFonts([]); await new Promise(resolve => setImmediate(resolve)); assert.equal(printed, 0);
     image.naturalWidth = 150; image.onload(); await pending; assert.equal(printed, 1);
-    assert(frame.srcdoc.includes('SAFE RECEIPT')); assert(frame.srcdoc.includes('max-width:54mm'));
+    assert(frame.srcdoc.includes('SAFE RECEIPT')); assert(frame.srcdoc.includes('max-width:50mm'));
     frame.contentWindow.onafterprint(); assert.equal(removed, 1, 'Print or cancel cleans up without mutating financial state');
     image.complete = true; image.naturalWidth = 0;
     const fallback = await printThermalReceipt(element);
@@ -176,8 +179,10 @@ async function main() {
     global.requestAnimationFrame = callback => { const id = ++animationId; pendingAnimations.add(id); queueMicrotask(() => { if (pendingAnimations.delete(id)) callback(); }); return id; };
     global.cancelAnimationFrame = id => pendingAnimations.delete(id);
     let refIndex = 0;
-    const mockedReact = { ...React, useState: initial => [initial, () => {}], useCallback: callback => callback, useEffect: callback => effects.push(callback), useRef: initial => ({ current: refIndex++ % 3 === 0 ? initial : refIndex % 3 === 0 ? paired : element }) };
+    const dialogDependencies = { './finance-pos-locale': {useFinancePosLocale:()=>({t:value=>value}),FinancePosModal:function Modal(props){return React.createElement('div',props,props.children)}}, '@/app/actions/finance-company-invoices': { findCompanyInvoiceAction: async () => ({ ok: true, data: null }) }, './company-invoice-files': { InvoiceFileDownloads: () => null } };
+    const mockedReact = { ...React, useState: initial => [initial, () => {}], useCallback: callback => callback, useEffect: callback => effects.push(callback), useRef: initial => ({ current: [initial, initial, element, paired][refIndex++ % 4] }) };
     const { FinanceReceiptDialog } = load('components/finance/finance-receipt-dialog.tsx', {
+      ...dialogDependencies,
       react: mockedReact,
       './finance-ui': { FinanceReceipt },
       './finance-receipt-print': { claimAutomaticReceiptPrint, printThermalReceipt: async (...args) => { calls.push(args); return { usedAssetFallback: false }; } },
@@ -197,11 +202,19 @@ async function main() {
     const deviceCalls = [];
     runDialog({ document: { ...document, id: 'bridge-sale' }, autoPrint: true, onPrint: async (...args) => { deviceCalls.push(args); return { usedAssetFallback: false, submittedToDevice: true }; } });
     await Promise.resolve(); assert.equal(deviceCalls.length, 1); assert.equal(deviceCalls[0][2].allCopies, true); assert.equal(calls.length, 2, 'Configured device transport replaces browser printing');
+    const butcherCalls = [];
+    const butcherSnapshot = { ...snapshot, cafe: { ...snapshot.cafe, businessCategory: 'butcher_shops' } };
+    runDialog({ document: { ...document, id: 'butcher-sale' }, snapshot: butcherSnapshot, autoPrint: true, onPrint: async (...args) => { butcherCalls.push(args); return { usedAssetFallback: false }; } });
+    await Promise.resolve(); assert.equal(butcherCalls.length, 1); assert.equal(butcherCalls[0][2].allCopies, false, 'Butcher automatic printing requests only customer copy');
+    const butcherDialog = FinanceReceiptDialog({ document, snapshot: butcherSnapshot, receiptBrand: brand, onClose() {} });
+    const walk = tree => Array.isArray(tree) ? tree.flatMap(walk) : tree && typeof tree === 'object' ? [tree, ...walk(tree.props?.children), ...walk(tree.props?.footer)] : [];
+    assert(!walk(butcherDialog).some(node => node.props?.copy === 'preparation'), 'No preparation DOM remains in butcher dialog');
+    assert(!JSON.stringify(butcherDialog).includes('المطبخ أو البار'), 'Butcher cannot choose kitchen copy');
     // Background checkout renders receipt DOM without opening or trapping focus in a modal.
     let states = [], stateIndex = 0, closed = 0;
     const ModalMock = function Modal() {};
     const backgroundReact = { ...mockedReact, useState: initial => { const i = stateIndex++; if (!(i in states)) states[i] = initial; return [states[i], value => { states[i] = typeof value === 'function' ? value(states[i]) : value; }]; } };
-    const BackgroundDialog = load('components/finance/finance-receipt-dialog.tsx', { react: backgroundReact, './finance-ui': { FinanceReceipt }, './finance-receipt-print': { claimAutomaticReceiptPrint, printThermalReceipt: async () => ({ usedAssetFallback: false }) }, '@/components/dashboard/ui/modal': { Modal: ModalMock } }).FinanceReceiptDialog;
+    const BackgroundDialog = load('components/finance/finance-receipt-dialog.tsx', { ...dialogDependencies, './finance-pos-locale':{...dialogDependencies['./finance-pos-locale'],FinancePosModal:ModalMock}, react: backgroundReact, './finance-ui': { FinanceReceipt }, './finance-receipt-print': { claimAutomaticReceiptPrint, printThermalReceipt: async () => ({ usedAssetFallback: false }) }, '@/components/dashboard/ui/modal': { Modal: ModalMock } }).FinanceReceiptDialog;
     function background(props) { effects.length = 0; refIndex = 0; stateIndex = 0; return BackgroundDialog({ document: { ...document, id: 'background-success' }, snapshot, receiptBrand: brand, autoPrint: true, backgroundAutoPrint: true, onClose: () => closed++, ...props }); }
     let finish;
     const transport = () => new Promise(resolve => { finish = resolve; });

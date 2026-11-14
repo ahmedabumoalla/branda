@@ -54,6 +54,11 @@ export async function readBrandFinanceSnapshot({ client, cafe }: Awaited<ReturnT
   const { data, error } = await client.rpc("brand_finance_snapshot", { p_cafe_id: cafe.id });
   if (error) throw new Error("تعذر تحميل المالية حاول مجددا");
   const snapshot = data as FinanceSnapshot;
+  if (snapshot.cafe.businessCategory === "butcher_shops") {
+    const seller = await client.rpc("brand_finance_receipt_seller", { p_cafe_id: cafe.id });
+    if (seller.error) throw new Error("تعذر تحميل بيانات البائع للإيصال حاول مجددًا");
+    snapshot.receiptSeller = seller.data;
+  }
   const [cashierMaintenance, resetActor, products, owner] = await Promise.all([
     snapshot.canAdminister ? Promise.resolve(null) : getFinanceCashierMaintenance(cafe.id),
     getFinanceMaintenanceActor(cafe.id),

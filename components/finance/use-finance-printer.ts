@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { defaultPrinterSettings, loadPrinterSettings, sendToLocalPrinter, type FinancePrinterCopy } from "@/lib/finance/printer-settings";
+import { defaultPrinterSettings, loadPrinterSettings, printerSettingsForBusiness, sendToLocalPrinter, type FinancePrinterCopy } from "@/lib/finance/printer-settings";
 import { buildThermalReceiptHtml, printThermalReceipt, type ReceiptPrintHandler } from "./finance-receipt-print";
 
-export function useFinancePrinter(brandId: string) {
-  const [settings, setSettings] = useState(defaultPrinterSettings);
+export function useFinancePrinter(brandId: string, businessCategory?: string) {
+  const [storedSettings, setSettings] = useState(defaultPrinterSettings);
+  const settings = printerSettingsForBusiness(storedSettings, businessCategory);
   const [ready, setReady] = useState(false);
   const batches = useRef(new Map<string, { id: string; complete: boolean; html: Partial<Record<FinancePrinterCopy, string>> }>());
   useEffect(() => {
@@ -15,7 +16,7 @@ export function useFinancePrinter(brandId: string) {
   const handler = (saleId: string, automatic: boolean): ReceiptPrintHandler => async (element, paper, options) => {
     if (!element) throw new Error("الفاتورة غير جاهزة للطباعة");
     const articles = element.matches("[data-finance-receipt]") ? [element] : Array.from(element.querySelectorAll<HTMLElement>("[data-finance-receipt]"));
-    const selected = articles.filter(article => !options.allCopies || settings[article.hasAttribute("data-receipt-preparation") ? "preparation" : "customer"].enabled);
+    const selected = articles.filter(article => !(businessCategory === "butcher_shops" && article.hasAttribute("data-receipt-preparation")) && (!options.allCopies || settings[article.hasAttribute("data-receipt-preparation") ? "preparation" : "customer"].enabled));
     if (!selected.length) throw new Error("فعّل نسخة واحدة على الأقل من إعداد الطابعة");
     if (settings.mode === "browser") {
       const wrapper = document.createElement("div"); selected.forEach(article => wrapper.appendChild(article.cloneNode(true)));

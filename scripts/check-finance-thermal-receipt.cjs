@@ -31,7 +31,7 @@ function load(file, mocks = {}) {
  const snapshot={cafe:{name:r.brandName},parties:[{id:'customer',name:r.customerName,tax_number:r.customerTaxNumber}],accounts:[{id:'cash',kind:'cash'}],documents:[]};
  const exact=renderToStaticMarkup(React.createElement(FinanceReceipt,{document:d,snapshot,brand:{name:r.brandName,logoUrl:null,color:'#3a2117'},copy:'customer'}));
  const html=buildFinanceThermalReceiptHtml(r,fonts);assert.equal(html.match(/<body>([\s\S]*)<\/body>/)[1],exact,'WhatsApp uses byte-identical customer receipt markup');
- assert(html.includes('max-width:76mm'));assert(html.includes('data:font/ttf;base64,'));assert(!html.includes('https://barndaksa.com/fonts/'));
+ assert(html.includes('max-width:72mm'));assert(html.includes('data:font/ttf;base64,'));assert(!html.includes('https://barndaksa.com/fonts/'));
  const attack=buildFinanceThermalReceiptHtml({...r,note:'<script>fetch("https://evil.test")</script>',lines:[{...r.lines[0],name:'<img src=x onerror=alert(1)>'}]},fonts);assert(!attack.includes('<script>'));assert(attack.includes('&lt;script&gt;'));assert(!attack.includes('<img src=x'));
  assert.throws(()=>buildFinanceThermalReceiptHtml(r,fonts,'https://evil.test/logo.png'));assert.throws(()=>buildFinanceThermalReceiptHtml(r,{regular:'bad<font',bold:fonts.bold}));
  for(const patch of [{discount:3},{paymentMethod:'pos'},{paymentMethod:'bank'},{outstanding:5,paid:18},{refunded:true,refundedTotal:23},{taxInclusive:false},{localReference:'L-77'},{customerName:null,customerPhone:null,customerTaxNumber:null}])assert(buildFinanceThermalReceiptHtml({...r,...patch},fonts).includes('data-finance-receipt'));

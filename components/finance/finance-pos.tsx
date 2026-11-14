@@ -1,9 +1,10 @@
 "use client";
+import { FinancePosLocaleProvider, PosNumeric, useFinancePosLocale } from "./finance-pos-locale";
+
 import { useFinanceInvoiceMessages } from "./use-finance-invoice-messages";
 import { FinanceInvoiceMessageStatus } from "./finance-invoice-message-status";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { isHospitalStore } from "@/lib/commerce/hospital-profile";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -11,13 +12,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Banknote, CreditCard, Check, Eye, Clock3, ImageIcon, LogOut, Minus, Plus, ReceiptText, RefreshCw, Search, ShoppingBag, Trash2 } from "lucide-react";
 import { logoutFinanceAction } from "@/app/actions/finance-access";
 import { isAldeemCafe } from "@/lib/platform/aldeem";
-import { Modal } from "@/components/dashboard/ui/modal";
+import { FinancePosModal as Modal } from "./finance-pos-locale";
 import type { FinanceDocument, FinanceProduct, FinanceSnapshot } from "@/lib/finance/brand-finance";
-import { financeMoney, getPrimaryFinanceAccount, previewFinanceTotals } from "@/lib/finance/brand-finance";
+import { getPrimaryFinanceAccount, previewFinanceTotals } from "@/lib/finance/brand-finance";
 import { getProductStockQuantity } from "@/lib/finance/pos-offline";
 import { butcherStockFactor, financeCartKey, financeProductSelection, financeSelectedCartLines, isButcherFinance, validCashierUnitPrice, type FinanceCartLine } from "@/lib/finance/pos-product-selection";
 import { FinanceOperationForm, type FinanceForm } from "./finance-operation-form";
-import { Empty, Field, financeDate, financeDocumentStatus, Numeric } from "./finance-ui";
+import { Empty, Field, financeDate, financeDocumentStatus } from "./finance-ui";
 import { FinanceRefundRequests } from "./finance-refund-requests";
 import { FinanceReceiptDialog } from "./finance-receipt-dialog";
 import { createFinanceReceiptPreview } from "@/lib/finance/receipt-preview";
@@ -31,13 +32,13 @@ import { useFinancePrinter } from "./use-finance-printer";
 import styles from "./finance.module.css";
 import checkoutStyles from "./finance-pos-checkout.module.css";
 import butcherStyles from "./finance-pos-butcher.module.css";
+import { FinanceTouchNumberInput } from "./finance-touch-number-input";
 
 type CartLine = FinanceCartLine;
 const quoteOnlyLabel = "بانتظار اعتماد السعر";
 type FinancePOSProps = { initialSnapshot: FinanceSnapshot; slug?: string; dashboardHref?: "/dashboard/finance"; offlineEntry?: boolean };
-const HospitalPOS = dynamic(() => import("./hospital-pos").then(module => module.HospitalPOS), { loading: () => <p role="status">جار فتح الكاشير / Loading cashier</p> });
 export function FinancePOS(props: FinancePOSProps) {
-  return isHospitalStore(props.initialSnapshot.cafe.slug) ? <HospitalPOS key={`${props.initialSnapshot.cafe.id}:${props.initialSnapshot.userId}`} initialSnapshot={props.initialSnapshot} slug={props.slug} dashboardHref={props.dashboardHref} /> : <StandardFinancePOS {...props} />;
+  return <FinancePosLocaleProvider key={`${props.initialSnapshot.cafe.id}:${props.initialSnapshot.userId}`}><StandardFinancePOS {...props} /></FinancePosLocaleProvider>;
 }
 export function financeCartLines(cart: CartLine[], products: FinanceProduct[], butcher = false) {
   return financeSelectedCartLines(cart, products, butcher);
@@ -65,9 +66,10 @@ export function PosProductImage({ product }: { product: FinanceProduct }) {
 }
 
 function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry = false }: FinancePOSProps) {
+  const { t, language, dir, setLanguage, productName, categoryName, money } = useFinancePosLocale();
   const router = useRouter();
   const state = usePosFinance(initialSnapshot, slug, offlineEntry);
-  const printer = useFinancePrinter(initialSnapshot.cafe.id);
+  const printer = useFinancePrinter(initialSnapshot.cafe.id, initialSnapshot.cafe.businessCategory);
   const { snapshot: data, pending, stale, error, message } = state;
   const butcher = isButcherFinance(data);
   const customer = usePosCustomer(slug ?? data.cafe.slug);
@@ -77,6 +79,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
   const [unitProductId, setUnitProductId] = useState<string | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState("");
   const [unitQuantity, setUnitQuantity] = useState("");
+  const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({});
   const [cashierUnitPrice, setCashierUnitPrice] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
@@ -109,27 +112,30 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
   const selectedQuantity = Number(unitQuantity);
   const unitQuantityValid = Number.isFinite(selectedQuantity) && selectedQuantity > 0 && selectedQuantity <= 9999 && Math.abs(selectedQuantity * 1000 - Math.round(selectedQuantity * 1000)) < 0.000001;
   const unitStockCompatible = !unitProduct?.stockTracked || !selectedUnit || butcherStockFactor(unitProduct.butcherDetails!.units[0].id, selectedUnit.id) !== null;
-  const cartCount = butcher ? `${cart.length} صنف` : `${cart.reduce((sum, line) => sum + line.quantity, 0)} قطعة`;
+  const cartCount = butcher ? `${cart.length}${t(" صنف")}` : `${cart.reduce((sum, line) => sum + line.quantity, 0)}${t(" قطعة")}`;
   const subtotal = previewFinanceTotals(lines.map(line => ({ quantity: line.quantity, price: line.product.price })), 0, data.settings.vat_rate, data.settings.tax_inclusive).subtotal;
   const pricesChanged = lines.some(line => line.priceChanged);
+  const validQuantityDraft = (raw: string) => raw.trim() !== "" && Number.isFinite(Number(raw)) && Number(raw) > 0 && Number(raw) <= 9999 && (!butcher || Math.abs(Number(raw) * 1000 - Math.round(Number(raw) * 1000)) < 0.000001);
+  const unfinishedQuantity = cart.some(line => { const raw = quantityDrafts[financeCartKey(line)]; return raw !== undefined && !validQuantityDraft(raw); });
   const needsShift = !shift && !butcher;
-  const checkoutBlocker = pending ? "جار حفظ العملية انتظر حتى تكتمل"
-    : stale ? error || "لم يكتمل تجهيز الكاشير حدّث المزامنة قبل الدفع"
-    : loggingOut ? "جار تسجيل الخروج"
-    : !cart.length ? "أضف منتجًا إلى السلة لبدء الدفع"
-    : lines.length !== cart.length ? "راجع وحدات الأصناف وأسعارها قبل الدفع أو احذف السلة وأضفها مجددًا"
-    : lines.some(line => line.product.quoteOnly) ? "يوجد صنف بانتظار اعتماد السعر احذفه من السلة أو اطلب تسعيره من المسؤول"
-    : pricesChanged ? "اعتمد السعر الجديد للأصناف المتغيرة قبل الدفع"
-    : shift?.supervisor_paused ? "الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع"
-    : needsShift && outgoing ? "الوردية بانتظار الاستلام أكمل تسليمها قبل بدء وردية جديدة"
-    : needsShift && data.initialized === false ? "يجب تسجيل الأرصدة الافتتاحية من إدارة الوردية قبل بدء البيع"
-    : needsShift && incoming.length > 1 ? "اختر الوردية المطلوب استلامها من إدارة الوردية أعلى الصفحة"
+  const checkoutBlocker = pending ? t("جار حفظ العملية انتظر حتى تكتمل")
+    : stale ? error || t("لم يكتمل تجهيز الكاشير حدّث المزامنة قبل الدفع")
+    : loggingOut ? t("جار تسجيل الخروج")
+    : !cart.length ? t("أضف منتجًا إلى السلة لبدء الدفع")
+    : unfinishedQuantity ? t("أكمل كمية الصنف أو احذفه من السلة قبل الدفع")
+    : lines.length !== cart.length ? t("راجع وحدات الأصناف وأسعارها قبل الدفع أو احذف السلة وأضفها مجددًا")
+    : lines.some(line => line.product.quoteOnly) ? t("يوجد صنف بانتظار اعتماد السعر احذفه من السلة أو اطلب تسعيره من المسؤول")
+    : pricesChanged ? t("اعتمد السعر الجديد للأصناف المتغيرة قبل الدفع")
+    : shift?.supervisor_paused ? t("الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع")
+    : needsShift && outgoing ? t("الوردية بانتظار الاستلام أكمل تسليمها قبل بدء وردية جديدة")
+    : needsShift && data.initialized === false ? t("يجب تسجيل الأرصدة الافتتاحية من إدارة الوردية قبل بدء البيع")
+    : needsShift && incoming.length > 1 ? t("اختر الوردية المطلوب استلامها من إدارة الوردية أعلى الصفحة")
     : "";
-  const checkoutHint = checkoutBlocker || (needsShift ? "ابدأ الوردية لإكمال الدفع ستبقى أصناف السلة محفوظة أثناء هذه الخطوة" : "");
+  const checkoutHint = checkoutBlocker || (needsShift ? t("ابدأ الوردية لإكمال الدفع ستبقى أصناف السلة محفوظة أثناء هذه الخطوة") : "");
   const discount = financeDiscount(subtotal, discountValue, discountKind);
   const totals = previewFinanceTotals(lines.map((line) => ({ quantity: line.quantity, price: line.product.price })), discount, data.settings.vat_rate, data.settings.tax_inclusive);
   const categories = [...new Set(data.products.filter((product) => product.available).map((product) => product.category))].filter(Boolean);
-  const products = data.products.filter((product) => product.available && (!category || product.category === category) && product.name.toLocaleLowerCase("ar").includes(query.trim().toLocaleLowerCase("ar")));
+  const products = data.products.filter((product) => product.available && (!category || product.category === category) && [product.name, productName(product)].some(name => name.toLocaleLowerCase(language).includes(query.trim().toLocaleLowerCase(language))));
   const printId = printQueue[0];
   const printDocument = printId ? data.documents.find((document) => document.id === printId || state.offline.sales.some((sale) => sale.id === printId && sale.document.id === document.id)) : undefined;
   const accounts = data.accounts.filter((account) => account.active && account.kind === paymentKind && (paymentKind !== "cash" || (shift ? account.id === shift.account_id : butcher && account.is_cashier_drawer && account.availableWithoutShift !== false && !data.shifts.some(row => row.account_id === account.id && row.status !== "closed"))));
@@ -146,24 +152,30 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
       await logoutFinanceAction();
       router.replace(data.role === "cashier" ? "/cashier/login?type=sales" : `/finance/${slug}/login`);
     } catch (cause) {
-      setLocalError(cause instanceof Error ? cause.message : "تعذر تسجيل الخروج حاول مرة أخرى");
+      setLocalError(cause instanceof Error ? cause.message : t("تعذر تسجيل الخروج حاول مرة أخرى"));
       setLoggingOut(false);
     }
   }
   function quantityAvailable(product: FinanceProduct) { return getProductStockQuantity(product, data.stock, warehouseId); }
-  function setQuantity(productId: string, quantity: number, unitId?: string, acceptCurrentPrice = false, enteredPrice?: number) {
+  function setQuantity(productId: string, quantity: number, unitId?: string, acceptCurrentPrice = false, enteredPrice?: number, preserveDraft = false) {
     if (disabled) return;
     const product = data.products.find((item) => item.id === productId);
     if (!product || !Number.isFinite(quantity) || quantity < 0 || quantity > 9999 || (butcher && Math.abs(quantity * 1000 - Math.round(quantity * 1000)) > 0.000001)) return;
     setLocalError("");
     const cashierPrice = enteredPrice !== undefined;
     const key = financeCartKey({ productId, unitId, cashierPrice, unitPrice: enteredPrice });
+    if (!preserveDraft) setQuantityDrafts(current => { const next = { ...current }; delete next[key]; return next; });
     let price: number;
     try { price = financeProductSelection(product, unitId, butcher, enteredPrice).product.price; } catch { if (quantity !== 0) return; price = product.price; }
     setCart((current) => quantity === 0 ? current.filter((item) => financeCartKey(item) !== key) : current.some((item) => financeCartKey(item) === key) ? current.map((item) => financeCartKey(item) === key ? { ...item, quantity, ...(butcher && acceptCurrentPrice ? { unitPrice: price } : {}) } : item) : [...current, { productId, quantity, ...(unitId ? { unitId } : {}), ...(butcher ? { unitPrice: price } : {}), ...(cashierPrice ? { cashierPrice: true } : {}) }]);
   }
+  function editCartQuantity(line: CartLine, raw: string) {
+    if (disabled) return;
+    setQuantityDrafts(current => ({ ...current, [financeCartKey(line)]: raw }));
+    if (validQuantityDraft(raw)) setQuantity(line.productId, Number(raw), line.unitId, false, line.cashierPrice ? line.unitPrice : undefined, true);
+  }
   function addProduct(product: FinanceProduct) {
-    if (product.quoteOnly) { setLocalError("هذا المنتج بانتظار اعتماد سعره من إدارة المنتجات ويمكنك إرساله كطلب للمعمل"); return; }
+    if (product.quoteOnly) { setLocalError(t("هذا المنتج بانتظار اعتماد سعره من إدارة المنتجات ويمكنك إرساله كطلب للمعمل")); return; }
     if (butcher && product.butcherDetails?.units.length) {
       setUnitProductId(product.id); setSelectedUnitId(product.butcherDetails.units[0].id); setUnitQuantity(""); setCashierUnitPrice(""); setLocalError("");
     } else setQuantity(product.id, (cart.find(line => line.productId === product.id)?.quantity ?? 0) + 1);
@@ -173,7 +185,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     const key = financeCartKey({ productId: unitProduct.id, unitId: selectedUnit.id, cashierPrice: cashierPriced, unitPrice: selectedPrice });
     const currentQuantity = cart.find(line => financeCartKey(line) === key)?.quantity ?? 0;
     const quantity = Math.round((currentQuantity + selectedQuantity) * 1000) / 1000;
-    if (quantity > 9999) { setLocalError("الكمية الإجمالية لهذه الوحدة تتجاوز الحد المسموح"); return; }
+    if (quantity > 9999) { setLocalError(t("الكمية الإجمالية لهذه الوحدة تتجاوز الحد المسموح")); return; }
     setQuantity(unitProduct.id, quantity, selectedUnit.id, true, cashierPriced ? selectedPrice : undefined); setUnitProductId(null);
   }
   useEffect(() => {
@@ -185,17 +197,17 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
   function previewReceipt() {
     setLocalError("");
     try {
-      setReceiptPreview(createFinanceReceiptPreview({ lines, settings: data.settings, discount, paymentKind, accountId: paymentAccountId, customerPhone: butcher ? null : customer.normalized, note, createdAt: new Date().toISOString() }));
+      setReceiptPreview(createFinanceReceiptPreview({ lines, settings: data.settings, receiptSeller: data.receiptSeller, discount, paymentKind, accountId: paymentAccountId, customerPhone: butcher ? null : customer.normalized, note, createdAt: new Date().toISOString() }));
       setShowCheckout(false);
-    } catch (cause) { setLocalError(cause instanceof Error ? cause.message : "تعذر تجهيز معاينة الإيصال"); }
+    } catch (cause) { setLocalError(cause instanceof Error ? cause.message : t("تعذر تجهيز معاينة الإيصال")); }
   }
   function beginCheckout() {
     if (checkoutBlocker) return;
     setLocalError("");
     if (needsShift) {
       open(incoming.length === 1
-        ? { operation: "shift_accept", title: "عد النقدية وتأكيد الاستلام", values: { shiftId: incoming[0].id } }
-        : { operation: "shift_open", title: "بدء وردية لإكمال الدفع" });
+        ? { operation: "shift_accept", title: t("عد النقدية وتأكيد الاستلام"), values: { shiftId: incoming[0].id } }
+        : { operation: "shift_open", title: t("بدء وردية لإكمال الدفع") });
       return;
     }
     setShowCheckout(true);
@@ -203,130 +215,131 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
   async function checkout() {
     if (disabled) return;
     setLocalError("");
-    if (pricesChanged) { setLocalError("تغيّر سعر أحد الأصناف اعتمد السعر الجديد في السلة قبل التحصيل"); return; }
-    if (!shift && !butcher) { setLocalError("ابدأ وردية مالية قبل تسجيل المبيعات"); return; }
-    if (shift?.supervisor_paused) { setLocalError("الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع"); return; }
-    if (!cart.length || lines.length !== cart.length || lines.some((line) => !line.product.available || !Number.isFinite(line.quantity) || line.quantity <= 0 || line.quantity > 9999)) { setLocalError("راجع أصناف السلة والكميات قبل التحصيل"); return; }
-    if (!warehouseId) { setLocalError("اختر مستودع البيع"); return; }
-    if (discount < 0 || discount > subtotal || (discountKind === "percent" && discountValue > 100)) { setLocalError("الخصم يجب ألا يتجاوز قيمة المبيعات"); return; }
-    if (!paymentAccountId) { setLocalError("أضف حساب تحصيل لهذا النوع من المالية ثم حدّث الأرصدة"); return; }
+    if (unfinishedQuantity) { setLocalError(t("أكمل كمية الصنف أو احذفه من السلة قبل الدفع")); return; }
+    if (pricesChanged) { setLocalError(t("تغيّر سعر أحد الأصناف اعتمد السعر الجديد في السلة قبل التحصيل")); return; }
+    if (!shift && !butcher) { setLocalError(t("ابدأ وردية مالية قبل تسجيل المبيعات")); return; }
+    if (shift?.supervisor_paused) { setLocalError(t("الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع")); return; }
+    if (!cart.length || lines.length !== cart.length || lines.some((line) => !line.product.available || !Number.isFinite(line.quantity) || line.quantity <= 0 || line.quantity > 9999)) { setLocalError(t("راجع أصناف السلة والكميات قبل التحصيل")); return; }
+    if (!warehouseId) { setLocalError(t("اختر مستودع البيع")); return; }
+    if (discount < 0 || discount > subtotal || (discountKind === "percent" && discountValue > 100)) { setLocalError(t("الخصم يجب ألا يتجاوز قيمة المبيعات")); return; }
+    if (!paymentAccountId) { setLocalError(t("أضف حساب تحصيل لهذا النوع من المالية ثم حدّث الأرصدة")); return; }
     let customerPayload: Record<string, unknown>;
-    try { customerPayload = butcher ? {} : customer.payload(); } catch (cause) { setLocalError(cause instanceof Error ? cause.message : "راجع رقم العميل قبل حفظ الفاتورة"); return; }
+    try { customerPayload = butcher ? {} : customer.payload(); } catch (cause) { setLocalError(cause instanceof Error ? cause.message : t("راجع رقم العميل قبل حفظ الفاتورة")); return; }
     const saved = await state.execute("sale", { lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity, expectedUnitPrice: line.product.price, ...(line.unitId ? { unitId: line.unitId } : {}), ...(line.unit?.priceMode === "cashier" ? { unitPrice: line.product.price } : {}) })), expectedTotal: totals.total, discount, accountId: paymentAccountId, ...customerPayload, warehouseId, ...(shift ? { shiftId: shift.id } : {}), note });
-    if (saved) { setShowCheckout(false); setCart([]); setDiscountValue(0); setNote(""); customer.reset(); setCustomerNotice(financePosCustomerNotice(saved.customer)); setPagerRefreshKey((value) => value + 1); setPrintQueue((queue) => queue.includes(saved.id) ? queue : [...queue, saved.id]); searchRef.current?.focus(); }
+    if (saved) { setShowCheckout(false); setCart([]); setQuantityDrafts({}); setDiscountValue(0); setNote(""); customer.reset(); setCustomerNotice(financePosCustomerNotice(saved.customer, language)); setPagerRefreshKey((value) => value + 1); setPrintQueue((queue) => queue.includes(saved.id) ? queue : [...queue, saved.id]); searchRef.current?.focus(); }
   }
 
-  return <div className={`${styles.page} ${styles.posPage}`} dir="rtl">
+  return <div className={`${styles.page} ${styles.posPage}`} dir={dir} lang={language} data-finance-standard-pos>
     <div className={styles.posLayout}>
-    <div className={styles.posMain} role="region" aria-label="المنتجات وأدوات الكاشير">
+    <div className={styles.posMain} role="region" aria-label={t("المنتجات وأدوات الكاشير")}>
     <div className={styles.posControls}>
     <header className={`${styles.header} ${styles.posHeader} ${shiftStyles.header}`}>
-      <div><p className={styles.eyebrow}><ReceiptText size={16} aria-hidden="true" />برندة المالية · {data.cafe.name}</p><h1 className={styles.title}>الكاشير المالي</h1>
-        <div className={styles.posShiftMeta} aria-label="الوردية الحالية"><Clock3 size={15} aria-hidden="true" /><span>{shift ? shift.supervisor_paused ? "ورديتك موقوفة إداريًا" : "ورديتك مفتوحة" : outgoing ? "ورديتك بانتظار الاستلام" : butcher ? "البيع متاح والوردية اختيارية" : "ابدأ ورديتك"}</span>{!!currentShiftNumber && <bdi dir="ltr">#{currentShiftNumber}</bdi>}</div>
+      <div><p className={styles.eyebrow}><ReceiptText size={16} aria-hidden="true" />{t("برندة المالية ·")}{data.cafe.name}</p><h1 className={styles.title}>{t("الكاشير المالي")}</h1>
+        <div className={styles.posShiftMeta} aria-label={t("الوردية الحالية")}><Clock3 size={15} aria-hidden="true" /><span>{shift ? shift.supervisor_paused ? t("ورديتك موقوفة إداريًا") : t("ورديتك مفتوحة") : outgoing ? t("ورديتك بانتظار الاستلام") : butcher ? t("البيع متاح والوردية اختيارية") : t("ابدأ ورديتك")}</span>{!!currentShiftNumber && <bdi dir="ltr">#{currentShiftNumber}</bdi>}</div>
       </div>
-      <div className={`${styles.posHeaderTools} ${shiftStyles.headerTools}`}>
-      <div className={shiftStyles.controls} aria-label="إدارة الوردية">
-        {!shift && !outgoing && (incoming.length ? incoming.map(item => <button key={item.id} type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut} title={data.accounts.find(account => account.id === item.account_id)?.name ?? "صندوق الكاشير"} onClick={() => open({ operation: "shift_accept", title: "عد النقدية وتأكيد الاستلام", values: { shiftId: item.id } })}><Plus size={16} aria-hidden="true" />استلام وبدء وردية</button>) : <button type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut || data.initialized === false} onClick={() => open({ operation: "shift_open", title: "بدء وردية جديدة" })}><Plus size={16} aria-hidden="true" />بدء وردية جديدة</button>)}
-        {shift ? <button type="button" className={shiftStyles.end} disabled={disabled || loggingOut || cart.length > 0} title={cart.length ? "احفظ السلة أو أفرغها قبل إنهاء الوردية" : "عد النقدية وحدد جهة التسليم لإقفال الوردية"} onClick={() => open({ operation: "shift_close", title: slug && !butcher ? "إنهاء الوردية وتسجيل الخروج" : "إنهاء الوردية", values: { shiftId: shift.id } })}><LogOut size={16} aria-hidden="true" />إنهاء الوردية</button> : slug && <button type="button" className={shiftStyles.exit} disabled={pending || loggingOut || !!outgoing || cart.length > 0} onClick={finishLogout}><LogOut size={16} aria-hidden="true" />خروج</button>}
+      <div className={`${styles.posHeaderTools} ${shiftStyles.headerTools}`}><button type="button" className={styles.secondary} data-pos-language-toggle onClick={() => setLanguage(language === "ar" ? "en" : "ar")} aria-label={language === "ar" ? "Switch cashier to English" : "تغيير لغة الكاشير إلى العربية"}>{language === "ar" ? "English" : "العربية"}</button>
+      <div className={shiftStyles.controls} aria-label={t("إدارة الوردية")}>
+        {!shift && !outgoing && (incoming.length ? incoming.map(item => <button key={item.id} type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut} title={data.accounts.find(account => account.id === item.account_id)?.name ?? t("صندوق الكاشير")} onClick={() => open({ operation: "shift_accept", title: t("عد النقدية وتأكيد الاستلام"), values: { shiftId: item.id } })}><Plus size={16} aria-hidden="true" />{t("استلام وبدء وردية")}</button>) : <button type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut || data.initialized === false} onClick={() => open({ operation: "shift_open", title: t("بدء وردية جديدة") })}><Plus size={16} aria-hidden="true" />{t("بدء وردية جديدة")}</button>)}
+        {shift ? <button type="button" className={shiftStyles.end} disabled={disabled || loggingOut || cart.length > 0} title={cart.length ? t("احفظ السلة أو أفرغها قبل إنهاء الوردية") : t("عد النقدية وحدد جهة التسليم لإقفال الوردية")} onClick={() => open({ operation: "shift_close", title: slug && !butcher ? t("إنهاء الوردية وتسجيل الخروج") : t("إنهاء الوردية"), values: { shiftId: shift.id } })}><LogOut size={16} aria-hidden="true" />{t("إنهاء الوردية")}</button> : slug && <button type="button" className={shiftStyles.exit} disabled={pending || loggingOut || !!outgoing || cart.length > 0} onClick={finishLogout}><LogOut size={16} aria-hidden="true" />{t("خروج")}</button>}
       </div>
-      {!butcher && <FinancePosPager slug={slug ?? data.cafe.slug} refreshKey={pagerRefreshKey} />}
-      {!offlineEntry && isAldeemCafe(data.cafe) && <Link className={styles.secondary} href={`/finance/${data.cafe.slug}/lab`}><Plus size={17} aria-hidden="true" />طلب للمعمل</Link>}
-      <FinancePosActions details={shift && <><span>{data.accounts.find((account) => account.id === shift.account_id)?.name ?? "الصندوق"}</span><span>بداية الوردية {financeDate(shift.opened_at)}</span><span>نقدية متوقعة <Numeric value={shift.expected_cash} money /></span></>}>
-      <div className={styles.actions} aria-label="أدوات الكاشير والوردية">
-        {shift && <button type="button" className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "supplier_payout", title: "سداد مورد من الصندوق", values: { shiftId: shift.id } })}>سداد الموردين</button>}
-        <button className={styles.secondary} onClick={() => setShowHistory(true)}>سجل المبيعات</button>
-        {shift && <button className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "shift_purchase", title: "فاتورة مشتريات", values: { shiftId: shift.id } })}>فاتورة مشتريات</button>}
-        {data.canManage && <Link href={dashboardHref ?? (slug ? `/finance/${slug}` : "/dashboard/finance")} className={styles.secondary}><ArrowRight size={16} />الإدارة المالية</Link>}
+      {!butcher && !isHospitalStore(data.cafe.slug) && <FinancePosPager slug={slug ?? data.cafe.slug} refreshKey={pagerRefreshKey} />}
+      {!offlineEntry && isAldeemCafe(data.cafe) && <Link className={styles.secondary} href={`/finance/${data.cafe.slug}/lab`}><Plus size={17} aria-hidden="true" />{t("طلب للمعمل")}</Link>}
+      <FinancePosActions details={shift && <><span>{data.accounts.find((account) => account.id === shift.account_id)?.name ?? t("الصندوق")}</span><span>{t("بداية الوردية")}{financeDate(shift.opened_at)}</span><span>{t("نقدية متوقعة")}<PosNumeric value={shift.expected_cash} money /></span></>}>
+      <div className={styles.actions} aria-label={t("أدوات الكاشير والوردية")}>
+        {shift && <button type="button" className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "supplier_payout", title: t("سداد مورد من الصندوق"), values: { shiftId: shift.id } })}>{t("سداد الموردين")}</button>}
+        <button className={styles.secondary} onClick={() => setShowHistory(true)}>{t("سجل المبيعات")}</button>
+        {shift && <button className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "shift_purchase", title: t("فاتورة مشتريات"), values: { shiftId: shift.id } })}>{t("فاتورة مشتريات")}</button>}
+        {data.canManage && <Link href={dashboardHref ?? (slug ? `/finance/${slug}` : "/dashboard/finance")} className={styles.secondary}><ArrowRight size={16} />{t("الإدارة المالية")}</Link>}
       </div>
       </FinancePosActions>
       <FinancePosFullscreen />
       </div>
     </header>
-      <div className={`${styles.toolbar} ${styles.posToolbar}`}><label className={styles.searchBox}><Search size={18} aria-hidden="true" /><input ref={searchRef} className={styles.search} placeholder="ابحث عن صنف" aria-label="البحث عن صنف" value={query} onChange={(event) => setQuery(event.target.value)} /></label><Field label="مستودع البيع"><select value={warehouseId} disabled={disabled} onChange={(event) => setWarehouseId(event.target.value)}>{data.warehouses.filter((warehouse) => warehouse.active).map((warehouse) => <option value={warehouse.id} key={warehouse.id}>{warehouse.name}</option>)}</select></Field></div>
-        <div className={styles.categories} aria-label="فئات الأصناف"><button className={styles.category} aria-pressed={!category} onClick={() => setCategory("")}>جميع الأصناف</button>{categories.map((name) => <button key={name} className={styles.category} aria-pressed={category === name} onClick={() => setCategory(name)}>{name}</button>)}</div>
+      <div className={`${styles.toolbar} ${styles.posToolbar}`}><label className={styles.searchBox}><Search size={18} aria-hidden="true" /><input ref={searchRef} className={styles.search} placeholder={t("ابحث عن صنف")} aria-label={t("البحث عن صنف")} value={query} onChange={(event) => setQuery(event.target.value)} /></label><Field label={t("مستودع البيع")}><select value={warehouseId} disabled={disabled} onChange={(event) => setWarehouseId(event.target.value)}>{data.warehouses.filter((warehouse) => warehouse.active).map((warehouse) => <option value={warehouse.id} key={warehouse.id}>{warehouse.name}</option>)}</select></Field></div>
+        <div className={styles.categories} aria-label={t("فئات الأصناف")}><button className={styles.category} aria-pressed={!category} onClick={() => setCategory("")}>{t("جميع الأصناف")}</button>{categories.map((name) => <button key={name} className={styles.category} aria-pressed={category === name} onClick={() => setCategory(name)}>{categoryName(name)}</button>)}</div>
     </div>
-    <div className={styles.posCatalog} role="region" aria-label="قائمة الأصناف القابلة للتمرير" tabIndex={0}>
-    {message && <div className={styles.success} role="status"><Check size={16} style={{ display: "inline", marginInlineEnd: 7 }} aria-hidden="true" />{message}</div>}
+    <div className={styles.posCatalog} role="region" aria-label={t("قائمة الأصناف القابلة للتمرير")} tabIndex={0}>
+    {message && <div className={styles.success} role="status"><Check size={16} style={{ display: "inline", marginInlineEnd: 7 }} aria-hidden="true" />{t(message)}</div>}
     {customerNotice && <div className={styles.notice} role="status">{customerNotice}</div>}
-    {(localError || error) && !form && <div className={styles.error} role="alert">{localError || error}</div>}
-    {stale && <div className={styles.notice}>توقف تسجيل العمليات حتى تحديث الأرصدة العملية المحفوظة لا تحتاج إلى تكرار</div>}
-    {data.initialized === false && <div className={styles.shiftSetup}><div><strong>الأرصدة الافتتاحية لم تسجل بعد</strong><p className={styles.muted}>يُسجل مالك العلامة النقدية الموجودة وأرصدة الشبكة قبل بدء أول وردية</p></div>{data.canInitialize && <button type="button" className={styles.primary} disabled={disabled} onClick={() => open({ operation: "opening_balances", title: "الأرصدة الافتتاحية" })}>تسجيل الأرصدة الافتتاحية</button>}</div>}
-      <section aria-label="منتجات المنيو">
-        {!products.length ? <div className={styles.panel}><Empty title={data.products.length ? "لا توجد أصناف مطابقة" : "المنيو خالٍ من الأصناف"}>{data.products.length ? "جرّب اسمًا آخر أو اختر جميع الأصناف" : "أضف منتجات العلامة وصورها وأسعارها من إدارة المنيو"}</Empty></div> : <div className={styles.products}>{products.map((product) => {
+    {(localError || error) && !form && <div className={styles.error} role="alert">{t(localError || error)}</div>}
+    {stale && <div className={styles.notice}>{t("توقف تسجيل العمليات حتى تحديث الأرصدة العملية المحفوظة لا تحتاج إلى تكرار")}</div>}
+    {data.initialized === false && <div className={styles.shiftSetup}><div><strong>{t("الأرصدة الافتتاحية لم تسجل بعد")}</strong><p className={styles.muted}>{t("يُسجل مالك العلامة النقدية الموجودة وأرصدة الشبكة قبل بدء أول وردية")}</p></div>{data.canInitialize && <button type="button" className={styles.primary} disabled={disabled} onClick={() => open({ operation: "opening_balances", title: t("الأرصدة الافتتاحية") })}>{t("تسجيل الأرصدة الافتتاحية")}</button>}</div>}
+      <section aria-label={t("منتجات المنيو")}>
+        {!products.length ? <div className={styles.panel}><Empty title={data.products.length ? t("لا توجد أصناف مطابقة") : t("المنيو خالٍ من الأصناف")}>{data.products.length ? t("جرّب اسمًا آخر أو اختر جميع الأصناف") : t("أضف منتجات العلامة وصورها وأسعارها من إدارة المنيو")}</Empty></div> : <div className={styles.products}>{products.map((product) => {
           const quantity = cart.filter((line) => line.productId === product.id).reduce((sum, line) => sum + line.quantity, 0);
           const stock = quantityAvailable(product);
-          return <button type="button" key={product.id} className={styles.product} disabled={disabled || quantity >= 9999 || product.quoteOnly} aria-label={product.quoteOnly ? `${product.name} بانتظار اعتماد السعر` : butcher && product.butcherDetails?.units[0]?.priceMode === "cashier" ? `إضافة ${product.name} وتحديد السعر` : `إضافة ${product.name} بسعر ${financeMoney(product.price)}`} onClick={() => addProduct(product)}>
+          return <button type="button" key={product.id} className={styles.product} disabled={disabled || quantity >= 9999 || product.quoteOnly} aria-label={product.quoteOnly ? `${productName(product)}${t(" بانتظار اعتماد السعر")}` : butcher && product.butcherDetails?.units[0]?.priceMode === "cashier" ? `${t("إضافة ")}${productName(product)}${t(" وتحديد السعر")}` : `${t("إضافة ")}${productName(product)}${t(" بسعر ")}${money(product.price)}`} onClick={() => addProduct(product)}>
             <PosProductImage key={product.imageUrl} product={product} />
-            {quantity > 0 && <span className={styles.productQuantity}>{quantity}</span>}<span className={styles.productBody}><span className={styles.productName}>{product.name}</span><span className={styles.productPrice}>{product.quoteOnly ? <span className={styles.muted}>{quoteOnlyLabel}</span> : butcher && product.butcherDetails?.units[0]?.priceMode === "cashier" ? <span className={styles.muted}>تحدد السعر وقت البيع</span> : <>{butcher ? <bdi>{new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(product.price)}</bdi> : <Numeric value={product.price} />}<small> ر س</small>{butcher && product.butcherDetails?.units[0] && <small> / {product.butcherDetails.units[0].label}</small>}</>}</span>{product.stockTracked && <span className={stock <= 0 ? styles.negative : styles.muted}>{`رصيد المخزون ${stock}`}</span>}</span>
+            {quantity > 0 && <span className={styles.productQuantity}>{quantity}</span>}<span className={styles.productBody}><span className={styles.productName}>{productName(product)}</span><span className={styles.productPrice}>{product.quoteOnly ? <span className={styles.muted}>{t(quoteOnlyLabel)}</span> : butcher && product.butcherDetails?.units[0]?.priceMode === "cashier" ? <span className={styles.muted}>{t("تحدد السعر وقت البيع")}</span> : <>{butcher ? <bdi>{new Intl.NumberFormat(language === "ar" ? "ar-SA" : "en-SA", { maximumFractionDigits: 6 }).format(product.price)}</bdi> : <PosNumeric value={product.price} />}<small> {t("ر س")}</small>{butcher && product.butcherDetails?.units[0] && <small> / {t(product.butcherDetails.units[0].label)}</small>}</>}</span>{product.stockTracked && <span className={stock <= 0 ? styles.negative : styles.muted}>{`${t("رصيد المخزون ")}${stock}`}</span>}</span>
           </button>;
         })}</div>}
       </section>
       <FinanceRefundRequests snapshot={data} pending={disabled} error={error} onExecute={state.execute} onReceipt={setReceiptId} />
     </div>
     </div>
-      <aside className={`${styles.panel} ${styles.cart}`} aria-label="سلة المبيعات"><div className={styles.panelHeader}><h2 className={styles.panelTitle}><ShoppingBag size={18} style={{ display: "inline", marginInlineEnd: 7 }} aria-hidden="true" />طلب جديد</h2><span className={styles.badge}>{cartCount}</span></div>
-        <div className={styles.cartBody} role="region" aria-label="الأصناف المختارة القابلة للتمرير" tabIndex={0}>
-        {!cart.length ? <Empty title="ابدأ بإضافة صنف">اضغط على صورة الصنف لإضافته إلى السلة</Empty> : <div className={styles.cartLines}>{lines.map((line) => <div className={styles.cartLine} key={financeCartKey(line)}><div className={styles.cartLineDetails}><div className={styles.cartProductIdentity}><CartProductImage key={line.product.imageUrl ?? line.productId} src={line.product.imageUrl} /><div><strong>{line.product.name}</strong><small><Numeric value={line.product.price} money unitPrice={!!line.unitId} /> للوحدة</small>{line.priceChanged && <button type="button" className={butcherStyles.acceptPrice} disabled={disabled} onClick={() => setQuantity(line.productId, line.quantity, line.unitId, true, line.cashierPrice ? line.unitPrice : undefined)}>اعتماد السعر الجديد <Numeric value={line.currentUnitPrice} unitPrice /></button>}</div></div><div className={styles.quantity} style={{ marginTop: 10 }}><button type="button" disabled={disabled} aria-label={`تقليل كمية ${line.product.name}`} onClick={() => setQuantity(line.productId, Math.max(0, Math.round((line.quantity - 1) * 1000) / 1000), line.unitId, false, line.cashierPrice ? line.unitPrice : undefined)}><Minus size={14} /></button><input type="number" min="0" max="9999" step={butcher ? "0.001" : "1"} inputMode="decimal" disabled={disabled} value={line.quantity} aria-label={`كمية ${line.product.name}`} onChange={(event) => setQuantity(line.productId, Number(event.target.value), line.unitId, false, line.cashierPrice ? line.unitPrice : undefined)} /><button type="button" disabled={disabled || line.quantity >= 9999} aria-label={`زيادة كمية ${line.product.name}`} onClick={() => setQuantity(line.productId, Math.round((line.quantity + 1) * 1000) / 1000, line.unitId, false, line.cashierPrice ? line.unitPrice : undefined)}><Plus size={14} /></button></div></div><div><strong><Numeric value={line.product.price * line.quantity} money /></strong><button className={styles.iconButton} type="button" disabled={disabled} aria-label={`حذف ${line.product.name}`} onClick={() => setQuantity(line.productId, 0, line.unitId, false, line.cashierPrice ? line.unitPrice : undefined)}><Trash2 size={15} /></button></div></div>)}</div>}
+      <aside className={`${styles.panel} ${styles.cart}`} aria-label={t("سلة المبيعات")}><div className={styles.panelHeader}><h2 className={styles.panelTitle}><ShoppingBag size={18} style={{ display: "inline", marginInlineEnd: 7 }} aria-hidden="true" />{t("طلب جديد")}</h2><span className={styles.badge}>{cartCount}</span></div>
+        <div className={styles.cartBody} role="region" aria-label={t("الأصناف المختارة القابلة للتمرير")} tabIndex={0}>
+        {!cart.length ? <Empty title={t("ابدأ بإضافة صنف")}>{t("اضغط على صورة الصنف لإضافته إلى السلة")}</Empty> : <div className={styles.cartLines}>{lines.map((line) => <div className={styles.cartLine} key={financeCartKey(line)}><div className={styles.cartLineDetails}><div className={styles.cartProductIdentity}><CartProductImage key={line.product.imageUrl ?? line.productId} src={line.product.imageUrl} /><div><strong>{productName(line.product)}</strong><small><PosNumeric value={line.product.price} money unitPrice={!!line.unitId} /> {t("للوحدة")}</small>{line.priceChanged && <button type="button" className={butcherStyles.acceptPrice} disabled={disabled} onClick={() => setQuantity(line.productId, line.quantity, line.unitId, true, line.cashierPrice ? line.unitPrice : undefined)}>{t("اعتماد السعر الجديد")}<PosNumeric value={line.currentUnitPrice} unitPrice /></button>}</div></div><div className={styles.quantity} style={{ marginTop: 10 }}><button type="button" disabled={disabled} aria-label={`${t("تقليل كمية ")}${productName(line.product)}`} onClick={() => setQuantity(line.productId, Math.max(0, Math.round((line.quantity - 1) * 1000) / 1000), line.unitId, false, line.cashierPrice ? line.unitPrice : undefined)}><Minus size={14} /></button><FinanceTouchNumberInput min="0.001" max="9999" step={butcher ? "0.001" : "1"} disabled={disabled} value={quantityDrafts[financeCartKey(line)] ?? String(line.quantity)} aria-label={`${t("كمية ")}${productName(line.product)}`} aria-invalid={quantityDrafts[financeCartKey(line)] !== undefined && !validQuantityDraft(quantityDrafts[financeCartKey(line)])} onValueChange={raw => editCartQuantity(line, raw)} /><button type="button" disabled={disabled || line.quantity >= 9999} aria-label={`${t("زيادة كمية ")}${productName(line.product)}`} onClick={() => setQuantity(line.productId, Math.round((line.quantity + 1) * 1000) / 1000, line.unitId, false, line.cashierPrice ? line.unitPrice : undefined)}><Plus size={14} /></button></div></div><div><strong><PosNumeric value={line.product.price * line.quantity} money /></strong><button className={styles.iconButton} type="button" disabled={disabled} aria-label={`${t("حذف ")}${productName(line.product)}`} onClick={() => setQuantity(line.productId, 0, line.unitId, false, line.cashierPrice ? line.unitPrice : undefined)}><Trash2 size={15} /></button></div></div>)}</div>}
         </div>
-        <section className={checkoutStyles.dock} aria-label="ملخص الدفع الثابت">
-          <div className={checkoutStyles.amountCard}><div className={checkoutStyles.amountCaption}><span>الإجمالي المستحق</span><small>{cartCount}</small></div><div className={checkoutStyles.amount}><bdi dir="ltr">{new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totals.total)}</bdi><small>ر س</small></div></div>
+        <section className={checkoutStyles.dock} aria-label={t("ملخص الدفع الثابت")}>
+          <div className={checkoutStyles.amountCard}><div className={checkoutStyles.amountCaption}><span>{t("الإجمالي المستحق")}</span><small>{cartCount}</small></div><div className={checkoutStyles.amount}><bdi dir="ltr">{new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totals.total)}</bdi><small>{t("ر س")}</small></div></div>
           {checkoutHint && <p id="pos-checkout-hint" className={checkoutStyles.hint} role="status">{checkoutHint}</p>}
-          <button type="button" className={styles.primary} disabled={!!checkoutBlocker} aria-describedby={checkoutHint ? "pos-checkout-hint" : undefined} onClick={beginCheckout}>{needsShift && !checkoutBlocker ? "بدء الوردية ومتابعة الدفع" : "الدفع وإصدار الإيصال"}<ArrowRight size={18} aria-hidden="true" /></button>
+          <button type="button" className={styles.primary} disabled={!!checkoutBlocker} aria-describedby={checkoutHint ? "pos-checkout-hint" : undefined} onClick={beginCheckout}>{needsShift && !checkoutBlocker ? t("بدء الوردية ومتابعة الدفع") : t("الدفع وإصدار الإيصال")}<ArrowRight size={18} aria-hidden="true" /></button>
           <div className={checkoutStyles.utilities}>
-            <button type="button" className={styles.secondary} disabled={disabled || !cart.length} onClick={() => { setCart([]); setDiscountValue(0); setLocalError(""); }}><Trash2 size={15} aria-hidden="true" />إفراغ السلة</button>
-            <div className={shiftStyles.syncTools}><button type="button" className={styles.iconButton} disabled={pending || state.offline.syncing || loggingOut} aria-label="تحديث ومزامنة الكاشير" title="تحديث ومزامنة الكاشير" onClick={state.refresh}><RefreshCw size={18} aria-hidden="true" /></button><FinancePosOfflineStatus state={state.offline} /></div>
+            <button type="button" className={styles.secondary} disabled={disabled || !cart.length} onClick={() => { setCart([]); setQuantityDrafts({}); setDiscountValue(0); setLocalError(""); }}><Trash2 size={15} aria-hidden="true" />{t("إفراغ السلة")}</button>
+            <div className={shiftStyles.syncTools}><button type="button" className={styles.iconButton} disabled={pending || state.offline.syncing || loggingOut} aria-label={t("تحديث ومزامنة الكاشير")} title={t("تحديث ومزامنة الكاشير")} onClick={state.refresh}><RefreshCw size={18} aria-hidden="true" /></button><FinancePosOfflineStatus state={state.offline} /></div>
           </div>
         </section>
       </aside>
     </div>
-    <Modal open={!!unitProduct} title={unitProduct?.name ?? "وحدة البيع"} onClose={() => setUnitProductId(null)} panelClassName={checkoutStyles.dialog} footer={<button type="button" className={styles.primary} disabled={disabled || !selectedUnit || !unitQuantityValid || !unitPriceValid || !unitStockCompatible} onClick={addSelectedUnit}><Plus size={18} aria-hidden="true" />إضافة إلى الطلب</button>}>
+    <Modal open={!!unitProduct} title={unitProduct?.name ?? t("وحدة البيع")} onClose={() => setUnitProductId(null)} panelClassName={checkoutStyles.dialog} footer={<button type="button" className={styles.primary} disabled={disabled || !selectedUnit || !unitQuantityValid || !unitPriceValid || !unitStockCompatible} onClick={addSelectedUnit}><Plus size={18} aria-hidden="true" />{t("إضافة إلى الطلب")}</button>}>
       <div className={butcherStyles.form}>
         {localError && <p className={styles.error} role="alert">{localError}</p>}
-        <fieldset className={butcherStyles.units}><legend>اختر وحدة البيع</legend>{unitProduct?.butcherDetails?.units.map(unit => {
+        <fieldset className={butcherStyles.units}><legend>{t("اختر وحدة البيع")}</legend>{unitProduct?.butcherDetails?.units.map(unit => {
           const compatible = !unitProduct.stockTracked || butcherStockFactor(unitProduct.butcherDetails!.units[0].id, unit.id) !== null;
-          return <button key={unit.id} type="button" className={butcherStyles.unit} aria-pressed={unit.id === selectedUnitId} disabled={!compatible || disabled} title={!compatible ? "هذه الوحدة تحتاج ربط مخزون متوافق" : undefined} onClick={() => { if (unit.id !== selectedUnitId) { setUnitQuantity(""); setCashierUnitPrice(""); } setSelectedUnitId(unit.id); }}><strong className={butcherStyles.unitName}><i className={butcherStyles.selectionMark} aria-hidden="true">{unit.id === selectedUnitId && <Check size={18} strokeWidth={3} />}</i>{unit.label}</strong><span className={butcherStyles.unitPrice}>{unit.priceMode === "cashier" ? "تحدد السعر وقت البيع" : <><bdi>{new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(unit.price)}</bdi>ر س</>}</span></button>;
+          return <button key={unit.id} type="button" className={butcherStyles.unit} aria-pressed={unit.id === selectedUnitId} disabled={!compatible || disabled} title={!compatible ? t("هذه الوحدة تحتاج ربط مخزون متوافق") : undefined} onClick={() => { if (unit.id !== selectedUnitId) { setUnitQuantity(""); setCashierUnitPrice(""); } setSelectedUnitId(unit.id); }}><strong className={butcherStyles.unitName}><i className={butcherStyles.selectionMark} aria-hidden="true">{unit.id === selectedUnitId && <Check size={18} strokeWidth={3} />}</i>{t(unit.label)}</strong><span className={butcherStyles.unitPrice}>{unit.priceMode === "cashier" ? t("تحدد السعر وقت البيع") : <><bdi>{new Intl.NumberFormat(language === "ar" ? "ar-SA" : "en-SA", { maximumFractionDigits: 6 }).format(unit.price)}</bdi>{t("ر س")}</>}</span></button>;
         })}</fieldset>
-        <div className={butcherStyles.quantity}><Field label={`الكمية${selectedUnit ? ` بالـ${selectedUnit.label}` : ""}`}><input type="number" inputMode="decimal" min="0.001" max="9999" step="0.001" placeholder="أدخل الكمية" value={unitQuantity} disabled={disabled} aria-invalid={unitQuantity !== "" && !unitQuantityValid} aria-describedby="butcher-quantity-hint" onChange={event => setUnitQuantity(event.target.value)} /></Field><small id="butcher-quantity-hint" className={styles.muted}>يمكن إدخال أجزاء الوحدة حتى ثلاث خانات عشرية</small></div>
-        {unitQuantity !== "" && !unitQuantityValid && <p className={styles.error} role="alert">أدخل كمية بين ٠٫٠٠١ و٩٩٩٩ بحد أقصى ثلاث خانات عشرية</p>}
-        {cashierPriced && <div className={butcherStyles.quantity}><Field label={`سعر ${selectedUnit.label} بالريال`}><input type="number" inputMode="decimal" min="0.000001" max="1000000" step="0.000001" placeholder="أدخل سعر البيع" value={cashierUnitPrice} disabled={disabled} aria-invalid={cashierUnitPrice !== "" && !unitPriceValid} aria-describedby="butcher-price-hint" onChange={event => setCashierUnitPrice(event.target.value)} /></Field><small id="butcher-price-hint" className={styles.muted}>سعر الوحدة الواحدة وفق إعداد الضريبة المعتمد ويُحفظ في الفاتورة</small>{cashierUnitPrice !== "" && !unitPriceValid && <p className={styles.error} role="alert">أدخل سعرًا أكبر من صفر بحد أقصى مليون ريال وست خانات عشرية</p>}</div>}
-        <div className={butcherStyles.total}><span>قيمة الصنف</span><Numeric value={unitQuantityValid && unitPriceValid && selectedUnit ? Math.round((selectedPrice * selectedQuantity + Number.EPSILON) * 100) / 100 : 0} money /></div>
+        <div className={butcherStyles.quantity}><Field label={`${t("الكمية")}${selectedUnit ? ` بالـ${selectedUnit.label}` : ""}`}><FinanceTouchNumberInput min="0.001" max="9999" step="0.001" placeholder={t("أدخل الكمية")} aria-label={t("كمية وحدة البيع")} value={unitQuantity} disabled={disabled} aria-invalid={unitQuantity !== "" && !unitQuantityValid} aria-describedby="butcher-quantity-hint" onValueChange={setUnitQuantity} /></Field><small id="butcher-quantity-hint" className={styles.muted}>{t("يمكن إدخال أجزاء الوحدة حتى ثلاث خانات عشرية")}</small></div>
+        {unitQuantity !== "" && !unitQuantityValid && <p className={styles.error} role="alert">{t("أدخل كمية بين ٠٫٠٠١ و٩٩٩٩ بحد أقصى ثلاث خانات عشرية")}</p>}
+        {cashierPriced && <div className={butcherStyles.quantity}><Field label={`${t("سعر ")}${selectedUnit.label}${t(" بالريال")}`}><FinanceTouchNumberInput min="0.000001" max="1000000" step="0.000001" placeholder={t("أدخل سعر البيع")} aria-label={t("سعر الوحدة بالريال")} value={cashierUnitPrice} disabled={disabled} aria-invalid={cashierUnitPrice !== "" && !unitPriceValid} aria-describedby="butcher-price-hint" onValueChange={setCashierUnitPrice} /></Field><small id="butcher-price-hint" className={styles.muted}>{t("سعر الوحدة الواحدة وفق إعداد الضريبة المعتمد ويُحفظ في الفاتورة")}</small>{cashierUnitPrice !== "" && !unitPriceValid && <p className={styles.error} role="alert">{t("أدخل سعرًا أكبر من صفر بحد أقصى مليون ريال وست خانات عشرية")}</p>}</div>}
+        <div className={butcherStyles.total}><span>{t("قيمة الصنف")}</span><PosNumeric value={unitQuantityValid && unitPriceValid && selectedUnit ? Math.round((selectedPrice * selectedQuantity + Number.EPSILON) * 100) / 100 : 0} money /></div>
       </div>
     </Modal>
-    <Modal open={showCheckout} title="الدفع وإصدار الإيصال" onClose={() => { if (!pending) setShowCheckout(false); }} panelClassName={checkoutStyles.dialog} footer={<div className={checkoutStyles.footer}>
-      <div className={checkoutStyles.amountCard}><div className={checkoutStyles.amountCaption}><span>الإجمالي المستحق</span><small>{cartCount}</small></div><div className={checkoutStyles.amount}><bdi dir="ltr">{new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totals.total)}</bdi><small>ر س</small></div></div>
+    <Modal open={showCheckout} title={t("الدفع وإصدار الإيصال")} onClose={() => { if (!pending) setShowCheckout(false); }} panelClassName={checkoutStyles.dialog} footer={<div className={checkoutStyles.footer}>
+      <div className={checkoutStyles.amountCard}><div className={checkoutStyles.amountCaption}><span>{t("الإجمالي المستحق")}</span><small>{cartCount}</small></div><div className={checkoutStyles.amount}><bdi dir="ltr">{new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totals.total)}</bdi><small>{t("ر س")}</small></div></div>
       <div className={checkoutStyles.footerActions}>
         {checkoutHint && <p className={checkoutStyles.hint} role="status">{checkoutHint}</p>}
-        <button type="button" className={styles.primary} disabled={!!checkoutBlocker || needsShift} onClick={checkout}>{pending ? "جار تسجيل العملية" : "تأكيد الاستلام وإصدار إيصال"}<Check size={17} aria-hidden="true" /></button>
-        <button type="button" className={styles.secondary} disabled={pending || !lines.length} onClick={previewReceipt}><Eye size={18} aria-hidden="true" />معاينة الإيصال</button>
+        <button type="button" className={styles.primary} disabled={!!checkoutBlocker || needsShift} onClick={checkout}>{pending ? t("جار تسجيل العملية") : t("تأكيد الاستلام وإصدار إيصال")}<Check size={17} aria-hidden="true" /></button>
+        <button type="button" className={styles.secondary} disabled={pending || !lines.length} onClick={previewReceipt}><Eye size={18} aria-hidden="true" />{t("معاينة الإيصال")}</button>
       </div>
     </div>}>
-      {(localError || error) && <div className={styles.error} role="alert">{localError || error}</div>}
-      {pricesChanged && <div className={styles.notice} role="alert">تغيّر سعر أحد الأصناف أغلق نافذة الدفع وراجع السعر الجديد في السلة قبل التحصيل</div>}
-      {stale && <div className={styles.notice}>توقف تسجيل العمليات حتى تحديث الأرصدة</div>}
-        <div className={checkoutStyles.body}><section className={checkoutStyles.breakdown} aria-label="الخصم وتفاصيل المبلغ"><h3 className={checkoutStyles.sectionTitle}>الخصم وتفاصيل المبلغ</h3><div className={styles.fields}><Field label="الخصم"><input type="number" min="0" max={discountKind === "percent" ? 100 : subtotal} step="0.01" value={discountValue} disabled={disabled} onChange={(event) => setDiscountValue(Number(event.target.value))} /></Field><Field label="نوع الخصم"><select value={discountKind} disabled={disabled} onChange={(event) => setDiscountKind(event.target.value as "amount" | "percent")}><option value="amount">مبلغ بالريال</option><option value="percent">نسبة مئوية</option></select></Field></div>
-          <div className={styles.balanceLine}><span>قبل الخصم</span><Numeric value={totals.subtotal} money /></div><div className={styles.balanceLine}><span>الخصم</span><Numeric value={discount} money /></div><div className={styles.balanceLine}><span>الضريبة {data.settings.vat_rate}% {data.settings.tax_inclusive ? "ضمن السعر" : ""}</span><Numeric value={totals.tax} money /></div></section><section className={checkoutStyles.payment} aria-label="الدفع وبيانات العميل">
+      {(localError || error) && <div className={styles.error} role="alert">{t(localError || error)}</div>}
+      {pricesChanged && <div className={styles.notice} role="alert">{t("تغيّر سعر أحد الأصناف أغلق نافذة الدفع وراجع السعر الجديد في السلة قبل التحصيل")}</div>}
+      {stale && <div className={styles.notice}>{t("توقف تسجيل العمليات حتى تحديث الأرصدة")}</div>}
+        <div className={checkoutStyles.body}><section className={checkoutStyles.breakdown} aria-label={t("الخصم وتفاصيل المبلغ")}><h3 className={checkoutStyles.sectionTitle}>{t("الخصم وتفاصيل المبلغ")}</h3><div className={styles.fields}><Field label={t("الخصم")}><input type="number" min="0" max={discountKind === "percent" ? 100 : subtotal} step="0.01" value={discountValue} disabled={disabled} onChange={(event) => setDiscountValue(Number(event.target.value))} /></Field><Field label={t("نوع الخصم")}><select value={discountKind} disabled={disabled} onChange={(event) => setDiscountKind(event.target.value as "amount" | "percent")}><option value="amount">{t("مبلغ بالريال")}</option><option value="percent">{t("نسبة مئوية")}</option></select></Field></div>
+          <div className={styles.balanceLine}><span>{t("قبل الخصم")}</span><PosNumeric value={totals.subtotal} money /></div><div className={styles.balanceLine}><span>{t("الخصم")}</span><PosNumeric value={discount} money /></div><div className={styles.balanceLine}><span>{t("الضريبة")}{data.settings.vat_rate}% {data.settings.tax_inclusive ? t("ضمن السعر") : ""}</span><PosNumeric value={totals.tax} money /></div></section><section className={checkoutStyles.payment} aria-label={t("الدفع وبيانات العميل")}>
           <div className={`${styles.form} ${styles.cartFields}`}><fieldset className={styles.paymentMethods} disabled={disabled}>
-              <legend>طريقة السداد</legend>
+              <legend>{t("طريقة السداد")}</legend>
               <div className={styles.paymentChoices}>
-                <button type="button" className={styles.paymentChoice} aria-pressed={paymentKind === "cash"} onClick={() => { if (paymentKind !== "cash") { setPaymentKind("cash"); } }}><Banknote size={27} aria-hidden="true" /><span>كاش</span>{paymentKind === "cash" && <Check size={14} className={styles.paymentSelected} aria-hidden="true" />}</button>
-                <button type="button" className={styles.paymentChoice} aria-pressed={paymentKind === "pos"} onClick={() => { if (paymentKind !== "pos") { setPaymentKind("pos"); } }}><CreditCard size={27} aria-hidden="true" /><span>شبكة</span>{paymentKind === "pos" && <Check size={14} className={styles.paymentSelected} aria-hidden="true" />}</button>
+                <button type="button" className={styles.paymentChoice} aria-pressed={paymentKind === "cash"} onClick={() => { if (paymentKind !== "cash") { setPaymentKind("cash"); } }}><Banknote size={27} aria-hidden="true" /><span>{t("كاش")}</span>{paymentKind === "cash" && <Check size={14} className={styles.paymentSelected} aria-hidden="true" />}</button>
+                <button type="button" className={styles.paymentChoice} aria-pressed={paymentKind === "pos"} onClick={() => { if (paymentKind !== "pos") { setPaymentKind("pos"); } }}><CreditCard size={27} aria-hidden="true" /><span>{t("شبكة")}</span>{paymentKind === "pos" && <Check size={14} className={styles.paymentSelected} aria-hidden="true" />}</button>
               </div>
               <details className={styles.paymentOther}>
-                <summary>{paymentKind === "bank" ? "تحويل بنكي" : "طرق سداد أخرى"}</summary>
+                <summary>{paymentKind === "bank" ? t("تحويل بنكي") : t("طرق سداد أخرى")}</summary>
                 <div className={styles.paymentChoices}>
-                  <button type="button" aria-pressed={paymentKind === "bank"} onClick={() => { if (paymentKind !== "bank") { setPaymentKind("bank"); } }}>تحويل بنكي</button>
+                  <button type="button" aria-pressed={paymentKind === "bank"} onClick={() => { if (paymentKind !== "bank") { setPaymentKind("bank"); } }}>{t("تحويل بنكي")}</button>
                 </div>
               </details>
             </fieldset>
             {!butcher && <FinancePosCustomerField state={customer} disabled={disabled} />}
-            <Field label="ملاحظة الطلب"><input maxLength={500} value={note} disabled={disabled} onChange={(event) => setNote(event.target.value)} /></Field>
+            <Field label={t("ملاحظة الطلب")}><input maxLength={500} value={note} disabled={disabled} onChange={(event) => setNote(event.target.value)} /></Field>
           </div>
-          {paymentKind === "pos" && <p className={styles.notice} style={{ marginTop: 14 }}>أكمل الدفع على جهاز الشبكة وتأكد من نجاحه قبل تسجيل البيع هنا</p>}
-          {paymentKind === "bank" && <p className={styles.notice} style={{ marginTop: 14 }}>تحقق من وصول التحويل البنكي قبل تسجيل البيع</p>}
+          {paymentKind === "pos" && <p className={styles.notice} style={{ marginTop: 14 }}>{t("أكمل الدفع على جهاز الشبكة وتأكد من نجاحه قبل تسجيل البيع هنا")}</p>}
+          {paymentKind === "bank" && <p className={styles.notice} style={{ marginTop: 14 }}>{t("تحقق من وصول التحويل البنكي قبل تسجيل البيع")}</p>}
         </section></div>
     </Modal>
-    <Modal open={!!form} title={form?.title ?? "الوردية"} onClose={() => { if (!pending && !operationBusy) setForm(null); }} panelClassName={["refund", "shift_purchase"].includes(form?.operation ?? "") ? styles.invoicePanel : styles.shiftDialog}>{form && <FinanceOperationForm key={form.operation} form={form} snapshot={data} pending={pending} error={error} onInventoryBusyChange={setOperationBusy} onInventorySaved={state.applyInventoryCatalog} onInventoryUnitsChanged={state.applyInventoryUnits} onCancel={() => setForm(null)} onSubmit={async (operation, payload) => { const saved = await state.execute(operation, payload); if (saved) { setForm(null); if (operation === "shift_close" && slug && !butcher) await finishLogout(); if (operation === "refund" && saved.status !== "pending") setReceiptId(saved.id); } return !!saved; }} />}</Modal>
-    <Modal open={showHistory} title="سجل المبيعات" onClose={() => setShowHistory(false)} panelClassName="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">{!butcher && <div className={styles.actions}><button type="button" className={styles.secondary} disabled={invoiceMessages.loading || !history.length} onClick={() => void invoiceMessages.refresh()}><RefreshCw size={16} aria-hidden="true" />تحديث حالة الرسائل</button></div>}{data.truncated && <p className={styles.notice}>يعرض السجل أحدث العمليات المتاحة</p>}{!history.length ? <Empty title="لا توجد مبيعات مسجلة" /> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>المستند</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th>{!butcher && <th>واتساب</th>}<th>الإجراء</th></tr></thead><tbody>{history.map((document) => <tr key={document.id}><td>{document.number ? `#${document.number}` : document.local_reference}{document.sync_status && document.sync_status !== "synced" && <small className={styles.muted}> بانتظار المزامنة</small>}</td><td>{financeDate(document.created_at)}</td><td><Numeric value={document.total} money /></td><td>{financeDocumentStatus(document)}</td>{!butcher && <td><FinanceInvoiceMessageStatus entry={invoiceMessages.entries[document.id]} offline={document.sync_status === "queued" || document.sync_status === "conflict"} /></td>}<td><div className={styles.actions}><button className={styles.secondary} onClick={() => { setShowHistory(false); setReceiptId(document.id); }}>الإيصال</button>{!document.refunded && (!document.sync_status || document.sync_status === "synced") && <button className={styles.danger} disabled={disabled} onClick={() => { setShowHistory(false); open({ operation: "refund", title: `مرتجع مبيعات #${document.number}`, values: { documentId: document.id } }); }}>إرجاع</button>}</div></td></tr>)}</tbody></table></div>}</Modal>
+    <Modal open={!!form} title={form?.title ?? t("الوردية")} onClose={() => { if (!pending && !operationBusy) setForm(null); }} panelClassName={["refund", "shift_purchase"].includes(form?.operation ?? "") ? styles.invoicePanel : styles.shiftDialog}>{form && <FinanceOperationForm key={form.operation} form={form} snapshot={data} pending={pending} error={error} onInventoryBusyChange={setOperationBusy} onInventorySaved={state.applyInventoryCatalog} onInventoryUnitsChanged={state.applyInventoryUnits} onCancel={() => setForm(null)} onSubmit={async (operation, payload) => { const saved = await state.execute(operation, payload); if (saved) { setForm(null); if (operation === "shift_close" && slug && !butcher) await finishLogout(); if (operation === "refund" && saved.status !== "pending") setReceiptId(saved.id); } return !!saved; }} />}</Modal>
+    <Modal open={showHistory} title={t("سجل المبيعات")} onClose={() => setShowHistory(false)} panelClassName="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">{!butcher && <div className={styles.actions}><button type="button" className={styles.secondary} disabled={invoiceMessages.loading || !history.length} onClick={() => void invoiceMessages.refresh()}><RefreshCw size={16} aria-hidden="true" />{t("تحديث حالة الرسائل")}</button></div>}{data.truncated && <p className={styles.notice}>{t("يعرض السجل أحدث العمليات المتاحة")}</p>}{!history.length ? <Empty title={t("لا توجد مبيعات مسجلة")} /> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>{t("المستند")}</th><th>{t("التاريخ")}</th><th>{t("الإجمالي")}</th><th>{t("الحالة")}</th>{!butcher && <th>{t("واتساب")}</th>}<th>{t("الإجراء")}</th></tr></thead><tbody>{history.map((document) => <tr key={document.id}><td>{document.number ? `#${document.number}` : document.local_reference}{document.sync_status && document.sync_status !== "synced" && <small className={styles.muted}> {t("بانتظار المزامنة")}</small>}</td><td>{financeDate(document.created_at)}</td><td><PosNumeric value={document.total} money /></td><td>{t(financeDocumentStatus(document))}</td>{!butcher && <td><FinanceInvoiceMessageStatus entry={invoiceMessages.entries[document.id]} offline={document.sync_status === "queued" || document.sync_status === "conflict"} /></td>}<td><div className={styles.actions}><button className={styles.secondary} onClick={() => { setShowHistory(false); setReceiptId(document.id); }}>{t("الإيصال")}</button>{!document.refunded && (!document.sync_status || document.sync_status === "synced") && <button className={styles.danger} disabled={disabled} onClick={() => { setShowHistory(false); open({ operation: "refund", title: `${t("مرتجع مبيعات #")}${document.number}`, values: { documentId: document.id } }); }}>{t("إرجاع")}</button>}</div></td></tr>)}</tbody></table></div>}</Modal>
     {receiptPreview && <FinanceReceiptDialog preview receiptBrand={state.offline.brand} document={receiptPreview} snapshot={data} onClose={() => setReceiptPreview(null)} />}
     {printDocument && printer.ready && <FinanceReceiptDialog key={`${data.cafe.id}:automatic:${printId}`} document={printDocument} snapshot={data} receiptBrand={state.offline.brand} autoPrint={printer.autoEnabled} backgroundAutoPrint autoPrintKey={printId} onPrint={printer.handler(printId, true)} onClose={() => setPrintQueue((queue) => queue.filter((id) => id !== printId))} />}
     {receipt && <FinanceReceiptDialog key={`${data.cafe.id}:${receiptId}`} document={receipt} snapshot={data} receiptBrand={state.offline.brand} onPrint={printer.handler(receiptId ?? receipt.id, false)} onClose={() => setReceiptId(null)} />}

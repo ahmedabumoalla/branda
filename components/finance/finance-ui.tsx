@@ -5,6 +5,7 @@ import { financeMoney } from "@/lib/finance/brand-finance";
 import styles from "./finance.module.css";
 import receiptStyles from "./finance-receipt.module.css";
 import type { ReceiptBrand, ReceiptCopy } from "./finance-receipt-print";
+import { financeReceiptQr } from "@/lib/finance/receipt-tax";
 export { printThermalReceipt as printFinanceReceipt } from "./finance-receipt-print";
 
 export const accountKindNames: Record<FinanceAccountKind, string> = {
@@ -52,15 +53,18 @@ export function FinanceReceipt({ document, snapshot, brand, copy = "customer", p
   const refund = document.kind === "refund";
   const original = snapshot.documents.find((item) => item.id === document.reference_id);
   const returned = document.refunded_total ?? (document.refunded ? document.total : 0);
-  const title = preparation ? "طلب تحضير" : refund ? "فاتورة مرتجع" : document.kind === "sale" ? "فاتورة مبيعات" : documentKindNames[document.kind] ?? "مستند مالي";
+  const taxQr = !preparation && !preview ? financeReceiptQr(document, snapshot.cafe.businessCategory === "butcher_shops") : null;
+  const taxReady = taxQr?.kind === "tax";
+  const title = preparation ? "طلب تحضير" : refund ? (taxReady ? "إشعار دائن ضريبي مبسط" : "فاتورة مرتجع") : document.kind === "sale" ? (taxReady ? "فاتورة ضريبية مبسطة" : "فاتورة مبيعات") : documentKindNames[document.kind] ?? "مستند مالي";
   return <article dir="rtl" data-finance-receipt data-receipt-preparation={preparation || undefined} className={receiptStyles.receipt} style={{ "--receipt-brand": brand?.color ?? "#3a2117" } as CSSProperties}>
     <header data-receipt-header>
       {/* The original tenant logo must retain its proportions and authenticated signed URL. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {brand?.logoUrl && <img src={brand.logoUrl} alt={brand.name} />}
-      <h3>{brand?.name || snapshot.cafe.name}</h3>
+      <h3>{document.receipt_seller?.name || brand?.name || snapshot.cafe.name}</h3>
+      {!preparation && document.receipt_seller?.vatNumber && <p>الرقم الضريبي <bdi dir="ltr">{document.receipt_seller.vatNumber}</bdi></p>}
       <p data-receipt-title>{title}</p>{preview ? <p><strong>معاينة فقط لم تُسجل الفاتورة</strong></p> : <><p>{document.number ? `#${document.number}` : document.local_reference}</p>{document.local_reference && document.number > 0 && <p>المرجع المحلي {document.local_reference}</p>}{document.sync_status && document.sync_status !== "synced" && <p>محفوظة على الجهاز بانتظار المزامنة</p>}</>}
-      <p>{financeDate(document.created_at)}</p>
+      <p>{financeDate(document.local_created_at || document.created_at)}</p>
     </header>
     <div data-receipt-meta>
       {preparation ? <p>نسخة المطبخ أو البار</p> : <>
@@ -91,6 +95,7 @@ export function FinanceReceipt({ document, snapshot, brand, copy = "customer", p
         {document.outstanding > .009 && <div data-receipt-row><span>المتبقي</span><Numeric value={document.outstanding} money /></div>}
       </>}
     </>}
+    {taxQr && <div data-receipt-qr><svg data-receipt-tax-qr role="img" aria-label={taxReady ? "رمز الفاتورة الضريبية" : "رمز الفاتورة"} viewBox={`0 0 ${taxQr.size} ${taxQr.size}`} xmlns="http://www.w3.org/2000/svg" shapeRendering="crispEdges"><rect width={taxQr.size} height={taxQr.size} fill="#fff" /><path d={taxQr.path} fill="#000" /></svg></div>}
     {document.note && <p data-receipt-note>{preparation ? "ملاحظة الطلب" : "ملاحظة"}: {document.note}</p>}
     <footer data-receipt-footer>{preview ? "معاينة فقط وليست إثبات دفع" : preparation ? "نسخة تحضير وليست فاتورة تحصيل" : "شكرًا لزيارتكم"}</footer>
   </article>;

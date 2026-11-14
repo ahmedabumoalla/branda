@@ -9,6 +9,10 @@ global.CustomEvent = class { constructor(type, payload) { this.type = type; this
 (async () => {
   assert.equal(settings.loadPrinterSettings('first').customer.enabled, true);
   const config = { ...settings.defaultPrinterSettings(), mode: 'bridge', token: 'a'.repeat(64), customer: { enabled: true, deviceName: 'Customer thermal', paper: '58' }, preparation: { enabled: true, deviceName: 'Kitchen thermal', paper: '80' } };
+  const butcher = settings.printerSettingsForBusiness(config, 'butcher_shops');
+  assert.equal(butcher.customer.enabled, true); assert.equal(butcher.preparation.enabled, false);
+  assert.equal(config.preparation.enabled, true, 'Stored settings remain intact');
+  assert.equal(settings.printerSettingsForBusiness(config, 'cafes'), config, 'Other categories keep kitchen printing');
   settings.savePrinterSettings('first', config);
   assert.deepEqual(settings.loadPrinterSettings('first'), config);
   assert.equal(settings.loadPrinterSettings('second').mode, 'browser'); assert.equal(events, 1);

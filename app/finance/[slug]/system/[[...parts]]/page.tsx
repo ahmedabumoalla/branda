@@ -5,6 +5,7 @@ import {readErpStaffShell} from '@/lib/data/erp-staff-shell';
 import {readBranchContext} from '@/lib/data/erp-branches';
 import {withErpRequest} from '@/lib/erp/request-context';
 import {erpHref} from '@/lib/erp/navigation';
+import {mindErpNavigationVisible} from '@/lib/platform/mind-navigation';
 import {StaffShell} from '@/components/erp/staff-shell';
 import {SystemAppearance} from '@/components/erp/settings/appearance';
 import s from '@/components/erp/staff-shell.module.css';
@@ -52,6 +53,7 @@ export default async function Page({params,searchParams}:{params:Promise<{slug:s
  if(!user)redirect(`/finance/${slug}/system/login`);
  const shell=await readErpStaffShell(slug);
  const branch=await readBranchContext(slug);
+ const visibleDomains=shell.domains.filter(d=>mindErpNavigationVisible(slug,d.key));
  const [module,...rest]=parts;
  const domain=shell.domains.find(d=>d.href===`/dashboard/system/${module}`);
  if(module&&!domain)notFound();
@@ -78,6 +80,6 @@ export default async function Page({params,searchParams}:{params:Promise<{slug:s
     case 'branches':return Branches(props);
     default:notFound();
    }
- }):<div className={s.home}>{shell.domains.map(d=><Link key={d.key} href={erpHref(d.href,slug)}>{d.label}</Link>)}{!shell.domains.length&&<p className={s.empty}>لا توجد أقسام متاحة لحسابك تواصل مع مسؤول العلامة لتعيين صلاحياتك</p>}</div>;
+ }):<div className={s.home}>{visibleDomains.map(d=><Link key={d.key} href={erpHref(d.href,slug)}>{d.label}</Link>)}{!visibleDomains.length&&<p className={s.empty}>لا توجد أقسام متاحة لحسابك تواصل مع مسؤول العلامة لتعيين صلاحياتك</p>}</div>;
  return <StaffShell slug={slug} name={shell.cafe.name} domains={shell.domains}><SystemAppearance slug={slug}>{content}</SystemAppearance></StaffShell>;
 }

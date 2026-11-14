@@ -13,7 +13,7 @@ const hooks = { ...React,
 };
 const exported = {};
 const code = ts.transpileModule(fs.readFileSync('components/finance/finance-pos-fullscreen.tsx', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
-new Function('require', 'exports', code)(name => name === 'react' ? hooks : name.endsWith('.css') ? { __esModule: true, default: {} } : require(name), exported);
+new Function('require', 'exports', code)(name => name === './finance-pos-locale' ? {useFinancePosLocale:()=>({t:value=>value,language:'ar',dir:'rtl'})} : name === 'react' ? hooks : name.endsWith('.css') ? { __esModule: true, default: {} } : require(name), exported);
 const render = () => { cursor = 0; return exported.FinancePosFullscreen(); };
 async function main() {
   const nativeDocument = global.document;

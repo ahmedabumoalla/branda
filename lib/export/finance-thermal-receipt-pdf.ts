@@ -9,7 +9,7 @@ export async function renderFinanceThermalReceiptPdf(html: string) {
     executablePath: localExecutable || await chromium.executablePath(),
     args: localExecutable ? [] : chromium.args,
     headless: "shell", timeout: 20000,
-    defaultViewport: { width: 288, height: 900 },
+    defaultViewport: { width: 302, height: 900 },
   });
   try {
     const page = await browser.newPage();
@@ -22,8 +22,8 @@ export async function renderFinanceThermalReceiptPdf(html: string) {
     await page.setContent(html, { waitUntil: "load", timeout: 15000 });
     await page.emulateMediaType("print");
     await page.evaluate(async () => { await document.fonts.ready; });
-    const height = await page.evaluate(() => document.querySelector("article")!.getBoundingClientRect().height);
+    const height = await page.evaluate(() => document.body.getBoundingClientRect().height);
     // Continuous thermal roll for ordinary orders; long orders paginate without clipping.
-    return await page.pdf({ width: "80mm", height: `${Math.min(1200, Math.max(60, Math.ceil(height * 25.4 / 96) + 5))}mm`, margin: { top: "2mm", right: "2mm", bottom: "2mm", left: "2mm" }, printBackground: true, waitForFonts: true, timeout: 20000 });
+    return await page.pdf({ width: "80mm", height: `${Math.min(1200, Math.max(60, Math.ceil(height * 25.4 / 96) + 2))}mm`, margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" }, printBackground: true, waitForFonts: true, timeout: 20000 });
   } finally { await browser.close(); }
 }

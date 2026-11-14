@@ -150,7 +150,7 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
         validatePosExpectedAmount(line.expectedUnitPrice, selected.product.price, 1_000_000);
         return { ...selected, quantity: line.quantity };
       });
-      const document = createFinanceReceiptPreview({ lines, settings: data.settings, discount: Number(payload.discount), paymentKind: payload.accountId ? data.accounts.find(account => account.id === payload.accountId)?.kind ?? "cash" : "credit", accountId: payload.accountId as string, partyId: payload.partyId as string, customerPhone: payload.customerPhone as string, note: String(payload.note ?? ""), createdAt: new Date().toISOString() });
+      const document = createFinanceReceiptPreview({ lines, settings: data.settings, receiptSeller: data.receiptSeller, discount: Number(payload.discount), paymentKind: payload.accountId ? data.accounts.find(account => account.id === payload.accountId)?.kind ?? "cash" : "credit", accountId: payload.accountId as string, partyId: payload.partyId as string, customerPhone: payload.customerPhone as string, note: String(payload.note ?? ""), createdAt: new Date().toISOString() });
       validatePosExpectedAmount(payload.expectedTotal, document.total, 100);
       document.shift_id = typeof payload.shiftId === "string" && payload.shiftId ? payload.shiftId : null; document.warehouse_id = String(payload.warehouseId); document.created_by = data.userId;
       const fingerprint = JSON.stringify(payload);

@@ -11,6 +11,9 @@ type Props = {
   children: React.ReactNode;
   footer?: React.ReactNode;
   panelClassName?: string;
+  dir?: "rtl" | "ltr";
+  lang?: string;
+  closeLabel?: string;
 };
 
 export function Modal({
@@ -20,6 +23,9 @@ export function Modal({
   children,
   footer,
   panelClassName,
+  dir = "rtl",
+  lang,
+  closeLabel = "إغلاق",
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -37,7 +43,8 @@ export function Modal({
 
   return (
     <div
-      dir="rtl"
+      dir={dir}
+      lang={lang}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
     >
       <div
@@ -70,7 +77,7 @@ export function Modal({
 
           <button
             type="button"
-            aria-label="إغلاق"
+            aria-label={closeLabel}
             onClick={onClose}
             className="rounded-2xl bg-[#F8F4EF] p-3 text-[#3A2117]"
           >

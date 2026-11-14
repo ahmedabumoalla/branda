@@ -58,7 +58,7 @@ export async function storeOfflineSale(scope: string, payload: Record<string, un
   const device = await read<string | undefined>(meta.get("device")) ?? crypto.randomUUID().slice(0, 8).toUpperCase();
   const counter = (await read<number | undefined>(meta.get("counter")) ?? 0) + 1;
   const localReference = `L-${device}-${String(counter).padStart(6, "0")}`;
-  const sale: OfflineSale = { id: requestId, scope, sequence: counter, command: { operation: "sale", requestId, payload: { ...payload, offlineExpectedVatRate: document.vat_rate, offlineExpectedTaxInclusive: document.tax_inclusive, localReceiptReference: localReference, localCreatedAt: document.created_at } }, document: { ...document, id: requestId, local_reference: localReference, sync_status: "queued" }, status: "queued", createdAt: document.created_at, localReference };
+  const sale: OfflineSale = { id: requestId, scope, sequence: counter, command: { operation: "sale", requestId, payload: { ...payload, ...(document.receipt_seller ? { offlineExpectedReceiptSeller: document.receipt_seller } : {}), offlineExpectedVatRate: document.vat_rate, offlineExpectedTaxInclusive: document.tax_inclusive, localReceiptReference: localReference, localCreatedAt: document.created_at } }, document: { ...document, id: requestId, local_reference: localReference, sync_status: "queued" }, status: "queued", createdAt: document.created_at, localReference };
   sale.stockDeductions = offlineStockDeductions(session.snapshot, document);
   meta.put(device, "device"); meta.put(counter, "counter"); sales.add(sale);
   await done; return sale;

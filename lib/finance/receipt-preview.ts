@@ -3,6 +3,7 @@ import { previewFinanceTotals, type FinanceDocument, type FinanceProduct, type F
 /** Local-only receipt model; never reserves a number or posts a financial operation. */
 export function createFinanceReceiptPreview(input: {
   lines: { product: FinanceProduct; quantity: number; unit?: { id: string; label: string }; stockFactor?: number }[];
+  receiptSeller?: FinanceSnapshot["receiptSeller"];
   settings: FinanceSnapshot["settings"];
   discount: number;
   paymentKind: string;
@@ -35,6 +36,7 @@ export function createFinanceReceiptPreview(input: {
     customer_phone: input.customerPhone || null, shift_id: null, warehouse_id: null,
     ...totals, paid, outstanding: round(totals.total - paid), refunded: false,
     reference_id: null, note: input.note, created_at: input.createdAt, lines,
+    receipt_seller: input.receiptSeller ? { ...input.receiptSeller } : null,
     vat_rate: input.settings.vat_rate, tax_inclusive: input.settings.tax_inclusive,
   };
 }

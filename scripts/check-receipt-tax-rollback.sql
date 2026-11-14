@@ -1,0 +1,40 @@
+-- Execute after the new migration in one transaction and always ROLLBACK.
+DO $test$
+DECLARE c uuid:='94b9326e-9fd1-4b15-aa70-008ac4387f4b'; o uuid:='1560d5b9-ab99-4e7b-ab9b-0d95f1e689ad';
+ p uuid:=gen_random_uuid(); bank uuid; wh uuid; sid uuid; s jsonb; seller jsonb; result jsonb; body jsonb; first_id uuid; second_id uuid; line_id uuid; failed boolean; checks integer:=0;
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM public.cafes WHERE id=c AND owner_user_id=o AND business_category='butcher_shops') THEN RAISE EXCEPTION 'Unexpected fixture tenant'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',o::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',o,'role','authenticated')::text,true);
+ s:=public.brand_finance_snapshot(c);
+ SELECT (a->>'id')::uuid INTO bank FROM jsonb_array_elements(s->'accounts') a WHERE a->>'kind'='bank' LIMIT 1;
+ wh:=(s->'warehouses'->0->>'id')::uuid;
+ SELECT id INTO sid FROM public.bf_shifts WHERE cafe_id=c AND user_id=o AND status='open' LIMIT 1;
+ PERFORM public.brand_finance_execute(c,'settings',jsonb_build_object('vatRate',15,'taxInclusive',true,'closedThrough',s->'settings'->'closed_through'),gen_random_uuid());
+ seller:=public.brand_finance_receipt_seller(c);
+ IF seller->>'vatNumber'<>'' THEN RAISE EXCEPTION 'Live VAT identity changed; review fixture before running'; END IF;
+ checks:=checks+1;
+ INSERT INTO public.menu_products(id,cafe_id,name,price) VALUES(p,c,'ROLLBACK ONLY receipt tax fixture',115);
+ body:=jsonb_build_object('lines',jsonb_build_array(jsonb_build_object('productId',p,'quantity',1,'expectedUnitPrice',115)),'accountId',bank,'warehouseId',wh,'shiftId',sid,'discount',0,'expectedTotal',115);
+ result:=public.brand_finance_execute(c,'sale',body,gen_random_uuid()); first_id:=(result->>'id')::uuid;
+ IF NOT EXISTS(SELECT 1 FROM public.bf_documents WHERE id=first_id AND receipt_seller=seller AND tax=15 AND total=115 AND vat_rate=15) THEN RAISE EXCEPTION 'Future VAT or captured seller mismatch'; END IF;
+ checks:=checks+1;
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(public.brand_finance_snapshot(c)->'documents') d WHERE d->>'id'=first_id::text AND d->'receipt_seller'=seller) THEN RAISE EXCEPTION 'Snapshot lost immutable seller'; END IF;
+ checks:=checks+1;
+ failed:=false;BEGIN UPDATE public.bf_documents SET receipt_seller='{}' WHERE id=first_id;EXCEPTION WHEN OTHERS THEN failed:=true;END;
+ IF NOT failed THEN RAISE EXCEPTION 'Seller mutation allowed'; END IF; checks:=checks+1;
+ INSERT INTO public.cafe_settings(cafe_id,tax_number) VALUES(c,'300000000000003') ON CONFLICT(cafe_id) DO UPDATE SET tax_number=excluded.tax_number;
+ result:=public.brand_finance_execute(c,'sale',body,gen_random_uuid()); second_id:=(result->>'id')::uuid;
+ IF NOT EXISTS(SELECT 1 FROM public.bf_documents WHERE id=second_id AND receipt_seller->>'vatNumber'='300000000000003') THEN RAISE EXCEPTION 'Configured VAT not frozen'; END IF;checks:=checks+1;
+ IF (SELECT receipt_seller FROM public.bf_documents WHERE id=first_id) IS DISTINCT FROM seller THEN RAISE EXCEPTION 'Prior seller changed'; END IF;checks:=checks+1;
+ SELECT id INTO line_id FROM public.bf_document_lines WHERE document_id=second_id LIMIT 1;
+ result:=public.brand_finance_execute(c,'refund',jsonb_build_object('documentId',second_id,'lines',jsonb_build_array(jsonb_build_object('lineId',line_id,'quantity',1)),'expectedTotal',115,'expectedPaid',115,'paymentMethod','bank','accountId',bank,'note','Rollback receipt test'),gen_random_uuid());
+ PERFORM public.brand_finance_execute(c,'refund_approve',jsonb_build_object('requestId',result->>'id'),gen_random_uuid());
+ IF NOT EXISTS(SELECT 1 FROM public.bf_documents WHERE reference_id=second_id AND kind='refund' AND receipt_seller->>'vatNumber'='300000000000003') THEN RAISE EXCEPTION 'Refund seller missing'; END IF;checks:=checks+1;
+ body:=body||jsonb_build_object('offlineExpectedVatRate',15,'offlineExpectedTaxInclusive',true,'localReceiptReference','TEST-'||p::text,'localCreatedAt',now(),'offlineExpectedReceiptSeller',seller);
+ failed:=false;BEGIN PERFORM public.brand_finance_execute(c,'sale',body,gen_random_uuid());EXCEPTION WHEN OTHERS THEN failed:=true;END;
+ IF NOT failed THEN RAISE EXCEPTION 'Offline seller drift accepted'; END IF;checks:=checks+1;
+ RAISE NOTICE 'Receipt tax rollback assertions: %',checks;
+END $test$;
+SELECT true AS receipt_tax_rollback_passed,8 AS checks;
+ROLLBACK;

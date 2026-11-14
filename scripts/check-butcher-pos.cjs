@@ -101,7 +101,7 @@ test('Half-cent unit price uses the same subtotal for full discount and receipt'
   assert.equal(before.subtotal, .15);
   assert.equal(previewFinanceTotals(lines, before.subtotal, 15, true).total, 0);
 });
-const nodes = tree => Array.isArray(tree) ? tree.flatMap(nodes) : tree && typeof tree === 'object' ? [tree, ...nodes(tree.props?.children), ...nodes(tree.props?.footer)] : [];
+const nodes = tree => Array.isArray(tree) ? tree.flatMap(nodes) : tree && typeof tree === 'object' ? tree.type?.name === 'FinanceTouchNumberInput' ? nodes(tree.type(tree.props)) : [tree, ...nodes(tree.props?.children), ...nodes(tree.props?.footer)] : [];
 const text = tree => Array.isArray(tree) ? tree.map(text).join('') : tree && typeof tree === 'object' ? text(tree.props?.children) : tree == null || typeof tree === 'boolean' ? '' : String(tree);
 const find = (tree, predicate) => { const result = nodes(tree).find(predicate); assert.ok(result, 'Expected control'); return result; };
 const button = (tree, label) => find(tree, node => node.type === 'button' && text(node) === label);
@@ -110,9 +110,10 @@ function harness(data) {
   const hooks = { ...React, useMemo: fn => fn(), useEffect() {}, useState(initial) { const slot = index++; if (!(slot in slots)) slots[slot] = typeof initial === 'function' ? initial() : initial; return [slots[slot], next => slots[slot] = typeof next === 'function' ? next(slots[slot]) : next]; }, useRef(initial) { const slot = index++; return slots[slot] ??= { current: initial }; } };
   const customer = { normalized: 'forbidden-phone', payload() { throw Error('Customer payload must not run for butcher'); }, reset() {} };
   const state = { snapshot: data, pending: false, stale: false, error: '', message: '', clearFeedback() {}, refresh() {}, offline: { sales: [], ready: true, pending: [] }, execute: async (...args) => { calls.push(args); return { id: 'sale', offline: true }; } };
-  const mocks = { react: hooks, 'next/navigation': { useRouter: () => ({ replace() {} }) }, 'next/link': { default: function Link() {}, __esModule: true }, 'next/image': { default: function Image() {}, __esModule: true }, '@/app/actions/finance-access': { logoutFinanceAction() {} }, '@/components/dashboard/ui/modal': { Modal() {} }, './finance-operation-form': { FinanceOperationForm() {} }, './finance-ui': { Empty() {}, Field() {}, Numeric() {}, financeDate: String, financeDocumentStatus: () => '' }, './finance-refund-requests': { FinanceRefundRequests() {} }, './finance-receipt-dialog': { FinanceReceiptDialog() {} }, './finance-pos-fullscreen': { FinancePosFullscreen() {} }, './finance-pos-actions': { FinancePosActions() {} }, './finance-pos-customer': { usePosCustomer: () => customer, FinancePosCustomerField() {}, FinancePosPager() {}, financePosCustomerNotice: () => '' }, './use-pos-finance': { usePosFinance: () => state }, './finance-pos-offline-status': { FinancePosOfflineStatus() {} }, './use-finance-printer': { useFinancePrinter: () => ({ ready: false, autoEnabled: false }) }, './use-finance-invoice-messages': { useFinanceInvoiceMessages: args => { messageLoads.push(args); return { entries: {}, loading: false }; } }, './finance-invoice-message-status': { FinanceInvoiceMessageStatus() {} } };
+  const mocks = { './finance-pos-locale':{useFinancePosLocale:()=>({t:value=>value,language:'ar',dir:'rtl',setLanguage(){},productName:product=>product.name,categoryName:name=>name,money:()=>''}),FinancePosLocaleProvider(){},PosNumeric(){},FinancePosModal:function Modal(){}}, react: hooks, 'next/navigation': { useRouter: () => ({ replace() {} }) }, 'next/link': { default: function Link() {}, __esModule: true }, 'next/image': { default: function Image() {}, __esModule: true }, '@/app/actions/finance-access': { logoutFinanceAction() {} }, '@/components/dashboard/ui/modal': { Modal() {} }, './finance-operation-form': { FinanceOperationForm() {} }, './finance-ui': { Empty() {}, Field() {}, Numeric() {}, financeDate: String, financeDocumentStatus: () => '' }, './finance-refund-requests': { FinanceRefundRequests() {} }, './finance-receipt-dialog': { FinanceReceiptDialog() {} }, './finance-pos-fullscreen': { FinancePosFullscreen() {} }, './finance-pos-actions': { FinancePosActions() {} }, './finance-pos-customer': { usePosCustomer: () => customer, FinancePosCustomerField() {}, FinancePosPager() {}, financePosCustomerNotice: () => '' }, './use-pos-finance': { usePosFinance: () => state }, './finance-pos-offline-status': { FinancePosOfflineStatus() {} }, './use-finance-printer': { useFinancePrinter: () => ({ ready: false, autoEnabled: false }) }, './use-finance-invoice-messages': { useFinanceInvoiceMessages: args => { messageLoads.push(args); return { entries: {}, loading: false }; } }, './finance-invoice-message-status': { FinanceInvoiceMessageStatus() {} } };
+  mocks['./finance-touch-number-input']={FinanceTouchNumberInput:function FinanceTouchNumberInput({onValueChange,...props}){return React.createElement('input',{...props,'data-touch-number':true,onChange:event=>onValueChange(event.target.value)});}};
   const { FinancePOS } = load('components/finance/finance-pos.tsx', mocks);
-  return { calls, messageLoads, render() { index = 0; const tree = FinancePOS({ initialSnapshot: data }); return tree.type?.name === 'StandardFinancePOS' ? tree.type(tree.props) : tree; } };
+  return { calls, messageLoads, render() { index = 0; const outer = FinancePOS({ initialSnapshot: data }); const tree = outer.props.children; return tree.type?.name === 'StandardFinancePOS' ? tree.type(tree.props) : tree; } };
 }
 async function main() {
   const manual = harness({ ...snapshot, products: [cashierProduct] });
@@ -132,6 +133,18 @@ async function main() {
   button(manual.render(), 'إضافة إلى الطلب').props.onClick();
   let manualLines = nodes(manual.render()).filter(node => node.type === 'input' && node.props?.['aria-label']?.startsWith('كمية لحم'));
   assert.equal(manualLines.length, 2);
+  const cartInputs=()=>nodes(manual.render()).filter(node=>node.type==='input'&&node.props?.['aria-label']?.startsWith('كمية لحم'));
+  for(const raw of ['', '0', '1.2345']){
+    cartInputs()[0].props.onChange({target:{value:raw}});
+    assert.equal(cartInputs().length,2,'Clearing or unfinished quantity never removes cart row');
+    assert.equal(cartInputs()[0].props.value,raw,'Raw quantity edit remains visible');
+    assert.equal(cartInputs()[0].props['aria-invalid'],true);
+    assert.equal(button(manual.render(),'تأكيد الاستلام وإصدار إيصال').props.disabled,true);
+    await button(manual.render(),'تأكيد الاستلام وإصدار إيصال').props.onClick();assert.equal(manual.calls.length,0,'Unfinished quantity never submits old hidden quantity');
+  }
+  cartInputs()[0].props.onChange({target:{value:'1.'}});assert.equal(cartInputs()[0].props.value,'1.','Decimal separator remains while editing');
+  cartInputs()[0].props.onChange({target:{value:'1.250'}});assert.equal(cartInputs()[0].props.value,'1.250','Trailing decimal zero is preserved');
+  assert.equal(cartInputs()[0].props['data-touch-number'],true,'Cart quantity uses touch keypad');checks++;
   manualLines[0].props.onChange({ target: { value: '2' } });
   await button(manual.render(), 'تأكيد الاستلام وإصدار إيصال').props.onClick();
   assert.equal(manual.calls[0][1].expectedTotal, 1401);
@@ -141,6 +154,7 @@ async function main() {
   const openPicker = () => find(picker.render(), node => node.type === 'button' && node.props?.['aria-label']?.startsWith('إضافة لحم')).props.onClick();
   const quantityInput = () => find(picker.render(), node => node.type === 'input' && node.props?.['aria-describedby'] === 'butcher-quantity-hint');
   openPicker();
+  assert.equal(quantityInput().props['data-touch-number'],true,'Unit picker uses touch keypad');
   assert.equal(quantityInput().props.value, '');
   assert.equal(quantityInput().props['aria-invalid'], false);
   assert.equal(button(picker.render(), 'إضافة إلى الطلب').props.disabled, true);
@@ -191,6 +205,9 @@ async function main() {
   assert.ok(nodes(tree).some(node => node.type?.name === 'FinancePosCustomerField'));
   find(tree, node => node.type === 'button' && node.props?.['aria-label']?.startsWith('إضافة لحم')).props.onClick(); tree = normal.render();
   assert.equal(button(tree, 'تأكيد الاستلام وإصدار إيصال').props.disabled, true); checks++;
+  const hospital=harness({...snapshot,cafe:{...snapshot.cafe,slug:'mind-hospital',businessCategory:'cafes'},products:[{...product,butcherDetails:null}]});tree=hospital.render();
+  assert.ok(nodes(tree).some(node=>node.type==='button'&&node.props?.['aria-label']?.startsWith('إضافة لحم')),'Hospital brand uses the same original cashier product grid');
+  assert.ok(!nodes(tree).some(node=>node.type?.name==='FinancePosPager'),'Hospital brand keeps pager hidden');checks++;
   console.log(`PASS butcher POS ${checks} groups: weighted pricing, unit identity, stock conversion, no-shift checkout, no customer UI/payload/polls, existing-category shift gate`);
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

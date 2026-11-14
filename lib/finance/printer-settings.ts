@@ -15,6 +15,10 @@ export const FINANCE_PRINTER_BRIDGE = "http://127.0.0.1:17841";
 export function defaultPrinterSettings(): FinancePrinterSettings {
   return { version: 1, mode: "browser", token: "", customer: { enabled: true, deviceName: "", paper: "80" }, preparation: { enabled: true, deviceName: "", paper: "80" } };
 }
+/** Butcher sales have one customer invoice, even on devices with older kitchen settings. */
+export function printerSettingsForBusiness(settings: FinancePrinterSettings, businessCategory?: string): FinancePrinterSettings {
+  return businessCategory === "butcher_shops" ? { ...settings, preparation: { ...settings.preparation, enabled: false } } : settings;
+}
 export function normalizePrinterSettings(value: unknown): FinancePrinterSettings {
   const base = defaultPrinterSettings();
   if (!value || typeof value !== "object") return base;

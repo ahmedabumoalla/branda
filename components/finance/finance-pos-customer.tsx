@@ -9,15 +9,17 @@ import { Modal } from "@/components/dashboard/ui/modal";
 import { PagerOrderCard } from "@/components/pager/pager-order-card";
 import styles from "./finance.module.css";
 import s from "./finance-pos-customer.module.css";
+import { useFinancePosLocale } from "./finance-pos-locale";
+import { financePosCustomerEnglish } from "@/lib/finance/pos-customer-labels";
 
-export function financePosCustomerNotice(result?: FinancePosCustomerResult) {
+export function financePosCustomerNotice(result?: FinancePosCustomerResult, language: "ar" | "en" = "ar") {
   if (!result) return "";
   const messages = [result.pagerOrderId ? "أُضيفت الفاتورة إلى البيجر" : ""];
   if (result.loyaltyStatus === "stamped") messages.push("سُجل ختم الولاء للعميل");
   if (result.loyaltyStatus === "pending_enrollment") messages.push("حُفظ ختم الفاتورة لحين إكمال تسجيل بطاقة الولاء");
   if (result.rewardRedeemedId) messages.push("تم صرف المكافأة وإقفالها");
   if (result.notificationStatus === "pending") messages.push("رسالة رابط البطاقة بانتظار الإرسال");
-  return messages.filter(Boolean).join(" · ");
+  return messages.filter(Boolean).map(text => language === "en" ? financePosCustomerEnglish[text] ?? text : text).join(" · ");
 }
 
 export function usePosCustomer(slug?: string) {
@@ -62,19 +64,20 @@ export function usePosCustomer(slug?: string) {
 }
 
 export function FinancePosCustomerField({ state, disabled }: { state: ReturnType<typeof usePosCustomer>; disabled: boolean }) {
+  const { t } = useFinancePosLocale();
   const customer = state.customer;
-  return <section className={s.customer} aria-label="جوال العميل والولاء">
-    <label className={s.phoneLabel}><span>رقم جوال العميل <small>اختياري</small></span><input name="posCustomerPhone" type="tel" inputMode="tel" autoComplete="off" dir="ltr" maxLength={24} placeholder="05xxxxxxxx" value={state.phone} disabled={disabled} onChange={(event) => state.changePhone(event.target.value)} aria-describedby="pos-customer-help" aria-invalid={!!state.phone.trim() && !state.normalized} /></label>
-    <p className={s.hint} id="pos-customer-help">بدون رقم تُصدر الفاتورة كالمعتاد</p>
-    {!!state.phone.trim() && !state.normalized && <p className={s.error}>أدخل رقم جوال سعودي صحيحًا</p>}
+  return <section className={s.customer} aria-label={t("جوال العميل والولاء")}>
+    <label className={s.phoneLabel}><span>{t("رقم جوال العميل")} <small>{t("اختياري")}</small></span><input name="posCustomerPhone" type="tel" inputMode="tel" autoComplete="off" dir="ltr" maxLength={24} placeholder="05xxxxxxxx" value={state.phone} disabled={disabled} onChange={(event) => state.changePhone(event.target.value)} aria-describedby="pos-customer-help" aria-invalid={!!state.phone.trim() && !state.normalized} /></label>
+    <p className={s.hint} id="pos-customer-help">{t("بدون رقم تُصدر الفاتورة كالمعتاد")}</p>
+    {!!state.phone.trim() && !state.normalized && <p className={s.error}>{t("أدخل رقم جوال سعودي صحيحًا")}</p>}
     <div aria-live="polite" aria-busy={state.loading}>
-      {state.loading && <p className={s.hint}>جار التحقق من بطاقة الولاء</p>}
-      {state.error && <div className={s.feedback}><p>{state.error}</p><button type="button" className={styles.secondary} disabled={disabled || state.loading} onClick={state.retry}>إعادة التحقق</button></div>}
+      {state.loading && <p className={s.hint}>{t("جار التحقق من بطاقة الولاء")}</p>}
+      {state.error && <div className={s.feedback}><p>{t(state.error)}</p><button type="button" className={styles.secondary} disabled={disabled || state.loading} onClick={state.retry}>{t("إعادة التحقق")}</button></div>}
       {customer && <div className={s.loyalty}>
-        <div className={s.heading}><WalletCards size={19} aria-hidden="true" /><strong>{customer.member?.name || "ولاء العميل"}</strong></div>
-        {customer.loyaltyEnabled ? customer.member ? <><div className={s.progress}><span>أختام البطاقة</span><strong><bdi>{customer.member.stampsInCycle} / {customer.member.targetStamps}</bdi></strong></div><p className={s.hint}>يُسجل ختم لهذه الفاتورة بعد حفظ البيع</p></> : <p className={s.hint}>يُرسل رابط بطاقة الولاء بعد حفظ البيع ويُضاف ختم الفاتورة عند إكمال التسجيل</p> : <p className={s.hint}>الولاء غير مفعّل لهذه العلامة</p>}
-        {customer.pagerEnabled ? <p className={s.pagerHint}><BellRing size={15} aria-hidden="true" />تُضاف الفاتورة إلى طلبات البيجر بعد الحفظ</p> : <p className={s.hint}>البيجر غير مفعّل لهذه العلامة</p>}
-        {!!customer.rewards.length && <div className={s.reward}><strong><Gift size={17} aria-hidden="true" />مكافأة جاهزة للعميل</strong><label><span>صرف مكافأة مع هذه الفاتورة</span><select name="posRedeemReward" value={state.rewardId} disabled={disabled || state.loading} onChange={(event) => state.selectReward(event.target.value)}><option value="">عدم صرف مكافأة الآن</option>{customer.rewards.map((reward) => <option key={reward.id} value={reward.id}>{reward.title}</option>)}</select></label><p className={s.hint}>عند اختيارها تُقفل المكافأة بعد حفظ البيع ولا يُغيّر سعر الفاتورة تلقائيًا</p></div>}
+        <div className={s.heading}><WalletCards size={19} aria-hidden="true" /><strong>{customer.member?.name || t("ولاء العميل")}</strong></div>
+        {customer.loyaltyEnabled ? customer.member ? <><div className={s.progress}><span>{t("أختام البطاقة")}</span><strong><bdi>{customer.member.stampsInCycle} / {customer.member.targetStamps}</bdi></strong></div><p className={s.hint}>{t("يُسجل ختم لهذه الفاتورة بعد حفظ البيع")}</p></> : <p className={s.hint}>{t("يُرسل رابط بطاقة الولاء بعد حفظ البيع ويُضاف ختم الفاتورة عند إكمال التسجيل")}</p> : <p className={s.hint}>{t("الولاء غير مفعّل لهذه العلامة")}</p>}
+        {customer.pagerEnabled ? <p className={s.pagerHint}><BellRing size={15} aria-hidden="true" />{t("تُضاف الفاتورة إلى طلبات البيجر بعد الحفظ")}</p> : <p className={s.hint}>{t("البيجر غير مفعّل لهذه العلامة")}</p>}
+        {!!customer.rewards.length && <div className={s.reward}><strong><Gift size={17} aria-hidden="true" />{t("مكافأة جاهزة للعميل")}</strong><label><span>{t("صرف مكافأة مع هذه الفاتورة")}</span><select name="posRedeemReward" value={state.rewardId} disabled={disabled || state.loading} onChange={(event) => state.selectReward(event.target.value)}><option value="">{t("عدم صرف مكافأة الآن")}</option>{customer.rewards.map((reward) => <option key={reward.id} value={reward.id}>{reward.title}</option>)}</select></label><p className={s.hint}>{t("عند اختيارها تُقفل المكافأة بعد حفظ البيع ولا يُغيّر سعر الفاتورة تلقائيًا")}</p></div>}
       </div>}
     </div>
   </section>;

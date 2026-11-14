@@ -3,6 +3,8 @@ const fs = require('node:fs');
 const ts = require('typescript');
 const React = require('react');
 const permissions = {};
+const shiftLabels = {};
+new Function("exports", ts.transpileModule(fs.readFileSync("lib/finance/pos-shift-labels.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText)(shiftLabels);
 new Function('exports', ts.transpileModule(fs.readFileSync('lib/finance/permissions.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(permissions);
 
 function hooks() {
@@ -25,7 +27,7 @@ function harness(kind='list',options={}) {
  const state={data:{rows:[row],total:1,hasMore:false,canReceive:true,cashierDrawerId:'drawer',accountants:[{user_id:'accountant',name:'المحاسب'}]},...options};
  const snapshot={role:'owner',cafe:{slug:'brand'},accounts:[{id:'drawer',name:'صندوق الكاشير',kind:'cash',active:true,is_cashier_drawer:true,balance:9999},{id:'cash',name:'الخزينة',kind:'cash',active:true,is_primary:true,balance:0},{id:'bank',name:'البنك',kind:'bank',active:true,balance:0},{id:'archived',name:'مؤرشف',kind:'cash',active:false}],shifts:[{id:'shift',shift_number:42,account_id:'drawer',expected_cash:125}],documents:[],truncated:false};
  const props=kind==='form'?{snapshot,form:{operation:'shift_open'},pending:false,error:'',onCancel(){},onSubmit:async(...args)=>{saves.push(args);return true;}}:{snapshot,onReceived(){state.received=true;}};
- const mocks={react:hook.api,'@/lib/finance/permissions':permissions,'@/components/dashboard/ui/modal':{Modal:function Modal(){}},'./finance-ui':{Numeric:function Numeric(){}},'@/app/actions/finance-cash-handovers':{fetchFinanceCashHandoversAction:async(...args)=>{calls.push(args);return state.error?{ok:false,message:state.error}:{ok:true,data:state.data};},receiveFinanceShiftCashAction:async(...args)=>{saves.push(args);if(state.wait)await state.wait;return state.saveError?{ok:false,message:state.saveError}:{ok:true,data:{id:'receipt',number:77}};}}};
+ const mocks={react:hook.api,'./finance-pos-locale':{PosNumeric:function Numeric(){},useFinancePosLocale:()=>({language:state.language??'ar',dir:state.language==='en'?'ltr':'rtl',t:value=>state.language==='en'?(shiftLabels.financePosShiftLabels[value.trim()]??value):value})},'@/lib/finance/permissions':permissions,'@/components/dashboard/ui/modal':{Modal:function Modal(){}},'./finance-ui':{Numeric:function Numeric(){}},'@/app/actions/finance-cash-handovers':{fetchFinanceCashHandoversAction:async(...args)=>{calls.push(args);return state.error?{ok:false,message:state.error}:{ok:true,data:state.data};},receiveFinanceShiftCashAction:async(...args)=>{saves.push(args);if(state.wait)await state.wait;return state.saveError?{ok:false,message:state.saveError}:{ok:true,data:{id:'receipt',number:77}};}}};
  const exports={};const compiled=ts.transpileModule(fs.readFileSync(`components/finance/finance-cash-${kind==='form'?'handover-form':'handovers'}.tsx`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
  new Function('require','exports',compiled)(name=>name in mocks?mocks[name]:name.endsWith('.css')?{__esModule:true,default:new Proxy({},{get:(_,key)=>key})}:require(name),exports);
  return {state,props,calls,saves,time:exports.cashHandoverTime,render:()=>hook.render(kind==='form'?exports.FinanceCashHandoverForm:exports.FinanceCashHandovers,props)};
@@ -87,6 +89,15 @@ async function main(){let checks=0;
   tree=change(h,tree,'countedCash','0');assert.ok(!nodes(tree).some(n=>n.props?.name==='handoverType'));await submit(tree);
   assert.deepEqual(h.saves[0],['shift_close',{shiftId:'shift',countedCash:0,handoverType:'no_cash',note:''}]);
   tree=change(h,h.render(),'countedCash','1');await submit(tree);assert.equal(h.saves.length,1,'positive cash still requires recipient');checks++;
+ }
+ {
+  const h=harness('form',{language:'en'});let tree=await ready(h);
+  assert.equal(tree.props.lang,'en');assert.equal(tree.props.dir,'ltr');button(tree,'Start shift');
+  await submit(tree);assert.match(text(h.render()),/Enter the cash you actually counted/);assert.equal(h.saves.length,0);
+  tree=change(h,h.render(),'openingCash','27.5');field(tree,'receivedCash').props.onChange({target:{checked:true}});await submit(h.render());
+  assert.deepEqual(h.saves[0],['shift_open',{accountId:'drawer',openingCash:27.5,note:''}]);
+  h.props.form={operation:'shift_close',values:{shiftId:'shift'}};tree=change(h,h.render(),'countedCash','0');await submit(tree);
+  assert.deepEqual(h.saves[1],['shift_close',{shiftId:'shift',countedCash:0,handoverType:'no_cash',note:''}]);checks++;
  }
  const treasury=fs.readFileSync('components/finance/finance-treasury.tsx','utf8');assert.match(treasury,/!account.is_primary && !account.is_cashier_drawer/);assert.match(treasury,/صندوق الكاشير مخصص للورديات ولا يمكن أرشفته/);checks++;
  console.log(`PASS cash handovers UI ${checks} groups: blind auto drawer, required count/recipient, zero, legacy transfer hint, exact receipt without income, permissions, retry idempotency, pagination, double submit`);
