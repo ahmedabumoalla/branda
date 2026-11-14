@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { ArrowUpLeft, ArrowDown, Search, ShoppingBag, MapPin, Shirt, Truck, X, SlidersHorizontal, Star, Heart, Eye, Grid2X2, Home } from "lucide-react";
+import { ArrowUpLeft, ArrowDown, Search, ShoppingBag, Shirt, Truck, X, SlidersHorizontal, Star, Heart, Eye, Grid2X2, Home } from "lucide-react";
 import type { StandaloneMenu, StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { matchesMenuSearch } from "@/lib/menu/standalone-menu";
 import { giftOrderInputSchema, type GiftOrderReceipt, type GiftStoreSettings } from "@/lib/commerce/gift-orders";
 import { giftProductAvailable, productMinimumPrice, type GiftCartLine } from "@/lib/commerce/storefront-cart";
 import { GiftCheckoutDialog, GiftProductDialog, GiftTrackingDialog, StoreRetailContext, StoreDialog } from "./gift-store-dialogs";
+import { FawaselBranches } from "./fawasel-branches";
 import s from "./fawasel-store.module.css";
 import { FawaselBrandMark } from "./fawasel-brand-mark";
 
@@ -113,7 +114,7 @@ export function FawaselStore({ menu, settings, loyalty }: { menu: StandaloneMenu
       {filtered.length > limit && <button className={s.more} onClick={() => setLimit(value => value + 24)}>شوف أكثر <ArrowDown aria-hidden="true" /></button>}
     </section>
     {loyalty && menu.loyaltyEnabled && <section className={s.club} id="fawasel-club"><div><p className={s.kicker}>لأنك من أهل فواصل</p><h2>ستايل يكافئك</h2><p>اجمع أختامك في بطاقة واحدة<br />ومع {loyalty.purchasesRequired} أختام تنتظرك مكافأتك</p><a className={s.primary} href={`/loyalty/${menu.slug}`}>انضم لنادي فواصل<ArrowUpLeft aria-hidden="true" /></a></div><a className={s.clubCard} href={`/loyalty/${menu.slug}`} aria-label="افتح بطاقة ولاء فواصل"><span className={s.cardTop}>FAWASEL<span>MEMBER CLUB</span></span><strong>لك مكان<br /><em>بين أهل الستايل</em></strong><div className={s.cardStamps} aria-hidden="true">{Array.from({ length: Math.min(loyalty.purchasesRequired, 8) }, (_, i) => <span key={i}><Shirt /></span>)}</div><span className={s.cardBottom}>{loyalty.rewardName}<ArrowUpLeft aria-hidden="true" /></span></a></section>}
-    <section className={s.branches} id="fawasel-branches"><div className={s.sectionHeading}><div><p className={s.kicker}>نخدمك أينما كنت</p><h2>قريبين منك</h2></div><MapPin aria-hidden="true" /></div><div className={s.branchGrid}>{[{ city: "خميس مشيط", place: "طريق المدينة العسكرية", account: "fawasell1" }, { city: "أبها", place: "المنسك · إشارة الأربعين", account: "fawasell2" }, { city: "خميس مشيط", place: "طريق الميه", account: "fawasell3" }, { city: "جازان", place: "مخطط 5", account: "fawasell4" }, { city: "الرياض", place: "طريق الإمام سعود", account: "fawasell5" }, { city: "تبوك", place: "الفيصلية الشمالية · أوتليت", account: "fawasell6" }, { city: "نجران", place: "حي الأثايبة · فاموس", account: "vamos_sa1" }].map(branch => <a key={branch.account} href={`https://www.snapchat.com/add/${branch.account}`} target="_blank" rel="noopener noreferrer"><MapPin aria-hidden="true" /><div><h3>{branch.city}</h3><p>{branch.place}</p><span dir="ltr">@{branch.account}</span></div><ArrowUpLeft aria-hidden="true" /></a>)}</div></section>
+    <FawaselBranches />
     <footer className={s.footer}><div><strong>فواصل</strong><span dir="ltr">STYLE FOR EVERYDAY</span></div><nav aria-label="خدمة العملاء"><a href="https://fawasell.com/ar/سياسة-الاستبدال-والاسترجاع/page-2043920405" target="_blank" rel="noopener noreferrer">الاستبدال والاسترجاع</a><a href="https://fawasell.com/ar/الخصوصيه/page-1270411030" target="_blank" rel="noopener noreferrer">الخصوصية</a><a href="tel:+966559565777">تواصل معنا</a></nav><a href="#fawasel-top">العودة للأعلى ↑</a></footer>
     <nav className={s.bottomNav} aria-label="التسوق السريع"><a href="#fawasel-top"><Home aria-hidden="true" /><span>الرئيسية</span></a><a href="#fawasel-collections"><Grid2X2 aria-hidden="true" /><span>الأقسام</span></a><button onClick={favorites} aria-label={`المفضلة ${favoriteIds.length} قطعة`}><Heart aria-hidden="true" /><span>المفضلة</span>{favoriteIds.length > 0 && <b>{favoriteIds.length}</b>}</button>{loyalty && menu.loyaltyEnabled && <a href={`/loyalty/${menu.slug}`}><Star aria-hidden="true" /><span>بطاقتك</span></a>}<button onClick={() => setCartOpen(true)}><ShoppingBag aria-hidden="true" /><span>الحقيبة</span>{count > 0 && <b>{count}</b>}</button></nav>
     {notice && <div className={s.notice} role="status"><span>{notice}</span><button onClick={() => { setCartOpen(true); setNotice(""); }}>افتح الحقيبة</button><button aria-label="إغلاق الإشعار" onClick={() => setNotice("")}><X size={16} /></button></div>}
