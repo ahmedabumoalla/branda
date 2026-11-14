@@ -61,11 +61,11 @@ async function salesCashierDestination(supabase: Awaited<ReturnType<typeof creat
   try {
     // Use the client that just authenticated, not a new cookie-based client.
     // The RPC derives its actor from auth.uid(); callers cannot choose another employee.
-    const { data, error } = await supabase.rpc("brand_finance_sales_cashier_destinations");
+    const { data, error } = await supabase.rpc("brand_finance_phone_staff_destinations");
     if (error) throw new Error("Sales cashier destinations unavailable");
-    const destinations = z.array(z.object({ id: z.uuid(), slug: slugSchema, name: z.string() })).parse(data);
-    const brands = destinations.map(({ slug, name }) => ({ slug, name }));
-    if (brands.length === 1) return { ok: true as const, redirectTo: `/finance/${brands[0].slug}/pos` };
+    const destinations = z.array(z.object({ id: z.uuid(), slug: slugSchema, name: z.string(), role: z.enum(financeStaffRoles).default("cashier") })).parse(data);
+    const brands = destinations.map(({ slug, name, role }) => ({ slug, name, redirectTo: `/finance/${slug}${role === "cashier" ? "/pos" : ""}` }));
+    if (brands.length === 1) return { ok: true as const, redirectTo: brands[0].redirectTo };
     if (brands.length > 1) return { ok: true as const, brands };
   } catch { lookupFailed = true; }
   if (lookupFailed) return { ok: false as const, message: "تعذر التحقق من صلاحية نقطة البيع مؤقتًا حاول مجددًا" };
@@ -305,4 +305,73 @@ export async function provisionFinanceStaff(input: z.infer<typeof staffSchema>) 
     throw new Error("Staff access grant failed");
   }
   return { ok: true as const, message: "تم إنشاء حساب الموظف وربطه بالمالية" };
+}
+
+const phoneStaffCafeId = "94b9326e-9fd1-4b15-aa70-008ac4387f4b";
+const phoneStaffSchema = salesCashierSchema.extend({ role: z.enum(financeStaffRoles) });
+
+async function requirePhoneStaffOwner() {
+  const cafe = await requireOwnerCafeContext();
+  if (cafe.id !== phoneStaffCafeId || cafe.role !== "owner" || !featureCodesAllow(await getOwnerFeatureCodes(), "finance")) {
+    throw new Error("إدارة المستخدمين متاحة لمالك العلامة مع تفعيل المالية");
+  }
+  const snapshot = await getBrandFinanceSnapshot(cafe.slug);
+  if (snapshot.cafe.id !== cafe.id || snapshot.role !== "owner" || !snapshot.canAdminister || !snapshot.ownerUserId || snapshot.userId !== snapshot.ownerUserId) throw new Error("لا تملك صلاحية إدارة مستخدمي هذه العلامة");
+  return { cafe, supabase: await createClient() };
+}
+
+/** Phone identities belong to this employer and never replace an existing customer identity. */
+export async function provisionFinancePhoneStaff(input: z.infer<typeof phoneStaffSchema>) {
+  const parsed = phoneStaffSchema.parse(input);
+  const { cafe, supabase } = await requirePhoneStaffOwner();
+  const admin = createAdminClient();
+  const created = await admin.auth.admin.createUser({
+    phone: `+${parsed.phone}`, password: parsed.password, phone_confirm: true,
+    user_metadata: { full_name: parsed.name },
+    app_metadata: { finance_staff_provisioned: true, finance_phone_staff: true, finance_cafe_id: cafe.id },
+  });
+  if (created.error || !created.data.user) {
+    if (["phone_exists", "user_already_exists"].includes(created.error?.code ?? "")) return { ok: false as const, message: "رقم الجوال مرتبط بحساب موجود لا يمكن استبدال كلمة مروره استخدم رقم موظف غير مسجل" };
+    if (created.error?.code === "weak_password") return { ok: false as const, message: SALES_CASHIER_PASSWORD_HINT };
+    return { ok: false as const, message: "تعذر إنشاء المستخدم لدى خدمة الدخول حاول مجددًا" };
+  }
+  const userId = created.data.user.id;
+  try {
+    const grant = await supabase.rpc("brand_finance_add_phone_staff", { p_cafe_id: cafe.id, p_user_id: userId, p_name: parsed.name, p_role: parsed.role });
+    if (grant.error || grant.data?.id !== userId) throw new Error("Phone staff grant failed");
+  } catch {
+    // A response may be lost after commit. Verify the owned membership list before
+    // compensating; on an uncertain read, retain the identity for safe recovery.
+    try {
+      const membership = await supabase.rpc("brand_finance_phone_staff_list", { p_cafe_id: cafe.id });
+      if (!membership.error && Array.isArray(membership.data) && !membership.data.some((entry: { userId?: string }) => entry.userId === userId)) {
+        await admin.auth.admin.deleteUser(userId);
+      }
+    } catch { /* Never remove an identity whose membership could not be checked. */ }
+    return { ok: false as const, message: "تعذر تأكيد ربط المستخدم حدّث قائمة الفريق قبل إعادة المحاولة" };
+  }
+  return { ok: true as const, message: "تم إنشاء المستخدم يمكنه الدخول من بوابة الكاشير برقم الجوال وكلمة المرور" };
+}
+
+export async function resetFinancePhoneStaffPassword(input: { userId: string; password: string }) {
+  const parsed = z.object({ userId: z.uuid(), password: z.string().refine(isSalesCashierPassword, SALES_CASHIER_PASSWORD_HINT) }).parse(input);
+  const { cafe, supabase } = await requirePhoneStaffOwner();
+  const parameters = { p_cafe_id: cafe.id, p_user_id: parsed.userId, p_revoke: true };
+  // Authorization and revocation occur in the same DB transaction. Old JWTs are
+  // rejected by role_for once their session disappears, not just on token refresh.
+  const target = await supabase.rpc("brand_finance_phone_staff_password_target", parameters);
+  if (target.error || target.data?.id !== parsed.userId) return { ok: false as const, message: "لا يمكن تغيير كلمة مرور هذا الحساب من العلامة يسمح فقط للمستخدم المنشأ لهذه العلامة وحدها" };
+  const changed = await createAdminClient().auth.admin.updateUserById(parsed.userId, { password: parsed.password });
+  if (changed.error || changed.data.user?.id !== parsed.userId) return { ok: false as const, message: "لم يتأكد تغيير كلمة المرور أعد المحاولة بكلمة تستوفي الشروط" };
+  const revoked = await supabase.rpc("brand_finance_phone_staff_password_target", parameters);
+  if (revoked.error) return { ok: false as const, message: "تم تغيير كلمة المرور لكن تعذر تأكيد إغلاق جميع الجلسات أعد تنفيذ تغيير كلمة المرور" };
+  return { ok: true as const, message: "تم تغيير كلمة المرور وإغلاق جلسات المستخدم السابقة" };
+}
+
+export async function fetchFinancePhoneStaff() {
+  const { cafe, supabase } = await requirePhoneStaffOwner();
+  const result = await supabase.rpc("brand_finance_phone_staff_list", { p_cafe_id: cafe.id });
+  if (result.error) return { ok: false as const, message: "تعذر تحميل بيانات دخول المستخدمين حاول مجددًا" };
+  const users = z.array(z.object({ userId: z.uuid(), phone: z.string(), canResetPassword: z.boolean() })).parse(result.data);
+  return { ok: true as const, users };
 }

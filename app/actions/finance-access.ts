@@ -1,6 +1,7 @@
 "use server";
 import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
-import { signInFinance, provisionFinanceStaff, signInSalesCashier, provisionSalesCashier, SalesCashierCreationError, requestSalesCashierOtp, verifySalesCashierOtp, resetSalesCashierPassword } from "@/lib/data/finance-access";
+import { signInFinance, provisionFinanceStaff, signInSalesCashier, provisionSalesCashier, SalesCashierCreationError, requestSalesCashierOtp, verifySalesCashierOtp, resetSalesCashierPassword, provisionFinancePhoneStaff, resetFinancePhoneStaffPassword, fetchFinancePhoneStaff } from "@/lib/data/finance-access";
+import type { FinanceStaffRole } from "@/lib/finance/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { ZodError } from "zod";
 import { SALES_CASHIER_PASSWORD_HINT } from "@/lib/finance/sales-cashier-password";
@@ -73,4 +74,24 @@ export async function createFinanceStaffAccountAction(input: { email: string; na
 export async function logoutFinanceAction() {
   const supabase = await createClient();
   await supabase.auth.signOut({ scope: "local" });
+}
+
+export async function createFinancePhoneStaffAccountAction(input: { name: string; phone: string; password: string; role: FinanceStaffRole }) {
+  try {
+    const result = await provisionFinancePhoneStaff(input);
+    if (result.ok) invalidateFinanceViews();
+    return result;
+  } catch (error) {
+    return { ok: false as const, message: error instanceof ZodError ? "راجع الاسم ورقم الجوال والصلاحية وكلمة المرور" : "تعذر إنشاء المستخدم تحقق من صلاحية المالك وتفعيل المالية ثم حاول مجددًا" };
+  }
+}
+
+export async function resetFinancePhoneStaffPasswordAction(input: { userId: string; password: string }) {
+  try { return await resetFinancePhoneStaffPassword(input); }
+  catch (error) { return { ok: false as const, message: error instanceof ZodError ? SALES_CASHIER_PASSWORD_HINT : "تعذر تغيير كلمة المرور تحقق من صلاحية المالك ثم حاول مجددًا" }; }
+}
+
+export async function fetchFinancePhoneStaffAction() {
+  try { return await fetchFinancePhoneStaff(); }
+  catch { return { ok: false as const, message: "تعذر تحميل مستخدمي العلامة تحقق من صلاحية المالك ثم حاول مجددًا" }; }
 }

@@ -11,9 +11,12 @@ import { CashierLanguageSwitch, useCashierLanguage } from "@/components/cashier/
 import { isSalesCashierPassword, SALES_CASHIER_PASSWORD_HINT, SALES_CASHIER_PASSWORD_PATTERN } from "@/lib/finance/sales-cashier-password";
 import styles from "@/components/cashier/cashier-login.module.css";
 
-export function salesCashierBrandDestination(slug: string, result: { redirectTo?: string; brands?: { slug: string; name: string }[] }) {
+export function salesCashierBrandDestination(slug: string, result: { redirectTo?: string; brands?: { slug: string; name: string; redirectTo?: string }[] }) {
   const target = `/finance/${encodeURIComponent(slug)}/pos`;
-  return result.redirectTo === target || result.brands?.some(brand => brand.slug === slug) ? target : null;
+  const workspace = `/finance/${encodeURIComponent(slug)}`;
+  if (result.redirectTo === target || result.redirectTo === workspace) return result.redirectTo;
+  const brand = result.brands?.find(brand => brand.slug === slug);
+  return brand ? brand.redirectTo === workspace ? workspace : target : null;
 }
 
 export function SalesCashierLogin({ slug }: { slug?: string } = {}) {
@@ -23,7 +26,7 @@ export function SalesCashierLogin({ slug }: { slug?: string } = {}) {
   const [busy, setBusy] = useState(false);
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState("");
-  const [brands, setBrands] = useState<{ slug: string; name: string }[]>([]);
+  const [brands, setBrands] = useState<{ slug: string; name: string; redirectTo?: string }[]>([]);
   const [mode, setMode] = useState<"password" | "otp" | "reset">("password");
   const [otpPhone, setOtpPhone] = useState("");
   const [notice, setNotice] = useState("");
@@ -80,7 +83,7 @@ export function SalesCashierLogin({ slug }: { slug?: string } = {}) {
       <CashierSystemSwitch active="sales" compact />
       <h1 id="sales-login-title" className={styles.heading}>{t(mode === "reset" ? "تعيين كلمة مرور الكاشير" : "دخول كاشير المبيعات")}</h1>
       {!brands.length && <div className={styles.loginModes} role="group" aria-label={t("طريقة دخول كاشير المبيعات")}>{([['password', 'كلمة المرور'], ['otp', 'رمز واتساب']] as const).map(([value, label]) => <button type="button" key={value} aria-pressed={mode === value} disabled={busy} onClick={() => { setMode(value); setOtpPhone(""); setVisible(false); setNotice(""); setError(""); }}>{t(label)}</button>)}</div>}
-      {brands.length ? <div className={styles.accessChoices}><p className={styles.hint}>{t("اختر العلامة لبدء العمل")}</p>{brands.map(brand => <Link className={styles.accessChoice} key={brand.slug} href={`/finance/${encodeURIComponent(brand.slug)}/pos`}><strong>{brand.name}</strong><ArrowUpLeft aria-hidden="true" /></Link>)}</div> : <form className={styles.form} onSubmit={submit} aria-busy={busy}>
+      {brands.length ? <div className={styles.accessChoices}><p className={styles.hint}>{t("اختر العلامة لبدء العمل")}</p>{brands.map(brand => <Link className={styles.accessChoice} key={brand.slug} href={salesCashierBrandDestination(brand.slug, { brands: [brand] }) ?? `/finance/${encodeURIComponent(brand.slug)}/pos`}><strong>{brand.name}</strong><ArrowUpLeft aria-hidden="true" /></Link>)}</div> : <form className={styles.form} onSubmit={submit} aria-busy={busy}>
         <label>{t("رقم الجوال")}<input name="phone" type="tel" inputMode="tel" autoComplete="username" required maxLength={30} dir="ltr" placeholder="05xxxxxxxx" disabled={busy} readOnly={Boolean(otpPhone)} /></label>
         {mode === "password" && <label>{t("كلمة المرور")}<div className={styles.password}><input name="password" type={visible ? "text" : "password"} autoComplete="current-password" required maxLength={128} dir="ltr" disabled={busy} /><button type="button" disabled={busy} aria-label={t(visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور")} aria-pressed={visible} onClick={() => setVisible(!visible)}>{visible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}</button></div></label>}
         {mode === "password" && <button type="button" className={styles.switchLink} disabled={busy} onClick={() => { setMode("reset"); setOtpPhone(""); setVisible(false); setNotice(""); setError(""); }}>{t("نسيت كلمة المرور أو تريد تعيينها؟")}</button>}

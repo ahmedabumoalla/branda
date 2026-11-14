@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { ReceiptText, Monitor, Store, Hammer, ClipboardCheck, CalendarDays, HardHat, BadgeDollarSign, KeyRound, ClipboardList, Workflow, Users, Coins, Star, BadgeCheck, Contact, ShieldCheck, Boxes, ShoppingBag, Timer, WalletCards, Landmark, Banknote, ListOrdered, UserRoundCog, Network, CalendarCheck, HandCoins, ChartNoAxesCombined, MapPin, FileText, Settings } from "lucide-react";
-import { financeMenuGroups, type FinanceMenuEntry, type FinanceSection } from "@/components/finance/finance-navigation";
+import { financeMenuGroups, financeMenuHref, type FinanceMenuEntry, type FinanceSection } from "@/components/finance/finance-navigation";
+import { NAQWA_SLUG } from "@/lib/platform/naqwa";
 import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 import { isAldeemCafe } from "@/lib/platform/aldeem";
 import { isHospitalStore } from "@/lib/commerce/hospital-profile";
@@ -50,6 +51,12 @@ const storeReportPaths = new Set(["sales", "purchases", "accounting", "customers
 
 /** Account-specific navigation; this deliberately does not grant or revoke permissions. */
 export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] {
+  if (cafeSlug === NAQWA_SLUG) return [
+    { id: "overview", label: "نظرة مالية", icon: WalletCards, items: [{ label: "نظرة مالية", section: "overview" }] },
+    ...financeMenuGroups.map(group => ({ id: group.id, label: group.label, icon: group.icon, items: group.entries.map(entry => ({ id: entry.id, section: entry.section, view: entry.view, label: entry.section === "cashiers" ? "إدارة المستخدمين والصلاحيات" : entry.label, href: financeMenuHref(entry) ?? undefined })) })),
+    { id: "products", label: "المنتجات والأسعار", icon: Store, items: [{ label: "إضافة المنتجات وتعديل الأسعار", href: "/dashboard/menu" }, { label: "فتح نقطة البيع", pos: true }] },
+    { id: "users", label: "إدارة المستخدمين والصلاحيات", icon: UserRoundCog, items: [{ label: "المستخدمون وكلمات المرور", section: "cashiers" }, { label: "تغيير كلمة مرور المالك", href: "/dashboard/settings" }] },
+  ];
   if (isAldeemCafe({ slug: cafeSlug })) return integratedSystemGroups.map(group => group.id === "manufacturing" ? { ...group, label: "المعمل والتصنيع", items: [{ label: "شاشة طلبات المعمل", href: "/dashboard/system/lab" }, ...group.items] } : group);
   if (isHospitalStore(cafeSlug)) {
     const allowed = new Set(["sales", "pos", "store", "customers", "inventory", "purchases", "finance", "accounting", "reports", "settings"]);
@@ -79,6 +86,7 @@ export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] 
 
 export function systemItemHref(item: SystemItem, context: { cafeSlug: string; enabledFeatures: readonly string[]; isSalon: boolean; isGifts: boolean }) {
   if (item.unavailable) return null;
+  if (context.cafeSlug === NAQWA_SLUG && item.href) return item.href;
   if (item.feature && !context.enabledFeatures.includes(item.feature)) return null;
   if (item.salonOnly && !context.isSalon) return null;
   if (item.giftsOnly && !context.isGifts && !isFawaselStore(context.cafeSlug)) return null;

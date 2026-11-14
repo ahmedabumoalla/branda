@@ -7,6 +7,7 @@ import { ChevronDown, WalletCards } from "lucide-react";
 import { resolveFinanceMenuEntry, resolveFinanceSection } from "@/components/finance/finance-navigation";
 import { integratedSystemGroupsForBrand, systemItemHref } from "./integrated-system-navigation";
 import styles from "./finance-sidebar-menu.module.css";
+import { NAQWA_SLUG } from "@/lib/platform/naqwa";
 
 export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug = "", enabledFeatures = [], isSalon = false, isGifts = false }: {
   collapsed: boolean;
@@ -27,7 +28,13 @@ export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug =
   const groups = integratedSystemGroupsForBrand(cafeSlug);
   const currentEntry = resolveFinanceMenuEntry(section, params.get("party"), params.get("view"));
   const closestSystemHref = groups.flatMap(group => group.items.map(item => systemItemHref(item, context))).filter((href): href is string => !!href && href.startsWith("/dashboard/system/") && (pathname === href || pathname.startsWith(href + "/"))).sort((a,b) => b.length-a.length)[0];
-  const isCurrent = (href: string | null) => href !== null && (href.startsWith("/dashboard/finance?") ? active && (section === "sales" ? groups[0].items.find(item => item.id === currentEntry && !item.unavailable && systemItemHref(item, context) === href) !== undefined : href === `/dashboard/finance?section=${section}`) : href.startsWith("/dashboard/system/") ? closestSystemHref === href : pathname === href);
+  const isCurrent = (href: string | null) => {
+    if (cafeSlug === NAQWA_SLUG && href?.startsWith("/dashboard/finance?")) {
+      const target = new URLSearchParams(href.split("?")[1]);
+      return active && target.get("section") === section && [...target].every(([key, value]) => key === "section" || params.get(key) === value);
+    }
+    return href !== null && (href.startsWith("/dashboard/finance?") ? active && (section === "sales" ? groups[0].items.find(item => item.id === currentEntry && !item.unavailable && systemItemHref(item, context) === href) !== undefined : href === `/dashboard/finance?section=${section}`) : href.startsWith("/dashboard/system/") ? closestSystemHref === href : pathname === href);
+  };
   const activeGroup = groups.find(group => group.items.some(item => isCurrent(systemItemHref(item, context))))?.id ?? null;
   const route = `${pathname}?${params.toString()}`;
   const [disclosure, setDisclosure] = useState({ route, expanded: !!activeGroup });
