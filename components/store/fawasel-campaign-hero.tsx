@@ -6,6 +6,7 @@ import { ArrowDown, ArrowUpLeft, Shirt } from "lucide-react";
 import type { StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { giftProductAvailable, productMinimumPrice } from "@/lib/commerce/storefront-cart";
 import { menuMotion, shouldAnimateMenu } from "@/lib/menu/motion-foundations";
+import { FAWASEL_CAMPAIGN_PRODUCT_IDS } from "@/lib/commerce/fawasel-profile";
 import styles from "./fawasel-campaign-hero.module.css";
 
 type Props = {
@@ -15,7 +16,10 @@ type Props = {
 };
 
 function campaignProducts(products: StandaloneMenuProduct[]) {
-  const ranked = products.filter(product => giftProductAvailable(product) && product.images[0]?.url)
+  const available = products.filter(product => giftProductAvailable(product) && product.images[0]?.url);
+  const curated = FAWASEL_CAMPAIGN_PRODUCT_IDS.flatMap(id => available.filter(product => product.id === id));
+  if (curated.length) return curated;
+  const ranked = available
     .map((product, index) => {
       const text = `${product.category} ${product.name}`;
       const rank = /شوز|حذاء|سنيكر/.test(text) ? 3 : /تيشيرت|هودي|قميص/.test(text) ? 2 : /شنط|حقيبة/.test(text) ? 1 : 0;
@@ -25,11 +29,11 @@ function campaignProducts(products: StandaloneMenuProduct[]) {
   // Prefer a different clothing category after the leading shoe, then fill from real stock.
   for (const { product } of ranked) {
     if (!chosen.some(item => item.category === product.category)) chosen.push(product);
-    if (chosen.length === 3) return chosen;
+    if (chosen.length === 2) return chosen;
   }
   for (const { product } of ranked) {
     if (!chosen.some(item => item.id === product.id)) chosen.push(product);
-    if (chosen.length === 3) break;
+    if (chosen.length === 2) break;
   }
   return chosen;
 }
@@ -38,7 +42,7 @@ function CampaignPhoto({ product, thumbnail = false }: { product: StandaloneMenu
   const src = product.images[0]?.url;
   const [failed, setFailed] = useState(false);
   if (!src || failed) return <span className={styles.imageFallback}><Shirt aria-hidden="true" />{!thumbnail && <span>{product.name}</span>}</span>;
-  // Keep the original catalog photograph and its colors on a neutral white surface.
+  // Preserve the original catalog photograph and its background without recoloring.
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={src} alt={thumbnail ? "" : product.name} loading={thumbnail ? "lazy" : "eager"} fetchPriority={thumbnail ? "auto" : "high"} decoding="async" onError={() => setFailed(true)} />;
 }

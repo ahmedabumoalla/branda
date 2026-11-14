@@ -2,13 +2,14 @@
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict'), crypto = require('node:crypto');
 const ts = require('typescript'), React = require('react'), { renderToStaticMarkup } = require('react-dom/server');
 const inputs = new Set(), cache = new Map();
+let testSlug = 'brand-1c2b6f7e028f';
 function load(file) {
   if (cache.has(file)) return cache.get(file);
   inputs.add(file); const exports = {}; cache.set(file, exports);
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   new Function('require', 'exports', code)(name => {
     if (name.endsWith('.css')) { const f = path.join(path.dirname(file), name); inputs.add(f); return { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) }; }
-    if (name === 'next/navigation') return { useRouter: () => ({ refresh() {} }) };
+    if (name === 'next/navigation') return { useRouter: () => ({ refresh() {} }), useParams: () => ({ slug: testSlug }) };
     if (name === '@/app/actions/gift-orders') return { submitGiftOrderAction() { throw Error('No live orders in render checks'); }, trackGiftOrderAction() { throw Error('No tracking requests in render checks'); } };
     if (name.startsWith('@/') || name.startsWith('./')) { const base = name.startsWith('@/') ? name.slice(2) : path.join(path.dirname(file), name); return load(fs.existsSync(base + '.ts') ? base + '.ts' : base + '.tsx'); }
     return require(name);
@@ -37,5 +38,23 @@ const css = fs.readFileSync('components/store/fawasel-store.module.css','utf8');
 check(css.includes('prefers-reduced-motion') && css.includes(':focus-visible'), 'Motion and focus styles');
 check(css.includes('grid-template-columns:repeat(2,minmax(0,1fr))'), 'Narrow product layout');
 inputs.add('package.json'); inputs.add('package-lock.json'); inputs.add('public/fawasel/brand-reference.jpeg');
+const { FawaselCampaignHero } = load('components/store/fawasel-campaign-hero.tsx');
+const { FAWASEL_CAMPAIGN_PRODUCT_IDS } = load('lib/commerce/fawasel-profile.ts');
+const campaignProducts = FAWASEL_CAMPAIGN_PRODUCT_IDS.map((id, index) => ({...product, id, name:`Reviewed ${index}`, images:[{url:`https://example.test/gray-${index}.jpg`,alt:''}]}));
+const campaign = products => renderToStaticMarkup(React.createElement(FawaselCampaignHero,{products,onSelect(){},onBrowse(){}}));
+const curated = campaign([product,...campaignProducts]);
+check(curated.includes('gray-0.jpg') && curated.includes('gray-1.jpg') && !curated.includes('shoe.jpg'), 'Reviewed gray images replace uncurated hero images');
+check((curated.match(/aria-pressed=/g)||[]).length===2, 'Two campaign choices');
+const soldOut = campaign([{...campaignProducts[0],available:false},campaignProducts[1]]);
+check(!soldOut.includes('gray-0.jpg') && soldOut.includes('gray-1.jpg'), 'Unavailable curated product excluded');
+const MenuError=load('app/menu/[slug]/error.tsx').default;
+for(const slug of ['brand-1c2b6f7e028f','khayal-aldeem','brand-871ec6e243c0','another-cafe']){
+  testSlug=slug;
+  const page=renderToStaticMarkup(React.createElement(MenuError,{retry(){}}));
+  check(page.includes(slug==='another-cafe'?'تعذر تحميل المنيو':'تعذر تحميل المتجر'), `Error label ${slug}`);
+}
+let retries=0;const errorView=MenuError({retry(){retries++}});
+errorView.props.children.find(child=>child.type==='button').props.onClick();
+check(retries===1,'Retry button invokes segment refetch callback');
 const evidence={finishedAt:new Date().toISOString(),runtime:process.version,command:'node scripts/check-fawasel-storefront.cjs',assertions,passed:true,inputs:Object.fromEntries([...inputs].sort().map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')])),limits:['SSR and source checks, no browser or real checkout']};
 fs.mkdirSync('output/fawasel-import-20261114',{recursive:true});fs.writeFileSync('output/fawasel-import-20261114/storefront-checks.json',JSON.stringify(evidence,null,2));console.log(JSON.stringify({assertions,passed:true}));
