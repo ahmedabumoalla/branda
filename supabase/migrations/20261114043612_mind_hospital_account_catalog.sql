@@ -41,11 +41,14 @@ INSERT INTO public.menu_categories SELECT (jsonb_populate_record(NULL::public.me
 INSERT INTO public.menu_products SELECT (jsonb_populate_record(NULL::public.menu_products,
   replace(to_jsonb(p)::text,'3813425d-db13-4d30-8b82-9d41aad12e36','ab9323ef-ff0e-42ad-8cf8-b8b8f92a48ef')::jsonb||jsonb_build_object('id',md5('mind-hospital-product:'||p.id::text)::uuid,'branch_id','f79f8cf8-9241-4c70-a9a7-b1810e163db3','category_id',CASE WHEN p.category_id IS NULL THEN NULL ELSE md5('mind-hospital-category:'||p.category_id::text)::uuid END,'created_by','cc64b0de-b4d5-494d-b406-045f6821cef1','updated_by','cc64b0de-b4d5-494d-b406-045f6821cef1'))).* FROM public.menu_products p WHERE branch_id='5924245c-a143-4170-8699-79fd3c279d92' AND cafe_id='3813425d-db13-4d30-8b82-9d41aad12e36';
 
--- Copy tax configuration if one exists; never fabricate a tax registration number or opening balances
-UPDATE public.bf_settings n SET vat_rate=o.vat_rate,tax_inclusive=o.tax_inclusive FROM public.bf_settings o WHERE n.cafe_id='ab9323ef-ff0e-42ad-8cf8-b8b8f92a48ef' AND o.cafe_id='3813425d-db13-4d30-8b82-9d41aad12e36';
+-- Owner instruction: leave registration blank and treat current menu prices as inclusive
+-- Keep the platform default VAT rate; all settings remain owner-editable
+UPDATE public.cafe_settings SET tax_number='' WHERE cafe_id='ab9323ef-ff0e-42ad-8cf8-b8b8f92a48ef';
+UPDATE public.bf_settings SET tax_inclusive=true WHERE cafe_id='ab9323ef-ff0e-42ad-8cf8-b8b8f92a48ef';
 
 DO $verify$
 BEGIN
+  IF NOT EXISTS(SELECT 1 FROM public.cafe_settings WHERE cafe_id='ab9323ef-ff0e-42ad-8cf8-b8b8f92a48ef' AND coalesce(tax_number,'')='') OR NOT EXISTS(SELECT 1 FROM public.bf_settings WHERE cafe_id='ab9323ef-ff0e-42ad-8cf8-b8b8f92a48ef' AND tax_inclusive) THEN RAISE EXCEPTION 'Owner tax configuration not preserved'; END IF;
   IF NOT EXISTS(SELECT 1 FROM public.subscriptions WHERE id='4fc964e8-2434-43b8-9ec1-01dc8ef7c0e7' AND expires_at>now()) THEN RAISE EXCEPTION 'Technical activation missing'; END IF;
   IF (SELECT count(*) FROM public.menu_products WHERE cafe_id='ab9323ef-ff0e-42ad-8cf8-b8b8f92a48ef' AND deleted_at IS NULL)<>111 THEN RAISE EXCEPTION 'Incomplete hospital copy'; END IF;
   IF EXISTS(SELECT 1 FROM mind_source_rows s LEFT JOIN LATERAL(SELECT to_jsonb(p) payload FROM public.menu_products p WHERE s.kind='products' AND p.id=s.id UNION ALL SELECT to_jsonb(c) FROM public.menu_categories c WHERE s.kind='categories' AND c.id=s.id UNION ALL SELECT to_jsonb(b) FROM public.branches b WHERE s.kind='branches' AND b.id=s.id) actual ON true WHERE s.payload IS DISTINCT FROM actual.payload) THEN RAISE EXCEPTION 'Source data changed'; END IF;
