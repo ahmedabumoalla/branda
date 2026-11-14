@@ -4,10 +4,12 @@ import { ArrowUpLeft } from "lucide-react";
 import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
 import s from "./rast-loyalty.module.css";
 import { loyaltyCommunityName } from "./loyalty-theme";
+import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
+import { FawaselBrandMark } from "@/components/store/fawasel-brand-mark";
 
 export function RastBrand({ identity, light = false, locale = "ar" }: { identity: LoyaltyIdentity; light?: boolean; locale?: "ar" | "en" }) {
   return <div className={`${s.brand} ${light ? s.brandLight : ""}`}>
-    {identity.logoUrl || identity.slug === "rast" ? <Image src={identity.logoDisplayUrl || identity.logoUrl || "/menu-logos/kawakib-transparent-20261008.png"} alt={identity.name} width={144} height={78} className={s.logo} unoptimized /> : <strong className={s.logoFallback}>{identity.name}</strong>}
+    {isFawaselStore(identity.slug) ? <FawaselBrandMark logoUrl={identity.logoDisplayUrl || identity.logoUrl} /> : identity.logoUrl || identity.slug === "rast" ? <Image src={identity.logoDisplayUrl || identity.logoUrl || "/menu-logos/kawakib-transparent-20261008.png"} alt={identity.name} width={144} height={78} className={s.logo} unoptimized /> : <strong className={s.logoFallback}>{identity.name}</strong>}
     <span>{locale === "en" ? `${identity.nameEn || identity.name} community` : loyaltyCommunityName(identity)}</span>
   </div>;
 }
@@ -15,6 +17,6 @@ export function RastBrand({ identity, light = false, locale = "ar" }: { identity
 export function RastHeader({ identity }: { identity: LoyaltyIdentity }) {
   return <header className={s.publicHeader}>
     <RastBrand identity={identity} />
-    <Link href={`/menu/${identity.slug}`} className={s.menuLink}>قائمة {identity.name} <ArrowUpLeft aria-hidden="true" /></Link>
+    <Link href={`/menu/${identity.slug}`} className={s.menuLink}>{isFawaselStore(identity.slug) ? "متجر" : "قائمة"} {identity.name} <ArrowUpLeft aria-hidden="true" /></Link>
   </header>;
 }

@@ -1,6 +1,9 @@
 import type { StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 
-export type GiftSelection = { groupId: string; choiceIds?: string[]; text?: string };
+export type GiftSelection = { groupId: string; choiceIds?: string[]; text?: string; attachmentToken?: string };
+export function commerceGroupVisible(group: { showWhen?: { optionIds: string[] } }, optionId?: string) {
+  return !group.showWhen || group.showWhen.optionIds.includes(optionId ?? "");
+}
 export type GiftCartLine = { key: string; productId: string; optionId?: string; quantity: number; selections: GiftSelection[] };
 
 /** Match checkout stock semantics without removing sold-out listings from the catalog. */
@@ -16,7 +19,7 @@ export function productMinimumPrice(product: StandaloneMenuProduct) {
   const options = product.commerceDetails?.options?.filter(o => o.available && o.stock !== 0);
   let value = options?.length ? Math.min(...options.map(o => o.price)) : product.price;
   for (const group of product.commerceDetails?.optionGroups ?? []) {
-    if (!group.required || group.type === "text") continue;
+    if (!group.required || !["select", "multi"].includes(group.type)) continue;
     const count = Math.max(1, group.minChoices ?? 1);
     value += (group.choices ?? []).map(c => c.priceDelta).sort((a, b) => a - b).slice(0, count).reduce((a, b) => a + b, 0);
   }
@@ -41,6 +44,21 @@ export function selectionError(product: StandaloneMenuProduct, selections: GiftS
   }
   for (const group of product.commerceDetails?.optionGroups ?? []) {
     const value = selections.find(s => s.groupId === group.id);
+    if (!commerceGroupVisible(group, optionId)) {
+      if (value) return `راجع ${group.label} بعد تغيير الاختيار`;
+      continue;
+    }
+    if (group.type === "file" || group.type === "image") {
+      if (group.required && !value?.attachmentToken) return `أرفق ${group.label}`;
+      continue;
+    }
+    if (group.type === "date") {
+      if (!value?.text && !group.required) continue;
+      const text = value?.text ?? "";
+      const date = new Date(`${text}T00:00:00Z`);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(text) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== text) return `اختر ${group.label}`;
+      continue;
+    }
     if (group.type === "text") {
       if (group.required && !value?.text?.trim()) return `أكمل ${group.label}`;
       continue;
@@ -60,6 +78,7 @@ export function selectionSummary(product: StandaloneMenuProduct, selections: Gif
   for (const selection of selections) {
     const group = product.commerceDetails?.optionGroups?.find(g => g.id === selection.groupId);
     if (!group) continue;
+    if (selection.attachmentToken) labels.push(`${group.label}: ملف مرفق`);
     if (selection.text?.trim()) labels.push(`${group.label}: ${selection.text.trim()}`);
     for (const choice of group.choices ?? []) if (selection.choiceIds?.includes(choice.id)) labels.push(choice.label);
   }

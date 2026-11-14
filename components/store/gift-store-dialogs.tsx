@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Leaf, Minus, Plus, ShoppingBag, Trash2, Truck, X } from "lucide-react";
 import { submitGiftOrderAction, trackGiftOrderAction } from "@/app/actions/gift-orders";
 import { giftOrderInputSchema, giftOrderStatusLabel, giftPaymentStatusLabel, previewGiftOrderTotal, type GiftOrderReceipt, type GiftOrderTracking, type GiftStoreSettings } from "@/lib/commerce/gift-orders";
-import { selectedProductPrice, selectionError, selectionSummary, type GiftCartLine, type GiftSelection } from "@/lib/commerce/storefront-cart";
+import { selectedProductPrice, selectionError, selectionSummary, commerceGroupVisible, type GiftCartLine, type GiftSelection } from "@/lib/commerce/storefront-cart";
 import type { StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { lockPageScroll } from "@/lib/ui/page-scroll-lock";
 import { pendingGiftRequest, clearPendingGiftRequest } from "@/lib/commerce/checkout-request";
@@ -14,6 +14,42 @@ import { rememberStorePhoto, warmStorePhoto } from "@/lib/ui/store-image-cache";
 import s from "./together-store.module.css";
 
 export const StoreRetailContext = createContext(false);
+
+function CommerceUploadField({ slug, productId, groupId, optionId, label, accept, token, onToken, onBusy }: {
+  slug?: string; productId: string; groupId: string; optionId: string; label: string; accept: string[]; token?: string;
+  onToken: (token?: string) => void; onBusy: (busy: boolean) => void;
+}) {
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const requests = useRef(new Map<string, string>());
+  const controller = useRef<AbortController | null>(null);
+  const busyCallback = useRef(onBusy);
+  useEffect(() => { busyCallback.current = onBusy; }, [onBusy]);
+  useEffect(() => () => { controller.current?.abort(); busyCallback.current(false); }, []);
+  async function upload(file?: File) {
+    if (!file || !slug || busy) return;
+    setError(""); onToken(undefined);
+    if (!accept.includes(file.type) || file.size > 3 * 1024 * 1024 || !file.size) { setError("اختر صورة بالصيغة المطلوبة لا تتجاوز ٣ ميجابايت"); return; }
+    const key = `${file.name}:${file.size}:${file.lastModified}:${file.type}`;
+    const requestId = requests.current.get(key) || crypto.randomUUID(); requests.current.set(key, requestId);
+    const form = new FormData();
+    Object.entries({ productId, groupId, optionId, requestId }).forEach(([key, value]) => form.set(key, value)); form.set("file", file);
+    const abort = new AbortController(); controller.current = abort; setBusy(true); onBusy(true);
+    try {
+      const response = await fetch(`/api/commerce/${encodeURIComponent(slug)}/attachments`, { method: "POST", body: form, signal: abort.signal });
+      const result = await response.json();
+      if (!response.ok || typeof result.token !== "string") throw new Error(typeof result.error === "string" ? result.error : "تعذر رفع الملف حاول مجددًا");
+      onToken(result.token);
+    } catch (error) { if (!abort.signal.aborted) setError(error instanceof Error ? error.message : "تعذر رفع الملف حاول مجددًا"); }
+    finally { if (!abort.signal.aborted) { setBusy(false); onBusy(false); } }
+  }
+  return <div>
+    <input type="file" aria-label={label} accept={accept.join(",")} disabled={busy || !slug} onChange={event => void upload(event.target.files?.[0])} />
+    <p aria-live="polite">{busy ? "جارٍ رفع الملف بأمان" : token ? "تم إرفاق الملف وسيظهر للمتجر مع طلبك" : "حتى ٣ ميجابايت الملف خاص بطلبك"}</p>
+    {token && <button type="button" onClick={() => onToken(undefined)}>إزالة الملف</button>}
+    {error && <p role="alert" className={s.error}>{error}</p>}
+  </div>;
+}
 
 export function StoreMoney({ amount }: { amount: number }) {
   return <span className={s.money}><bdi>{amount.toLocaleString("en-US", { maximumFractionDigits: 2 })}</bdi><small>ريال</small></span>;
@@ -44,12 +80,13 @@ export function StoreDialog({ title, close, children, wide = false, open = true 
   </dialog>;
 }
 
-export function GiftProductDialog({ product, close, add, orderingEnabled, open = true }: { product: StandaloneMenuProduct; close: () => void; add: (product: StandaloneMenuProduct, line: Omit<GiftCartLine, "key" | "productId">) => string | null; orderingEnabled: boolean; open?: boolean }) {
+export function GiftProductDialog({ product, slug, close, add, orderingEnabled, open = true }: { slug?: string; product: StandaloneMenuProduct; close: () => void; add: (product: StandaloneMenuProduct, line: Omit<GiftCartLine, "key" | "productId">) => string | null; orderingEnabled: boolean; open?: boolean }) {
   const retail = useContext(StoreRetailContext);
   const [image, setImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [optionId, setOptionId] = useState("");
   const [selections, setSelections] = useState<GiftSelection[]>([]);
+  const [uploading, setUploading] = useState<string[]>([]);
   const [error, setError] = useState("");
   const imageIndex = Math.min(image, Math.max(0, product.images.length - 1));
   const nextImage = product.images.length > 1 ? product.images[(imageIndex + 1) % product.images.length]?.url : undefined;
@@ -75,13 +112,13 @@ export function GiftProductDialog({ product, close, add, orderingEnabled, open =
         <div className={s.detailPrice}>{quote ? <strong>مصمّم لمساحتك</strong> : <StoreMoney amount={unitPrice} />}<span>{!product.available ? "غير متاح حاليًا" : quote ? "السعر بعد معرفة التفاصيل" : details.optionGroups?.length ? "السعر يتحدث حسب اختياراتك" : ""}</span></div>
         {product.description && <div className={s.description}>{product.description}</div>}
         {!!details.attributes?.length && <dl className={s.attributes}>{details.attributes.map((a, i) => <div key={i}><dt>{a.label}</dt><dd>{a.value}</dd></div>)}</dl>}
-        {!!details.options?.length && <fieldset className={s.optionGroup}><legend>اختر الخيار المناسب <small>مطلوب</small></legend>{details.options.map(o => <label key={o.id} className={s.choice}><input type="radio" name="variant" value={o.id} checked={optionId === o.id} disabled={!o.available || o.stock === 0} onChange={() => setOptionId(o.id)} /><span>{o.label}</span><StoreMoney amount={o.price} /></label>)}</fieldset>}
-        {details.optionGroups?.map(group => {
+        {!!details.options?.length && <fieldset className={s.optionGroup}><legend>اختر الخيار المناسب <small>مطلوب</small></legend>{details.options.map(o => <label key={o.id} className={s.choice}><input type="radio" name="variant" value={o.id} checked={optionId === o.id} disabled={!o.available || o.stock === 0} onChange={() => { setOptionId(o.id); setSelections(items => items.filter(item => { const group = details.optionGroups?.find(group => group.id === item.groupId); return group && commerceGroupVisible(group, o.id); })); }} /><span>{o.label}</span><StoreMoney amount={o.price} /></label>)}</fieldset>}
+        {details.optionGroups?.filter(group => commerceGroupVisible(group, optionId)).map(group => {
           const value = selections.find(i => i.groupId === group.id);
-          return <fieldset key={group.id} className={s.optionGroup}><legend>{group.label} <small>{group.required ? "مطلوب" : "اختياري"}</small></legend>{group.hint && <p>{group.hint}</p>}{group.type === "text" ? <textarea aria-label={group.label} required={group.required} maxLength={1000} value={value?.text ?? ""} onChange={e => choose(group.id, { text: e.target.value })} rows={3} /> : (group.choices ?? []).map(choice => <label key={choice.id} className={s.choice}><input type={group.type === "select" ? "radio" : "checkbox"} name={group.id} checked={value?.choiceIds?.includes(choice.id) ?? false} onChange={e => choose(group.id, { choiceIds: group.type === "select" ? [choice.id] : e.target.checked ? [...(value?.choiceIds ?? []), choice.id] : (value?.choiceIds ?? []).filter(id => id !== choice.id) })} /><span>{choice.label}</span><span className={s.optionDelta}>{choice.priceDelta ? <><span>+</span><StoreMoney amount={choice.priceDelta} /></> : "دون إضافة"}</span></label>)}</fieldset>;
+          return <fieldset key={group.id} className={s.optionGroup}><legend>{group.label} <small>{group.required ? "مطلوب" : "اختياري"}</small></legend>{group.hint && <p>{group.hint}</p>}{group.type === "file" || group.type === "image" ? <CommerceUploadField slug={slug} productId={product.id} groupId={group.id} optionId={optionId} label={group.label} accept={group.accept ?? ["image/png", "image/jpeg", "image/webp"]} token={value?.attachmentToken} onToken={token => choose(group.id, { attachmentToken: token })} onBusy={busy => setUploading(items => busy ? [...new Set([...items, group.id])] : items.filter(id => id !== group.id))} /> : group.type === "date" ? <input type="date" aria-label={group.label} required={group.required} value={value?.text ?? ""} onChange={e => choose(group.id, { text: e.target.value })} /> : group.type === "text" ? <textarea aria-label={group.label} required={group.required} maxLength={1000} value={value?.text ?? ""} onChange={e => choose(group.id, { text: e.target.value })} rows={3} /> : (group.choices ?? []).map(choice => <label key={choice.id} className={s.choice}><input type={group.type === "select" ? "radio" : "checkbox"} name={group.id} checked={value?.choiceIds?.includes(choice.id) ?? false} onChange={e => choose(group.id, { choiceIds: group.type === "select" ? [choice.id] : e.target.checked ? [...(value?.choiceIds ?? []), choice.id] : (value?.choiceIds ?? []).filter(id => id !== choice.id) })} /><span>{choice.label}</span><span className={s.optionDelta}>{choice.priceDelta ? <><span>+</span><StoreMoney amount={choice.priceDelta} /></> : "دون إضافة"}</span></label>)}</fieldset>;
         })}
         {error && <p role="alert" className={s.error}>{error}</p>}
-        <div className={s.buyBar}>{!quote && <div className={s.quantity}><button type="button" aria-label="تقليل الكمية" disabled={quantity <= 1} onClick={() => setQuantity(q => q - 1)}><Minus /></button><output>{quantity}</output><button type="button" aria-label="زيادة الكمية" disabled={quantity >= 99} onClick={() => setQuantity(q => q + 1)}><Plus /></button></div>}<button type="submit" className={s.primary} disabled={!product.available || !orderingEnabled}>{!product.available ? "غير متاح حاليًا" : !orderingEnabled ? "الطلبات متوقفة مؤقتًا" : quote ? "اطلب تصميمًا لمساحتك" : "أضف إلى السلة"}{product.available && orderingEnabled && <ShoppingBag aria-hidden="true" />}</button></div>
+        <div className={s.buyBar}>{!quote && <div className={s.quantity}><button type="button" aria-label="تقليل الكمية" disabled={quantity <= 1} onClick={() => setQuantity(q => q - 1)}><Minus /></button><output>{quantity}</output><button type="button" aria-label="زيادة الكمية" disabled={quantity >= 99} onClick={() => setQuantity(q => q + 1)}><Plus /></button></div>}<button type="submit" className={s.primary} disabled={!product.available || !orderingEnabled || uploading.length > 0}>{uploading.length ? "جارٍ رفع الملف" : !product.available ? "غير متاح حاليًا" : !orderingEnabled ? "الطلبات متوقفة مؤقتًا" : quote ? "اطلب تصميمًا لمساحتك" : "أضف إلى السلة"}{product.available && orderingEnabled && <ShoppingBag aria-hidden="true" />}</button></div>
       </form>
     </div>
   </StoreDialog>;

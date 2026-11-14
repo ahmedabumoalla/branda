@@ -8,6 +8,7 @@ import { fetchOwnerGiftOrdersAction, saveGiftStoreSettingsAction, updateGiftOrde
 import { Modal } from "@/components/dashboard/ui/modal";
 import { giftOrderStatusLabel, giftPaymentStatusLabel, type GiftOrder, type GiftOrderCommand, type GiftStoreSettings } from "@/lib/commerce/gift-orders";
 import styles from "./gift-orders-page.module.css";
+import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 
 export type GiftOrdersFinance = {
   accounts: { id: string; name: string; kind: string }[];
@@ -24,6 +25,7 @@ const date = (value: string) => new Intl.DateTimeFormat("ar-SA", { dateStyle: "m
 const defaults: GiftStoreSettings = { enabled: false, deliveryEnabled: true, pickupEnabled: false, deliveryFee: 25, paymentMethods: ["cod"], pickupLocation: "", deliveryNotes: "", bankInstructions: "", vatRate: 0, taxInclusive: true };
 
 export function GiftOrdersPage({ initialOrders, initialSettings, cafe, initialHasMore, finance, financeMessage, configError }: Props) {
+  const retail = isFawaselStore(cafe.slug);
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
   const [settings, setSettings] = useState(initialSettings);
@@ -81,7 +83,7 @@ export function GiftOrdersPage({ initialOrders, initialSettings, cafe, initialHa
 
   return <main className={styles.root} dir="rtl" aria-busy={busy}>
     <header className={styles.hero}>
-      <div className={styles.heroCopy}><span className={styles.eyebrow}><Leaf size={15} aria-hidden="true" /> {cafe.name}</span><h1>من اختيار جميل<br /><span>إلى هدية تصل</span></h1><p>طلبات المنتجات والخدمات في مكان واحد من أول طلب حتى التسليم</p></div>
+      <div className={styles.heroCopy}><span className={styles.eyebrow}><ShoppingBag size={15} aria-hidden="true" /> {cafe.name}</span><h1>{retail ? "إطلالاتهم تبدأ هنا" : "من اختيار جميل"}<br /><span>{retail ? "وطلباتهم بين يديك" : "إلى هدية تصل"}</span></h1><p>{retail ? "طلبات المتجر والمقاسات والتوصيل والتحصيل في مكان واحد" : "طلبات المنتجات والخدمات في مكان واحد من أول طلب حتى التسليم"}</p></div>
       <div className={styles.heroSide}><span className={styles.heroMark}><Gift size={52} strokeWidth={1} aria-hidden="true" /></span><Link href={`/menu/${cafe.slug}`} target="_blank" rel="noopener noreferrer">عرض المتجر <ExternalLink size={16} aria-hidden="true" /></Link><button type="button" className={styles.settingsShortcut} onClick={() => setTab("settings")}><Truck size={18} aria-hidden="true" /><CreditCard size={18} aria-hidden="true" />إعداد التوصيل والدفع</button><span className={styles.storeStatus}><i data-open={settings?.enabled ?? false} />{settings?.enabled ? "استقبال الطلبات مفعّل" : "استقبال الطلبات متوقف"}</span></div>
     </header>
     <div className={styles.metrics} aria-label="ملخص طلبات الصفحة الحالية"><div><ShoppingBag aria-hidden="true" /><span>الطلبات المعروضة<strong>{orders.length}</strong></span></div><div><Gift aria-hidden="true" /><span>بانتظارك<strong>{pending}</strong></span></div><div><PackageCheck aria-hidden="true" /><span>قيد التنفيذ<strong>{preparing}</strong></span></div></div>
@@ -136,7 +138,7 @@ function OrderDetails({ order, finance, financeMessage, busy, command }: { order
   return <div className={styles.details}>
     <div className={styles.detailTop}><span className={styles.badge} data-state={order.status}>{giftOrderStatusLabel[order.status]}</span><span>{giftPaymentStatusLabel[order.paymentStatus]}</span><small>{date(order.createdAt)}</small></div>
     <div className={styles.infoGrid}><section><h3>العميل</h3><strong>{order.customerName}</strong><a dir="ltr" href={`tel:+${order.phone}`}>+{order.phone}</a><p>{order.fulfillment === "delivery" ? `توصيل إلى ${order.city}` : "استلام من المحل"}</p>{order.address && <p className={styles.pre}>{order.address}</p>}</section><section><h3>الدفع</h3><strong>{order.paymentMethod === "cod" ? "عند الاستلام" : "تحويل بنكي"}</strong><p>{giftPaymentStatusLabel[order.paymentStatus]}</p><span className={styles.detailTotal}>{order.status === "quote_requested" ? "طلب تسعير" : money(order.total)}</span></section></div>
-    <section className={styles.items}><h3>تفاصيل الاختيار</h3>{order.items.map(line => <article key={line.id}><div><strong>{line.name}</strong><small>{line.catalogKind === "service" ? "خدمة" : "منتج"} <span aria-hidden="true"> / </span> الكمية {line.quantity}</small>{line.selections.map((selection, index) => <p key={`${selection.label}:${index}`}><span>{selection.label}</span> {selection.value}{selection.priceDelta > 0 ? ` + ${money(selection.priceDelta)}` : ""}</p>)}</div><b>{order.status === "quote_requested" ? "يحدد لاحقًا" : money(line.lineTotal)}</b></article>)}</section>
+    <section className={styles.items}><h3>تفاصيل الاختيار</h3>{order.items.map(line => <article key={line.id}><div><strong>{line.name}</strong><small>{line.catalogKind === "service" ? "خدمة" : "منتج"} <span aria-hidden="true"> / </span> الكمية {line.quantity}</small>{line.selections.map((selection, index) => <p key={`${selection.label}:${index}`}><span>{selection.label}</span> {selection.value}{selection.attachmentId && <a href={`/api/commerce/attachments/${encodeURIComponent(selection.attachmentId)}`} target="_blank" rel="noopener noreferrer"> تنزيل المرفق</a>}{selection.priceDelta > 0 ? ` + ${money(selection.priceDelta)}` : ""}</p>)}</div><b>{order.status === "quote_requested" ? "يحدد لاحقًا" : money(line.lineTotal)}</b></article>)}</section>
     {(order.giftMessage || order.notes) && <section className={styles.noteBox}>{order.giftMessage && <><h3>رسالة الهدية</h3><p className={styles.pre}>{order.giftMessage}</p></>}{order.notes && <><h3>ملاحظات العميل</h3><p className={styles.pre}>{order.notes}</p></>}</section>}
     {order.status !== "quote_requested" && <dl className={styles.totals}><div><dt>المنتجات والخدمات</dt><dd>{money(order.subtotal)}</dd></div><div><dt>التوصيل</dt><dd>{money(order.deliveryFee)}</dd></div><div><dt>الضريبة {order.taxInclusive ? "المشمولة" : "المضافة"} {order.vatRate}%</dt><dd>{money(order.tax)}</dd></div><div><dt>الإجمالي</dt><dd>{money(order.total)}</dd></div></dl>}
     {order.status === "quote_requested" && <form className={styles.actionBox} onSubmit={event => { event.preventDefault(); void command({ id: order.id, action: "quote", amount: Number(quote), note }); }}><h3>تسعير الخدمة</h3><p className={styles.hint}>أدخل قيمة الخدمة المتفق عليها مع العميل {order.taxInclusive ? "شاملة الضريبة" : "قبل الضريبة"} ويظهر الإجمالي في متابعة طلبه</p><label className={styles.field}>قيمة الخدمة بالريال<input required type="number" min="0.01" max="1000000" step="0.01" value={quote} onChange={event => setQuote(event.target.value)} /></label><button className={styles.primary} disabled={busy}>اعتماد التسعير</button></form>}

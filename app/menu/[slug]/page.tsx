@@ -29,7 +29,7 @@ type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<Record<
 
 export async function generateViewport({ params }: Props): Promise<Viewport> {
   const { slug } = await params;
-  return { themeColor: slug === JAMILA_SLUG ? "#5c5c5c" : "#102019", width: "device-width", initialScale: 1 };
+  return { themeColor: isFawaselStore(slug) ? "#ff8500" : slug === JAMILA_SLUG ? "#5c5c5c" : "#102019", width: "device-width", initialScale: 1 };
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {

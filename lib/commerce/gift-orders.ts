@@ -15,13 +15,13 @@ export const giftOrderInputSchema = z.object({
   fulfillment: z.enum(["delivery", "pickup"]), city: z.string().trim().max(100).default(""), address: z.string().trim().max(1000).default(""),
   paymentMethod: z.enum(["cod", "bank_transfer"]), giftMessage: z.string().trim().max(1000).default(""), notes: z.string().trim().max(1000).default(""),
   expectedTotal: z.number().finite().min(0).max(100_000_000),
-  items: z.array(z.object({ productId: z.uuid(), optionId: identifier.optional(), quantity: z.number().int().min(1).max(99), selections: z.array(z.object({ groupId: identifier, choiceIds: z.array(identifier).max(50).optional(), text: z.string().trim().max(1000).optional() })).max(20).default([]) })).min(1).max(30),
+  items: z.array(z.object({ productId: z.uuid(), optionId: identifier.optional(), quantity: z.number().int().min(1).max(99), selections: z.array(z.object({ groupId: identifier, choiceIds: z.array(identifier).max(50).optional(), text: z.string().trim().max(1000).optional(), attachmentToken: z.uuid().optional() })).max(20).default([]) })).min(1).max(30),
 });
 export type GiftOrderInput = z.input<typeof giftOrderInputSchema>;
 export type GiftOrderStatus = "pending" | "quote_requested" | "accepted" | "preparing" | "ready" | "completed" | "cancelled" | "refunded";
 export type GiftPaymentStatus = "unpaid" | "paid" | "partially_refunded" | "refunded";
 export type GiftOrderReceipt = { id: string; number: number; trackingToken: string; total: number; status: GiftOrderStatus; paymentStatus: GiftPaymentStatus; duplicate?: boolean };
-export type GiftOrderLine = { id: string; productId: string; name: string; catalogKind: "product" | "service"; optionId: string | null; selections: { label: string; value: string; priceDelta: number }[]; quantity: number; unitPrice: number; lineTotal: number };
+export type GiftOrderLine = { id: string; productId: string; name: string; catalogKind: "product" | "service"; optionId: string | null; selections: { label: string; value: string; priceDelta: number; attachmentId?: string }[]; quantity: number; unitPrice: number; lineTotal: number };
 export type GiftOrder = {
   id: string; number: number; customerName: string; phone: string; fulfillment: "delivery" | "pickup"; city: string; address: string;
   giftMessage: string; notes: string; paymentMethod: "cod" | "bank_transfer"; status: GiftOrderStatus; paymentStatus: GiftPaymentStatus;
