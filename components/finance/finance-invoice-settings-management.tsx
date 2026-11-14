@@ -17,7 +17,7 @@ export function FinanceInvoiceSettingsManagement({ mode, title, value, snapshot,
   const products = snapshot.products;
   const customers = snapshot.parties.filter(row => row.kind === "customer" && row.active);
   const staff: { user_id: string; name: string }[] = snapshot.staff.filter(row => row.active && (row.role === "manager" || row.role === "accountant"));
-  if (snapshot.role === "owner" && !staff.some(row => row.user_id === snapshot.userId)) staff.unshift({ user_id: snapshot.userId, name: "مالك المنشأة الحالي" });
+  if (snapshot.ownerUserId && !staff.some(row => row.user_id === snapshot.ownerUserId)) staff.unshift({ user_id: snapshot.ownerUserId, name: "مالك المنشأة" });
   const accounts = snapshot.accounts.filter(row => row.active);
   const productOptions = products.map(row => <option value={row.id} key={row.id}>{row.name}</option>);
   let content: ReactNode;

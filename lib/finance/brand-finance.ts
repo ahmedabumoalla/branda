@@ -22,6 +22,7 @@ export type FinanceStaff = { user_id: string; name: string; role: FinanceStaffRo
 export type FinanceJournalLine = { id: string; document_id: string; account_id: string; debit: number; credit: number; created_at: string; memo: string };
 export type FinanceMovement = { id: string; item_id: string; warehouse_id: string; document_id: string; quantity: number; unit_cost: number; created_at: string };
 export type FinanceSnapshot = Partial<FinanceShiftSnapshot> & {
+  ownerUserId?: string;
   units?: import("./inventory-catalog").FinanceInventoryUnit[];
   canResetBalances?: boolean;
   cafe: { id: string; name: string; slug: string; businessCategory?: string }; userId: string; canManage: boolean; canAdminister: boolean; canManageCashiers?: boolean; role: FinanceRole;

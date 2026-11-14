@@ -49,6 +49,8 @@ export async function saveFinanceInvoiceSettings(slug: string, settings: unknown
     const { data, error } = await client.rpc("brand_finance_invoice_settings", { p_cafe_id: cafe.id, p_action: "save", p_settings: parsed.data.settings, p_revision: parsed.data.revision });
     if (error?.code === "40001") throw new Error("تغيرت الإعدادات في جلسة أخرى أعد تحميلها قبل الحفظ");
     if (error?.code === "42501") throw new Error("لا تملك صلاحية تعديل إعدادات الفواتير");
+    if (error?.code === "22023" && error.message === "Invalid user discount cap") throw new Error("راجع حدود الخصم للمستخدمين اختر مالك المنشأة أو مديرًا أو محاسبًا نشطًا واحذف صف حساب الصيانة إن وجد");
+    if (error?.code === "22023" && error.message === "Invoice numbering cannot move backwards") throw new Error("تقدم ترقيم الفواتير منذ فتح الإعدادات حدّث الرقم التالي قبل الحفظ");
     if (error?.code === "22023" && error.message.length < 400 && /[\u0600-\u06ff]/.test(error.message)) throw new Error(error.message);
     if (error) throw new Error("تعذر تأكيد حفظ الإعدادات أعد المحاولة بنفس الخيارات");
     invalidateFinanceViews(slug);

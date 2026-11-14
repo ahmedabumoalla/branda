@@ -42,7 +42,7 @@ export const getBrandFinanceContext = cache(async (slug?: string) => {
   if (data?.maintenance && !await getFinanceCashierMaintenance(data.id)) {
     throw new Error("انتهت جلسة الصيانة افتح صيانة العلامة مجددًا");
   }
-  return { client, cafe: data as { id: string; name: string; slug: string; role: FinanceRole; businessCategory?: string } };
+  return { client, cafe: data as { id: string; name: string; slug: string; role: FinanceRole; businessCategory?: string; maintenance?: boolean } };
 });
 
 export async function getBrandFinanceSnapshot(slug?: string): Promise<FinanceSnapshot> {
@@ -54,11 +54,15 @@ export async function readBrandFinanceSnapshot({ client, cafe }: Awaited<ReturnT
   const { data, error } = await client.rpc("brand_finance_snapshot", { p_cafe_id: cafe.id });
   if (error) throw new Error("تعذر تحميل المالية حاول مجددا");
   const snapshot = data as FinanceSnapshot;
-  const [cashierMaintenance, resetActor, products] = await Promise.all([
+  const [cashierMaintenance, resetActor, products, owner] = await Promise.all([
     snapshot.canAdminister ? Promise.resolve(null) : getFinanceCashierMaintenance(cafe.id),
     getFinanceMaintenanceActor(cafe.id),
     financeProductMedia(cafe, snapshot.products as (FinanceProduct & { imageStoragePath?: string | null })[]),
+    cafe.maintenance ? client.from("cafes").select("owner_user_id").eq("id", cafe.id).single() : Promise.resolve(null),
   ]);
+  if (owner?.error) throw new Error("تعذر تحميل مستخدمي إعدادات المالية حاول مجددًا");
+  // Maintenance grants owner capabilities, but never changes the user's identity.
+  snapshot.ownerUserId = cafe.maintenance ? owner?.data?.owner_user_id ?? undefined : snapshot.role === "owner" ? snapshot.userId : undefined;
   snapshot.canManageCashiers = snapshot.canAdminister || !!cashierMaintenance;
   snapshot.items = snapshot.items.map(item => ({ ...item, imageUrl: isInventoryImagePath(item.image_path, cafe.id) ? inventoryImageUrl(item.image_path, cafe.slug) : null }));
   snapshot.canResetBalances = !!resetActor;
