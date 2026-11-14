@@ -5,6 +5,7 @@ import { ArrowRight, RotateCcw, Save } from "lucide-react";
 import { getFinanceInvoiceSettings, saveFinanceInvoiceSettings } from "@/app/actions/finance-invoice-settings";
 import type { FinanceSnapshot } from "@/lib/finance/brand-finance";
 import type { InvoiceSettings, InvoiceSettingsState } from "@/lib/finance/invoice-settings";
+import { invoiceSettingsCache, invoiceSettingsCacheTtl, type EditableInvoiceSettings } from "@/lib/finance/invoice-settings-cache";
 import { FinanceInvoiceSettingsManagement } from "./finance-invoice-settings-management";
 import styles from "./finance-invoice-settings.module.css";
 
@@ -69,16 +70,24 @@ export function FinanceInvoiceSettings(props: Props) {
   return <InvoiceSettingsLoader key={props.slug} {...props} />;
 }
 function InvoiceSettingsLoader(props: Props) {
+  const cache = invoiceSettingsCache(props.snapshot);
   const [attempt, setAttempt] = useState(0);
-  const [loaded, setLoaded] = useState<{ attempt: number; data?: InvoiceSettingsState; error?: string } | null>(null);
+  const [loaded, setLoaded] = useState<{ attempt: number; data?: EditableInvoiceSettings; error?: string } | null>(() => {
+    const data = cache.read<EditableInvoiceSettings>(props.slug);
+    return data ? { attempt: 0, data } : null;
+  });
   useEffect(() => {
     let active = true;
-    getFinanceInvoiceSettings(props.slug).then(result => { if (active) setLoaded({ attempt, ...(result.ok ? { data: result.data } : { error: result.message }) }); }).catch(() => { if (active) setLoaded({ attempt, error: "تعذر تحميل إعدادات الفاتورة أعد المحاولة" }); });
+    cache.load(props.slug, invoiceSettingsCacheTtl, async () => {
+      const result = await getFinanceInvoiceSettings(props.slug);
+      if (!result.ok) throw new Error(result.message);
+      return result.data;
+    }).then(data => { if (active) setLoaded({ attempt, data }); }).catch((error: unknown) => { if (active) setLoaded({ attempt, error: error instanceof Error ? error.message : "تعذر تحميل إعدادات الفاتورة أعد المحاولة" }); });
     return () => { active = false; };
-  }, [props.slug, attempt]);
+  }, [props.slug, attempt, cache]);
   const current = loaded?.attempt === attempt ? loaded : null;
   if (!current?.data) return <section className={styles.page} dir="rtl" aria-busy={!current}><div className={styles.heading}><h2>إعدادات الفاتورة</h2><button type="button" onClick={props.onBack}><ArrowRight size={16} aria-hidden="true" />إعدادات المبيعات</button></div>{!current ? <p role="status" className={styles.notice}>جار تحميل إعدادات الفاتورة</p> : <div role="alert" className={styles.error}><p>{current.error || "إعدادات الفاتورة غير متاحة"}</p><button type="button" onClick={() => setAttempt(value => value + 1)}>إعادة المحاولة</button></div>}</section>;
-  return <InvoiceSettingsForm key={attempt} {...props} initial={current.data} onReload={() => setAttempt(value => value + 1)} />;
+  return <InvoiceSettingsForm key={attempt} {...props} canEdit={current.data.canEdit} initial={current.data} onReload={() => { cache.clear(); setAttempt(value => value + 1); }} />;
 }
 
 function InvoiceSettingsForm({ slug, snapshot, settings, canEdit, disabled, onBack, onEditTax, initial, onReload }: Props & { initial: InvoiceSettingsState; onReload: () => void }) {
@@ -100,6 +109,7 @@ function InvoiceSettingsForm({ slug, snapshot, settings, canEdit, disabled, onBa
       const result = await saveFinanceInvoiceSettings(slug, draft, saved.revision);
       if (!result.ok) { setError(result.message); return; }
       setSaved(result.data); setDraft(result.data.settings); setMessage("تم حفظ إعدادات الفاتورة");
+      invoiceSettingsCache(snapshot).write(slug, { ...result.data, canEdit }, invoiceSettingsCacheTtl);
     } catch { setError("تعذر تأكيد حفظ الإعدادات أعد تحميلها قبل المحاولة مجددًا"); }
     finally { lock.current = false; setSaving(false); }
   }

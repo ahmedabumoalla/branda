@@ -38,6 +38,10 @@ export const getBrandFinanceContext = cache(async (slug?: string) => {
   const { data, error } = await client.rpc("brand_finance_context", { p_slug: target });
   throwIfFinanceUnavailable(error);
   if (error) throw new Error("لا تملك صلاحية المالية لهذه العلامة أو أن الباقة غير مفعلة");
+  // The database checks the audited session; the web additionally checks its signed cookie.
+  if (data?.maintenance && !await getFinanceCashierMaintenance(data.id)) {
+    throw new Error("انتهت جلسة الصيانة افتح صيانة العلامة مجددًا");
+  }
   return { client, cafe: data as { id: string; name: string; slug: string; role: FinanceRole; businessCategory?: string } };
 });
 

@@ -4,19 +4,21 @@ import { FinanceCashierManagement } from "./finance-cashier-management";
 import { FinancePrinterSettings } from "./finance-printer-settings";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { financeSections as sections, resolveFinanceSection, resolveFinanceParty, financeSectionAllowed, type FinanceSection as Section } from "./finance-navigation";
 import { useRef, useState } from "react";
 import { ArrowDownToLine, ArrowLeft, CircleDollarSign, Plus, RefreshCw, Search, Wallet } from "lucide-react";
 import { Modal } from "@/components/dashboard/ui/modal";
 import type { FinanceDocument, FinanceSnapshot, FinanceParty } from "@/lib/finance/brand-finance";
-import { FinanceSaleForm } from "./finance-sale-form";
+
 import { FinanceInvoices } from "./finance-invoices";
-import { FinanceSalesSettings } from "./finance-sales-settings";
-import { FinanceInvoiceDetail } from "./finance-invoice-detail";
-import { FinanceCustomerDetail } from "./finance-customer-detail";
-import { FinanceJournalDetail } from "./finance-journal-detail";
-import { FinancePaymentEditor } from "./finance-payment-editor";
+
+
+
+
+
+
 import { readInvoiceDetailAction } from "@/app/actions/finance-invoice-management";
 import { saveInvoiceDraftAction } from "@/app/actions/finance-invoice-drafts";
 import { copyFinanceInvoiceLineNotes } from "@/app/actions/finance-invoice-line-notes";
@@ -24,16 +26,16 @@ import { copyFinanceInvoiceShippingCharge } from "@/app/actions/finance-invoice-
 import { invoiceCopyPayload } from "@/lib/finance/invoice-copy";
 import type { JournalDetail } from "@/lib/finance/journal-detail";
 import type { InvoicePayment } from "@/lib/finance/payment-management";
-import { FinanceRecurringInvoices } from "./finance-recurring-invoices";
-import { FinanceCreditNotes } from "./finance-credit-notes";
+
+
 import { FinanceSalesReturns, navigateSalesReturns } from "./finance-sales-returns";
 import { FinanceCustomerPayments, navigateCustomerPayments } from "./finance-customer-payments";
-import { FinanceQuotes } from "./finance-quotes";
+
 import { FinanceCustomerForm } from "./finance-customer-form";
 import { FinanceOperationForm, type FinanceForm } from "./finance-operation-form";
 import { documentKindNames, downloadFinanceCsv, Empty, financeDate, financeDocumentStatus, Metric, Numeric, Panel } from "./finance-ui";
 import { FinanceRefundRequests } from "./finance-refund-requests";
-import { FinanceReceiptDialog } from "./finance-receipt-dialog";
+
 import { FinanceTreasury } from "./finance-treasury";
 import { FinanceTrialBalance } from "./finance-trial-balance";
 import { FinanceShiftDetails } from "./finance-shift-details";
@@ -41,10 +43,24 @@ import { FinanceCashDifferences } from "./finance-cash-differences";
 import { FinanceCashHandovers } from "./finance-cash-handovers";
 import { useFinance } from "./use-finance";
 import { canFinance, canFinanceOperation, financeRoleLabels } from "@/lib/finance/permissions";
-import { FinanceInventoryReport } from "./finance-inventory-report";
+
 import { FinanceControlPanel, FinanceJournalExport, FinancePeriodHistory } from "./finance-control-panel";
 import { ledgerPilotEnabled } from "@/lib/finance/ledger";
 import styles from "./finance.module.css";
+
+function FinanceViewLoading() { return <p role="status" aria-live="polite">جارٍ فتح الصفحة</p>; }
+const FinanceSaleForm = dynamic(() => import("./finance-sale-form").then(module => module.FinanceSaleForm), { loading: FinanceViewLoading });
+const FinanceInvoiceImport = dynamic(() => import("./finance-invoice-import").then(module => module.FinanceInvoiceImport), { loading: FinanceViewLoading });
+const FinanceSalesSettings = dynamic(() => import("./finance-sales-settings").then(module => module.FinanceSalesSettings), { loading: FinanceViewLoading });
+const FinanceInvoiceDetail = dynamic(() => import("./finance-invoice-detail").then(module => module.FinanceInvoiceDetail), { loading: FinanceViewLoading });
+const FinanceCustomerDetail = dynamic(() => import("./finance-customer-detail").then(module => module.FinanceCustomerDetail), { loading: FinanceViewLoading });
+const FinanceJournalDetail = dynamic(() => import("./finance-journal-detail").then(module => module.FinanceJournalDetail), { loading: FinanceViewLoading });
+const FinancePaymentEditor = dynamic(() => import("./finance-payment-editor").then(module => module.FinancePaymentEditor), { loading: FinanceViewLoading });
+const FinanceRecurringInvoices = dynamic(() => import("./finance-recurring-invoices").then(module => module.FinanceRecurringInvoices), { loading: FinanceViewLoading });
+const FinanceCreditNotes = dynamic(() => import("./finance-credit-notes").then(module => module.FinanceCreditNotes), { loading: FinanceViewLoading });
+const FinanceQuotes = dynamic(() => import("./finance-quotes").then(module => module.FinanceQuotes), { loading: FinanceViewLoading });
+const FinanceReceiptDialog = dynamic(() => import("./finance-receipt-dialog").then(module => module.FinanceReceiptDialog), { loading: FinanceViewLoading });
+const FinanceInventoryReport = dynamic(() => import("./finance-inventory-report").then(module => module.FinanceInventoryReport), { loading: FinanceViewLoading });
 
 const salesCashierLabel = "إضافة كاشير مبيعات";
 const staffLabel = "إدارة موظف مالي";
@@ -59,6 +75,7 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
   const section = requestedSection === "cashiers" ? requestedSection : financeSectionAllowed(requestedSection,data.role,canManageCashiers) ? requestedSection : canFinance(data.role,"reports") ? "overview" : "inventory";
   const allows = (operation: string) => operation === "journal" && ledgerPilotEnabled(data.cafe.id) ? false : (operation === "sales_cashier_create" || operation === "staff") && canManageCashiers ? true : operation === "staff_create" ? canFinance(data.role,"staff_manage") : canFinanceOperation(data.role,operation);
   const [query, setQuery] = useState("");
+  const [invoiceImportMode, setInvoiceImportMode] = useState<"sheet" | "ai" | null>(null);
   const [localPartyKind, setLocalPartyKind] = useState("all");
   const partyKind = slug ? localPartyKind : resolveFinanceParty(params.get("party"));
   const inventoryView = !slug && params.get("view") === "items" ? "items" : !slug && params.get("view") === "movements" ? "movements" : "all";
@@ -266,7 +283,7 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
       {section === "sales" && salesView === "create" && (canFinance(data.role, "accounting_write") ? <FinanceSaleForm key={`${params.get("draft") ?? "new"}:${params.get("customer") ?? ""}`} initialDraftId={params.get("draft") ?? undefined} initialCustomerId={params.get("customer") ?? undefined} onIssued={() => { void state.refresh(); }} snapshot={creationSnapshot} pending={pending} stale={stale} error={error} onCancel={showSalesInvoices} onCreateCustomer={async payload => allows("party") && !!(await state.execute("party", payload))} /> : <Empty title="لا تملك صلاحية إنشاء الفواتير" />)}
       {isSalesSettings && <FinanceSalesSettings snapshot={data} slug={data.cafe.slug} settings={data.settings} disabled={disabled} onEditInvoices={allows("settings") ? () => open({ operation: "settings", title: "تعديل إعدادات المبيعات", values: { vatRate: data.settings.vat_rate, closedThrough: data.settings.closed_through ?? "", taxInclusive: data.settings.tax_inclusive } }) : undefined} />}
       {isInvoiceDetail && <FinanceInvoiceDetail key={`${invoiceId}:${paymentId ?? ""}`} id={invoiceId} initialPaymentId={paymentId} onCustomer={(customerId, paymentId) => showRecord("customer", customerId, invoiceId, paymentId)} onJournal={(id, paymentId) => showRecord("journal", id, invoiceId, paymentId)} onChanged={state.refresh} snapshot={data} disabled={disabled} onBack={showSalesInvoices} onNavigate={showInvoice} onPrint={document => { setReceiptId(null); setDetailReceipt(document); }} onDraft={!slug ? id => window.history.pushState(null, "", `/dashboard/finance?section=sales&view=create&draft=${encodeURIComponent(id)}`) : undefined} onSettle={allows("settlement") ? (document, amount) => { setDetailOperationDocument(document); open({ operation: "settlement", title: `تسجيل دفعة للفاتورة #${document.number}`, values: { documentId: document.id, remaining: document.outstanding, ...(amount === undefined ? {} : { amount }) } }); } : undefined} onRefund={allows("refund") ? document => { setDetailOperationDocument(document); open({ operation: "refund", title: `إرجاع مستند #${document.number}`, values: { documentId: document.id } }); } : undefined} />}
-      {isInvoiceManagement && <FinanceInvoices currentUserId={data.userId} onSettings={allows("settings") ? showInvoiceSettings : undefined} onReports={canFinance(data.role, "reports") ? showInvoiceReports : undefined} documents={data.documents} parties={data.parties} staff={data.staff} shifts={data.shifts} pending={pending} disabled={disabled} hasMore={state.historyMore.documents} onRefresh={state.refresh} onLoadMore={() => state.loadMore("documents")} onCreate={allows("sale") ? () => { if (slug) open({ operation: "sale", title: "إضافة فاتورة مبيعات" }); else { state.clearFeedback(); window.history.pushState(null, "", "/dashboard/finance?section=sales&view=create"); } } : undefined} onReceipt={showInvoice} onSettle={allows("settlement") ? document => open({ operation: "settlement", title: `تسوية مستند #${document.number}`, values: { documentId: document.id, remaining: document.outstanding } }) : undefined} onRefund={allows("refund") ? document => open({ operation: "refund", title: `إرجاع مستند #${document.number}`, values: { documentId: document.id } }) : undefined} />}
+      {isInvoiceManagement && <FinanceInvoices onImport={canFinance(data.role, "accounting_write") && !disabled ? setInvoiceImportMode : undefined} currentUserId={data.userId} onSettings={allows("settings") ? showInvoiceSettings : undefined} onReports={canFinance(data.role, "reports") ? showInvoiceReports : undefined} documents={data.documents} parties={data.parties} staff={data.staff} shifts={data.shifts} pending={pending} disabled={disabled} hasMore={state.historyMore.documents} onRefresh={state.refresh} onLoadMore={() => state.loadMore("documents")} onCreate={allows("sale") ? () => { if (slug) open({ operation: "sale", title: "إضافة فاتورة مبيعات" }); else { state.clearFeedback(); window.history.pushState(null, "", "/dashboard/finance?section=sales&view=create"); } } : undefined} onReceipt={showInvoice} onSettle={allows("settlement") ? document => open({ operation: "settlement", title: `تسوية مستند #${document.number}`, values: { documentId: document.id, remaining: document.outstanding } }) : undefined} onRefund={allows("refund") ? document => open({ operation: "refund", title: `إرجاع مستند #${document.number}`, values: { documentId: document.id } }) : undefined} />}
       {isCustomerPaymentsPage && <FinanceCustomerPayments key={`${data.cafe.id}:${data.userId}:${data.role}`} snapshot={data} view={salesView ?? "payments"} paymentId={paymentId} disabled={disabled} onChanged={() => { void state.refresh(); }} onInvoice={showInvoice} onCustomer={(id, payment) => showRecord("customer", id, undefined, undefined, undefined, payment)} onJournal={(id, payment) => showRecord("journal", id, undefined, undefined, undefined, payment)} />}
       {section === "purchases" && <><div className={styles.toolbar}><div><h2 className={styles.panelTitle}>مشتريات العلامة</h2><p className={styles.muted}>استلام الأصناف وتكلفتها وسداد المورد في عملية واحدة</p></div>{addButton({ operation: "purchase", title: "تسجيل مشتريات" })}</div>{searches}{documentsTable(data.documents.filter((document) => document.kind === "purchase"), "فواتير الموردين")}</>}
       {section === "parties" && !isCustomerDetail && <><div className={styles.toolbar}><div className={styles.actions}><button className={styles.category} aria-pressed={partyKind === "all"} onClick={() => setPartyKind("all")}>الكل</button>{[["customer", "العملاء"], ["supplier", "الموردون"], ["employee", "الموظفون"]].map(([kind, name]) => <button className={styles.category} key={kind} aria-pressed={partyKind === kind} onClick={() => setPartyKind(kind)}>{name}</button>)}</div>{addButton({ operation: "party", title: "إضافة عميل أو مورد أو موظف", values: { kind: partyKind === "all" ? "customer" : partyKind } }, "إضافة طرف")}</div>{searches}<Panel title="العملاء والموردون والموظفون">{!filteredParties.length ? <Empty title="ابدأ بإضافة أطراف التعامل">أضف عملاءك ومورديك لربط المبيعات والمشتريات بحساباتهم</Empty> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>الاسم</th><th>النوع</th><th>التواصل</th><th>الرصيد</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>{filteredParties.map((party) => <tr key={party.id}><td>{party.kind === "customer" ? <button type="button" className={styles.secondary} onClick={() => showRecord("customer", party.id)}>{party.name}</button> : <strong>{party.name}</strong>}</td><td>{party.kind === "customer" ? "عميل" : party.kind === "supplier" ? "مورد" : "موظف"}</td><td>{party.phone || party.email || "—"}</td><td><Numeric value={party.balance} money /></td><td>{party.active ? "نشط" : "موقوف"}</td><td>{allows("party") && <button className={styles.secondary} disabled={disabled} onClick={() => open({ operation: "party", title: "تعديل بيانات الطرف", values: { ...party, taxNumber: party.tax_number } })}>تعديل</button>}</td></tr>)}</tbody></table></div>}</Panel></>}
@@ -308,6 +325,7 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
       {section === "inventory" && inventoryView !== "items" && state.historyMore.movements && <button className={styles.secondary} disabled={pending} onClick={() => state.loadMore("movements")}>{pending ? "جار تحميل الحركات" : "تحميل حركات مخزون أقدم"}</button>}
     </div>
     {canFinance(data.role,"accounting_write") && (section === "overview" || (section === "sales" && ["invoices", "returns"].includes(salesView ?? ""))) && <FinanceRefundRequests snapshot={data} pending={disabled} error={error} onExecute={state.execute} onReceipt={id => { if (slug) setReceiptId(id); else navigateSalesReturns(id); }} />}
+    {invoiceImportMode && canFinance(data.role, "accounting_write") && <FinanceInvoiceImport mode={invoiceImportMode} slug={data.cafe.slug} onClose={() => setInvoiceImportMode(null)} onImported={id => { setInvoiceImportMode(null); if (slug) open({ operation: "sale", title: "مراجعة الفاتورة المستوردة", values: { draftId: id } }); else window.history.pushState(null, "", `/dashboard/finance?section=sales&view=create&draft=${encodeURIComponent(id)}`); }} />}
     <Modal open={!!accessibleForm} title={accessibleForm?.title ?? "عملية مالية"} onClose={() => { if (!pending && !inventoryBusy) setForm(null); }} panelClassName={["sale", "refund"].includes(accessibleForm?.operation ?? "") ? styles.invoicePanel : "flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"}>{accessibleForm?.operation === "sale" ? <FinanceSaleForm initialDraftId={typeof accessibleForm.values?.draftId === "string" ? accessibleForm.values.draftId : undefined} initialCustomerId={String(accessibleForm.values?.customerId ?? "")} onIssued={() => { void state.refresh(); }} snapshot={creationSnapshot} pending={pending} stale={stale} error={error} onCancel={() => { if (!pending) setForm(null); }} onCreateCustomer={async payload => allows("party") && !!(await state.execute("party", payload))} /> : accessibleForm?.operation === "party" && accessibleForm.values?.kind === "customer" ? <FinanceCustomerForm values={accessibleForm.values} pending={disabled} error={error} onCancel={() => { if (!pending) setForm(null); }} onSubmit={async (operation, payload) => allows(operation) && !!(await state.execute(operation, payload))} onSaved={() => setForm(null)} /> : accessibleForm && <FinanceOperationForm key={`${accessibleForm.operation}:${String(accessibleForm.values?.id ?? accessibleForm.values?.documentId ?? "new")}`} form={accessibleForm} snapshot={operationSnapshot} pending={pending} error={error} onInventorySaved={state.applyInventoryCatalog} onInventoryUnitsChanged={state.applyInventoryUnits} onInventoryBusyChange={setInventoryBusy} onCancel={() => setForm(null)} onSubmit={async (operation, payload) => { if (!allows(operation)) return false; const result = await state.execute(operation, payload); if (result) { setForm(null); if (accessibleForm.values?.journalOrigin && result.status !== "pending") { setJournalRevision(value => value + 1); showRecord("journal", result.id, detailOperationDocument?.id); } else if (operation === "refund" && result.status !== "pending") setReceiptId(result.id); } return !!result; }} />}</Modal>
     {canFinance(data.role,"reports") && receipt && <FinanceReceiptDialog key={`${data.cafe.id}:${receipt.id}`} document={receipt} snapshot={data} onClose={() => { setReceiptId(null); setDetailReceipt(null); }} />}
     {canFinance(data.role,"reports") && selectedAccountId && <FinanceTreasury key={selectedAccountId} snapshot={data} slug={slug} onRefresh={state.refresh} initialAccountId={selectedAccountId} detailOnly onCloseAccount={() => setSelectedAccountId(null)} />}

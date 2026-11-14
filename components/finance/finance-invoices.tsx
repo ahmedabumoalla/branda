@@ -22,13 +22,14 @@ const sortOptions = [
 ] as const;
 type InvoiceSort = typeof sortOptions[number]["id"];
 
-export function FinanceInvoices({ documents, parties, staff = [], shifts = [], currentUserId, pending, disabled, hasMore, onRefresh, onLoadMore, onCreate, onReceipt, onSettle, onRefund, onSettings, onReports }: {
+export function FinanceInvoices({ documents, parties, staff = [], shifts = [], currentUserId, pending, disabled, hasMore, onRefresh, onLoadMore, onCreate, onReceipt, onSettle, onRefund, onSettings, onReports, onImport }: {
   documents: FinanceDocument[]; parties: FinanceParty[]; pending: boolean; disabled: boolean; hasMore: boolean;
   staff?: FinanceStaff[]; shifts?: FinanceShift[];
   currentUserId?: string;
   onRefresh: () => void; onLoadMore: () => void; onCreate?: () => void; onReceipt: (id: string) => void;
   onSettle?: (document: FinanceDocument) => void; onRefund?: (document: FinanceDocument) => void;
   onSettings?: () => void; onReports?: () => void;
+  onImport?: (mode: "sheet" | "ai") => void;
 }) {
   const [draft, setDraft] = useState<Filters>(emptyFilters);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -200,8 +201,8 @@ export function FinanceInvoices({ documents, parties, staff = [], shifts = [], c
           </div>
           {addOpen && !disabled && <div id={addMenuId} className={styles.addMenu} role="group" aria-label="خيارات إضافة فاتورة">
             <button type="button" onClick={() => { setAddOpen(false); onCreate(); }}><Plus size={17} aria-hidden="true" /><span>فاتورة جديدة</span></button>
-            <button type="button" disabled><CloudUpload size={17} aria-hidden="true" /><span>استيراد</span><small>غير مفعّل</small></button>
-            <button type="button" disabled className={styles.aiOption}><Sparkles size={17} aria-hidden="true" /><span>رفع بالذكاء الاصطناعي</span><small>غير مفعّل</small></button>
+            <button type="button" disabled={!onImport} onClick={() => { setAddOpen(false); onImport?.("sheet"); }}><CloudUpload size={17} aria-hidden="true" /><span>استيراد</span></button>
+            <button type="button" disabled={!onImport} className={styles.aiOption} onClick={() => { setAddOpen(false); onImport?.("ai"); }}><Sparkles size={17} aria-hidden="true" /><span>رفع بالذكاء الاصطناعي</span></button>
           </div>}
         </div>}
       </div>

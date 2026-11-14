@@ -4,15 +4,17 @@ import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalida
 import { z } from "zod";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { canFinance } from "@/lib/finance/permissions";
+import { getFinanceCashierMaintenance } from "@/lib/data/finance-cashier-maintenance";
 import { invoiceSettingsSchema, invoiceSettingsStateSchema, invoiceEditorContextSchema } from "@/lib/finance/invoice-settings";
 import { actionResult } from "@/lib/platform/action-result";
 
-async function context(slug: string, write = false) {
+async function context(slug: string, write = false, inspectAccess = false) {
   const result = await getBrandFinanceContext(slug);
-  if (write ? !canFinance(result.cafe.role, "settings_manage") : !["owner", "manager", "accountant", "auditor"].includes(result.cafe.role)) {
+  const canEdit = canFinance(result.cafe.role, "settings_manage") || ((write || inspectAccess) && !!await getFinanceCashierMaintenance(result.cafe.id));
+  if (write ? !canEdit : !["owner", "manager", "accountant", "auditor"].includes(result.cafe.role)) {
     throw new Error("لا تملك صلاحية إدارة إعدادات الفواتير");
   }
-  return result;
+  return { ...result, canEdit };
 }
 function state(value: unknown) {
   const parsed = invoiceSettingsStateSchema.safeParse(value);
@@ -21,10 +23,10 @@ function state(value: unknown) {
 }
 export async function getFinanceInvoiceSettings(slug: string) {
   return actionResult(async () => {
-    const { client, cafe } = await context(slug);
+    const { client, cafe, canEdit } = await context(slug, false, true);
     const { data, error } = await client.rpc("brand_finance_invoice_settings", { p_cafe_id: cafe.id, p_action: "get" });
     if (error) throw new Error("تعذر تحميل إعدادات الفواتير أعد المحاولة");
-    return state(data);
+    return { ...state(data), canEdit };
   }, "تعذر تحميل إعدادات الفواتير");
 }
 export async function getFinanceInvoiceContext(slug: string, partyId: string, productIds: string[]) {
