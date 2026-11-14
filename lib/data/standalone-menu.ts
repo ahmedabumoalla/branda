@@ -1,4 +1,5 @@
 import "server-only";
+import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 import { signatureBrand } from "@/lib/menu/signature-brands";
 import { usesDefaultSignatureMenu } from "@/lib/menu/default-signature";
 
@@ -79,7 +80,7 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
   const [categoryResult, settingsResult, rawRows, identityResult] = await Promise.all([
     branchId ? categoryQuery.eq("branch_id", branchId) : categoryQuery.is("branch_id", null),
     admin.from("cafe_settings").select("logo_url,logo_storage_path,description,instagram,whatsapp").eq("cafe_id", cafe.id).maybeSingle(),
-    readMenuProducts(admin, String(cafe.id), branchId, cafe.business_category === "gifts_flowers" || hospitalMenu),
+    readMenuProducts(admin, String(cafe.id), branchId, isCommerceBusinessCategory(cafe.business_category) || hospitalMenu),
     defaultPresentation ? admin.from("cafe_custom_identity").select("palette,logo_storage_path,logo_url,background_storage_path,background_url").eq("cafe_id", cafe.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
   if (categoryResult.error) throw categoryResult.error;
@@ -90,7 +91,7 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
   const categoryNames = new Map(categories.map((category) => [String(category.id), String(category.name)]));
   const categoryIds = new Set(categoryNames.keys());
   // Gifts retain sold-out listings; deleted products and hidden categories never expose media.
-  const rows = rawRows.filter(row => isStandaloneProductVisible(row, categoryIds, cafe.business_category === "gifts_flowers"));
+  const rows = rawRows.filter(row => isStandaloneProductVisible(row, categoryIds, isCommerceBusinessCategory(cafe.business_category)));
   const mapped = rows.map((row) => mapDbProductToMenuProduct(row, categoryNames.get(row.category_id ?? "")));
   const paths = new Set<string>();
   for (const product of mapped) {
@@ -148,7 +149,7 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
       catalogKind: product.catalogKind,
       commerceDetails: product.commerceDetails,
       preparationTimeMinutes: product.preparationTimeMinutes, ingredients: product.ingredients,
-      available: cafe.business_category === "gifts_flowers" ? giftProductAvailable(product) : product.available, promo: product.promo,
+      available: isCommerceBusinessCategory(cafe.business_category) ? giftProductAvailable(product) : product.available, promo: product.promo,
       primaryMediaType: product.media?.some((item) => item.primary) ? primaryMediaType(product) : undefined,
       images: images.filter((item, index) => images.findIndex((other) => other.url === item.url) === index), videos,
     };

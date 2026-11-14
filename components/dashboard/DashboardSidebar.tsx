@@ -17,6 +17,7 @@ import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import type { AppNotification } from "@/lib/mock/notifications";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
 import { LOCO_BRAND_SLUG } from "@/lib/whatsapp/brand-connection-types";
+import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 import shell from "./dashboard-sidebar.module.css";
 
 type SidebarProps = {
@@ -53,7 +54,8 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
   const cafeLogoUrl = useResolvedCafeLogoUrl(settings);
   const cafeName = settings.cafeName || "العلامة";
   const isSalon = settings.businessCategory === "hair_salons";
-  const isGifts = settings.businessCategory === "gifts_flowers";
+  const isFashion = isFawaselStore(settings.cafeSlug);
+  const isGifts = settings.businessCategory === "gifts_flowers" || isFashion;
   const ToggleIcon = collapsed ? ChevronsLeft : ChevronsRight;
   const toggleLabel = collapsed ? "توسيع القائمة الجانبية" : "طي القائمة الجانبية";
   const integrated = (pathname === "/dashboard/finance" || pathname.startsWith("/dashboard/system/")) && !collapsed;
@@ -108,7 +110,7 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
       {links.filter(({ feature, access }) => feature.id === "finance" && access?.effectiveEnabled).map(({ feature }) => <FinanceSidebarMenu key={feature.id} collapsed={collapsed} onExpand={() => onCollapsedChange?.(false)} onNavigate={onNavigate} cafeSlug={settings.cafeSlug} isSalon={isSalon} isGifts={isGifts} enabledFeatures={links.filter(link => link.access?.effectiveEnabled).map(link => link.feature.id)} />)}
       {links.filter(({ feature }) => feature.id !== "finance").map(({ feature, access }) => {
         const Icon = feature.id === "menu" ? (isSalon ? Scissors : Package) : feature.id === "loyalty" ? Star : feature.id === "offers" ? Gift : feature.id === "pager" ? BellRing : feature.id === "marketing_campaigns" ? Megaphone : feature.id === "finance" ? WalletCards : Settings;
-        const title = isGifts && feature.id === "menu" ? "المنتجات والخدمات" : isGifts && feature.id === "settings" ? "إعدادات المتجر" : isSalon && feature.id === "menu" ? "الخدمات والمنتجات" : isSalon && feature.id === "settings" ? "إعدادات الصالون" : feature.sidebarLabel ?? feature.titleAr;
+        const title = isFashion && feature.id === "menu" ? "المتجر والمنتجات" : isGifts && feature.id === "menu" ? "المنتجات والخدمات" : isGifts && feature.id === "settings" ? "إعدادات المتجر" : isSalon && feature.id === "menu" ? "الخدمات والمنتجات" : isSalon && feature.id === "settings" ? "إعدادات الصالون" : feature.sidebarLabel ?? feature.titleAr;
         const locked = !access?.effectiveEnabled;
         const href = feature.route;
         const active = !locked && (pathname === href || pathname.startsWith(`${href}/`)) && !(feature.id === "pager" && pathname.startsWith("/dashboard/pager/reviews"));

@@ -14,11 +14,12 @@ import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { GiftOrdersPage, type GiftOrdersFinance } from "@/components/dashboard/pages/gift-orders-page";
 import { getOwnerGiftOrders } from "@/lib/data/gift-orders";
 import { getBrandFinanceSnapshot } from "@/lib/data/brand-finance";
+import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 
 export default async function OrdersPage() {
   if (isSupabaseConfigured()) {
     const cafe = await getOwnerCafeContext();
-    if (cafe?.businessCategory === "gifts_flowers") {
+    if (cafe && isCommerceBusinessCategory(cafe.businessCategory)) {
       const features = await getOwnerFeatureCodes();
       if (!featureCodesAllow(features, "menu")) return <DashboardFeatureBlockedState title="طلبات المنتجات والخدمات" />;
       let finance: GiftOrdersFinance | null = null;

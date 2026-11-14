@@ -8,6 +8,8 @@ import { RastQrCode } from "./qr-code";
 import s from "./rast-loyalty.module.css";
 import { loyaltyCommunityName, loyaltyTheme } from "./loyalty-theme";
 import { brandStampStyle } from "@/lib/loyalty/brand-stamp-artwork";
+import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
+import { FawaselLoyaltyCard } from "@/components/store/fawasel-loyalty-card";
 
 type Props = {
   identity: LoyaltyIdentity;
@@ -23,6 +25,7 @@ type Props = {
 };
 
 export function RastStampCard({ identity, customerName, stamps, required, rewardName, cardCode, displayNumber, stampStyle, preview = false, details }: Props) {
+  if (isFawaselStore(identity.slug)) return <FawaselLoyaltyCard customerName={customerName} stamps={stamps} required={required} rewardName={rewardName} cardCode={cardCode} displayNumber={displayNumber} preview={preview} details={details} />;
   const goal = Math.max(1, Math.min(100, Math.trunc(required)));
   const collected = Math.max(0, Math.min(goal, Math.trunc(stamps)));
   const selectedStyle = brandStampStyle(identity.slug, stampStyle);

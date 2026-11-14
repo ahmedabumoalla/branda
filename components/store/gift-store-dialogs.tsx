@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Leaf, Minus, Plus, ShoppingBag, Trash2, Truck, X } from "lucide-react";
 import { submitGiftOrderAction, trackGiftOrderAction } from "@/app/actions/gift-orders";
@@ -12,6 +12,8 @@ import { pendingGiftRequest, clearPendingGiftRequest } from "@/lib/commerce/chec
 import { togetherResponsiveImage, STORE_CARD_IMAGE_SIZES, STORE_DETAIL_IMAGE_SIZES } from "@/lib/menu/together-images";
 import { rememberStorePhoto, warmStorePhoto } from "@/lib/ui/store-image-cache";
 import s from "./together-store.module.css";
+
+export const StoreRetailContext = createContext(false);
 
 export function StoreMoney({ amount }: { amount: number }) {
   return <span className={s.money}><bdi>{amount.toLocaleString("en-US", { maximumFractionDigits: 2 })}</bdi><small>ريال</small></span>;
@@ -27,6 +29,7 @@ export function StorePhoto({ src, alt, eager = false, className = "", sizes = ST
 }
 
 export function StoreDialog({ title, close, children, wide = false, open = true }: { title: string; close: () => void; children: ReactNode; wide?: boolean; open?: boolean }) {
+  const retail = useContext(StoreRetailContext);
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -36,12 +39,13 @@ export function StoreDialog({ title, close, children, wide = false, open = true 
     const unlock = lockPageScroll();
     return () => { node?.close(); unlock(); previous?.focus({ preventScroll: true }); };
   }, [open]);
-  return <dialog ref={ref} className={`${s.dialog} ${wide ? s.wideDialog : ""}`} dir="rtl" aria-label={title} onCancel={e => { e.preventDefault(); close(); }} onClick={e => { if (e.target === e.currentTarget) close(); }}>
+  return <dialog ref={ref} className={`${s.dialog} ${wide ? s.wideDialog : ""} ${retail ? s.retailDialog : ""}`} dir="rtl" aria-label={title} onCancel={e => { e.preventDefault(); close(); }} onClick={e => { if (e.target === e.currentTarget) close(); }}>
     <div className={s.dialogHeader}><span>{title}</span><button type="button" className={s.iconButton} aria-label="إغلاق" onClick={close} autoFocus><X aria-hidden="true" /></button></div>{children}
   </dialog>;
 }
 
 export function GiftProductDialog({ product, close, add, orderingEnabled, open = true }: { product: StandaloneMenuProduct; close: () => void; add: (product: StandaloneMenuProduct, line: Omit<GiftCartLine, "key" | "productId">) => string | null; orderingEnabled: boolean; open?: boolean }) {
+  const retail = useContext(StoreRetailContext);
   const [image, setImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [optionId, setOptionId] = useState("");
@@ -55,7 +59,7 @@ export function GiftProductDialog({ product, close, add, orderingEnabled, open =
   const unitPrice = selectedProductPrice(product, selections, optionId);
   function choose(groupId: string, value: Partial<GiftSelection>) { setSelections(items => [...items.filter(i => i.groupId !== groupId), { groupId, ...value }]); setError(""); }
   function submit(e: FormEvent) { e.preventDefault(); const invalid = selectionError(product, selections, optionId); if (invalid) { setError(invalid); return; } const message = add(product, { quantity: quote ? 1 : quantity, optionId: optionId || undefined, selections }); if (message) setError(message); else { setError(""); setQuantity(1); setOptionId(""); setSelections([]); } }
-  return <StoreDialog title={product.catalogKind === "service" ? "خدمات وتجارب Together" : "تفاصيل غرسَتك"} close={close} open={open} wide>
+  return <StoreDialog title={retail ? "تفاصيل المنتج" : product.catalogKind === "service" ? "خدمات وتجارب Together" : "تفاصيل غرسَتك"} close={close} open={open} wide>
     <div className={s.productDetail}>
       <div className={s.detailGallery}>
         <div className={s.detailImage}><StorePhoto src={product.images[imageIndex]?.url} alt={product.images[imageIndex]?.alt || product.name} sizes={STORE_DETAIL_IMAGE_SIZES} eager /></div>
@@ -84,6 +88,7 @@ export function GiftProductDialog({ product, close, add, orderingEnabled, open =
 }
 
 export function GiftCheckoutDialog({ slug, lines, products, settings, setLines, close, onReceipt }: { slug: string; lines: GiftCartLine[]; products: StandaloneMenuProduct[]; settings: GiftStoreSettings; setLines: (items: GiftCartLine[]) => void; close: () => void; onReceipt: (receipt: GiftOrderReceipt) => void }) {
+  const retail = useContext(StoreRetailContext);
   const router = useRouter();
   const [selectedFulfillment, setFulfillment] = useState<"delivery" | "pickup">(settings.deliveryEnabled ? "delivery" : "pickup");
   const [selectedPayment, setPayment] = useState<"cod" | "bank_transfer">(settings.paymentMethods[0] ?? "cod");
@@ -113,11 +118,11 @@ export function GiftCheckoutDialog({ slug, lines, products, settings, setLines, 
     } catch { setError("تعذر الاتصال حاول مرة أخرى وسيُحفظ طلبك مرة واحدة"); }
     finally { lock.current = false; setBusy(false); }
   }
-  return <StoreDialog title={quote ? "تصميم ينمو مع مساحتك" : "سلة الغراس"} close={() => { if (!busy) close(); }}>
-    <div className={s.checkoutBody}>{!lines.length ? <div className={s.empty}><ShoppingBag /><h2>سلتك تنتظر غرسَتها الأولى</h2><button className={s.primary} onClick={close}>اكتشف المنتجات</button></div> : <>
+  return <StoreDialog title={retail ? "سلة التسوق" : quote ? "تصميم ينمو مع مساحتك" : "سلة الغراس"} close={() => { if (!busy) close(); }}>
+    <div className={s.checkoutBody}>{!lines.length ? <div className={s.empty}><ShoppingBag /><h2>{retail ? "إطلالتك القادمة تبدأ هنا" : "سلتك تنتظر غرسَتها الأولى"}</h2><button className={s.primary} onClick={close}>اكتشف المنتجات</button></div> : <>
       <div className={s.cartLines}>{resolved.map(({ line, product }) => <article key={line.key}><div className={s.cartImage}><StorePhoto src={product?.images[0]?.url} alt={product?.name || "صنف غير متاح"} sizes="64px" /></div><div><strong>{product?.name || "صنف غير متاح"}</strong>{product && <p>{selectionSummary(product, line.selections, line.optionId)}</p>}{!quote && <span>{line.quantity} × <StoreMoney amount={product ? selectedProductPrice(product, line.selections, line.optionId) : 0} /></span>}</div><button className={s.iconButton} type="button" disabled={busy} aria-label={`حذف ${product?.name || "الصنف"}`} onClick={() => setLines(lines.filter(i => i.key !== line.key))}><Trash2 /></button></article>)}</div>
       <form onSubmit={submit} className={s.checkoutForm}>
-        <h3>{quote ? "عرّفنا على مساحتك" : "لمن نجهّز هذا الجمال؟"}</h3>
+        <h3>{retail ? "تفاصيل طلبك" : quote ? "عرّفنا على مساحتك" : "لمن نجهّز هذا الجمال؟"}</h3>
         <div className={s.formRow}><label>الاسم<input name="name" autoComplete="name" required minLength={2} maxLength={120} disabled={busy} /></label><label>رقم الجوال<input name="phone" type="tel" inputMode="tel" dir="ltr" placeholder="05XXXXXXXX" autoComplete="tel" required pattern="(05|9665|\+9665|009665)[0-9]{8}" maxLength={16} disabled={busy} /></label></div>
         <fieldset className={s.optionGroup}><legend>{quote ? "طريقة تقديم الخدمة" : "كيف يصلك طلبك؟"}</legend>{settings.deliveryEnabled && <label className={s.choice}><input type="radio" name="fulfillment" checked={fulfillment === "delivery"} onChange={() => setFulfillment("delivery")} disabled={busy} /><Truck aria-hidden="true" /><span>توصيل</span>{!quote && <StoreMoney amount={settings.deliveryFee} />}</label>}{settings.pickupEnabled && <label className={s.choice}><input type="radio" name="fulfillment" checked={fulfillment === "pickup"} onChange={() => setFulfillment("pickup")} disabled={busy} /><ShoppingBag aria-hidden="true" /><span>استلام من المحل</span></label>}</fieldset>
         {fulfillment === "delivery" ? <><div className={s.formRow}><label>المدينة<input name="city" autoComplete="address-level2" required minLength={2} maxLength={100} disabled={busy} /></label><label>الحي والعنوان<input name="address" autoComplete="street-address" required minLength={5} maxLength={1000} disabled={busy} /></label></div>{settings.deliveryNotes && <p className={s.formHint}>{settings.deliveryNotes}</p>}</> : settings.pickupLocation && <p className={s.formHint}>{settings.pickupLocation}</p>}
@@ -132,6 +137,7 @@ export function GiftCheckoutDialog({ slug, lines, products, settings, setLines, 
 }
 
 export function GiftTrackingDialog({ slug, token, receipt, close }: { slug: string; token: string; receipt?: GiftOrderReceipt | null; close: () => void }) {
+  const retail = useContext(StoreRetailContext);
   const [tracking, setTracking] = useState<GiftOrderTracking | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -143,7 +149,7 @@ export function GiftTrackingDialog({ slug, token, receipt, close }: { slug: stri
   return <StoreDialog title="متابعة طلبك" close={close}>
     <div className={s.tracking}>
       <div className={s.successMark}>{order ? <Check /> : <Leaf />}</div>
-      <p className={s.eyebrow}>{order ? "غرسَتك في أيدينا" : "متابعة الغراس"}</p>
+      <p className={s.eyebrow}>{retail ? order ? "طلبك وصلنا" : "متابعة طلبك" : order ? "غرسَتك في أيدينا" : "متابعة الغراس"}</p>
       <h2>{order ? `طلبك رقم ${order.number}` : error ? "تعذر عرض الطلب" : "جارٍ تحميل الطلب"}</h2>
       {order && <><p className={s.statusTag}>{giftOrderStatusLabel[order.status]}</p><p>{giftPaymentStatusLabel[order.paymentStatus]}</p>{order.status !== "quote_requested" && <StoreMoney amount={order.total} />}</>}
       {tracking && <ul className={s.trackingItems}>{tracking.items.map((item, i) => <li key={i}><span>{item.name} × {item.quantity}</span><StoreMoney amount={item.lineTotal} /></li>)}</ul>}

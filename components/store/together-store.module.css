@@ -2,6 +2,8 @@
 @font-face { font-family: "Together Arabic"; src: url("/fonts/bistro-sans-semibold-ar.woff2") format("woff2"); font-weight: 600 900; font-display: swap; }
 .store, .dialog { --forest: #24452f; --green: #38571a; --sage: #e5eadb; --paper: #fafbf6; --ink: #243529; --muted: #687061; --line: #dce1d4; --lime: #dce8a6; color: var(--ink); background: var(--paper); font-family: "Together Arabic", sans-serif; color-scheme: light; }
 .store { overflow-x: clip; min-height: 100vh; }
+.dialog.retailDialog { --forest: #151515; --green: #a94400; --sage: #f3f3f3; --paper: #ffffff; --ink: #151515; --muted: #656565; --line: #dedede; --lime: #ff8500; border-radius: 4px; }
+.retailDialog :is(button,input,select,textarea):focus-visible { outline-color: #b34e00; }
 .store *, .store *::before, .store *::after, .dialog *, .dialog *::before, .dialog *::after { box-sizing: border-box; }
 .store :is(button, input, select, textarea), .dialog :is(button, input, select, textarea) { font: inherit; }
 .store button, .dialog button { cursor: pointer; }

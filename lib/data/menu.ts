@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 import { butcherProductDetailsSchema, type ButcherProductDetails } from "@/lib/menu/butcher-products";
 import { commerceDetailsSchema, type CommerceDetails } from "@/lib/commerce/product-details";
 import { revalidatePath } from "next/cache";
@@ -573,7 +574,7 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
     calories: parsed.calories ?? null,
     loyalty_points: 0,
     catalog_kind: cafe.businessCategory === "gifts_flowers" ? (parsed.catalogKind ?? "product") : cafe.businessCategory === "hair_salons" ? (parsed.catalogKind ?? "service") : "product",
-    ...(cafe.businessCategory === "gifts_flowers" && parsed.commerceDetails !== undefined ? { commerce_details: parsed.commerceDetails } : {}),
+    ...(isCommerceBusinessCategory(cafe.businessCategory) && parsed.commerceDetails !== undefined ? { commerce_details: parsed.commerceDetails } : {}),
     preparation_time_minutes: parsed.preparationTimeMinutes ?? null,
     redeemable_with_points: false,
     redemption_points: null,
@@ -597,7 +598,7 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
       .update(payload)
       .eq("id", parsed.id)
       .eq("cafe_id", cafe.id);
-    const compareCommerce = cafe.businessCategory === "gifts_flowers" && parsed.expectedCommerceDetails !== undefined;
+    const compareCommerce = isCommerceBusinessCategory(cafe.businessCategory) && parsed.expectedCommerceDetails !== undefined;
     if (compareCommerce) update = update.eq("commerce_details", JSON.stringify(parsed.expectedCommerceDetails));
     const { data, error } = await update.select("*").maybeSingle();
 

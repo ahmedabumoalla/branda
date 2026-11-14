@@ -1,4 +1,5 @@
 import "server-only";
+import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
@@ -11,7 +12,7 @@ function failure(error: { message?: string } | null, fallback: string) {
 }
 async function ownerContext() {
   const cafe = await requireOwnerCafeContext();
-  if (cafe.businessCategory !== "gifts_flowers" || !["owner", "manager", "platform_admin"].includes(cafe.role)) throw new Error("لا تملك صلاحية إدارة طلبات هذا المتجر");
+  if (!isCommerceBusinessCategory(cafe.businessCategory) || !["owner", "manager", "platform_admin"].includes(cafe.role)) throw new Error("لا تملك صلاحية إدارة طلبات هذا المتجر");
   return { cafe, client: await createClient() };
 }
 export async function getGiftStoreSettings(slug: string): Promise<GiftStoreSettings | null> {

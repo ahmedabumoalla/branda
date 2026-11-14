@@ -1,5 +1,5 @@
 "use client";
-import { Flower2, Scissors, Clock3, ChevronDown, Coffee, Copy, Eye, EyeOff, Flame, Gift, Pencil, Trash2 } from "lucide-react";
+import { Flower2, Shirt, Scissors, Clock3, ChevronDown, Coffee, Copy, Eye, EyeOff, Flame, Gift, Pencil, Trash2 } from "lucide-react";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { formatSar } from "@/lib/format";
 import { isPromoActive, promoBadgeText, productFinalPrice, type MenuProduct } from "@/lib/mock/menu";
@@ -14,7 +14,7 @@ type Props = {
 export function MenuProductCard({ product, busy = false, categoryLabel, freeProductLabel, onEdit, onDuplicate, onToggleAvailability, onDelete, businessCategory }: Props) {
   const isEvents = getBusinessCopy(businessCategory).kind === "events";
   const isSalon = businessCategory === "hair_salons";
-  const isGifts = businessCategory === "gifts_flowers";
+  const isGifts = businessCategory === "gifts_flowers" || businessCategory === "clothing_stores";
   const promoOn = product.promo != null && isPromoActive(product.promo);
   const finalPrice = productFinalPrice(product.price, product.promo);
   const discounted = promoOn && finalPrice < product.price;
@@ -23,7 +23,7 @@ export function MenuProductCard({ product, busy = false, categoryLabel, freeProd
     <div className={styles.productOverview}>
       <div className={styles.media}>
         <ProductMediaDisplay ownerMenu product={product} alt="" className={styles.mediaAsset}
-          fallback={<div className={styles.mediaFallback}>{isGifts ? <Flower2 aria-hidden="true" /> : isSalon ? <Scissors aria-hidden="true" /> : <Coffee aria-hidden="true" />}<span>بدون صورة</span></div>} />
+          fallback={<div className={styles.mediaFallback}>{businessCategory === "clothing_stores" ? <Shirt aria-hidden="true" /> : isGifts ? <Flower2 aria-hidden="true" /> : isSalon ? <Scissors aria-hidden="true" /> : <Coffee aria-hidden="true" />}<span>بدون صورة</span></div>} />
       </div>
       <div className={styles.productIdentity}>
         <p className={styles.categoryLabel}>{categoryLabel ?? product.category}</p>

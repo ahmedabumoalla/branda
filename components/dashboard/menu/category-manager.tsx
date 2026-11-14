@@ -204,7 +204,7 @@ export function CategoryManager({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-black text-[#3A2117]">
-            {isSalon ? "أقسام الخدمات ومنتجات العناية" : isEvents ? "فئات التذاكر والباقات" : "تصنيفات المنيو"}
+            {copy.kind === "clothing" ? "تصنيفات المتجر" : isSalon ? "أقسام الخدمات ومنتجات العناية" : isEvents ? "فئات التذاكر والباقات" : "تصنيفات المنيو"}
           </h2>
           <p className="mt-1 text-sm font-bold text-[#7A6255]">
             رتّب التصنيفات وتحكم في ظهورها للعميل

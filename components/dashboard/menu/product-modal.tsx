@@ -3,6 +3,7 @@
 import {
   Coffee,
   Flower2,
+  Shirt,
   Scissors,
   Download,
   Flame,
@@ -169,20 +170,21 @@ function MenuProductEditor({
   const copy = getBusinessCopy(businessCategory);
   const isEvents = copy.kind === "events";
   const isSalon = copy.kind === "barbershop";
-  const isGifts = copy.kind === "gifts";
+  const isFashion = copy.kind === "clothing";
+  const isGifts = copy.kind === "gifts" || isFashion;
   const isButcher = businessCategory === "butcher_shops";
   const [butcherDraft, setButcherDraft] = useState(() => createButcherProductDraft(editingProduct?.butcherDetails, editingProduct?.price));
   const [butcherError, setButcherError] = useState("");
   const [catalogKind, setCatalogKind] = useState<"service" | "product">(editingProduct?.catalogKind ?? (isSalon ? "service" : "product"));
   const [commerceDetails, setCommerceDetails] = useState<CommerceDetails>(() => editingProduct?.commerceDetails ?? {});
-  const productNoun = isGifts ? "المنتج أو الخدمة" : isSalon ? "الخدمة أو المنتج" : isEvents ? "التذكرة أو الباقة" : "المنتج";
-  const productNameLabel = isGifts ? "اسم المنتج أو الخدمة" : isSalon ? "اسم الخدمة أو المنتج" : isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
+  const productNoun = isFashion ? "المنتج" : isGifts ? "المنتج أو الخدمة" : isSalon ? "الخدمة أو المنتج" : isEvents ? "التذكرة أو الباقة" : "المنتج";
+  const productNameLabel = isFashion ? "اسم المنتج" : isGifts ? "اسم المنتج أو الخدمة" : isSalon ? "اسم الخدمة أو المنتج" : isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
   const categoryLabel = isEvents ? "نوع التذكرة أو الفئة" : "التصنيف";
-  const descriptionLabel = isGifts ? "وصف المنتج أو الخدمة" : isSalon ? "وصف الخدمة أو المنتج" : isEvents ? "وصف التذكرة أو الباقة" : "وصف المنتج";
+  const descriptionLabel = isFashion ? "وصف المنتج" : isGifts ? "وصف المنتج أو الخدمة" : isSalon ? "وصف الخدمة أو المنتج" : isEvents ? "وصف التذكرة أو الباقة" : "وصف المنتج";
   const priceLabel = isEvents ? "رسوم الدخول ر.س *" : "السعر ر.س *";
   const detailsLabel = isGifts ? "تفاصيل إضافية" : isSalon ? "تفاصيل الخدمة أو المنتج" : isEvents ? "ما تشمله التذكرة أو الباقة" : "مكونات المنتج";
-  const detailsPlaceholder = isGifts ? "مثال: تغليف هدية، بطاقة إهداء" : isSalon ? "مثال: حلاقة الشعر وتحديد اللحية" : isEvents ? "مثال: حضور ورشة، شهادة" : "مثال: حليب، قهوة";
-  const defaultProductName = isGifts ? "اسم المنتج أو الخدمة" : isSalon ? "اسم الخدمة أو المنتج" : isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
+  const detailsPlaceholder = isFashion ? "مثال: الخامة، تعليمات العناية" : isGifts ? "مثال: تغليف هدية، بطاقة إهداء" : isSalon ? "مثال: حلاقة الشعر وتحديد اللحية" : isEvents ? "مثال: حضور ورشة، شهادة" : "مثال: حليب، قهوة";
+  const defaultProductName = isFashion ? "اسم المنتج" : isGifts ? "اسم المنتج أو الخدمة" : isSalon ? "اسم الخدمة أو المنتج" : isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
 
 
   const [submitting, setSubmitting] = useState(false);
@@ -701,7 +703,7 @@ function MenuProductEditor({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={isButcher ? "مثال: لحم خروف طازج" : isGifts ? (catalogKind === "service" ? "مثال: تصميم مساحة خضراء" : "مثال: نبتة مونستيرا") : isSalon ? (catalogKind === "service" ? "مثال: قص الشعر وتحديد اللحية" : "مثال: زيت العناية باللحية") : isEvents ? "مثال: تذكرة دخول عامة" : "مثال: لاتيه فانيلا"}
+              placeholder={isFashion ? "مثال: تيشيرت قطني أسود" : isButcher ? "مثال: لحم خروف طازج" : isGifts ? (catalogKind === "service" ? "مثال: تصميم مساحة خضراء" : "مثال: نبتة مونستيرا") : isSalon ? (catalogKind === "service" ? "مثال: قص الشعر وتحديد اللحية" : "مثال: زيت العناية باللحية") : isEvents ? "مثال: تذكرة دخول عامة" : "مثال: لاتيه فانيلا"}
               className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
             />
           </label>
@@ -886,8 +888,8 @@ function MenuProductEditor({
             </label>}
           </div>
 
-          {isGifts && <label className="block text-sm font-bold text-[#3A2117]">نوع العنصر<select className="mt-2 min-h-11 w-full rounded-xl border border-[#E5D8CD] bg-white p-3" value={catalogKind} onChange={e => { const next = e.target.value as "product" | "service"; setCatalogKind(next); if (next === "product") setCommerceDetails(current => ({ ...current, quoteOnly: false })); }}><option value="product">منتج</option><option value="service">خدمة أو ورشة</option></select></label>}
-          {isGifts && <GiftProductFields value={commerceDetails} onChange={setCommerceDetails} service={catalogKind === "service"} />}
+          {isGifts && !isFashion && <label className="block text-sm font-bold text-[#3A2117]">نوع العنصر<select className="mt-2 min-h-11 w-full rounded-xl border border-[#E5D8CD] bg-white p-3" value={catalogKind} onChange={e => { const next = e.target.value as "product" | "service"; setCatalogKind(next); if (next === "product") setCommerceDetails(current => ({ ...current, quoteOnly: false })); }}><option value="product">منتج</option><option value="service">خدمة أو ورشة</option></select></label>}
+          {isGifts && <GiftProductFields value={commerceDetails} onChange={setCommerceDetails} service={catalogKind === "service"} fashion={isFashion} />}
           {isButcher && <ButcherProductFields value={butcherDraft} onChange={setButcherDraft} disabled={submitting} error={butcherError} />}
           {isSalon && <label className="block text-sm font-bold">نوع العنصر<select className="mt-2 w-full rounded-xl border p-3" value={catalogKind} onChange={e => setCatalogKind(e.target.value as "service" | "product")}><option value="service">خدمة حلاقة وعناية</option><option value="product">منتج للعناية</option></select></label>}
           {!isButcher && <div className="grid gap-4 sm:grid-cols-2">
@@ -1321,7 +1323,7 @@ function MenuProductEditor({
                   <div
                     className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${isSalon ? "from-[#4A281D] to-[#311912]" : variantGradient[previewProduct.imageVariant]}`}
                   >
-                    {isGifts ? <Flower2 className="h-12 w-12 text-white/85" /> : isSalon ? <Scissors className="h-12 w-12 text-white/85" /> : <Coffee className="h-12 w-12 text-white/85" />}
+                    {isFashion ? <Shirt className="h-12 w-12 text-white/85" /> : isGifts ? <Flower2 className="h-12 w-12 text-white/85" /> : isSalon ? <Scissors className="h-12 w-12 text-white/85" /> : <Coffee className="h-12 w-12 text-white/85" />}
                   </div>
                 }
               />

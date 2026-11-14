@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { ReceiptText, Monitor, Store, Hammer, ClipboardCheck, CalendarDays, HardHat, BadgeDollarSign, KeyRound, ClipboardList, Workflow, Users, Coins, Star, BadgeCheck, Contact, ShieldCheck, Boxes, ShoppingBag, Timer, WalletCards, Landmark, Banknote, ListOrdered, UserRoundCog, Network, CalendarCheck, HandCoins, ChartNoAxesCombined, MapPin, FileText, Settings } from "lucide-react";
 import { financeMenuGroups, type FinanceMenuEntry, type FinanceSection } from "@/components/finance/finance-navigation";
+import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 
 type SystemItem = { label: string; id?: string; view?: FinanceMenuEntry["view"]; unavailable?: boolean; section?: FinanceSection; href?: string; feature?: string; salonOnly?: boolean; giftsOnly?: boolean; pos?: boolean };
 type SystemGroup = { id: string; label: string; icon: LucideIcon; items: SystemItem[] };
@@ -42,11 +43,33 @@ export const integratedSystemGroups: SystemGroup[] = [
   { id: "settings", label: "الإعدادات", icon: Settings, items: [{"label":"معلومات الحساب","href":"/dashboard/system/settings/account"},{"label":"إعدادات الحساب","href":"/dashboard/system/settings/general"},{"label":"إعدادات SMTP","href":"/dashboard/system/settings/smtp"},{"label":"طرق الدفع","href":"/dashboard/system/settings/payments"},{"label":"إعدادات الرسائل","href":"/dashboard/system/settings/sms"},{"label":"الترقيم المتسلسل","href":"/dashboard/system/settings/numbering"},{"label":"إعدادات الضرائب","href":"/dashboard/system/settings/taxes"},{"label":"إدارة التطبيقات","href":"/dashboard/system/settings/apps"},{"label":"شعار وألوان النظام","href":"/dashboard/system/settings/brand"},{"label":"واجهة API","href":"/dashboard/system/settings/api"},{"label":"المساعد الذكي (Copilot)","href":"/dashboard/system/settings/copilot"}] },
 ];
 
+const storeGroupIds = new Set(["sales", "pos", "store", "customers", "loyalty", "inventory", "purchases", "finance", "accounting", "reports", "branches", "templates", "settings"]);
+const storeReportPaths = new Set(["sales", "purchases", "accounting", "customers", "inventory", "activity"]);
+
+/** Account-specific navigation; this deliberately does not grant or revoke permissions. */
+export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] {
+  if (!isFawaselStore(cafeSlug)) return integratedSystemGroups;
+  return integratedSystemGroups.filter(group => storeGroupIds.has(group.id)).map(group => {
+    if (group.id === "store") return { ...group, label: "المتجر والمنتجات", items: [
+      { label: "إدارة المنتجات", href: "/dashboard/menu", feature: "menu" },
+      { label: "طلبات المتجر", href: "/dashboard/orders", feature: "menu" },
+      { label: "عرض المتجر", href: `/menu/${encodeURIComponent(cafeSlug)}`, feature: "menu" },
+      ...group.items.filter(item => item.href !== "/dashboard/menu"),
+    ] };
+    if (group.id === "reports") return { ...group, items: group.items.filter(item => item.section === "reports" || storeReportPaths.has(item.href?.split("/").at(-1) ?? "")) };
+    if (group.id === "customers") return { ...group, items: group.items.filter(item => !item.href?.endsWith("/appointments")) };
+    if (group.id === "accounting") return { ...group, items: group.items.filter(item => !item.href?.includes("/assets")) };
+    if (group.id === "branches") return { ...group, items: group.items.map(item => item.href === "/dashboard/branches" ? { ...item, label: "فروع المتجر" } : item) };
+    if (group.id === "settings") return { ...group, items: [...group.items, { label: "إعدادات المبيعات والشحن", section: "sales", view: "sales-settings" }, { label: "إعدادات المالية والصلاحيات", section: "settings" }] };
+    return group;
+  });
+}
+
 export function systemItemHref(item: SystemItem, context: { cafeSlug: string; enabledFeatures: readonly string[]; isSalon: boolean; isGifts: boolean }) {
   if (item.unavailable) return null;
   if (item.feature && !context.enabledFeatures.includes(item.feature)) return null;
   if (item.salonOnly && !context.isSalon) return null;
-  if (item.giftsOnly && !context.isGifts) return null;
+  if (item.giftsOnly && !context.isGifts && !isFawaselStore(context.cafeSlug)) return null;
   if (item.section) return `/dashboard/finance?section=${item.section}${item.view ? `&view=${item.view}` : ""}`;
   if (item.pos) return context.cafeSlug ? `/finance/${encodeURIComponent(context.cafeSlug)}/pos` : null;
   return item.href ?? null;

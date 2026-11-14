@@ -7,11 +7,24 @@ const input = "mt-2 min-h-11 w-full rounded-xl border border-[#E5D8CD] bg-white 
 const remove = "flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-red-100 text-red-700 hover:bg-red-50";
 const add = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#D8C4B5] bg-white px-4 py-2 text-sm font-bold text-[#6D3B25]";
 
-export function GiftProductFields({ value, onChange, service }: { value: CommerceDetails; onChange: (next: CommerceDetails) => void; service: boolean }) {
+export function GiftProductFields({ value, onChange, service, fashion = false }: { value: CommerceDetails; onChange: (next: CommerceDetails) => void; service: boolean; fashion?: boolean }) {
   const groups = value.optionGroups ?? [];
   const attributes = value.attributes ?? [];
+  const variants = value.options ?? [];
   function patchGroup(id: string, patch: Partial<CommerceOptionGroup>) { onChange({ ...value, optionGroups: groups.map(group => group.id === id ? { ...group, ...patch } : group) }); }
   return <section className="space-y-6 rounded-2xl border border-[#E5D8CD] bg-[#FAF7F3] p-4 sm:p-5" aria-label="تفاصيل المنتجات والخدمات">
+    {(fashion || variants.length > 0) && <div className="space-y-3">
+      <h3 className="font-bold text-[#3A2117]">المقاسات والألوان</h3>
+      <p className="text-xs leading-6 text-[#7A6255]">لكل تركيبة مقاس ولون سعرها وكميتها المتاحة وتظهر للعميل عند اختيار المنتج</p>
+      {variants.map((variant, index) => <fieldset key={variant.id} className="grid gap-3 rounded-xl border border-[#E5D8CD] bg-white p-3 sm:grid-cols-2">
+        <legend className="px-1 text-xs font-bold">الخيار {index + 1}</legend>
+        <label className="text-xs">المقاس واللون<input className={input} value={variant.label} maxLength={240} onChange={event => onChange({ ...value, options: variants.map(item => item.id === variant.id ? { ...item, label: event.target.value } : item) })} /></label>
+        <label className="text-xs">السعر بالريال<input className={input} type="number" min="0" max="1000000" step="0.01" value={variant.price} onChange={event => onChange({ ...value, options: variants.map(item => item.id === variant.id ? { ...item, price: Number(event.target.value) } : item) })} /></label>
+        <label className="text-xs">الكمية المتاحة<input className={input} type="number" min="0" max="1000000" step="1" value={variant.stock ?? ""} onChange={event => onChange({ ...value, options: variants.map(item => item.id === variant.id ? { ...item, stock: event.target.value === "" ? null : Number(event.target.value) } : item) })} /></label>
+        <div className="flex items-center justify-between gap-3"><label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={variant.available} onChange={event => onChange({ ...value, options: variants.map(item => item.id === variant.id ? { ...item, available: event.target.checked } : item) })} />متاح للطلب</label><button type="button" className={remove} aria-label={`حذف الخيار ${index + 1}`} onClick={() => onChange({ ...value, options: variants.filter(item => item.id !== variant.id) })}><Trash2 size={16} aria-hidden="true" /></button></div>
+      </fieldset>)}
+      {variants.length < 100 && <button type="button" className={add} onClick={() => onChange({ ...value, options: [...variants, { id: crypto.randomUUID(), label: "", price: 0, available: true, stock: null }] })}><Plus size={16} aria-hidden="true" />إضافة مقاس أو لون</button>}
+    </div>}
     <label className="block text-sm font-bold text-[#3A2117]">الكمية المتاحة<input aria-label="الكمية المتاحة" className={input} type="number" min="0" max="1000000" step="1" value={value.stock ?? ""} onChange={e => onChange({ ...value, stock: e.target.value === "" ? null : Number(e.target.value) })} placeholder="اتركها فارغة لعدد غير محدود" /><span className="mt-2 block text-xs font-normal leading-6 text-[#7A6255]">للخدمات يمكنك تحديد عدد الحجوزات المتاحة</span></label>
     {service && <label className="flex items-start gap-3 text-sm font-bold text-[#3A2117]"><input type="checkbox" checked={value.quoteOnly ?? false} onChange={e => onChange({ ...value, quoteOnly: e.target.checked })} className="mt-1 h-5 w-5 accent-[#6D3B25]" /><span>الخدمة تتطلب عرض سعر<span className="mt-1 block text-xs font-normal leading-6 text-[#7A6255]">يرسل العميل تفاصيله للإدارة قبل تحديد السعر ولا تُعرض الخدمة كخدمة مجانية</span></span></label>}
     <div><h3 className="font-bold text-[#3A2117]">المواصفات والعناية</h3><p className="mt-1 text-xs leading-6 text-[#7A6255]">أضف الحجم وطريقة العناية أو ما تتضمنه الخدمة</p>

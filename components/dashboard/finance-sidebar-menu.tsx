@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, WalletCards } from "lucide-react";
 import { resolveFinanceMenuEntry, resolveFinanceSection } from "@/components/finance/finance-navigation";
-import { integratedSystemGroups, systemItemHref } from "./integrated-system-navigation";
+import { integratedSystemGroupsForBrand, systemItemHref } from "./integrated-system-navigation";
 import styles from "./finance-sidebar-menu.module.css";
 
 export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug = "", enabledFeatures = [], isSalon = false, isGifts = false }: {
@@ -24,10 +24,11 @@ export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug =
   const systemActive = pathname.startsWith("/dashboard/system/");
   const section = resolveFinanceSection(params.get("section"), true);
   const context = { cafeSlug, enabledFeatures, isSalon, isGifts };
+  const groups = integratedSystemGroupsForBrand(cafeSlug);
   const currentEntry = resolveFinanceMenuEntry(section, params.get("party"), params.get("view"));
-  const closestSystemHref = integratedSystemGroups.flatMap(group => group.items.map(item => systemItemHref(item, context))).filter((href): href is string => !!href && href.startsWith("/dashboard/system/") && (pathname === href || pathname.startsWith(href + "/"))).sort((a,b) => b.length-a.length)[0];
-  const isCurrent = (href: string | null) => href !== null && (href.startsWith("/dashboard/finance?") ? active && (section === "sales" ? integratedSystemGroups[0].items.find(item => item.id === currentEntry && !item.unavailable && systemItemHref(item, context) === href) !== undefined : href === `/dashboard/finance?section=${section}`) : href.startsWith("/dashboard/system/") ? closestSystemHref === href : pathname === href);
-  const activeGroup = integratedSystemGroups.find(group => group.items.some(item => isCurrent(systemItemHref(item, context))))?.id ?? null;
+  const closestSystemHref = groups.flatMap(group => group.items.map(item => systemItemHref(item, context))).filter((href): href is string => !!href && href.startsWith("/dashboard/system/") && (pathname === href || pathname.startsWith(href + "/"))).sort((a,b) => b.length-a.length)[0];
+  const isCurrent = (href: string | null) => href !== null && (href.startsWith("/dashboard/finance?") ? active && (section === "sales" ? groups[0].items.find(item => item.id === currentEntry && !item.unavailable && systemItemHref(item, context) === href) !== undefined : href === `/dashboard/finance?section=${section}`) : href.startsWith("/dashboard/system/") ? closestSystemHref === href : pathname === href);
+  const activeGroup = groups.find(group => group.items.some(item => isCurrent(systemItemHref(item, context))))?.id ?? null;
   const route = `${pathname}?${params.toString()}`;
   const [disclosure, setDisclosure] = useState({ route, expanded: !!activeGroup });
   const [selection, setSelection] = useState({ route, group: activeGroup });
@@ -47,7 +48,7 @@ export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug =
       {!collapsed && <><span className={styles.label}>نظام برندة المتكامل</span><ChevronDown className={`${styles.chevron} ${expanded ? styles.open : ""}`} aria-hidden="true" /></>}
     </button>}
     <div id={`${id}-sections`} hidden={!visible} className={styles.groups}>
-      {integratedSystemGroups.map(({ id: groupId, label, icon: Icon, items }) => {
+      {groups.map(({ id: groupId, label, icon: Icon, items }) => {
         const available = items.some(item => systemItemHref(item, context));
         const open = openGroup === groupId;
         return <div key={groupId}>

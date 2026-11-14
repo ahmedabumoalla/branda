@@ -18,6 +18,8 @@ import { SignatureMenu } from "@/components/menu/signature-menu";
 import { defaultSignatureBrand } from "@/lib/menu/default-signature";
 import { TeaBakeryMenu } from "@/components/menu/tea-bakery-menu";
 import { JamilaMenu, JAMILA_SLUG } from "@/components/menu/jamila-menu";
+import { FawaselStore } from "@/components/store/fawasel-store";
+import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 
 export const dynamic = "force-dynamic";
 // Share the preview publication check between metadata and page rendering in one request.
@@ -40,6 +42,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (loyaltyBrand) return { title: `${loyaltyBrand.identity.name} | الولاء والمكافآت`, description: `انضم إلى برنامج ولاء ${loyaltyBrand.identity.name} واجمع أختامك`, alternates: { canonical: `/loyalty/${loyaltyBrand.identity.slug}/qr` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
+  if (isFawaselStore(menu.slug)) return { title: "فواصل | ستايلك كل يوم", description: "تسوّق أزياء وأحذية وإكسسوارات فواصل واختر تفاصيل إطلالتك وانضم إلى نادي فواصل", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (menu.slug === JAMILA_SLUG && menu.products.length === 0) return {
     title: `${menu.name} | قهوة ومخبوزات`, description: "أهلًا بك في جميلة قهوة ومخبوزات ولحظات جميلة قائمتنا قريبًا",
     ...(showcase ? { robots: { index: false, follow: false }, alternates: { canonical: `/menu/${slug}` } } : {}),
@@ -62,7 +65,8 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) notFound();
   if (menu.businessCategory === "hair_salons") redirect(`/salon/${menu.slug}`);
-  const giftStore = menu.businessCategory === "gifts_flowers";
+  const fawasel = isFawaselStore(menu.slug);
+  const giftStore = menu.businessCategory === "gifts_flowers" || fawasel;
   const teaBakery = menu.slug === "brand-9010051467ed";
   const jamila = menu.slug === JAMILA_SLUG && menu.products.length === 0;
   const signature = signatureBrand(menu.slug, menu.branch?.slug) || defaultSignatureBrand(menu);
@@ -71,6 +75,11 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;
   // Gallery frames are genuine public menus, without visitor/customer tracking or interactions.
   const storeSettings = giftStore ? await getGiftStoreSettings(menu.slug).catch(() => null) : null;
+  if (fawasel) {
+    const storefront = <FawaselStore menu={menu} settings={storeSettings} loyalty={loyalty} />;
+    if (showcase) return <div inert>{storefront}</div>;
+    return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{storefront}</>;
+  }
   const presentation = jamila ? <JamilaMenu menu={menu} loyalty={loyalty} /> : teaBakery ? <TeaBakeryMenu key={`${menu.slug}:${menu.branch?.id ?? "primary"}`} menu={menu} loyalty={loyalty} /> : signature ? <SignatureMenu key={`${menu.slug}:${menu.branch?.id ?? "primary"}`} menu={menu} brand={signature} loyalty={loyalty} /> : giftStore && menu.slug === "brand-871ec6e243c0" ? <TogetherStore menu={menu} loyalty={loyalty} settings={storeSettings} /> : isLocoMenu(menu.slug) ? <LocoMenu menu={menu} loyalty={loyalty} /> : menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} loyalty={loyalty} /> : <BistroMenu menu={menu} />;
   if (showcase) return <div inert>{presentation}</div>;
   return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{presentation}</>;
