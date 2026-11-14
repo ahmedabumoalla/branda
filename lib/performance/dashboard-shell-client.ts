@@ -20,7 +20,7 @@ function writeSessionSnapshot(value: DashboardShellSnapshot) {
     clearDashboardShellSnapshot();
     return;
   }
-  cachedSnapshot = { at: Date.now(), value };
+  cachedSnapshot = { at: performance.now(), value };
 }
 
 // Only the current server-rendered layout may seed its account snapshot.
@@ -38,7 +38,7 @@ function redirectUnauthenticatedDashboard(value: DashboardShellSnapshot) {
 }
 
 export function getCachedDashboardShellSnapshot() {
-  if (cachedSnapshot && Array.isArray(cachedSnapshot.value.serviceSubscriptions) && Date.now() - cachedSnapshot.at < DASHBOARD_SHELL_TTL_MS) {
+  if (cachedSnapshot && Array.isArray(cachedSnapshot.value.serviceSubscriptions) && performance.now() - cachedSnapshot.at < DASHBOARD_SHELL_TTL_MS) {
     return Promise.resolve(cachedSnapshot.value);
   }
 

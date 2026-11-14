@@ -21,6 +21,7 @@ import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 import shell from "./dashboard-sidebar.module.css";
 
 type SidebarProps = {
+  serverNow?: () => number;
   snapshot?: DashboardShellSnapshot;
   servicesAvailable?: boolean;
   collapsed?: boolean;
@@ -46,7 +47,7 @@ const initialNavigation: NavigationState = {
 };
 
 
-export function DashboardSidebar({ snapshot, servicesAvailable = false, collapsed = false, onCollapsedChange, onNavigate, onEndMaintenance, isEndingMaintenance = false }: SidebarProps = {}) {
+export function DashboardSidebar({ snapshot, serverNow, servicesAvailable = false, collapsed = false, onCollapsedChange, onNavigate, onEndMaintenance, isEndingMaintenance = false }: SidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const navigation = snapshot ?? initialNavigation;
@@ -102,7 +103,7 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
           {settings.ownerName && <p className={`${shell.ownerName} mt-0.5 truncate text-[10px] font-normal text-[#8F8176]`}>{settings.ownerName}</p>}
         </div>
       </div>
-      {navigation.subscription && <div className={shell.subscription}><SubscriptionCountdown subscription={navigation.subscription} /></div>}
+      {navigation.subscription && <div className={shell.subscription}><SubscriptionCountdown subscription={navigation.subscription} serverNow={serverNow} /></div>}
       {servicesAvailable && <div className={`${shell.notifications} mt-2.5 flex gap-1.5`}><NotificationsPanel live={isSalon} initialNotifications={notifications} className="[&>button]:h-8 [&>button]:w-8 [&>button]:rounded-lg [&>button]:border-white/10 [&>button]:bg-white/[0.06]" /></div>}
     </div>}
 

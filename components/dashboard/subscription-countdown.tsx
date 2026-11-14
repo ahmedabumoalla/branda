@@ -3,14 +3,15 @@
 import { useEffect, useState } from "react";
 import { subscriptionTimeRemaining, type SubscriptionSummary } from "@/lib/platform/subscription-clock";
 
-export function SubscriptionCountdown({ subscription }: { subscription: SubscriptionSummary }) {
+export function SubscriptionCountdown({ subscription, serverNow }: { subscription: SubscriptionSummary; serverNow?: () => number }) {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
-    const tick = () => setNow(Date.now());
+    if (!serverNow) return;
+    const tick = () => setNow(serverNow());
     const interval = window.setInterval(tick, 1000);
     tick();
     return () => window.clearInterval(interval);
-  }, []);
+  }, [serverNow]);
   const remaining = now === null ? null : subscriptionTimeRemaining(subscription.expiresAt, now);
   const trial = subscription.status === "trialing";
   const label = trial ? "الفترة التجريبية" : subscription.planName;

@@ -18,8 +18,10 @@ import { dashboardPlatformFeatures, type PlatformPlan } from "@/lib/platform/adm
 import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
 import { cafeHasFeature } from "@/lib/platform/permissions";
 import { getServiceSubscriptionAccess } from "@/lib/platform/service-subscriptions";
+import { snapshotServerClock } from "@/lib/platform/server-clock";
 
 type GuardState = {
+  serverNow?: () => number;
   snapshot?: DashboardShellSnapshot;
   loading: boolean;
   error?: boolean;
@@ -47,12 +49,13 @@ function readSidebarPreference() {
   catch { return false; }
 }
 
-function guardForSnapshot(snapshot: DashboardShellSnapshot): GuardState {
+function guardForSnapshot(snapshot: DashboardShellSnapshot, serverNow = snapshotServerClock(snapshot)): GuardState {
   if (snapshot.unauthenticated) return { loading: false, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] };
-  const access = getServiceSubscriptionAccess(snapshot.serviceSubscriptions);
+  const access = getServiceSubscriptionAccess(snapshot.serviceSubscriptions, serverNow());
   const plans = snapshot.plans.map(plan => plan.id === access.planId
     ? { ...plan, features: access.features as PlatformPlan["features"] } : plan);
   return {
+    serverNow,
     snapshot: { ...snapshot, planId: access.planId, plans, subscription: access.subscription ?? snapshot.subscription },
     loading: false,
     expiresAt: access.nextChangeAt,
@@ -115,31 +118,32 @@ export function DashboardAppLayout({
     }
     load();
     const refresh = () => { clearDashboardShellSnapshot(); load(); };
-    window.addEventListener("focus", load);
+    window.addEventListener("focus", refresh);
     window.addEventListener("barndaksa:subscription-updated", refresh);
     window.addEventListener("barndaksa:settings-updated", refresh);
     return () => {
       cancelled = true;
-      window.removeEventListener("focus", load);
+      window.removeEventListener("focus", refresh);
       window.removeEventListener("barndaksa:subscription-updated", refresh);
       window.removeEventListener("barndaksa:settings-updated", refresh);
     };
   }, [pathname, retry, initialSnapshot]);
 
+  const { expiresAt, serverNow } = guard;
   useEffect(() => {
-    if (!guard.expiresAt) return;
-    const remaining = Date.parse(guard.expiresAt) - Date.now();
+    if (!expiresAt || !serverNow) return;
+    const remaining = Date.parse(expiresAt) - serverNow();
     if (!Number.isFinite(remaining)) return;
     const timer = window.setTimeout(() => {
       if (remaining > 2147483647) { setRetry(value => value + 1); return; }
       clearDashboardShellSnapshot();
       // Expire only the affected package immediately, then refresh server permissions.
-      setGuard(state => state.snapshot ? guardForSnapshot(state.snapshot) : state);
+      setGuard(state => state.snapshot ? guardForSnapshot(state.snapshot, state.serverNow) : state);
       setRetry(value => value + 1);
       router.refresh();
     }, Math.max(0, Math.min(remaining, 2147483647)));
     return () => window.clearTimeout(timer);
-  }, [guard.activePlanId, guard.expiresAt, retry, router]);
+  }, [expiresAt, serverNow, retry, router]);
 
   const currentFeature = useMemo(() => {
     if (pathname === "/dashboard/branches") return dashboardPlatformFeatures.find(feature => feature.id === "menu");
@@ -193,6 +197,7 @@ export function DashboardAppLayout({
       sidebar={(close) => (
         <DashboardSidebar
           snapshot={guard.snapshot}
+          serverNow={guard.serverNow}
           servicesAvailable={!guard.loading && !guard.error && Boolean(guard.activePlanId)}
           collapsed={sidebarCollapsed}
           onCollapsedChange={handleSidebarCollapsedChange}

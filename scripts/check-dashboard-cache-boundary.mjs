@@ -9,6 +9,9 @@ function load(file,stubs) {
  new Function('require','exports',js)(name=>Object.hasOwn(stubs,name)?stubs[name]:require(name),exports);
  return exports;
 }
+const realPerformance=globalThis.performance;
+let elapsed=0;
+Object.defineProperty(globalThis,"performance",{configurable:true,value:{now:()=>elapsed}});
 let calls=0,resolvePending;
 let loader=async()=>{calls++;return {serviceSubscriptions:[],settings:{cafeSlug:'one'}}};
 const stored=new Map([['barndaksa_dashboard_shell_snapshot',JSON.stringify({at:Date.now(),value:{settings:{cafeSlug:'old-account'}}})]]);
@@ -29,15 +32,15 @@ loader=async()=>{failures++;throw Error('offline')};
 await assert.rejects(cache.getCachedDashboardShellSnapshot(),/offline/);
 await assert.rejects(cache.getCachedDashboardShellSnapshot(),/offline/);assert.equal(failures,2);
 cache.primeDashboardShellSnapshot(seeded);
-const realNow=Date.now;Date.now=()=>realNow()+31_000;loader=async()=>{calls++;return first};
-assert.equal(await cache.getCachedDashboardShellSnapshot(),first);assert.equal(calls,3);Date.now=realNow;
+elapsed+=31_000;loader=async()=>{calls++;return first};
+assert.equal(await cache.getCachedDashboardShellSnapshot(),first);assert.equal(calls,3);
 console.log('PASS cache: first read, warm read, SSR prime without request, deduplication, account-change pending race, retry and expiry; no private sessionStorage');
 
 let currentSession;
 let refs=[],refIndex=0,pathname="/admin/cafes";
 let authCallback,cleanup,clears=0,reloads=0,refreshes=0,unsubscribe=0,redirect;
 const listeners=new Map();let clock=100_000;
-Date.now=()=>clock;
+Object.defineProperty(globalThis,"performance",{configurable:true,value:{now:()=>clock}});
 globalThis.window={location:{replace:value=>{redirect=value},reload:()=>reloads++},addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:name=>listeners.delete(name)};
 globalThis.document={visibilityState:'visible',addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:name=>listeners.delete(name)};
 Object.defineProperty(globalThis,'navigator',{configurable:true,value:{onLine:true}});
@@ -62,5 +65,7 @@ refs=[];refIndex=0;pathname='/admin/cafes';boundary.DashboardCacheBoundary();aut
 refIndex=0;pathname='/';boundary.DashboardCacheBoundary();
 const priorReloads=reloads;refIndex=0;pathname='/admin/cafes';boundary.DashboardCacheBoundary();authCallback('INITIAL_SESSION',session('two','second'));assert.equal(reloads,priorReloads+1,'public navigation does not forget account identity');cleanup();
 assert.equal(boundary.dashboardSessionIdentity(session('one','s')), 'one:s');
-Date.now=realNow;
+
 console.log('PASS boundary: token refresh keeps cache, new login/session clears all routes, logout redirects, focus/online/visibility throttled, hidden/offline suppressed and cleanup');
+
+Object.defineProperty(globalThis,"performance",{configurable:true,value:realPerformance});

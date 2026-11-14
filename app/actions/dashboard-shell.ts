@@ -48,6 +48,7 @@ export async function fetchOwnerDashboardShellAction() {
   const cafe = await getOwnerCafeContext();
   if (!cafe) {
     return {
+      serverTime: Date.now(),
       unauthenticated: true as const,
       planId: "",
       subscription: null,
@@ -99,6 +100,7 @@ export async function fetchOwnerDashboardShellAction() {
   }
 
   return {
+    serverTime: Date.now(),
     planId: serviceAccess.planId,
     subscription: serviceAccess.subscription,
     serviceSubscriptions: serviceAccess.serviceSubscriptions,

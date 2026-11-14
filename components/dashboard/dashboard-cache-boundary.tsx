@@ -31,7 +31,7 @@ export function DashboardCacheBoundary() {
     }
     let leaving = false;
     let checking = false;
-    lastRefresh.current = Date.now();
+    lastRefresh.current = performance.now();
     const client = createClient();
     const observe = (event: string, session: { user: { id: string }; access_token: string } | null) => {
       const nextIdentity = dashboardSessionIdentity(session);
@@ -54,8 +54,8 @@ export function DashboardCacheBoundary() {
         const { data: current, error } = await client.auth.getSession();
         if (error || leaving) return;
         observe("FOREGROUND", current.session);
-        if (leaving || Date.now() - lastRefresh.current < 60_000) return;
-        lastRefresh.current = Date.now();
+        if (leaving || performance.now() - lastRefresh.current < 60_000) return;
+        lastRefresh.current = performance.now();
         router.refresh();
       } catch { /* A transient auth/network failure is not evidence of a different account. */ }
       finally { checking = false; }
