@@ -244,7 +244,8 @@ export async function signInFinance(slug: string, identity: string, password: st
 export async function provisionFinanceStaff(input: z.infer<typeof staffSchema>) {
   const parsed = staffSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
-  if (cafe.role !== "owner" || !featureCodesAllow(await getOwnerFeatureCodes(), "finance")) {
+  const maintenance = cafe.role === "platform_admin" ? await getFinanceCashierMaintenance(cafe.id) : null;
+  if ((cafe.role !== "owner" && !maintenance) || !featureCodesAllow(await getOwnerFeatureCodes(), "finance")) {
     throw new Error("Finance owner access required");
   }
   const supabase = await createClient();
