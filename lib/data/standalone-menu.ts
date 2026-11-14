@@ -1,4 +1,5 @@
 import "server-only";
+import { isHospitalStore } from "@/lib/commerce/hospital-profile";
 import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 import { signatureBrand } from "@/lib/menu/signature-brands";
 import { usesDefaultSignatureMenu } from "@/lib/menu/default-signature";
@@ -72,7 +73,7 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
   const chosenBranch = branchSlug ? branchRows?.find(row => row.menu_slug === branchSlug) : branchRows?.find(row => row.is_primary) ?? branchRows?.[0];
   if (branchSlug && !chosenBranch) return null;
   const branchId = chosenBranch?.id ?? null;
-  const hospitalMenu = slug === "brand-8ad185ee82e3" && chosenBranch?.menu_slug === "hospital";
+  const hospitalMenu = isHospitalStore(slug) || (slug === "brand-8ad185ee82e3" && chosenBranch?.menu_slug === "hospital");
   const branchDto = (row: NonNullable<typeof branchRows>[number]) => ({ id: String(row.id), name: String(row.name), slug: String(row.menu_slug) });
   const categoryQuery = admin.from("menu_categories").select("id,name,description").eq("cafe_id", cafe.id)
     .eq("visible", true).is("deleted_at", null).order("sort_order").order("id");

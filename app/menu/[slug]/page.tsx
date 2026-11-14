@@ -22,6 +22,8 @@ import { FawaselStore } from "@/components/store/fawasel-store";
 import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 import { AldeemStore } from "@/components/store/aldeem-store";
 import { isAldeemStore } from "@/lib/commerce/aldeem-profile";
+import { isHospitalStore, MIND_HOSPITAL_SLUG } from "@/lib/commerce/hospital-profile";
+import { HospitalMenu } from "@/components/menu/hospital-menu";
 
 export const dynamic = "force-dynamic";
 // Share the preview publication check between metadata and page rendering in one request.
@@ -39,6 +41,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const query = await searchParams;
   const showcase = query?.showcase === "1";
   const branch = typeof query?.branch === "string" ? query.branch : undefined;
+  if (slug === "brand-8ad185ee82e3" && branch === "hospital") return { title: "مايند | MIND Café & Bakery", alternates: { canonical: `/menu/${MIND_HOSPITAL_SLUG}` } };
   if (showcase && !await isPublicShowcase(slug)) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
   const loyaltyBrand = await getPublicLoyaltyLanding(slug);
   if (loyaltyBrand) return { title: `${loyaltyBrand.identity.name} | الولاء والمكافآت`, description: `انضم إلى برنامج ولاء ${loyaltyBrand.identity.name} واجمع أختامك`, alternates: { canonical: `/loyalty/${loyaltyBrand.identity.slug}/qr` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
@@ -62,11 +65,16 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   const query = await searchParams;
   const showcase = query?.showcase === "1";
   const branch = typeof query?.branch === "string" ? query.branch : undefined;
+  if (slug === "brand-8ad185ee82e3" && branch === "hospital") redirect(`/menu/${MIND_HOSPITAL_SLUG}${showcase ? "?showcase=1" : ""}`);
   if (showcase && !await isPublicShowcase(slug)) notFound();
   const loyaltyBrand = await getPublicLoyaltyLanding(slug);
   if (loyaltyBrand) redirect(`/loyalty/${loyaltyBrand.identity.slug}/qr`);
   const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) notFound();
+  if (isHospitalStore(slug)) {
+    const hospital = <HospitalMenu menu={menu} />;
+    return showcase ? <div inert>{hospital}</div> : <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={slug} />{hospital}</>;
+  }
   if (menu.businessCategory === "hair_salons") redirect(`/salon/${menu.slug}`);
   const fawasel = isFawaselStore(menu.slug);
   const aldeem = isAldeemStore(menu.slug);

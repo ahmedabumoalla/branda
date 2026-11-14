@@ -48,8 +48,10 @@ import { canFinance, canFinanceOperation, financeRoleLabels } from "@/lib/financ
 import { FinanceControlPanel, FinanceJournalExport, FinancePeriodHistory } from "./finance-control-panel";
 import { ledgerPilotEnabled } from "@/lib/finance/ledger";
 import styles from "./finance.module.css";
+import { isHospitalStore } from "@/lib/commerce/hospital-profile";
 
 function FinanceViewLoading() { return <p role="status" aria-live="polite">جارٍ فتح الصفحة</p>; }
+const HospitalDebtsPanel = dynamic(() => import("./hospital-debts").then(module => module.HospitalDebtsPanel), { loading: FinanceViewLoading });
 const FinanceSaleForm = dynamic(() => import("./finance-sale-form").then(module => module.FinanceSaleForm), { loading: FinanceViewLoading });
 const FinanceInvoiceImport = dynamic(() => import("./finance-invoice-import").then(module => module.FinanceInvoiceImport), { loading: FinanceViewLoading });
 const FinanceSalesSettings = dynamic(() => import("./finance-sales-settings").then(module => module.FinanceSalesSettings), { loading: FinanceViewLoading });
@@ -252,6 +254,7 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
     {stale && <div className={styles.notice}>البيانات المعروضة قديمة مؤقتًا حدّث الأرصدة لاستئناف العمليات</div>}
     {!isDocumentPage && Object.values(state.historyMore).some(Boolean) && <div className={styles.notice}>الجداول تعرض أحدث العمليات استخدم تحميل المزيد لاستعراض الأقدم الأرصدة وميزان المراجعة يشملان كامل السجل</div>}
     <div className={styles.workspace}>
+      {isHospitalStore(data.cafe.slug) && section === "parties" && !isCustomerDetail && <HospitalDebtsPanel snapshot={data} language="ar" onChanged={() => { void state.refresh(); }} />}
       {isCustomerDetail && <FinanceCustomerDetail key={recordId} id={recordId} snapshot={data} disabled={disabled} onBack={returnFromRecord}
         onInvoice={id => showInvoice(id)} onPayment={(invoiceId, paymentId) => showInvoice(invoiceId, paymentId)}
         onQuote={!slug && canFinance(data.role, "accounting_write") ? id => window.history.pushState(null, "", `/dashboard/finance?section=sales&view=quote-create&quote=${encodeURIComponent(id)}`) : undefined}

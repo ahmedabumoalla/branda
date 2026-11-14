@@ -1,4 +1,6 @@
 import "server-only";
+import { ownerLoginAliasEmail } from "@/lib/auth/owner-login-alias";
+import { isHospitalStore } from "@/lib/commerce/hospital-profile";
 import { getFinanceCashierMaintenance } from "@/lib/data/finance-cashier-maintenance";
 import { financeStaffRoles } from "@/lib/finance/permissions";
 import { createHmac } from "node:crypto";
@@ -221,15 +223,43 @@ export async function provisionSalesCashier(input: { name: string; phone: string
   }
 }
 
+/** A split hospital owner shares contact details, but keeps a separate Auth identity. */
+async function hospitalOwnerContactEmail(slug: string, identity: string): Promise<string | null> {
+  const normalizedPhone = /^[+\d\s()-]+$/.test(identity) ? normalizeSaudiPhone(identity) : null;
+  if (!isHospitalStore(slug) || (!normalizedPhone && !identity.includes("@"))) return null;
+  const admin = createAdminClient();
+  const cafe = await admin.from("cafes").select("id,owner_user_id").eq("slug", slug).is("deleted_at", null).in("status", ["active", "published"]).maybeSingle();
+  if (cafe.error) throw new Error("Finance sign in unavailable");
+  if (!cafe.data?.owner_user_id) return null;
+  const owner = await admin.from("profiles").select("id,phone,email,role,status").eq("id", cafe.data.owner_user_id).maybeSingle();
+  if (owner.error) throw new Error("Finance sign in unavailable");
+  if (!owner.data) return null;
+  const contactMatches = normalizedPhone
+    ? normalizeSaudiPhone(String(owner.data.phone ?? "")) === normalizedPhone
+    : String(owner.data.email ?? "").trim().toLowerCase() === identity.trim().toLowerCase();
+  if (!contactMatches) return null;
+  if (owner.data.status !== "active" || owner.data.role !== "cafe_owner") throw new Error("Finance sign in unavailable");
+  const account = await admin.auth.admin.getUserById(String(owner.data.id));
+  const user = account.data.user;
+  if (account.error || !user || user.id !== owner.data.id || user.app_metadata?.admin_hospital_split !== cafe.data.id || !user.email?.endsWith("@accounts.barndaksa.invalid") || !user.email_confirmed_at) {
+    throw new Error("Finance sign in unavailable");
+  }
+  return user.email;
+}
+
 export async function signInFinance(slug: string, identity: string, password: string) {
   const safeSlug = slugSchema.parse(slug);
   const value = z.string().trim().min(3).max(254).parse(identity);
   z.string().min(1).max(128).parse(password);
   const supabase = await createClient();
   const phone = value.replace(/[\s()-]/g, "").replace(/^00/, "+");
-  const credentials = value.includes("@")
+  const alias = !value.includes("@") && !normalizeSaudiPhone(value) ? ownerLoginAliasEmail(value) : null;
+  const hospitalContactEmail = await hospitalOwnerContactEmail(safeSlug, value);
+  const credentials = hospitalContactEmail
+    ? { email: hospitalContactEmail, password }
+    : value.includes("@")
     ? { email: value.toLowerCase(), password }
-    : { phone: phone.startsWith("+") ? phone : phone.startsWith("05") ? "+966" + phone.slice(1) : "+" + phone, password };
+    : alias ? { email: alias, password } : { phone: phone.startsWith("+") ? phone : phone.startsWith("05") ? "+966" + phone.slice(1) : "+" + phone, password };
   const { data, error } = await supabase.auth.signInWithPassword(credentials);
   if (error || !data.user) return { ok: false as const, message: "تعذر تسجيل الدخول تحقق من بياناتك" };
   try {
