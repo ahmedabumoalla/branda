@@ -22,7 +22,7 @@ const { productMinimumPrice, giftProductAvailable } = load('lib/commerce/storefr
 const product = { id:'00000000-0000-4000-8000-000000000001', name:'حذاء أبيض', category:'أحذية', categoryId:'shoes', description:'خامة شبكية', price:100, ingredients:[], available:true, images:[{url:'https://example.test/shoe.jpg',alt:'حذاء أبيض'}], videos:[], commerceDetails:{ options:[{id:'40',label:'40 / أبيض',price:120,available:true,stock:null},{id:'41',label:'41 / أبيض',price:130,available:false,stock:0}] } };
 const menu = { name:'فواصل',slug:'brand-1c2b6f7e028f',businessCategory:'clothing_stores',logoUrl:null,description:null,loyaltyEnabled:true,categories:[{id:'shoes',name:'أحذية',description:null}],products:[product],contacts:{feedbackEnabled:false,instagramUrl:null,location:null} };
 const html = renderToStaticMarkup(React.createElement(FawaselStore,{menu,settings:null,loyalty:{purchasesRequired:3,rewardName:'خصم 20%'}}));
-for (const value of ['فواصل','ستايلك','حذاء أبيض','120','نادي فواصل','/loyalty/brand-1c2b6f7e028f','/fawasel/brand-reference.jpeg','fawasell6','vamos_sa1']) check(html.includes(value), `SSR ${value}`);
+for (const value of ['فواصل','حضورك','حذاء أبيض','120','نادي فواصل','/loyalty/brand-1c2b6f7e028f','/fawasel/brand-reference.jpeg','fawasell6','vamos_sa1']) check(html.includes(value), `SSR ${value}`);
 check(!html.includes('غرسَتك'), 'No plant branding in retail storefront');
 check(productMinimumPrice(product) === 120, 'Hero uses available variant price');
 check(!giftProductAvailable({...product,commerceDetails:{options:product.commerceDetails.options.map(o=>({...o,available:false}))}}), 'Sold-out variants cannot be advertised available');
