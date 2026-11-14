@@ -70,7 +70,9 @@ try {
     assert.equal((svg.match(/data-earned="true"/g) || []).length, earned);
     assert(!svg.includes(member.card.cardCode)); assert(!svg.includes(member.card.customerName));
     const google = payload.buildGoogleObject(current, "12345", art.walletArtUrl(current));
-    assert.equal(google.loyaltyPoints.balance.string, String(4 - earned)); assert.equal(google.secondaryLoyaltyPoints.balance.int, 0); checks += 3;
+    assert.equal(google.loyaltyPoints.balance.string, "0"); assert.equal(google.secondaryLoyaltyPoints.balance.int, 4 - earned); checks += 3;
+    assert.equal(google.loyaltyPoints.label, "مكافآت جاهزة"); assert.equal(google.secondaryLoyaltyPoints.label, "أختام للمكافأة");
+    assert(!svg.includes('M0,18') && !svg.includes('M375,18') && !svg.includes('width="367"')); checks++;
     for (const apple of [true, false]) {
       const png = await art.walletStampArtwork(current, 2, apple), meta = await sharp(png).metadata();
       assert.equal(meta.width, apple ? 750 : 1032); assert.equal(meta.height, apple ? 288 : 812);
@@ -84,7 +86,10 @@ try {
   assert(!payload.buildGoogleClass(other, "12345", "https://wallet.example.test").programLogo.sourceUri.uri.includes("wallet=mqas77")); checks++;
   const native = unzip(await load("lib/wallet/apple.ts").issueApplePass(member)), pass = JSON.parse(native["pass.json"]);
   assert.equal(pass.backgroundColor, "rgb(8, 8, 8)"); assert.equal(pass.foregroundColor, "rgb(246, 220, 166)");
-  assert.equal(pass.storeCard.headerFields[0].value, "3 / 4"); assert.equal(pass.storeCard.secondaryFields[0].value, 1); assert.equal(pass.storeCard.auxiliaryFields[0].value, 0); checks += 3;
+  assert.equal(pass.storeCard.headerFields[0].value, "3 / 4"); assert.equal(pass.storeCard.secondaryFields[0].value, 0); assert.equal(pass.storeCard.auxiliaryFields[0].value, 1); checks += 3;
+  assert.equal(pass.storeCard.secondaryFields[0].key, "rewards"); assert.equal(pass.storeCard.auxiliaryFields[0].key, "remaining"); assert.equal(pass.logoText, "BARBER SHOP 77"); checks++;
+  assert.equal(payload.buildGoogleClass(member, "12345", "https://wallet.example.test").issuerName, "BARBER SHOP 77");
+  const ordinary = payload.buildGoogleObject(other, "12345"); assert.equal(ordinary.loyaltyPoints.balance.string, "3 / 4"); assert.equal(ordinary.secondaryLoyaltyPoints.balance.int, 0); checks++;
   assert.equal(pass.barcodes[0].message, payload.buildGoogleObject(member, "12345").barcode.value); assert.equal(pass.serialNumber, member.card.cardCode); checks++;
   for (const suffix of ["", "@2x", "@3x"]) assert(native[`strip${suffix}.png`] && native[`logo${suffix}.png`]); checks++;
   for (const [index, suffix] of ["", "@2x", "@3x"].entries()) {

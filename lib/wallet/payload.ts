@@ -1,7 +1,7 @@
 import { createBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import type { WalletMember } from "./types";
 import { walletArtifactKey } from "./artifact-cache";
-import { isMqas77Wallet, MQAS77_WALLET_COLORS, MQAS77_WALLET_VERSION } from "./mqas77-design";
+import { isMqas77Wallet, MQAS77_WALLET_COLORS, MQAS77_WALLET_VERSION, MQAS77_WALLET_NAME } from "./mqas77-design";
 
 export function googleClassId(issuerId: string, cafeId: string) {
   const override = process.env.GOOGLE_WALLET_RAST_CLASS_ID;
@@ -34,8 +34,8 @@ export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl
   const logoVersion = mqas77 ? MQAS77_WALLET_VERSION : walletArtifactKey(JSON.stringify([member.cafeName, member.logoUrl, member.program.cardBackground]));
   return {
     id: googleClassId(issuerId, member.card.cafeId),
-    issuerName: member.cafeName,
-    localizedIssuerName: { defaultValue: { language: "ar", value: member.cafeName } },
+    issuerName: mqas77 ? MQAS77_WALLET_NAME : member.cafeName,
+    localizedIssuerName: { defaultValue: { language: mqas77 ? "en" : "ar", value: mqas77 ? MQAS77_WALLET_NAME : member.cafeName } },
     programName: member.program.cardTitle,
     localizedProgramName: { defaultValue: { language: "ar", value: member.program.cardTitle } },
     programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/brand/${encodeURIComponent(member.cafeSlug)}/logo?v=${logoVersion}${mqas77 ? "&wallet=mqas77" : ""}` }, contentDescription: { defaultValue: { language: "ar", value: member.cafeName } } },
@@ -54,9 +54,11 @@ export function buildGoogleObject(member: WalletMember, issuerId: string, artwor
     state: member.program.enabled ? "ACTIVE" : "INACTIVE",
     barcode: { type: "QR_CODE", value: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), alternateText: member.card.displayNumber || member.card.cardCode },
     loyaltyPoints: isMqas77Wallet(member.cafeSlug)
-      ? { label: "أختام للمكافأة", balance: { string: String(Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle)) } }
+      ? { label: "مكافآت جاهزة", balance: { string: String(member.card.availableRewards) } }
       : { label: member.program.stampLabel, balance: { string: `${member.card.stampsInCycle} / ${member.program.purchasesRequired}` } },
-    secondaryLoyaltyPoints: { label: isMqas77Wallet(member.cafeSlug) ? "مكافآت جاهزة" : "المكافآت المتاحة", balance: { int: member.card.availableRewards } },
+    secondaryLoyaltyPoints: isMqas77Wallet(member.cafeSlug)
+      ? { label: "أختام للمكافأة", balance: { int: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) } }
+      : { label: "المكافآت المتاحة", balance: { int: member.card.availableRewards } },
     merchantLocations: walletLocations(member),
     hexBackgroundColor: walletColors(member).background,
     ...(artworkUrl ? { heroImage: { sourceUri: { uri: artworkUrl }, contentDescription: { defaultValue: { language: "ar", value: member.program.stampLabel } } } } : {}),

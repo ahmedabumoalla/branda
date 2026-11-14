@@ -9,7 +9,7 @@ import { walletColors, walletLocations } from "./payload";
 import type { WalletMember } from "./types";
 import { walletBrandLogo } from "./logo";
 import { createWalletArtifactCache, walletArtifactKey } from "./artifact-cache";
-import { isMqas77Wallet, MQAS77_WALLET_VERSION } from "./mqas77-design";
+import { isMqas77Wallet, MQAS77_WALLET_VERSION, MQAS77_WALLET_NAME } from "./mqas77-design";
 import { mqas77Emblem } from "./mqas77-assets";
 import { APPLE_ICON_SIZE, APPLE_ICON_VERSION, appleIconBackground } from "./apple-icon";
 export { walletBrandLogo } from "./logo";
@@ -70,15 +70,17 @@ export async function issueApplePass(member: WalletMember) {
     formatVersion: 1, passTypeIdentifier: config.passTypeIdentifier, teamIdentifier: config.teamIdentifier,
     serialNumber: member.card.cardCode, organizationName: member.cafeName, description: `${member.cafeName} - ${member.program.cardTitle}`,
     backgroundColor: rgb(colors.background), foregroundColor: rgb(colors.foreground), labelColor: rgb(colors.foreground), sharingProhibited: true, suppressStripShine: true,
-    ...(mqas77 ? { logoText: "مقص 77", labelColor: rgb("#fff4df") } : {}),
+    ...(mqas77 ? { logoText: MQAS77_WALLET_NAME, labelColor: rgb("#fff4df") } : {}),
     userInfo: { artworkVersion: mqas77 ? MQAS77_WALLET_VERSION : `${WALLET_ART_VERSION}:apple-burgundy-v1`, iconVersion: APPLE_ICON_VERSION },
     webServiceURL: `${config.baseUrl}/api/wallet/apple`, authenticationToken: appleAuthToken(member.card.cardCode),
   });
   const style = new PassType("storeCard");
   pass.types.push(style);
   style.headerFields.push({ key: "stamps", label: member.program.stampLabel, value: `${member.card.stampsInCycle} / ${member.program.purchasesRequired}`, changeMessage: "رصيد الأختام الآن %@" });
-  style.secondaryFields.push({ key: "remaining", label: "أختام للمكافأة", value: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) });
-  style.auxiliaryFields.push({ key: "rewards", label: "مكافآت جاهزة", value: member.card.availableRewards, changeMessage: "مكافآتك المتاحة %@" });
+  const remaining = { key: "remaining", label: "أختام للمكافأة", value: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) };
+  const rewards = { key: "rewards", label: "مكافآت جاهزة", value: member.card.availableRewards, changeMessage: "مكافآتك المتاحة %@" };
+  style.secondaryFields.push(mqas77 ? rewards : remaining);
+  style.auxiliaryFields.push(mqas77 ? remaining : rewards);
   style.backFields.push({ key: "reward", label: "مكافأتك", value: member.program.rewardName }, { key: "terms", label: "الشروط", value: member.program.terms }, { key: "validity", label: "صلاحية المكافأة", value: `${member.experience.rewardValidityDays} يوماً من إصدار المكافأة` });
   style.backFields.push({ key: "offer", label: member.cafeName, value: [member.experience.offerTitle, member.experience.offerBody].filter(Boolean).join("\n"), changeMessage: "%@" });
   pass.setBarcodes({ format: "PKBarcodeFormatQR", message: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), messageEncoding: "iso-8859-1", altText: member.card.displayNumber || member.card.cardCode });

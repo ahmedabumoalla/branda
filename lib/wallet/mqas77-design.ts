@@ -1,7 +1,8 @@
 import type { WalletMember } from "./types";
 
 export const MQAS77_WALLET_SLUG = "brand-edbc2c01385b";
-export const MQAS77_WALLET_VERSION = "mqas77-gold-20261113-v1";
+export const MQAS77_WALLET_VERSION = "mqas77-clean-20261114-v2";
+export const MQAS77_WALLET_NAME = "BARBER SHOP 77";
 export const MQAS77_WALLET_COLORS = { background: "#080808", foreground: "#f6dca6", accent: "#d8a34f" };
 export const isMqas77Wallet = (slug: string) => slug === MQAS77_WALLET_SLUG;
 
@@ -43,13 +44,6 @@ export function mqas77StampSvg(member: WalletMember, emblem: string, scale: 1 | 
     </defs>
     <rect width="375" height="${height}" fill="#080808"/>
     <ellipse cx="187.5" cy="${logoTop + logoSize * .6}" rx="116" ry="${logoSize * .7}" fill="url(#light)"/>
-    <g fill="url(#gold)" stroke="#d6a355" stroke-width=".35">
-      <path d="M0,18 42,0H59L0,59Z"/><path d="M0,67 35,32V47L0,83Z"/>
-      <path d="M375,18 333,0H316L375,59Z"/><path d="M375,67 340,32V47L375,83Z"/>
-      <path d="M0,${height - 36} Q20,${height - 8} 75,${height}H48Q18,${height - 12} 0,${height - 18}Z"/>
-      <path d="M375,${height - 36} Q355,${height - 8} 300,${height}H327Q357,${height - 12} 375,${height - 18}Z"/>
-    </g>
-    <rect x="4" y="3" width="367" height="${height - 6}" rx="15" stroke="url(#gold)" stroke-width="1" fill="none"/>
     ${image((375 - logoSize) / 2, logoTop, logoSize)}
     <path d="M115,${starY}H165M210,${starY}H260" stroke="url(#gold)" stroke-width=".7"/>
     ${star(174, .45)}${star(187.5, .7)}${star(201, .45)}
