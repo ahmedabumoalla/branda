@@ -3,8 +3,6 @@ import { useFinanceInvoiceMessages } from "./use-finance-invoice-messages";
 import { FinanceInvoiceMessageStatus } from "./finance-invoice-message-status";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
-import { isHospitalStore } from "@/lib/commerce/hospital-profile";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -35,10 +33,6 @@ import butcherStyles from "./finance-pos-butcher.module.css";
 type CartLine = FinanceCartLine;
 const quoteOnlyLabel = "بانتظار اعتماد السعر";
 type FinancePOSProps = { initialSnapshot: FinanceSnapshot; slug?: string; dashboardHref?: "/dashboard/finance"; offlineEntry?: boolean };
-const HospitalPOS = dynamic(() => import("./hospital-pos").then(module => module.HospitalPOS), { loading: () => <p role="status">جار فتح الكاشير / Loading cashier</p> });
-export function FinancePOS(props: FinancePOSProps) {
-  return isHospitalStore(props.initialSnapshot.cafe.slug) ? <HospitalPOS key={`${props.initialSnapshot.cafe.id}:${props.initialSnapshot.userId}`} initialSnapshot={props.initialSnapshot} slug={props.slug} dashboardHref={props.dashboardHref} /> : <StandardFinancePOS {...props} />;
-}
 export function financeCartLines(cart: CartLine[], products: FinanceProduct[], butcher = false) {
   return financeSelectedCartLines(cart, products, butcher);
 }
@@ -64,7 +58,7 @@ export function PosProductImage({ product }: { product: FinanceProduct }) {
     onError={() => { if (!fallback && product.imageFallbackUrl && product.imageFallbackUrl !== src) setFallback(true); else setFailed(true); }} />;
 }
 
-function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry = false }: FinancePOSProps) {
+export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry = false }: FinancePOSProps) {
   const router = useRouter();
   const state = usePosFinance(initialSnapshot, slug, offlineEntry);
   const printer = useFinancePrinter(initialSnapshot.cafe.id);
