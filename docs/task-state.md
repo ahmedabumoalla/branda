@@ -1,5 +1,7 @@
-# MIND customer navigation and performance - READY FOR RELEASE - 2026-11-15T18:40:26.009Z
+# MIND customer navigation and performance - PUBLISHED AND VERIFIED - 2026-11-15T18:40:26.009Z
 
+- PUBLISHED GitHub main f2e15911fa710409225b27cd67974fdea186adbb; Vercel branda-2 dpl_J8yK1dTfG3rGtVf2VxBh7UG7WMk3 success18:48:02Z. Both domains200 with matchingdeployment verified2026-11-15T18:49:11.969Z. Private evidence .codex-tmp/mind-speed-production.json
+- RUN release and root full Node24 TypeScript exit0; scoped changed-source/doc text integrity PASS18:40:54Z and root PASS18:41Z; whitespace/security/source review complete. Application build passed on Vercel. No browser or controlled latency benchmark
 - MIND only: customer menu now keeps management/add; removes appointments/contacts/CRM/settings/combined parties. Two linked cards: invoiced branch customers and existing wallet-card loyalty registry. Old MIND loyalty registry URL redirects; other brands keep their registry/menu
 - New guarded erp_mind_customers_read composes original authorized/branch-filtered/masked read and adds full-history sales membership. No 500-document cutoff, extra membership request, table grants or customer resets
 - Migration20261115183734 APPLIED atomically with real-owner membership read and anonymous/cross-tenant/ACL checks. sourceMD5 f1a309f98d6d44a5e10f6f7f00e36466. Private evidence output/erp-database/mind-directory-apply.result.json. Earlier direct table query42501 abandoned, initial prepared SQL syntax failed atomically; corrected before successful apply

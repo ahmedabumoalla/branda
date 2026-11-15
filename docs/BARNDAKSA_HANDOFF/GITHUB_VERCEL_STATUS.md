@@ -1,3 +1,15 @@
+# Latest verified application release - MIND customers and performance
+
+- GitHub main application commit: f2e15911fa710409225b27cd67974fdea186adbb
+- Vercel project branda-2: dpl_J8yK1dTfG3rGtVf2VxBh7UG7WMk3, successful at2026-11-15T18:48:02Z
+- Both production domains200 and matchingdeployment verified2026-11-15T18:49:11.969Z
+- [Release details](MIND_CUSTOMERS_SPEED_20261115.md), [source commit](https://github.com/ahmedabumoalla/branda/commit/f2e15911fa710409225b27cd67974fdea186adbb), [Vercel deployment](https://vercel.com/ahmedabumoallas-projects/branda-2/J8yK1dTfG3rGtVf2VxBh7UG7WMk3)
+- MIND navigation/registry only; faster admin directory and finance reads. Original role/branch controls retained. Migration20261115183734 applied with real-owner read/ACL/tenant checks
+- Release/root TypeScript, text integrity and Vercel build passed. No browser or latency benchmark; no operational messages or financial test writes. Claude production changes preserved
+- This subsequent handoff-only update leaves verified application code unchanged
+
+---
+
 # متابعة قيت هوب وفيرسال — منشور ومتحقق — ١٥ نوفمبر ٢٠٢٦
 
 نُشرت النسخة المجمعة التي تشمل تعديلات كلود وتحسينات المنصة، مع الحفاظ على إصلاحات الإنتاج الموجودة

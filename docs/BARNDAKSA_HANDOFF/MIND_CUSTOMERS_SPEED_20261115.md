@@ -12,8 +12,8 @@ Admin brands initially reads brands, plans and deletion state only. Details/acti
 
 ## Verification and publication
 
-- Node24 TypeScript and scoped text integrity/diff review required; final results/input hashes in private .codex-tmp/mind-speed-verification.json
+- RUN full Node24 TypeScript in release and shared root, scoped text integrity and diff review: PASS. Results/input hashes in private .codex-tmp/mind-speed-verification.json and .codex-tmp/mind-root-speed-verification.json
 - DB evidence: output/erp-database/mind-directory-apply.result.json. Direct table read42501 replaced with guarded RPC; initial apply syntax attempt rolled back before successful corrected application
 - User performs behavioral testing. No browser, real payment/refund/message or controlled before/after production timing measured
-- Release is prepared from current origin/main7635795b, preserving Claude's enterprise and birthday changes. GitHub/Vercel publication pending exact deployment verification
+- Release is prepared from current origin/main7635795b, preserving Claude's enterprise and birthday changes. Published application commit f2e15911fa710409225b27cd67974fdea186adbb; Vercel dpl_J8yK1dTfG3rGtVf2VxBh7UG7WMk3 succeeded18:48:02Z, exactcommit/productiondeployment/bothdomains verified2026-11-15T18:49:11.969Z. Evidence .codex-tmp/mind-speed-production.json. Later handoff-only commit does not alter verified application inputs
 - Native Wallet location once/day remains unresolved and is outside this change; no silent disabling or false daily limiter
