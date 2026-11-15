@@ -1,3 +1,9 @@
+# Loyalty birth date + birthday greeting (Claude) - DB APPLIED - 2026-11-15
+
+- مقص 77 only: loyalty enrollment form asks for birth date, customer file shows phone and birth date, one WhatsApp birthday greeting per customer per year from 09:00 Riyadh through the platform loyalty sender
+- Migration 20261116020000 applied to production directly, do not reapply. TypeScript and text integrity pass, DB functions tested in a rolled-back transaction. No browser test and no real greeting sent
+- Details: docs/BARNDAKSA_HANDOFF/LOYALTY_BIRTHDAY_20261115.md
+
 # Loyalty customer registry FIXED LIVE DB - 2026-11-15
 
 - Restored wallet-card registry access for loyalty-only brands: removed finance-package coupling, retained existing customer authorization, active-account/brand checks and loyalty entitlement. Migration20261115171618 applied17:18:47Z, exactMD5 988f9a53cc1eb94dca70eb0fc713e327

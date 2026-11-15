@@ -19,9 +19,9 @@ import { GoogleMapsLocationError } from "@/lib/maps/resolve-branch-location";
 import { lookupRastCashierReward } from "@/lib/data/customer-rewards";
 import { localizeCashierCatalog } from "@/lib/cashier/catalog-translation";
 
-export async function enrollLoyaltyAction(slug: string, phone: string, name: string) {
+export async function enrollLoyaltyAction(slug: string, phone: string, name: string, birthDate?: string) {
   try {
-    return await enrollLoyaltyCustomer({ slug, phone, name });
+    return await enrollLoyaltyCustomer({ slug, phone, name, birthDate: typeof birthDate === "string" && birthDate ? birthDate : undefined });
   } catch { return { ok: false as const, message: "تعذر إكمال التسجيل حاول لاحقًا" }; }
 }
 

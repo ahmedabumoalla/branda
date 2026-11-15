@@ -54,8 +54,10 @@ export async function getOwnerLoyaltyCustomerDetail(id: unknown, downloadedOnly:
     if (error || !data) throw new Error("Customer unavailable");
     return data as LoyaltyCustomerDetail;
   }
-  const { data, error } = await db.from("customer_profiles").select("id,full_name,phone")
-    .eq("cafe_id", cafeId).eq("id", customerId).maybeSingle();
+  const [{ data, error }, birthday] = await Promise.all([
+    db.from("customer_profiles").select("id,full_name,phone,birth_date").eq("cafe_id", cafeId).eq("id", customerId).maybeSingle(),
+    db.rpc("loyalty_birthday_enabled", { p_cafe: cafeId }),
+  ]);
   if (error || !data) throw new Error("Customer unavailable");
-  return { id: String(data.id), name: String(data.full_name || "عميل بدون اسم"), phone: data.phone ? String(data.phone) : null };
+  return { id: String(data.id), name: String(data.full_name || "عميل بدون اسم"), phone: data.phone ? String(data.phone) : null, birthdayEnabled: birthday.data === true, birthDate: data.birth_date ? String(data.birth_date) : null };
 }

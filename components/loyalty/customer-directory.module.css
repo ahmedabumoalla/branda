@@ -76,6 +76,8 @@
 .contact dl { margin: 0; }
 .contact dt { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--directory-muted); }
 .contact dd { margin: 13px 0 0; font-size: 23px; letter-spacing: .04em; font-weight: 700; overflow-wrap: anywhere; }
+.contact dt.nextTerm { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--directory-line); }
+.birthDate { font-size: 19px; letter-spacing: normal; }
 .missingPhone { font-size: 15px; letter-spacing: normal; font-weight: 500; color: var(--directory-muted); }
 .detailLoading { display: flex; flex-direction: column; gap: 20px; color: var(--directory-muted); font-size: 13px; }
 .detailFooter { margin-top: 20px; }

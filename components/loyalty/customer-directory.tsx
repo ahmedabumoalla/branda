@@ -1,13 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, Phone, Search, UsersRound, X } from "lucide-react";
+import { ArrowLeft, Cake, ChevronLeft, ChevronRight, Phone, Search, UsersRound, X } from "lucide-react";
 import { loadLoyaltyCustomerDetailAction, loadLoyaltyCustomersAction } from "@/app/actions/loyalty-customers";
 import type { LoyaltyCustomerDetail, LoyaltyCustomerPage, LoyaltyCustomerRow } from "@/lib/loyalty/customer-directory-types";
 import styles from "./customer-directory.module.css";
 
 const number = new Intl.NumberFormat("ar-SA");
 const loadError = "تعذر تحميل سجل العملاء حاول مرة أخرى";
+const birthday = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+function birthDateLabel(value: string) {
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) ? value : birthday.format(date);
+}
 
 function initials(name: string) {
   return name.trim().split(/\s+/u).slice(0, 2).map((part) => Array.from(part)[0]).join(" ") || "؟";
@@ -64,7 +69,7 @@ export function LoyaltyCustomerDetailDialog({ customer, onClose, downloadedOnly 
         </div>
         <div className={styles.contact} aria-busy={!detail && !error}>
           {error ? <div className={styles.detailError}><p role="alert">{error}</p><button className={styles.retry} type="button" onClick={() => setRetry((value) => value + 1)}>إعادة المحاولة</button></div>
-            : detail ? <dl><dt><Phone size={18} aria-hidden="true" /> رقم الجوال</dt><dd>{detail.phone ? <bdi dir="ltr">{detail.phone}</bdi> : <span className={styles.missingPhone}>رقم الجوال غير متوفر</span>}</dd></dl>
+            : detail ? <dl><dt><Phone size={18} aria-hidden="true" /> رقم الجوال</dt><dd>{detail.phone ? <bdi dir="ltr">{detail.phone}</bdi> : <span className={styles.missingPhone}>رقم الجوال غير متوفر</span>}</dd>{detail.birthdayEnabled ? <><dt className={styles.nextTerm}><Cake size={18} aria-hidden="true" /> تاريخ الميلاد</dt><dd>{detail.birthDate ? <span className={styles.birthDate}>{birthDateLabel(detail.birthDate)}</span> : <span className={styles.missingPhone}>لم يسجل تاريخ الميلاد</span>}</dd></> : null}</dl>
               : <div className={styles.detailLoading} role="status"><span className={styles.skeletonLine} aria-hidden="true" /> جار تحميل بيانات العميل</div>}
         </div>
         <footer className={styles.detailFooter}><button type="button" onClick={onClose}>إغلاق الملف</button></footer>
