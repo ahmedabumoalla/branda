@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Banknote, CreditCard, Check, Eye, Clock3, ImageIcon, LogOut, Minus, Plus, ReceiptText, RefreshCw, Search, ShoppingBag, Trash2 } from "lucide-react";
 import { logoutFinanceAction } from "@/app/actions/finance-access";
 import { isAldeemCafe } from "@/lib/platform/aldeem";
+import { FinancePosPoints, usePosPoints } from "./finance-pos-points";
 import { FinancePosLocaleProvider, FinancePosModal as Modal, PosNumeric as Numeric, useFinancePosLocale } from "./finance-pos-locale";
 import { HospitalOrdersToolbar } from "./hospital-orders-toolbar";
 import { FinancePosLoyaltyReader } from "./finance-pos-loyalty-reader";
@@ -85,6 +86,8 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
   // Recipe products, such as a coffee linked to its cup, never show a balance because the balance belongs to the component.
   const soldFromStock = (product: FinanceProduct) => { const components = product.stock_components ?? []; return components.length === 1 && data.items.find(item => item.id === components[0].item_id)?.name.trim() === product.name.trim(); };
   const customer = usePosCustomer(slug ?? data.cafe.slug);
+  // User request 2026-11-15: Aldeem customers earn points on every branch and spend them as a discount at any branch
+  const points = usePosPoints(slug ?? data.cafe.slug, butcher ? null : customer.normalized, isAldeemCafe(data.cafe) && !offlineEntry, state.offline.connected);
   const [pagerRefreshKey, setPagerRefreshKey] = useState(0);
   const [customerNotice, setCustomerNotice] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -158,7 +161,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     : needsShift && incoming.length > 1 ? t("اختر الوردية المطلوب استلامها من إدارة الوردية أعلى الصفحة")
     : "";
   const checkoutHint = checkoutBlocker || (needsShift ? t("ابدأ الوردية لإكمال الدفع ستبقى أصناف السلة محفوظة أثناء هذه الخطوة") : "");
-  const discount = financeDiscount(subtotal, discountValue, discountKind);
+  const discount = Math.round((financeDiscount(subtotal, discountValue, discountKind) + points.value) * 100) / 100;
   const totals = previewFinanceTotals(lines.map((line) => ({ quantity: line.quantity, price: line.product.price })), discount, data.settings.vat_rate, data.settings.tax_inclusive);
   const categories = [...new Set(data.products.filter((product) => product.available).map((product) => product.category))].filter(Boolean);
   const availableProducts = data.products.filter(product => product.available);
@@ -291,10 +294,12 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
       setLocalError(issue ? t(issue.ar, issue.en) : t("تعذر تحديد حساب التحصيل من البيانات الحالية حدّث الأرصدة ثم أعد المحاولة", "The payment account could not be resolved Refresh balances and retry"));
       return;
     }
+    const pointsProblem = points.issue(subtotal);
+    if (pointsProblem) { setLocalError(t(pointsProblem)); return; }
     let customerPayload: Record<string, unknown>;
     try { customerPayload = butcher ? {} : customer.payload(); } catch (cause) { setLocalError(cause instanceof Error ? cause.message : t("راجع رقم العميل قبل حفظ الفاتورة")); return; }
-    const saved = await state.execute("sale", { lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity, expectedUnitPrice: line.product.price, ...(line.unitId ? { unitId: line.unitId } : {}), ...((line.unit?.priceMode === "cashier" || (!butcher && line.product.priceMode === "cashier")) ? { unitPrice: line.product.price } : {}) })), expectedTotal: totals.total, discount, accountId: paymentAccountId, ...customerPayload, warehouseId, ...(shift ? { shiftId: shift.id } : {}), note });
-    if (saved) { setShowCheckout(false); setCart([]); setQuantityDrafts({}); setDiscountValue(0); setNote(""); customer.reset(); setCustomerNotice(financePosCustomerNotice(saved.customer, language)); setPagerRefreshKey((value) => value + 1); setPrintQueue((queue) => queue.includes(saved.id) ? queue : [...queue, saved.id]); searchRef.current?.focus(); }
+    const saved = await state.execute("sale", { lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity, expectedUnitPrice: line.product.price, ...(line.unitId ? { unitId: line.unitId } : {}), ...((line.unit?.priceMode === "cashier" || (!butcher && line.product.priceMode === "cashier")) ? { unitPrice: line.product.price } : {}) })), expectedTotal: totals.total, discount, accountId: paymentAccountId, ...customerPayload, ...(points.points > 0 ? { redeemPoints: points.points } : {}), warehouseId, ...(shift ? { shiftId: shift.id } : {}), note });
+    if (saved) { setShowCheckout(false); setCart([]); setQuantityDrafts({}); setDiscountValue(0); setNote(""); points.reset(); customer.reset(); setCustomerNotice(financePosCustomerNotice(saved.customer, language)); setPagerRefreshKey((value) => value + 1); setPrintQueue((queue) => queue.includes(saved.id) ? queue : [...queue, saved.id]); searchRef.current?.focus(); }
   }
 
   return <div className={`${styles.page} ${styles.posPage}`} dir={dir} lang={language} data-finance-standard-pos>
@@ -392,7 +397,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
       {(localError || error) && <div className={styles.error} role="alert">{t(localError || error)}</div>}
       {pricesChanged && <div className={styles.notice} role="alert">{t("تغيّر سعر أحد الأصناف أغلق نافذة الدفع وراجع السعر الجديد في السلة قبل التحصيل")}</div>}
       {stale && <div className={styles.notice}>{t("توقف تسجيل العمليات حتى تحديث الأرصدة")}</div>}
-        <div className={checkoutStyles.body}><section className={checkoutStyles.breakdown} aria-label={t("الخصم وتفاصيل المبلغ")}><h3 className={checkoutStyles.sectionTitle}>{t("الخصم وتفاصيل المبلغ")}</h3><div className={styles.fields}><Field label={t("الخصم")}><input type="number" min="0" max={discountKind === "percent" ? 100 : subtotal} step="0.01" value={discountValue} disabled={disabled} onChange={(event) => setDiscountValue(Number(event.target.value))} /></Field><Field label={t("نوع الخصم")}><select value={discountKind} disabled={disabled} onChange={(event) => setDiscountKind(event.target.value as "amount" | "percent")}><option value="amount">{t("مبلغ بالريال")}</option><option value="percent">{t("نسبة مئوية")}</option></select></Field></div>
+        <div className={checkoutStyles.body}><section className={checkoutStyles.breakdown} aria-label={t("الخصم وتفاصيل المبلغ")}><h3 className={checkoutStyles.sectionTitle}>{t("الخصم وتفاصيل المبلغ")}</h3><div className={styles.fields}><Field label={t("الخصم")}><input type="number" min="0" max={discountKind === "percent" ? 100 : subtotal} step="0.01" value={discountValue} disabled={disabled} onChange={(event) => setDiscountValue(Number(event.target.value))} /></Field><Field label={t("نوع الخصم")}><select value={discountKind} disabled={disabled} onChange={(event) => setDiscountKind(event.target.value as "amount" | "percent")}><option value="amount">{t("مبلغ بالريال")}</option><option value="percent">{t("نسبة مئوية")}</option></select></Field></div><FinancePosPoints points={points} disabled={disabled} subtotal={subtotal} />
           <div className={styles.balanceLine}><span>{t("قبل الخصم")}</span><Numeric value={totals.subtotal} money /></div><div className={styles.balanceLine}><span>{t("الخصم")}</span><Numeric value={discount} money /></div><div className={styles.balanceLine}><span>{t("الضريبة ")}{data.settings.vat_rate}% {data.settings.tax_inclusive ? t("ضمن السعر") : ""}</span><Numeric value={totals.tax} money /></div></section><section className={checkoutStyles.payment} aria-label={t("الدفع وبيانات العميل")}>
           <div className={`${styles.form} ${styles.cartFields}`}><fieldset className={styles.paymentMethods} disabled={disabled}>
               <legend>{t("طريقة السداد")}</legend>

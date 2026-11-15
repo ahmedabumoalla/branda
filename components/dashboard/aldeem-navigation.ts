@@ -18,6 +18,8 @@ export function aldeemSystemGroups(groups: SystemGroup[]): SystemGroup[] {
     ...groups.filter(group => !hidden.has(group.id)).map(group => {
       if (group.id === "manufacturing") return { ...group, label: "المعمل والتصنيع", items: [{ label: "شاشة طلبات المعمل", href: "/dashboard/system/lab" }, ...group.items, { label: "الأصول والآلات والإهلاك", href: "/dashboard/system/assets" }] };
       if (group.id === "store") return { ...group, label: "المتجر والطلبات", items: [{ label: "طلبات المتجر", href: "/dashboard/orders", feature: "menu" }, ...group.items] };
+      // User request 2026-11-15: points with clear limits, usable at any branch, with a ledger of every point
+      if (group.id === "loyalty") return { ...group, label: "الولاء والنقاط", items: [{ label: "نقاط الولاء وسجلها", href: "/dashboard/system/points" }, ...group.items] };
       return group;
     }),
   ];

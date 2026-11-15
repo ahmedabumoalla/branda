@@ -126,9 +126,15 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
     delete command.payload.redeemRewardId;
     delete command.payload.pagerFeedbackHash;
   } else if (command.operation === "sale") prepareFinancePosCustomerPayload(command.payload, command.requestId);
+  // Loyalty points spent on this sale: checked and recorded by the database in the same transaction as the sale
+  const redeemPoints = command.operation === "sale" ? command.payload.redeemPoints : undefined;
+  delete command.payload.redeemPoints;
+  if (redeemPoints !== undefined && (butcherSale || typeof redeemPoints !== "number" || !Number.isInteger(redeemPoints) || redeemPoints <= 0 || redeemPoints > 1000000 || !command.payload.customerPhone)) throw new Error("راجع رقم جوال العميل وعدد النقاط المطلوب استبدالها");
   const customerDetails = command.operation === "party" && command.payload.kind === "customer" && Object.hasOwn(command.payload, "details");
   const { data, error } = customerDetails
     ? await client.rpc("brand_finance_save_customer", { p_cafe_id: cafe.id, p_payload: command.payload, p_request_id: command.requestId })
+    : redeemPoints !== undefined
+    ? await client.rpc("erp_points_sale", { p_cafe: cafe.id, p_payload: command.payload, p_request: command.requestId, p_points: redeemPoints })
     : await client.rpc("brand_finance_execute", { p_cafe_id: cafe.id, p_operation: command.operation, p_payload: command.payload, p_request_id: command.requestId });
   if (error) {
     throwIfFinanceUnavailable(error);
