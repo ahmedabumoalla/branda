@@ -1,3 +1,13 @@
+# Aldeem enterprise build - 2026-11-15 (Claude)
+
+- Owner mandate: rebuild the account khayal-aldeem as an enterprise system, Aldeem account only. Full record, database objects, demo data and limits: docs/BARNDAKSA_HANDOFF/ALDEEM_ENTERPRISE_20261115.md
+- Built: overview landing page, reordered Aldeem sidebar, productive families with consignment ledger and family portal, loyalty points ledger across branches with cashier redemption, live branch monitor, item trace, cash trail, food safety register, the same sections in the employee portal by role, help marks on every control, quiet loading line, admin package sections for Branda Finance, Employees and Manufacturing
+- Database: seven migration files 20261115230000 to 20261116013000 applied to production directly and not registered in migration history. New objects are gated by erp_enterprise_settings and erp_family_settings rows that exist for Aldeem only
+- Fixed for Aldeem: cashier sales, refunds and payments were not tagged with a branch. Trigger erp_enterprise_branch_tag assigns it for enterprise brands only
+- Demo data seeded in Aldeem through the real commands as the owner account and listed in public.erp_enterprise_demo: 5 branches, 5 branch warehouses, 20 employees, 5 families, 10 items, 10 receipts, 24 sales. Removal script not written yet
+- Not verified: no browser inspection, no role-by-role testing, no real messages. Aldeem products still have price 0 and VAT 0 percent, owner decision
+- Do not reapply the seven migrations or the seed. Do not remove the Aldeem slug gates
+
 # Combined platform release - PUBLISHED AND VERIFIED - 2026-11-15
 
 - User authorized the combined release including Claude work after the requested performance/interface audit; production source commit 0a40c8f3ebefe86b088dc047917f3e87f7cb353b is verified on branda-2, GitHub main
