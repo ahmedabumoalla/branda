@@ -72,6 +72,7 @@ These files or objects are shared by all brands. Each change is inert for other 
 - GitHub main moved from 9ca87fcd to a324d7a0bf8bebc1c7e4b72a8bdd9dad584cc921 as a fast-forward on 2026-11-15, after Vercel preview builds of the work branch succeeded
 - Vercel production deployment dpl_4HiqphL5nK769L21qh1VbNaC6AXL completed. https://barndaksa.com returned 200 with that deployment id in its HTML, and https://www.barndaksa.com/finance/khayal-aldeem/family returned 200 with the family sign-in page
 - Follow-up commit: the family portal page returns not found for brands without the families section. Function erp_family_portal_enabled added to production and to the families migration file
+- The follow-up reached production as commit 6e1004b87a44e1c88b0eb888a30b44f0291c9c6a, deployment dpl_Hr44Vg2nakempc5MBbpogxGdCigk seen in the HTML of barndaksa.com. On it the Aldeem family page shows the sign-in form and the same path for mind-hospital shows the not found page. Later commits that only edit documents do not change the application
 - A local production build cannot run in the work tree because node_modules is a directory junction that Turbopack rejects. Builds were verified on Vercel
 
 ## Not done or not verified
