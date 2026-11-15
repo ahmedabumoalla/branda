@@ -1,3 +1,11 @@
+# Loyalty customer registry FIXED LIVE DB - 2026-11-15
+
+- Restored wallet-card registry access for loyalty-only brands: removed finance-package coupling, retained existing customer authorization, active-account/brand checks and loyalty entitlement. Migration20261115171618 applied17:18:47Z, exactMD5 988f9a53cc1eb94dca70eb0fc713e327
+- Preserved the NEW compact sidebar and loyalty submenu; no interface rollback or customer reset. Release based on origin95c6e2d3 including Claude changes
+- RUN real-owner/admin read-only regression and tenant/anonymous/ACL checks atomically with migration; Node24 TypeScript passed17:19Z. Scoped text/diff verification passed17:21Z. No real messages or browser/handset test
+- Native Wallet location reminder once/day is unsupported by current Apple/Google APIs; explained options, no misleading limiter or silent disabling. Apple maximum distance can be reduced; Google radius is system-controlled. Awaiting user's implementation choice
+- Details: docs/BARNDAKSA_HANDOFF/LOYALTY_DIRECTORY_20261115.md; private publication evidence .codex-tmp/loyalty-production.json
+
 # Aldeem enterprise build - 2026-11-15 (Claude)
 
 - Owner mandate: rebuild the account khayal-aldeem as an enterprise system, Aldeem account only. Full record, database objects, demo data and limits: docs/BARNDAKSA_HANDOFF/ALDEEM_ENTERPRISE_20261115.md
