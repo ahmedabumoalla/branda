@@ -1,10 +1,10 @@
-import { HeartHandshake, LayoutDashboard } from "lucide-react";
+import { HeartHandshake, LayoutDashboard, Radar } from "lucide-react";
 import type { SystemGroup } from "./integrated-system-navigation";
 
 // User mandate 2026-11-15: the Aldeem sidebar follows the daily flow of a sweets chain, starting with the
 // overview landing page. Presentation only: it grants and revokes nothing, permissions stay in the database.
 const order = [
-  "overview", "sales", "pos", "store", "manufacturing", "families", "inventory", "purchases", "customers", "loyalty", "credits", "memberships",
+  "overview", "tracking", "sales", "pos", "store", "manufacturing", "families", "inventory", "purchases", "customers", "loyalty", "credits", "memberships",
   "finance", "accounting", "branches", "employees", "organization", "attendance", "payroll", "requests", "tasks", "workflows", "work-orders", "targets",
   "reports", "templates", "settings",
 ];
@@ -14,6 +14,7 @@ const hidden = new Set(["bookings", "contracting", "installments", "rentals", "t
 export function aldeemSystemGroups(groups: SystemGroup[]): SystemGroup[] {
   const prepared: SystemGroup[] = [
     { id: "overview", label: "نظرة عامة", icon: LayoutDashboard, direct: true, items: [{ label: "نظرة عامة", href: "/dashboard/system/overview" }] },
+    { id: "tracking", label: "المتابعة والتتبع", icon: Radar, items: [{ label: "متابعة الفروع المباشرة", href: "/dashboard/system/tracking" }, { label: "تتبع الأصناف", href: "/dashboard/system/tracking/items" }, { label: "تتبع النقد", href: "/dashboard/system/tracking/cash" }, { label: "سجل نشاط الحساب", href: "/dashboard/system/reports/activity" }] },
     { id: "families", label: "الأسر المنتجة", icon: HeartHandshake, direct: true, items: [{ label: "الأسر المنتجة", href: "/dashboard/system/families" }] },
     ...groups.filter(group => !hidden.has(group.id)).map(group => {
       if (group.id === "manufacturing") return { ...group, label: "المعمل والتصنيع", items: [{ label: "شاشة طلبات المعمل", href: "/dashboard/system/lab" }, ...group.items, { label: "الأصول والآلات والإهلاك", href: "/dashboard/system/assets" }] };
