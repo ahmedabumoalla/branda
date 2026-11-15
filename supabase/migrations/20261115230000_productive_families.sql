@@ -80,8 +80,8 @@ CREATE FUNCTION erp_family_private.snapshot(c uuid,p_family uuid,p_wide boolean)
   JOIN public.erp_purchase_documents p ON p.cafe_id=k.cafe_id AND p.id=k.purchase_id
   WHERE k.cafe_id=c AND CASE WHEN p_wide THEN true ELSE erp_branch_private.branch_allowed(c,k.branch_id) END),
  agg AS(
-  SELECT k.id consignment_id,k.family_id,k.mode,k.finance_id,k.received_at,l.item_id,min(l.name) name,sum(l.quantity*l.stock_unit_factor) qty,sum(l.net+l.tax) amount
-  FROM k JOIN public.bf_document_lines l ON l.cafe_id=c AND l.document_id=k.finance_id WHERE l.item_id IS NOT NULL GROUP BY 1,2,3,4,5,6),
+  SELECT k.id consignment_id,k.family_id,k.mode,k.finance_id,k.received_at,l.item_id,k.warehouse_id,min(l.name) name,sum(l.quantity*l.stock_unit_factor) qty,sum(l.net+l.tax) amount
+  FROM k JOIN public.bf_document_lines l ON l.cafe_id=c AND l.document_id=k.finance_id WHERE l.item_id IS NOT NULL GROUP BY 1,2,3,4,5,6,7),
  ret AS(
   SELECT d.reference_id finance_id,m.item_id,-sum(m.quantity) qty FROM public.bf_movements m JOIN public.bf_documents d ON d.cafe_id=m.cafe_id AND d.id=m.document_id
   WHERE m.cafe_id=c AND d.kind='refund' AND d.reference_id IN(SELECT finance_id FROM k) GROUP BY 1,2),
@@ -91,13 +91,15 @@ CREATE FUNCTION erp_family_private.snapshot(c uuid,p_family uuid,p_wide boolean)
   LEFT JOIN public.bf_documents o ON o.cafe_id=d.cafe_id AND o.id=d.reference_id LEFT JOIN public.erp_branch_documents bd ON bd.cafe_id=d.cafe_id AND bd.document_id=d.id
   LEFT JOIN wh w ON w.id=m.warehouse_id WHERE m.cafe_id=c AND (d.kind='sale' OR d.kind='refund' AND o.kind='sale')),
  sold AS(SELECT item_id,sum(qty) qty FROM sales GROUP BY 1),
+ soldw AS(SELECT item_id,warehouse_id,sum(qty) qty FROM sales GROUP BY 1,2),
  net AS(
   SELECT a.*,coalesce(r.qty,0) returned,greatest(a.qty-coalesce(r.qty,0),0) net_qty,CASE WHEN a.qty>0 THEN a.amount/a.qty ELSE 0 END unit_cost
   FROM agg a LEFT JOIN ret r ON r.finance_id=a.finance_id AND r.item_id=a.item_id),
- -- Sold units are matched to receipts oldest first, so every receipt shows what left the shelf and what is still on it.
+ -- Units sold from a warehouse are matched to the receipts of that same warehouse, oldest first, so every receipt
+ -- shows what left its own shelf and what is still on it.
  alloc AS(
-  SELECT n.*,greatest(0,least(n.net_qty,coalesce(s.qty,0)-(sum(n.net_qty) OVER(PARTITION BY n.item_id ORDER BY n.received_at,n.consignment_id)-n.net_qty))) sold_qty
-  FROM net n LEFT JOIN sold s ON s.item_id=n.item_id),
+  SELECT n.*,greatest(0,least(n.net_qty,coalesce(s.qty,0)-(sum(n.net_qty) OVER(PARTITION BY n.item_id,n.warehouse_id ORDER BY n.received_at,n.consignment_id)-n.net_qty))) sold_qty
+  FROM net n LEFT JOIN soldw s ON s.item_id=n.item_id AND s.warehouse_id=n.warehouse_id),
  kt AS(
   SELECT k.id,k.family_id,k.mode,k.total,coalesce((k.state->>'outstanding')::numeric,0) outstanding,coalesce((k.state->>'refunded_total')::numeric,0) refunded,
    coalesce(sum(a.qty),0) qty,coalesce(sum(a.returned),0) returned,coalesce(sum(a.sold_qty),0) sold_qty,coalesce(sum(a.sold_qty*a.unit_cost),0) sold_value
@@ -111,9 +113,10 @@ CREATE FUNCTION erp_family_private.snapshot(c uuid,p_family uuid,p_wide boolean)
   'warehouses',coalesce((SELECT jsonb_agg(jsonb_build_object('id',id,'name',name,'branchId',branch_id) ORDER BY name) FROM wh WHERE active),'[]'::jsonb),
   'families',coalesce((SELECT jsonb_agg(jsonb_build_object('id',f.id,'number',f.number,'revision',f.revision,'active',f.active,'supplierId',f.supplier_id,'name',f.name,'phone',f.phone,'profile',f.payload,'createdAt',f.created_at,
     'itemCount',(SELECT count(*) FROM fi WHERE fi.family_id=f.id),
-    'received',coalesce(t.qty,0),'returned',coalesce(t.returned,0),'sold',coalesce(t.sold_qty,0),'remaining',coalesce(t.qty-t.returned-t.sold_qty,0),
+    'received',coalesce(t.qty,0),'returned',coalesce(t.returned,0),'sold',coalesce(fs.qty,0),'remaining',coalesce(t.qty-t.returned,0)-coalesce(fs.qty,0),
     'receivedValue',coalesce(t.total,0),'soldValue',round(coalesce(t.sold_value,0),2),'paid',coalesce(t.paid,0),'payable',coalesce(t.outstanding,0),'dueNow',coalesce(t.due_now,0)) ORDER BY f.active DESC,f.name)
-   FROM fam f LEFT JOIN(SELECT family_id,sum(qty) qty,sum(returned) returned,sum(sold_qty) sold_qty,sum(total-refunded) total,sum(sold_value) sold_value,sum(paid) paid,sum(outstanding) outstanding,sum(due_now) due_now FROM kd GROUP BY 1) t ON t.family_id=f.id),'[]'::jsonb),
+   FROM fam f LEFT JOIN(SELECT family_id,sum(qty) qty,sum(returned) returned,sum(sold_qty) sold_qty,sum(total-refunded) total,sum(sold_value) sold_value,sum(paid) paid,sum(outstanding) outstanding,sum(due_now) due_now FROM kd GROUP BY 1) t ON t.family_id=f.id
+   LEFT JOIN(SELECT fi.family_id,sum(s.qty) qty FROM sold s JOIN fi ON fi.item_id=s.item_id GROUP BY 1) fs ON fs.family_id=f.id),'[]'::jsonb),
   'items',coalesce((SELECT jsonb_agg(jsonb_build_object('itemId',i.item_id,'familyId',i.family_id,'name',i.name,'barcode',i.barcode,'sku',i.sku,'unit',i.unit,'flavor',i.flavor,'active',i.active,'cost',i.cost,'price',i.price,
     'received',coalesce(x.qty,0),'returned',coalesce(x.returned,0),'sold',coalesce(s.qty,0),
     'stock',coalesce((SELECT jsonb_agg(jsonb_build_object('warehouseId',st.warehouse_id,'quantity',st.quantity)) FROM stock st WHERE st.item_id=i.item_id),'[]'::jsonb),
@@ -179,7 +182,7 @@ BEGIN
  IF NOT FOUND THEN RAISE EXCEPTION 'الأسرة غير موجودة' USING ERRCODE='22023';END IF;
  IF p_action='item' THEN
   item:=(p->>'itemId')::uuid;
-  IF NOT EXISTS(SELECT 1 FROM public.bf_items i JOIN public.erp_inventory_items e ON e.cafe_id=i.cafe_id AND e.item_id=i.id WHERE i.cafe_id=c AND i.id=item AND i.active AND i.menu_product_id IS NULL AND e.kind='product') THEN RAISE EXCEPTION 'اختر صنفًا مخزنيًا فعالًا من أصناف العلامة' USING ERRCODE='22023';END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.bf_items i JOIN public.erp_inventory_items e ON e.cafe_id=i.cafe_id AND e.item_id=i.id WHERE i.cafe_id=c AND i.id=item AND i.active AND e.kind='product') THEN RAISE EXCEPTION 'اختر صنفًا مخزنيًا فعالًا من أصناف العلامة' USING ERRCODE='22023';END IF;
   IF EXISTS(SELECT 1 FROM public.erp_family_items x WHERE x.cafe_id=c AND x.item_id=item AND x.family_id<>f.id) THEN RAISE EXCEPTION 'الصنف مسجل لأسرة أخرى' USING ERRCODE='23505';END IF;
   INSERT INTO public.erp_family_items(cafe_id,item_id,family_id,created_by) VALUES(c,item,f.id,auth.uid()) ON CONFLICT DO NOTHING;
   IF FOUND THEN INSERT INTO public.erp_family_events(cafe_id,family_id,action,payload,actor) VALUES(c,f.id,'item_linked',jsonb_build_object('itemId',item),auth.uid());END IF;
@@ -206,6 +209,9 @@ BEGIN
   IF EXISTS(SELECT 1 FROM public.bf_document_lines l WHERE l.cafe_id=c AND l.document_id=pd.finance_id AND (l.item_id IS NULL OR NOT EXISTS(SELECT 1 FROM public.erp_family_items x WHERE x.cafe_id=c AND x.family_id=f.id AND x.item_id=l.item_id))) THEN RAISE EXCEPTION 'كل أصناف الاستلام يجب أن تكون من أصناف هذه الأسرة' USING ERRCODE='22023';END IF;
   SELECT * INTO doc FROM public.bf_documents WHERE cafe_id=c AND id=pd.finance_id;
   IF mode='cash' AND doc.paid<doc.total OR mode='after_sale' AND doc.paid<>0 THEN RAISE EXCEPTION 'المبلغ المدفوع في الفاتورة لا يطابق طريقة التسوية المختارة' USING ERRCODE='22023';END IF;
+  -- The receipt belongs to the receiving branch in every branch report, even when it was entered from the all-branches view
+  IF EXISTS(SELECT 1 FROM public.erp_branch_documents x WHERE x.cafe_id=c AND x.document_id=pd.finance_id AND x.branch_id<>b) THEN RAISE EXCEPTION 'فاتورة الاستلام مسجلة على فرع آخر غير الفرع المختار' USING ERRCODE='22023';END IF;
+  INSERT INTO public.erp_branch_documents(cafe_id,document_id,branch_id) SELECT c,pd.finance_id,b WHERE NOT EXISTS(SELECT 1 FROM public.erp_branch_documents x WHERE x.cafe_id=c AND x.document_id=pd.finance_id);
   INSERT INTO public.erp_family_consignments(cafe_id,family_id,branch_id,warehouse_id,mode,purchase_id,finance_id,return_by,note,created_by)
   VALUES(c,f.id,b,w,mode,pd.id,pd.finance_id,due,coalesce(p->>'note',''),auth.uid()) RETURNING * INTO k;
   INSERT INTO public.erp_family_events(cafe_id,family_id,action,payload,actor) VALUES(c,f.id,'consignment',jsonb_build_object('id',k.id,'branchId',b,'warehouseId',w,'mode',mode,'financeId',pd.finance_id,'total',doc.total),auth.uid());

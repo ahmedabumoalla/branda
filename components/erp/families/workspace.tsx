@@ -108,7 +108,7 @@ export function FamiliesWorkspace({ initialSnapshot }: { initialSnapshot: Family
     </div>
 
     {open?.kind === "family" && <FamilyDialog snapshot={snapshot} family={open.family} onClose={() => setOpen(null)} onSaved={() => reload("تم حفظ بيانات الأسرة")} />}
-    {open?.kind === "item" && <ItemDialog snapshot={snapshot} familyId={open.familyId} onClose={() => setOpen(null)} onSaved={() => reload("تم ربط الصنف بالأسرة")} />}
+    {open?.kind === "item" && <ItemDialog snapshot={snapshot} familyId={open.familyId} onClose={() => setOpen(null)} onSaved={warning => reload(warning ?? "تم حفظ الصنف وربطه بالأسرة")} />}
     {open?.kind === "receive" && <ReceiveDialog snapshot={snapshot} mode={open.mode} familyId={open.familyId} onClose={() => setOpen(null)} onSaved={() => reload("تم تسجيل الاستلام وإضافة الكميات إلى مخزون الفرع")} />}
     {open?.kind === "return" && <ReturnDialog snapshot={snapshot} familyId={open.familyId} consignmentId={open.consignmentId} familyName={familyName} branchName={branchName} onClose={() => setOpen(null)} onSaved={() => reload("تم تسجيل الإرجاع وخصم الكميات من المخزون")} />}
     {open?.kind === "pay" && <PayDialog snapshot={snapshot} consignmentId={open.consignmentId} familyName={familyName} onClose={() => setOpen(null)} onSaved={() => reload("تم تسجيل الدفعة للأسرة")} />}
@@ -179,15 +179,20 @@ function ActivityTable({ rows, familyName, branchName, snapshot }: { snapshot: F
   </table></div></div>;
 }
 
-function useSubmit(onSaved: () => void) {
+function useSubmit(onSaved: (warning?: string) => void) {
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
   const [requestId] = useState(() => crypto.randomUUID());
-  const run = (operation: (requestId: string) => Promise<{ ok: true } | { ok: false; message: string }>) => {
+  const run = (operation: (requestId: string) => Promise<{ ok: true; data?: unknown } | { ok: false; message: string }>) => {
     if (pending) return;
     setError("");
     start(async () => {
-      try { const result = await operation(requestId); if (result.ok) onSaved(); else setError(result.message); }
+      try {
+        const result = await operation(requestId);
+        if (!result.ok) return setError(result.message);
+        const warning = result.data && typeof result.data === "object" && "warning" in result.data && typeof result.data.warning === "string" ? result.data.warning : "";
+        onSaved(warning || undefined);
+      }
       catch { setError("انقطع الاتصال قبل تأكيد الحفظ اضغط حفظ مرة أخرى وسيكمل النظام من حيث توقف"); }
     });
   };
@@ -233,7 +238,7 @@ function FamilyDialog({ snapshot, family, onClose, onSaved }: { snapshot: Family
   </Dialog>;
 }
 
-function ItemDialog({ snapshot, familyId, onClose, onSaved }: { snapshot: FamilySnapshot; familyId: string; onClose: () => void; onSaved: () => void }) {
+function ItemDialog({ snapshot, familyId, onClose, onSaved }: { snapshot: FamilySnapshot; familyId: string; onClose: () => void; onSaved: (warning?: string) => void }) {
   const owner = snapshot.families.find(row => row.id === familyId);
   const [mode, setMode] = useState<"new" | "existing">("new");
   const [form, setForm] = useState({ name: "", flavor: "", barcode: "", buyPrice: 0, salePrice: 0, minQuantity: 0 });
@@ -261,7 +266,7 @@ function ItemDialog({ snapshot, familyId, onClose, onSaved }: { snapshot: Family
       </fieldset>
       <footer className={s.dialogFoot}>
         <Action type="button" help="يغلق النافذة دون إضافة الصنف" onClick={onClose} disabled={pending}>إلغاء</Action>
-        <Action type="submit" tone="primary" side="end" help="يضيف الصنف إلى المخزون ويربطه بهذه الأسرة" disabled={pending}>{pending ? "جار الحفظ" : "حفظ الصنف"}</Action>
+        <Action type="submit" tone="primary" side="end" help="يضيف الصنف إلى المخزون ويربطه بهذه الأسرة ويظهره في الكاشير بسعر البيع" disabled={pending}>{pending ? "جار الحفظ" : "حفظ الصنف"}</Action>
       </footer>
     </form>
   </Dialog>;

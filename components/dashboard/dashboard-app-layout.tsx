@@ -19,6 +19,8 @@ import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
 import { cafeHasFeature } from "@/lib/platform/permissions";
 import { getServiceSubscriptionAccess } from "@/lib/platform/service-subscriptions";
 import { snapshotServerClock } from "@/lib/platform/server-clock";
+import { isAldeemCafe } from "@/lib/platform/aldeem";
+import { NavigationPending } from "@/components/dashboard/navigation-pending";
 
 type GuardState = {
   serverNow?: () => number;
@@ -166,6 +168,9 @@ export function DashboardAppLayout({
       overrides: guard.featureOverrides,
     });
 
+  // User requests 2026-11-15: the MIND and Aldeem accounts show the loading skeleton the moment a section is clicked
+  const content = isAldeemCafe({ slug: guard.cafeSlug }) || guard.cafeSlug === "mind-hospital" ? <NavigationPending>{children}</NavigationPending> : children;
+
   function endMaintenanceMode() {
     if (isEndingMaintenance) return;
     setMaintenanceError("");
@@ -231,11 +236,11 @@ export function DashboardAppLayout({
           {maintenanceError && <p role="alert" className="mt-3 text-sm font-bold text-red-800">{maintenanceError}</p>}
         </section>
       ) : null}
-      {pathname === "/dashboard/subscription" || pathname.startsWith("/dashboard/subscription/") ? children
+      {pathname === "/dashboard/subscription" || pathname.startsWith("/dashboard/subscription/") ? content
         : guard.loading ? <p role="status" className="p-10 text-center">جارٍ التحقق من الاشتراك</p>
         : guard.error ? <div role="alert" className="p-10 text-center"><p>تعذر التحقق من الاشتراك حاول مجددًا</p><button type="button" className="mt-4 rounded-xl bg-[#38251b] px-5 py-3 text-white" onClick={() => { clearDashboardShellSnapshot(); setGuard(state => ({ ...state, loading: true, error: false })); setRetry(value => value + 1); }}>إعادة المحاولة</button></div>
         : !guard.activePlanId ? <SubscriptionExpiredState />
-        : allowed ? children : <DashboardFeatureBlockedState title={currentFeature?.title ?? ""} />}
+        : allowed ? content : <DashboardFeatureBlockedState title={currentFeature?.title ?? ""} />}
     </ResponsiveAppShell>
   );
 }

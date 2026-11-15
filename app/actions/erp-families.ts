@@ -9,6 +9,7 @@ import { familiesError, readFamilies } from "@/lib/data/erp-families";
 import { purchasesContext, purchasesError } from "@/lib/data/erp-purchases";
 import { actionResult } from "@/lib/platform/action-result";
 import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
+import { showStockItemInMenu } from "@/app/actions/inventory-item-menu-visibility";
 import { familyItemSchema, familyReceiptTotal, linkFamilyItemSchema, payFamilySchema, receiveFamilySchema, returnFamilySchema, saveFamilySchema } from "@/lib/erp/families";
 
 type Context = Awaited<ReturnType<typeof getBrandFinanceContext>>;
@@ -82,8 +83,10 @@ export async function createFamilyItem(input: unknown, slug?: string) {
     if (error) throw new Error(/[\u0600-\u06ff]/.test(error.message) ? error.message : "تعذر إضافة صنف الأسرة راجع الاسم والباركود");
     const itemId = (data as { item: { id: string } }).item.id;
     await family(context, "item", { familyId: value.familyId, itemId });
+    // The cashier sells menu products: list the item there through the existing show in menu switch, deducting one unit per sale
+    const listed = await showStockItemInMenu(context.cafe.slug, { itemId, price: value.salePrice, categoryId: "", quantity: 1 }, stepId(value.requestId, "menu"));
     refresh(context.cafe.slug);
-    return { id: itemId };
+    return { id: itemId, warning: listed.ok ? "" : `تم حفظ الصنف وربطه بالأسرة لكنه لم يظهر في الكاشير بعد ${listed.message} ويمكن إظهاره من بطاقة الصنف في المخزون بزر إظهار في المنيو` };
   }, "تعذر إضافة صنف الأسرة");
 }
 
