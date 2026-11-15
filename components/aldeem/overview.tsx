@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/erp/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { BadgeDollarSign, ClipboardList, FilePlus2, FlaskConical, MonitorSmartphone, ReceiptText, Search, UserPlus, Users } from "lucide-react";
 import { getOverview, searchOverview } from "@/app/actions/erp-overview";

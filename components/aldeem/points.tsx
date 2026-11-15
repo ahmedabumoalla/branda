@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/erp/navigation";
 import { useState, useTransition } from "react";
 import { Coins, Settings2, SlidersHorizontal } from "lucide-react";
 import { adjustPoints, getPoints, savePointsSettings } from "@/app/actions/erp-points";

@@ -44,6 +44,11 @@ import Cheques from '@/app/dashboard/system/cheques/[[...segments]]/page';
 import Reports from '@/app/dashboard/system/reports/[[...parts]]/page';
 import Branches from '@/app/dashboard/system/branches/[[...path]]/page';
 import Requests from '@/app/dashboard/system/requests/[[...segments]]/page';
+import Overview from '@/app/dashboard/system/overview/page';
+import Families from '@/app/dashboard/system/families/page';
+import Tracking from '@/app/dashboard/system/tracking/[[...view]]/page';
+import FoodSafety from '@/app/dashboard/system/food-safety/page';
+import Points from '@/app/dashboard/system/points/page';
 export const dynamic='force-dynamic';
 export const runtime='nodejs';
 export default async function Page({params,searchParams}:{params:Promise<{slug:string;parts?:string[]}>;searchParams:Promise<Record<string,string|string[]|undefined>>}) {
@@ -78,6 +83,11 @@ export default async function Page({params,searchParams}:{params:Promise<{slug:s
     case 'reports':return Reports(props);
     case 'requests':return Requests(props);
     case 'branches':return Branches(props);
+    case 'overview':if(rest.length)notFound();return Overview();
+    case 'families':if(rest.length)notFound();return Families();
+    case 'tracking':return Tracking({params:Promise.resolve({view:rest})});
+    case 'food-safety':if(rest.length)notFound();return FoodSafety();
+    case 'points':if(rest.length)notFound();return Points();
     default:notFound();
    }
  }):<div className={s.home}>{visibleDomains.map(d=><Link key={d.key} href={erpHref(d.href,slug)}>{d.label}</Link>)}{!visibleDomains.length&&<p className={s.empty}>لا توجد أقسام متاحة لحسابك تواصل مع مسؤول العلامة لتعيين صلاحياتك</p>}</div>;

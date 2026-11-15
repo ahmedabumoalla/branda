@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/components/erp/navigation";
 import { X } from "lucide-react";
 import s from "./aldeem-ui.module.css";
 
