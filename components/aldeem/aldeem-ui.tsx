@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import Link from "next/link";
 import { X } from "lucide-react";
 import s from "./aldeem-ui.module.css";
 
@@ -22,6 +23,15 @@ type ActionProps = ButtonHTMLAttributes<HTMLButtonElement> & { help: string; ton
 export function Action({ help, tone, small, side, className, children, type = "button", ...rest }: ActionProps) {
   return <span className={s.action}>
     <button type={type} className={[s.button, tone === "primary" ? s.primary : tone === "danger" ? s.danger : "", small ? s.small : "", className ?? ""].join(" ")} {...rest}>{children}</button>
+    <Help text={help} side={side} />
+  </span>;
+}
+
+/** A link that looks and explains itself like a button */
+export function LinkAction({ href, help, tone, small, side, external, children }: { href: string; help: string; tone?: "primary"; small?: boolean; side?: "start" | "end"; external?: boolean; children: ReactNode }) {
+  const className = [s.button, tone === "primary" ? s.primary : "", small ? s.small : ""].join(" ");
+  return <span className={s.action}>
+    {external ? <a href={href} className={className}>{children}</a> : <Link href={href} className={className}>{children}</Link>}
     <Help text={help} side={side} />
   </span>;
 }

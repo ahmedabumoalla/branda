@@ -6,9 +6,10 @@ import { isAldeemCafe } from "@/lib/platform/aldeem";
 import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 import { isMindSalesSimplified, isSalesViewVisible } from "@/lib/finance/sales-features";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { aldeemSystemGroups } from "./aldeem-navigation";
 
 type SystemItem = { label: string; id?: string; view?: FinanceMenuEntry["view"]; unavailable?: boolean; section?: FinanceSection; href?: string; feature?: string; salonOnly?: boolean; giftsOnly?: boolean; pos?: boolean; financeOnly?: boolean };
-type SystemGroup = { id: string; label: string; icon: LucideIcon; items: SystemItem[] };
+export type SystemGroup = { id: string; label: string; icon: LucideIcon; items: SystemItem[]; /** A single destination shown as one link instead of an expandable group */ direct?: boolean };
 
 export function isIntegratedLoyaltyRoute(pathname: string, financeActive: boolean) {
   return financeActive && (pathname === "/dashboard/loyalty" || pathname.startsWith("/dashboard/loyalty/") || pathname === "/dashboard/cashier" || pathname === "/dashboard/read-operations");
@@ -83,7 +84,7 @@ export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] 
     { id: "products", label: "المنتجات والأسعار", icon: Store, items: [{ label: "إضافة المنتجات وتعديل الأسعار", href: "/dashboard/menu" }, { label: "فتح نقطة البيع", pos: true }] },
     { id: "users", label: "إدارة المستخدمين والصلاحيات", icon: UserRoundCog, items: [{ label: "المستخدمون وكلمات المرور", section: "cashiers" }, { label: "تغيير كلمة مرور المالك", href: "/dashboard/settings" }] },
   ];
-  if (isAldeemCafe({ slug: cafeSlug })) return groups.map(group => group.id === "manufacturing" ? { ...group, label: "المعمل والتصنيع", items: [{ label: "شاشة طلبات المعمل", href: "/dashboard/system/lab" }, ...group.items] } : group);
+  if (isAldeemCafe({ slug: cafeSlug })) return aldeemSystemGroups(groups);
   if (isMindSalesSimplified(cafeSlug)) return groups.filter(group => !mindHiddenGroups.has(group.id)).map(group => {
     if (group.id === "sales") return { ...group, items: group.items.filter(item => isSalesViewVisible(cafeSlug, item.view)) };
     if (group.id === "pos") return { ...group, items: [...group.items, { label: "إعدادات نقاط البيع", section: "pos-settings" as const }] };

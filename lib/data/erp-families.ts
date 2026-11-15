@@ -5,7 +5,7 @@ import type { FamilySnapshot } from "@/lib/erp/families";
 export function familiesError(error: { code?: string; message?: string } | null) {
   if (!error) return;
   if (error.code === "40001") throw new Error("تغيرت بيانات الأسرة أعد تحميل الصفحة قبل الحفظ");
-  if (error.message && error.message.length < 300 && /[؀-ۿ]/.test(error.message)) throw new Error(error.message);
+  if (error.message && error.message.length < 300 && /[\u0600-\u06ff]/.test(error.message)) throw new Error(error.message);
   if (error.code === "42501") throw new Error("لا تملك صلاحية الأسر المنتجة");
   throw new Error("تعذر إكمال عملية الأسر المنتجة");
 }

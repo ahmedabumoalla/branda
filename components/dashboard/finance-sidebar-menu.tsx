@@ -56,7 +56,12 @@ export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug =
       {!collapsed && <><span className={styles.label}>نظام برندة المتكامل</span><ChevronDown className={`${styles.chevron} ${expanded ? styles.open : ""}`} aria-hidden="true" /></>}
     </button>}
     <div id={`${id}-sections`} hidden={!visible} className={styles.groups}>
-      {groups.map(({ id: groupId, label, icon: Icon, items }) => {
+      {groups.map(({ id: groupId, label, icon: Icon, items, direct: single }) => {
+        // A group marked direct with one destination opens it in one click
+        const directHref = single && items.length === 1 ? systemItemHref(items[0], context) : null;
+        if (directHref) return <Link key={groupId} href={directHref} scroll={false} onClick={() => onNavigate?.()} aria-current={isCurrent(directHref) ? "page" : undefined} className={`${styles.groupTrigger} ${isCurrent(directHref) ? styles.active : ""}`}>
+          <Icon className={styles.icon} aria-hidden="true" /><span className={styles.groupLabel}><span>{label}</span></span>
+        </Link>;
         const available = items.some(item => systemItemHref(item, context));
         const open = openGroup === groupId;
         return <div key={groupId}>

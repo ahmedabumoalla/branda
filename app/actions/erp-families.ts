@@ -20,7 +20,7 @@ function stepId(base: string, step: string) {
 }
 function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   const result = schema.safeParse(branchInput(input));
-  if (!result.success) throw new Error(result.error.issues.find(issue => /[؀-ۿ]/.test(issue.message))?.message ?? "راجع بيانات الأسرة والحقول المطلوبة");
+  if (!result.success) throw new Error(result.error.issues.find(issue => /[\u0600-\u06ff]/.test(issue.message))?.message ?? "راجع بيانات الأسرة والحقول المطلوبة");
   return result.data;
 }
 async function purchase(context: Context, action: string, payload: unknown, requestId: string, input: unknown) {
@@ -79,7 +79,7 @@ export async function createFamilyItem(input: unknown, slug?: string) {
       p_cafe: context.cafe.id, p_request: stepId(value.requestId, "product"), p_shift: null,
       p_input: { name: value.name, category: "الأسر المنتجة", brand: "", seller: owner.name, sellerKind: "family", flavor: value.flavor, barcode: value.barcode, unitId: "", trackStock: true, minQuantity: value.minQuantity, buyPrice: value.buyPrice, salePrice: value.salePrice, margin: Math.max(0, Math.round((value.salePrice - value.buyPrice) * 100) / 100), marginType: "amount", components: [], imagePath: null },
     });
-    if (error) throw new Error(/[؀-ۿ]/.test(error.message) ? error.message : "تعذر إضافة صنف الأسرة راجع الاسم والباركود");
+    if (error) throw new Error(/[\u0600-\u06ff]/.test(error.message) ? error.message : "تعذر إضافة صنف الأسرة راجع الاسم والباركود");
     const itemId = (data as { item: { id: string } }).item.id;
     await family(context, "item", { familyId: value.familyId, itemId });
     refresh(context.cafe.slug);
