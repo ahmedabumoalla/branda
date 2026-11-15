@@ -1,10 +1,10 @@
 "use client";
 
-import { BrandDetailsDialog, BrandFeatureControls } from "@/components/admin/brand-details-dialog";
+import dynamic from "next/dynamic";
+import type { BrandActivityCache } from "@/components/admin/brand-activity-panel";
 
 import { BrandDirectory } from "@/components/admin/brand-directory";
 import { PendingBrandDeletionCleanup } from "@/components/admin/brand-deletion-control";
-import { BrandAccountCreate } from "@/components/admin/brand-account-create";
 import type { BrandDeletionResult, PendingBrandDeletion } from "@/lib/data/brand-deletion";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition, type SetStateAction } from "react";
@@ -14,7 +14,6 @@ import {
   removeCafePlansAction,
   updateCafeStatusAction,
 } from "@/app/actions/admin";
-import { BentoCard } from "@/components/ui/design-system";
 import type {
   PlatformCafe,
   PlatformCustomer,
@@ -29,13 +28,17 @@ import {
   getPlanIncludedFeatures,
 } from "@/lib/platform/feature-access";
 import type { PlatformFeatureId } from "@/lib/platform/feature-registry";
-import { formatSar } from "@/lib/format";
+
+const BrandDetailsDialog = dynamic(() => import("@/components/admin/brand-details-dialog").then(module => module.BrandDetailsDialog));
+const BrandFeatureControls = dynamic(() => import("@/components/admin/brand-details-dialog").then(module => module.BrandFeatureControls));
+const BrandAccountCreate = dynamic(() => import("@/components/admin/brand-account-create").then(module => module.BrandAccountCreate));
+const BrandActivityPanel = dynamic(() => import("@/components/admin/brand-activity-panel").then(module => module.BrandActivityPanel));
 
 type Props = {
   initialCafes: PlatformCafe[];
   initialPlans: PlatformPlan[];
-  initialCustomers: PlatformCustomer[];
-  initialOperations: PlatformOperation[];
+  initialCustomers?: PlatformCustomer[];
+  initialOperations?: PlatformOperation[];
   configError?: string;
   pendingDeletions?: PendingBrandDeletion[];
 };
@@ -83,8 +86,7 @@ export function AdminCafesPage({
   const [cafeSnapshot, setCafeSnapshot] = useState({ source: initialCafes, value: initialCafes });
   const cafes = cafeSnapshot.source === initialCafes ? cafeSnapshot.value : initialCafes;
   const plans = initialPlans;
-  const customers = initialCustomers;
-  const operations = initialOperations;
+  const activityCache = useMemo<BrandActivityCache>(() => new Map(), [initialCafes]);
 
   const [modalCafeId, setModalCafeId] = useState<string | null>(null);
   const modalCafe = cafes.find(cafe => cafe.id === modalCafeId) ?? null;
@@ -115,19 +117,6 @@ export function AdminCafesPage({
   }
   const deletionJobs = [...new Map([...pendingDeletions, ...localPendingDeletions].map(job => [job.cafeId, job])).values()]
     .filter(job => !finishedDeletionIds.includes(job.cafeId));
-
-  const cafeCustomers = useMemo(
-    () => (modalCafe ? customers.filter((c) => c.cafeId === modalCafe.id) : []),
-    [customers, modalCafe],
-  );
-
-  const cafeOperations = useMemo(
-    () =>
-      modalCafe
-        ? operations.filter((o) => o.cafeId === modalCafe.id).slice(0, 8)
-        : [],
-    [operations, modalCafe],
-  );
 
   async function toggleCafe(id: string) {
     const cafe = cafes.find((item) => item.id === id);
@@ -250,70 +239,15 @@ export function AdminCafesPage({
           cafe={modalCafe}
           plans={plans}
           services={renderFeatureOverridesPanel(modalCafe)}
-          activity={<div className="space-y-5">          <BentoCard variant="dark" span="2">
-            <h3 className="mb-4 text-xl font-semibold text-[#F8F4EF]">
-              آخر العمليات المرتبطة
-            </h3>
-            <div className="space-y-2">
-              {cafeOperations.map((operation) => (
-                <div
-                  key={operation.id}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-3"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-semibold text-[#F8F4EF]">
-                      {operation.title}
-                    </p>
-                    <span className="text-xs font-medium text-[#CBB29C]">
-                      {operation.createdAt}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm font-medium text-[#B7AEA2]">
-                    {operation.type}{" "}
-                    {operation.amount ? `• ${formatSar(operation.amount)}` : ""}
-                  </p>
-                </div>
-              ))}
-              {!cafeOperations.length ? (
-                <p className="py-6 text-center font-medium text-[#B7AEA2]">
-                  لا توجد عمليات حديثة
-                </p>
-              ) : null}
-            </div>
-          </BentoCard>
-
-          <BentoCard variant="dark" span="2">
-            <h3 className="mb-4 text-xl font-semibold text-[#F8F4EF]">
-              عملاء العلامة
-            </h3>
-            <div className="space-y-2">
-              {cafeCustomers.slice(0, 8).map((customer) => (
-                <div
-                  key={customer.id}
-                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-3"
-                >
-                  <div>
-                    <p className="font-semibold text-[#F8F4EF]">
-                      {customer.fullName}
-                    </p>
-                    <p className="text-xs font-medium text-[#B7AEA2]">
-                      {customer.phone}{" "}
-                      {customer.email ? `• ${customer.email}` : ""}
-                    </p>
-                  </div>
-                  <span className="text-sm font-semibold text-[#F6C35B]">
-                    {formatSar(customer.totalSpent)}
-                  </span>
-                </div>
-              ))}
-              {!cafeCustomers.length ? (
-                <p className="py-6 text-center font-medium text-[#B7AEA2]">
-                  لا يوجد عملاء مسجلون
-                </p>
-              ) : null}
-            </div>
-          </BentoCard>
-</div>}
+          activity={<BrandActivityPanel
+            key={modalCafe.id}
+            cafeId={modalCafe.id}
+            cache={activityCache}
+            preview={configError && initialCustomers && initialOperations ? {
+              customers: initialCustomers.filter(customer => customer.cafeId === modalCafe.id).slice(0, 8).map(customer => ({ ...customer, email: customer.email })),
+              operations: initialOperations.filter(operation => operation.cafeId === modalCafe.id).slice(0, 8).map(operation => ({ ...operation, amount: operation.amount ?? 0 })),
+            } : undefined}
+          />}
           toggleStatus={() => toggleCafe(modalCafe.id)}
           planPending={updatingPlanCafeId === modalCafe.id}
           updatePlan={updatePlan}

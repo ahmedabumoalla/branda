@@ -12,7 +12,7 @@ export function DashboardNavigationLink({ href, prefetch, onPointerEnter, onPoin
   const prepare = () => { if (prefetch !== false) setPreparedHref(key); };
   const cancel = () => { if (timer.current !== null) { clearTimeout(timer.current); timer.current = null; } };
   useEffect(() => () => { if (timer.current !== null) clearTimeout(timer.current); }, [key]);
-  return <Link {...props} href={href} prefetch={prefetch !== false && preparedHref === key ? true : false}
+  return <Link {...props} href={href} prefetch={prefetch === true || (prefetch !== false && preparedHref === key)}
     onPointerEnter={event => { cancel(); if (prefetch !== false) timer.current = setTimeout(prepare, 80); onPointerEnter?.(event); }}
     onPointerLeave={event => { cancel(); onPointerLeave?.(event); }}
     onFocus={event => { cancel(); prepare(); onFocus?.(event); }}

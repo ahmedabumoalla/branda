@@ -86,6 +86,8 @@ export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] 
   ];
   if (isAldeemCafe({ slug: cafeSlug })) return aldeemSystemGroups(groups);
   if (isMindSalesSimplified(cafeSlug)) return groups.filter(group => !mindHiddenGroups.has(group.id)).map(group => {
+    if (group.id === "customers") return { ...group, items: group.items.filter(item => ["/dashboard/system/customers", "/dashboard/system/customers/new"].includes(item.href ?? "")) };
+    if (group.id === "loyalty") return { ...group, items: group.items.filter(item => item.href !== "/dashboard/loyalty/customers") };
     if (group.id === "sales") return { ...group, items: group.items.filter(item => isSalesViewVisible(cafeSlug, item.view)) };
     if (group.id === "pos") return { ...group, items: [...group.items, { label: "إعدادات نقاط البيع", section: "pos-settings" as const }] };
     // User request 2026-11-15: MIND reports list only the families of sections present in its sidebar.

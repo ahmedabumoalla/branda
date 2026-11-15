@@ -8,7 +8,7 @@ type StoredProduct = FinanceProduct & { imageStoragePath?: string | null };
 const signatures = new Map<string, { url: string; refreshAt: number }>();
 
 /** Call only after the current request has authorized the finance snapshot. */
-export async function financeProductMedia(cafe: { id: string; slug: string }, products: StoredProduct[]): Promise<FinanceProduct[]> {
+export async function financeProductMedia(cafe: { id: string; slug: string }, products: StoredProduct[], signMissingImages = true): Promise<FinanceProduct[]> {
   const quoteOnly = new Map<string, boolean>();
   if (isAldeemCafe(cafe)) {
     const admin = createAdminClient();
@@ -22,7 +22,9 @@ export async function financeProductMedia(cafe: { id: string; slug: string }, pr
   const paths = [...new Set(products.flatMap(product => product.imageStoragePath && isOwnedMenuAsset(product.imageStoragePath, cafe.id) ? [product.imageStoragePath] : []))];
   const now = Date.now();
   for (const [path, signature] of signatures) if (signature.refreshAt <= now) signatures.delete(path);
-  const missing = paths.filter(path => !signatures.has(path));
+  // ERP screens can use cached signatures or the authorized media endpoint
+  // without delaying their financial data for unrelated menu image signing.
+  const missing = signMissingImages ? paths.filter(path => !signatures.has(path)) : [];
   // Cache only short-lived image signatures, never authorization or financial data.
   try {
     for (let offset = 0; offset < missing.length; offset += 200) {

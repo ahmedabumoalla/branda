@@ -7,8 +7,6 @@ import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getPendingBrandDeletions } from "@/lib/data/brand-deletion";
 import {
   getAdminCafes,
-  getAdminCustomers,
-  getAdminOperations,
   getPlatformPlans,
 } from "@/lib/data/admin";
 import {
@@ -34,18 +32,14 @@ export default async function AdminCafesRoutePage() {
   const data = await Promise.all([
       getAdminCafes(),
       getPlatformPlans(),
-      getAdminCustomers(),
-      getAdminOperations(),
       getPendingBrandDeletions(),
     ]).catch(() => null);
   if (data) {
-    const [cafes, plans, customers, operations, pendingDeletions] = data;
+    const [cafes, plans, pendingDeletions] = data;
     return (
       <AdminCafesPage
         initialCafes={cafes}
         initialPlans={plans}
-        initialCustomers={customers}
-        initialOperations={operations}
         pendingDeletions={pendingDeletions}
       />
     );

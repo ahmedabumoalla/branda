@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, Search } from "lucide-react";
 import { readCustomerPaymentAction, readCustomerPaymentsAction } from "@/app/actions/finance-customer-payments";
-import { customerPaymentFiltersSchema, normalizeCustomerPaymentNumber, type CustomerPaymentDetail, type CustomerPaymentFilters, type CustomerPaymentRow } from "@/lib/finance/customer-payment";
+import { customerPaymentFiltersSchema, normalizeCustomerPaymentNumber, type CustomerPaymentFilters } from "@/lib/finance/customer-payment";
+import { customerPaymentsCache, customerPaymentsCacheTtl, type CustomerPaymentsRead } from "@/lib/finance/customer-payments-cache";
 import type { FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { canFinance } from "@/lib/finance/permissions";
 import { paymentReceiptData, type PaymentReceiptData } from "@/lib/finance/payment-receipt";
@@ -35,26 +36,37 @@ export function FinanceCustomerPayments({ snapshot, view, paymentId, disabled, o
   const [filterError, setFilterError] = useState("");
   const [revision, setRevision] = useState(0);
   const list = view === "payments";
-  const requestKey = JSON.stringify([snapshot.cafe.id, snapshot.userId, snapshot.role, view, paymentId, filters, revision]);
-  const [result, setResult] = useState<{ key: string; items: CustomerPaymentRow[]; total: number; detail?: CustomerPaymentDetail; error: string }>({ key: "", items: [], total: 0, error: "" });
+  const cache = customerPaymentsCache(snapshot);
+  const requestKey = JSON.stringify(list ? ["list", filters] : ["detail", paymentId]);
+  const [responseState, setResult] = useState<CustomerPaymentsRead & { key: string; scope: typeof cache | null; revision: number; error: string }>({ key: "", scope: null, revision: -1, items: [], total: 0, error: "" });
+  const cached = cache.read<CustomerPaymentsRead>(requestKey);
+  const current = responseState.scope === cache && responseState.key === requestKey && responseState.revision === revision;
+  const result = cached ? { ...cached, error: "" } : current ? responseState : { items: [], total: 0, detail: undefined, error: "" };
+  const reload = () => { cache.clear(); setRevision(value => value + 1); };
   const [receipt, setReceipt] = useState<{ key: string; data: PaymentReceiptData; mode: "standard" | "thermal" } | null>(null);
   const allowed = canFinance(snapshot.role, "reports");
   useEffect(() => {
     if (!allowed) return;
     let active = true;
-    async function read() {
+    async function read(): Promise<CustomerPaymentsRead> {
       if (!list) {
         const response = await readCustomerPaymentAction(paymentId ?? "", snapshot.cafe.slug);
-        if (active) setResult(response.ok ? { key: requestKey, items: [], total: 0, detail: response.data, error: "" } : { key: requestKey, items: [], total: 0, error: response.message });
+        if (!response.ok) throw new Error(response.message);
+        return { items: [], total: 0, detail: response.data };
       } else {
         const response = await readCustomerPaymentsAction(snapshot.cafe.slug, filters);
-        if (active) setResult(response.ok ? { key: requestKey, items: response.data.items, total: response.data.total, error: "" } : { key: requestKey, items: [], total: 0, error: response.message });
+        if (!response.ok) throw new Error(response.message);
+        return { items: response.data.items, total: response.data.total };
       }
     }
-    void read().catch(() => { if (active) setResult({ key: requestKey, items: [], total: 0, error: "تعذر تحميل مدفوعات العملاء أعد المحاولة" }); });
+    void cache.load(requestKey, customerPaymentsCacheTtl, read).then(data => {
+      if (active) setResult({ ...data, key: requestKey, scope: cache, revision, error: "" });
+    }).catch(error => {
+      if (active) setResult({ key: requestKey, scope: cache, revision, items: [], total: 0, error: error instanceof Error ? error.message : "تعذر تحميل مدفوعات العملاء أعد المحاولة" });
+    });
     return () => { active = false; };
-  }, [allowed, snapshot.cafe.slug, list, paymentId, filters, requestKey]);
-  const loading = result.key !== requestKey;
+  }, [allowed, snapshot.cafe.slug, list, paymentId, filters, requestKey, cache, revision]);
+  const loading = !cached && !current;
   const record = !loading ? result.detail : undefined;
   const editing = view === "payment-edit" || view === "payment-delete";
   const preview = receipt?.key === requestKey ? receipt : null;
@@ -72,7 +84,7 @@ export function FinanceCustomerPayments({ snapshot, view, paymentId, disabled, o
   return <div className={css.page}>
     <div className={css.page} inert={!!preview}>
       {list && <>
-        <div className={css.bar}><div><h2>مدفوعات العملاء</h2><p>كل دفعة مرتبطة بفاتورتها مع المبلغ وطريقة التحصيل والحالة</p></div><button type="button" className={styles.secondary} disabled={loading} onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} aria-hidden="true" />تحديث</button></div>
+        <div className={css.bar}><div><h2>مدفوعات العملاء</h2><p>كل دفعة مرتبطة بفاتورتها مع المبلغ وطريقة التحصيل والحالة</p></div><button type="button" className={styles.secondary} disabled={loading} onClick={reload}><RefreshCw size={16} aria-hidden="true" />تحديث</button></div>
         <form className={css.panel} onSubmit={event => { event.preventDefault(); applyFilters(); }}>
           <div className={css.panelHead}><h2>بحث</h2><button type="button" className={styles.secondary} aria-expanded={advanced} aria-controls="payment-advanced-search" onClick={() => setAdvanced(value => !value)}>بحث متقدم</button></div>
           <div className={css.fields}>
@@ -92,8 +104,8 @@ export function FinanceCustomerPayments({ snapshot, view, paymentId, disabled, o
           <div className={css.footer}><div className={css.actions}><button type="submit" className={styles.primary} disabled={loading}><Search size={16} aria-hidden="true" />بحث</button><button type="button" className={styles.secondary} onClick={reset}>إلغاء الفلتر</button></div></div>
         </form>
       </>}
-      {loading ? <p className={styles.notice} role="status">جار تحميل مدفوعات العملاء</p> : result.error ? <section className={css.panel}><p className={styles.error} role="alert">{result.error}</p><div className={css.toolbar}><button type="button" className={styles.secondary} onClick={() => setRevision(value => value + 1)}>إعادة المحاولة</button>{!list && <button type="button" className={styles.secondary} onClick={() => navigateCustomerPayments()}>المدفوعات</button>}</div></section> : record ? editing ?
-        <FinancePaymentEditor key={`${record.payment.id}:${record.payment.revision}:${(view === "payment-delete")}`} payment={record.payment} invoiceNumber={record.detail.document.number} snapshot={snapshot} collectors={record.detail.paymentCollectors} deleting={(view === "payment-delete")} disabled={!mayEdit} onCancel={() => navigateCustomerPayments(record.payment.id)} onSaved={() => { setReceipt(null); setRevision(value => value + 1); navigateCustomerPayments(record.payment.id); onChanged(); }} /> :
+      {loading ? <p className={styles.notice} role="status">جار تحميل مدفوعات العملاء</p> : result.error ? <section className={css.panel}><p className={styles.error} role="alert">{result.error}</p><div className={css.toolbar}><button type="button" className={styles.secondary} onClick={reload}>إعادة المحاولة</button>{!list && <button type="button" className={styles.secondary} onClick={() => navigateCustomerPayments()}>المدفوعات</button>}</div></section> : record ? editing ?
+        <FinancePaymentEditor key={`${record.payment.id}:${record.payment.revision}:${(view === "payment-delete")}`} payment={record.payment} invoiceNumber={record.detail.document.number} snapshot={snapshot} collectors={record.detail.paymentCollectors} deleting={(view === "payment-delete")} disabled={!mayEdit} onCancel={() => navigateCustomerPayments(record.payment.id)} onSaved={() => { setReceipt(null); reload(); navigateCustomerPayments(record.payment.id); onChanged(); }} /> :
         <FinancePaymentDetail document={record.document} detail={record.detail} snapshot={snapshot} disabled={disabled} onBack={() => navigateCustomerPayments()} onInvoice={() => onInvoice(record.detail.document.id)} onCustomer={id => onCustomer(id, record.payment.id)} onJournal={id => onJournal(id, record.payment.id)} onEdit={mayEdit ? payment => { if (payment.canEdit) navigateCustomerPayments(payment.id, "payment-edit"); } : undefined} onDelete={mayEdit ? payment => { if (payment.canDelete) navigateCustomerPayments(payment.id, "payment-delete"); } : undefined} onReceipt={mode => { if (!disabled && record.payment.status === "completed" && record.payment.amount > 0) setReceipt({ key: requestKey, data: paymentReceiptData(record.document, record.detail, snapshot), mode }); }} /> :
         <section className={css.panel}>
           <div className={css.panelHead}><h2>سجل المدفوعات</h2><span role="status">{result.total} دفعة</span></div>

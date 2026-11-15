@@ -1,3 +1,12 @@
+# MIND customer navigation and performance - READY FOR RELEASE - 2026-11-15T18:40:26.009Z
+
+- MIND only: customer menu now keeps management/add; removes appointments/contacts/CRM/settings/combined parties. Two linked cards: invoiced branch customers and existing wallet-card loyalty registry. Old MIND loyalty registry URL redirects; other brands keep their registry/menu
+- New guarded erp_mind_customers_read composes original authorized/branch-filtered/masked read and adds full-history sales membership. No 500-document cutoff, extra membership request, table grants or customer resets
+- Migration20261115183734 APPLIED atomically with real-owner membership read and anonymous/cross-tenant/ACL checks. sourceMD5 f1a309f98d6d44a5e10f6f7f00e36466. Private evidence output/erp-database/mind-directory-apply.result.json. Earlier direct table query42501 abandoned, initial prepared SQL syntax failed atomically; corrected before successful apply
+- MIND prefetches up to3 links in expanded sidebar and both customer cards; ERP finance reads skip unrelated image signing and independent authorized reads overlap. Payment list/detail cache scoped to immutable authenticated snapshot,30s, deduped; clear on edit/refresh and new branch/account snapshot
+- Admin directory no longer loads all customers/orders initially; selected-brand activity loads on demand with admin guard and page-scoped60s cache. Shared root/Claude changes preserved; release based on7635795b
+- RUN full Node24 TypeScript exit0 and git diff --check after final implementation. Text integrity/provenance and publication result recorded in MIND_CUSTOMERS_SPEED_20261115.md. No browser, real messages, financial writes or artificial latency guarantee
+
 # Loyalty birth date + birthday greeting (Claude) - DB APPLIED - 2026-11-15
 
 - مقص 77 only: loyalty enrollment form asks for birth date, customer file shows phone and birth date, one WhatsApp birthday greeting per customer per year from 09:00 Riyadh through the platform loyalty sender

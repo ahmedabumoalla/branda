@@ -75,10 +75,10 @@ export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug =
             <ChevronDown className={`${styles.chevron} ${open ? styles.open : ""}`} aria-hidden="true" />
           </button>
           <div id={`${id}-${groupId}`} hidden={!open} className={styles.items}>
-            {items.map(item => {
+            {items.map((item, index) => {
               const href = systemItemHref(item, context);
               if (!href) return <div key={item.label} aria-disabled="true" className={`${styles.item} ${styles.unavailable}`}><span>{item.label}</span>{item.financeOnly ? <span className={styles.status}>متاحة مع باقة المالية</span> : groupId !== "loyalty" && <span className={styles.status}>غير متاح حاليًا</span>}</div>;
-              return <Link key={item.label} href={href} scroll={false} prefetch={active && item.section ? false : undefined}
+              return <Link key={item.label} href={href} scroll={false} prefetch={active && item.section ? false : cafeSlug === "mind-hospital" && visible && open && index < 3 && !isCurrent(href) ? true : undefined}
                 onClick={event => {
                   // Preserve the loaded workspace and pending forms during section navigation.
                   if (active && item.section && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) {

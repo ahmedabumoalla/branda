@@ -62,8 +62,14 @@ export async function getBrandFinanceSnapshot(slug?: string): Promise<FinanceSna
 }
 
 /** Reuse authority only within the same server request, never from a client payload. */
-export async function readBrandFinanceSnapshot({ client, cafe }: Awaited<ReturnType<typeof getBrandFinanceContext>>): Promise<FinanceSnapshot> {
-  const { data, error } = await client.rpc("brand_finance_snapshot", { p_cafe_id: cafe.id });
+export async function readBrandFinanceSnapshot({ client, cafe }: Awaited<ReturnType<typeof getBrandFinanceContext>>, { signMenuImages = true } = {}): Promise<FinanceSnapshot> {
+  // These reads share the already-authorized request and do not depend on the
+  // financial result. Start them together instead of adding another round trip.
+  const [{ data, error }, resetActor, owner] = await Promise.all([
+    client.rpc("brand_finance_snapshot", { p_cafe_id: cafe.id }),
+    getFinanceMaintenanceActor(cafe.id),
+    cafe.maintenance ? client.from("cafes").select("owner_user_id").eq("id", cafe.id).single() : Promise.resolve(null),
+  ]);
   if (error) throw new Error("تعذر تحميل المالية حاول مجددا");
   const snapshot = data as FinanceSnapshot;
   if (snapshot.cafe.businessCategory === "butcher_shops") {
@@ -71,11 +77,9 @@ export async function readBrandFinanceSnapshot({ client, cafe }: Awaited<ReturnT
     if (seller.error) throw new Error("تعذر تحميل بيانات البائع للإيصال حاول مجددًا");
     snapshot.receiptSeller = seller.data;
   }
-  const [cashierMaintenance, resetActor, products, owner] = await Promise.all([
+  const [cashierMaintenance, products] = await Promise.all([
     snapshot.canAdminister ? Promise.resolve(null) : getFinanceCashierMaintenance(cafe.id),
-    getFinanceMaintenanceActor(cafe.id),
-    financeProductMedia(cafe, snapshot.products as (FinanceProduct & { imageStoragePath?: string | null })[]),
-    cafe.maintenance ? client.from("cafes").select("owner_user_id").eq("id", cafe.id).single() : Promise.resolve(null),
+    financeProductMedia(cafe, snapshot.products as (FinanceProduct & { imageStoragePath?: string | null })[], signMenuImages),
   ]);
   if (owner?.error) throw new Error("تعذر تحميل مستخدمي إعدادات المالية حاول مجددًا");
   // Maintenance grants owner capabilities, but never changes the user's identity.

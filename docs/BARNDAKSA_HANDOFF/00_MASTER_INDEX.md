@@ -1,5 +1,7 @@
 # Branda current handoff
 
+Current follow-up: [MIND customers and performance](MIND_CUSTOMERS_SPEED_20261115.md) - prepared, deployment verification pending
+
 الأولوية الحالية — ١٥ نوفمبر ٢٠٢٦: [فحص المنصة وتحسين الأداء والإصدار المجمع](PLATFORM_AUDIT_20261115.md)
 اكتمل الدمج والفحص والنشر، وتشمل النسخة عمل كلود، وتوثقت مطابقة إصدار التطبيق للدومينين في [متابعة الإصدار](GITHUB_VERCEL_STATUS.md)
 حالات عدم النشر أدناه توثيق للجولات السابقة
