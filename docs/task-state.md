@@ -6,6 +6,7 @@
 - Fixed for Aldeem: cashier sales, refunds and payments were not tagged with a branch. Trigger erp_enterprise_branch_tag assigns it for enterprise brands only
 - Demo data seeded in Aldeem through the real commands as the owner account and listed in public.erp_enterprise_demo: 5 branches, 5 branch warehouses, 20 employees, 5 families, 10 items, 10 receipts, 24 sales. Removal script not written yet
 - Not verified: no browser inspection, no role-by-role testing, no real messages. Aldeem products still have price 0 and VAT 0 percent, owner decision
+- Published: GitHub main a324d7a0 plus the portal follow-up commit, Vercel production dpl_4HiqphL5nK769L21qh1VbNaC6AXL verified on barndaksa.com
 - Do not reapply the seven migrations or the seed. Do not remove the Aldeem slug gates
 
 # Combined platform release - PUBLISHED AND VERIFIED - 2026-11-15
