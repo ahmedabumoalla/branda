@@ -8,8 +8,9 @@ import { resolveFinanceMenuEntry, resolveFinanceSection } from "@/components/fin
 import { integratedSystemGroupsForBrand, systemItemHref } from "./integrated-system-navigation";
 import styles from "./finance-sidebar-menu.module.css";
 import { NAQWA_SLUG } from "@/lib/platform/naqwa";
+import { erpModuleAllowed } from "@/lib/platform/erp-modules";
 
-export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug = "", enabledFeatures = [], isSalon = false, isGifts = false, loyaltyOnly = false }: {
+export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug = "", enabledFeatures = [], isSalon = false, isGifts = false, loyaltyOnly = false, allowedModules = null }: {
   collapsed: boolean;
   onExpand: () => void;
   onNavigate?: () => void;
@@ -18,6 +19,8 @@ export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug =
   isSalon?: boolean;
   isGifts?: boolean;
   loyaltyOnly?: boolean;
+  /** Sections included by the brand packages; null means every section */
+  allowedModules?: readonly string[] | null;
 }) {
   const pathname = usePathname();
   const params = useSearchParams();
@@ -26,7 +29,7 @@ export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug =
   const systemActive = pathname.startsWith("/dashboard/system/");
   const section = resolveFinanceSection(params.get("section"), true);
   const context = { cafeSlug, enabledFeatures, isSalon, isGifts };
-  const groups = integratedSystemGroupsForBrand(cafeSlug).filter(group => !loyaltyOnly || group.id === "loyalty").map(group => group.id === "settings" ? { ...group, items: group.items.map(item => item.href === "/dashboard/settings" ? { ...item, label: isGifts ? "إعدادات المتجر" : isSalon ? "إعدادات الصالون" : item.label } : item) } : group);
+  const groups = integratedSystemGroupsForBrand(cafeSlug).filter(group => (!loyaltyOnly || group.id === "loyalty") && erpModuleAllowed(allowedModules, group.id)).map(group => group.id === "settings" ? { ...group, items: group.items.map(item => item.href === "/dashboard/settings" ? { ...item, label: isGifts ? "إعدادات المتجر" : isSalon ? "إعدادات الصالون" : item.label } : item) } : group);
   const currentEntry = resolveFinanceMenuEntry(section, params.get("party"), params.get("view"));
   const closestSystemHref = groups.flatMap(group => group.items.map(item => systemItemHref(item, context))).filter((href): href is string => !!href && href.startsWith("/dashboard/system/") && (pathname === href || pathname.startsWith(href + "/"))).sort((a,b) => b.length-a.length)[0];
   const isCurrent = (href: string | null) => {

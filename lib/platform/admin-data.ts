@@ -27,6 +27,8 @@ export type PlatformPlan = {
   isDefault: boolean;
   isUpgradeBundle?: boolean;
   features: PlatformFeature[];
+  /** Sections of the integrated system this package includes; null or missing means every section */
+  erpModules?: string[] | null;
   categoryId?: string;
   maxOrdersMonthly?: number | null;
   maxProductsMonthly?: number | null;

@@ -8,6 +8,7 @@ import { mapDbSettingsToCafeSettings } from "@/lib/data/mappers";
 import type { AppNotification } from "@/lib/mock/notifications";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import { createClient } from "@/lib/supabase/server";
+import { resolveErpModules } from "@/lib/platform/erp-modules";
 
 function fallbackSettings(cafe: { slug: string; name: string; businessCategory?: string }): CafeSettings {
   return {
@@ -74,6 +75,8 @@ export async function fetchOwnerDashboardShellAction() {
     serviceSubscriptions: serviceAccess.serviceSubscriptions,
     plans: plans.map(plan => plan.id === serviceAccess.planId ? { ...plan, features: serviceAccess.features as PlatformFeature[] } : plan),
     featureOverrides: [],
+    // Sections of the integrated system allowed by the current finance packages; null means all of them
+    erpModules: resolveErpModules(serviceAccess.subscriptions.filter(subscription => subscription.features.includes("finance")).map(subscription => plans.find(plan => plan.id === subscription.planId)?.erpModules)),
     settings,
     // Optional notifications load after the authorized shell is visible.
     notifications: [] as AppNotification[],

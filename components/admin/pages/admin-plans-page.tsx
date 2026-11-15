@@ -6,6 +6,7 @@ import { approveSubscriptionRequestAction, deletePlatformPlanAction, rejectSubsc
 import { AdminPageShell } from "@/components/ui/design-system";
 import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 import { getAdminPackageFeatures, normalizeAdminPlanFeatures } from "@/lib/platform/feature-access";
+import { erpModuleCatalog, erpModuleIds } from "@/lib/platform/erp-modules";
 import type { PlatformFeature, PlatformPlan, PlanDurationUnit } from "@/lib/platform/admin-data";
 import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
 import { normalizeTrialDuration } from "@/lib/platform/plan-trial";
@@ -63,6 +64,14 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
     })));
     setDirty(true);
     setNotice(null);
+  }
+
+  // Sections of the integrated system included by a package. No list means every section, as before this option existed.
+  function toggleErpModule(planId: string, moduleId: string) {
+    const target = plans.find((item) => item.id === planId);
+    if (!target) return;
+    const current = target.erpModules ?? [...erpModuleIds];
+    updatePlan(planId, { erpModules: current.includes(moduleId) ? current.filter((item) => item !== moduleId) : erpModuleIds.filter((item) => item === moduleId || current.includes(item)) });
   }
 
   function toggleFeature(planId: string, feature: PlatformFeature) {
@@ -213,6 +222,21 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
                 })}</div>
                 <p className={styles.policy}>الخدمات غير المفعلة لا تظهر للعميل عند عدم وجود اشتراك مفعّل تتوقف خدمات العلامة بما فيها المنيو المستقل</p>
               </section>
+
+              {isIncluded(plan, "finance") ? <section className={styles.section} aria-labelledby="plan-modules-title">
+                <div className={styles.sectionHeading}><div><h3 id="plan-modules-title">أقسام النظام المتكامل في هذه الباقة</h3><p>{plan.erpModules ? "تظهر للعلامة الأقسام المحددة فقط" : "الباقة تشمل كل الأقسام حدد أقسامًا لتقييدها"}</p></div>
+                  <label className={styles.toggle}><input type="checkbox" checked={!!plan.erpModules} onChange={(event) => updatePlan(plan.id, { erpModules: event.target.checked ? [...erpModuleIds] : null })} />تحديد الأقسام</label></div>
+                {plan.erpModules ? erpModuleCatalog.map((group) => <div key={group.id}>
+                  <div className={styles.sectionHeading}><div><h3>{group.title}</h3></div><span className={styles.count}>{group.modules.filter(([id]) => plan.erpModules!.includes(id)).length} / {group.modules.length}</span></div>
+                  <div className={styles.featureGrid}>{group.modules.map(([id, label]) => {
+                    const enabled = plan.erpModules!.includes(id);
+                    return <button type="button" key={id} className={styles.feature} aria-pressed={enabled} onClick={() => toggleErpModule(plan.id, id)}>
+                      <span><strong>{label}</strong><small>{enabled ? "يظهر في حساب العلامة" : "غير مشمول في هذه الباقة"}</small></span><span className={styles.checkBox} aria-hidden="true">{enabled ? <Check size={17} /> : null}</span>
+                    </button>;
+                  })}</div>
+                </div>) : null}
+                <p className={styles.policy}>القسم غير المشمول يختفي من قائمة العلامة وإذا اشتركت العلامة في أكثر من باقة مالية تظهر أقسامها مجتمعة</p>
+              </section> : null}
 
               <section className={styles.section} aria-labelledby="plan-details-title">
                 <h3 id="plan-details-title">تفاصيل الباقة</h3>

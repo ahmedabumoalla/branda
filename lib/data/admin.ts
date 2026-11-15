@@ -22,6 +22,7 @@ import { getAdminBrandSubscriptionStates, getAdminBrandSubscriptionSummary } fro
 import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
 import type { SubscriptionPaymentRequest, SubscriptionRequestPage } from "@/lib/platform/subscription";
 import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
+import { normalizeErpModules } from "@/lib/platform/erp-modules";
 
 
 function normalizeCafeStatus(status: unknown): PlatformCafe["status"] {
@@ -189,6 +190,7 @@ const planSchema = z.object({
   offerLabel: z.string().trim().max(80).nullable().optional(),
   offerEndsAt: z.string().trim().max(40).nullable().optional(),
   durationOptions: z.array(z.number().int()).max(4).optional(),
+  erpModules: z.array(z.string().max(40)).max(60).nullable().optional(),
 });
 
 function normalizePlanCategoryId(value: unknown) {
@@ -213,6 +215,7 @@ function mapDbPlan(row: Record<string, unknown>, defaultPlanIds?: Set<string>): 
     isDefault: defaultPlanIds?.has(String(row.id)) ?? false,
     isUpgradeBundle: Boolean(row.is_upgrade_bundle),
     features: Array.isArray(row.features) ? (row.features as PlatformPlan["features"]) : [],
+    erpModules: normalizeErpModules(row.erp_modules),
     categoryId: normalizePlanCategoryId(row.category_id),
     maxOrdersMonthly: row.max_orders_monthly == null ? null : Number(row.max_orders_monthly),
     maxProductsMonthly: null,
@@ -371,6 +374,7 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
       offer_label: plan.offerLabel || null,
       offer_ends_at: plan.offerEndsAt || null,
       duration_options: normalizedDurationOptions.length ? normalizedDurationOptions : [1, 3],
+      erp_modules: normalizeErpModules(plan.erpModules),
     };
 
     if (error) {
