@@ -21,7 +21,7 @@ export function Help({ text, side }: { text: string; side?: "start" | "end" }) {
 type ActionProps = ButtonHTMLAttributes<HTMLButtonElement> & { help: string; tone?: "primary" | "danger"; small?: boolean; side?: "start" | "end"; children: ReactNode };
 /** Every Aldeem button carries its explanation */
 export function Action({ help, tone, small, side, className, children, type = "button", ...rest }: ActionProps) {
-  return <span className={s.action}>
+  return <span className={s.action} data-no-help>
     <button type={type} className={[s.button, tone === "primary" ? s.primary : tone === "danger" ? s.danger : "", small ? s.small : "", className ?? ""].join(" ")} {...rest}>{children}</button>
     <Help text={help} side={side} />
   </span>;
@@ -30,7 +30,7 @@ export function Action({ help, tone, small, side, className, children, type = "b
 /** A link that looks and explains itself like a button */
 export function LinkAction({ href, help, tone, small, side, external, children }: { href: string; help: string; tone?: "primary"; small?: boolean; side?: "start" | "end"; external?: boolean; children: ReactNode }) {
   const className = [s.button, tone === "primary" ? s.primary : "", small ? s.small : ""].join(" ");
-  return <span className={s.action}>
+  return <span className={s.action} data-no-help>
     {external ? <a href={href} className={className}>{children}</a> : <Link href={href} className={className}>{children}</Link>}
     <Help text={help} side={side} />
   </span>;

@@ -21,6 +21,7 @@ import { getServiceSubscriptionAccess } from "@/lib/platform/service-subscriptio
 import { snapshotServerClock } from "@/lib/platform/server-clock";
 import { isAldeemCafe } from "@/lib/platform/aldeem";
 import { NavigationPending } from "@/components/dashboard/navigation-pending";
+import { AldeemEnhancer } from "@/components/aldeem/aldeem-enhancer";
 
 type GuardState = {
   serverNow?: () => number;
@@ -169,7 +170,9 @@ export function DashboardAppLayout({
     });
 
   // User requests 2026-11-15: the MIND and Aldeem accounts show the loading skeleton the moment a section is clicked
-  const content = isAldeemCafe({ slug: guard.cafeSlug }) || guard.cafeSlug === "mind-hospital" ? <NavigationPending>{children}</NavigationPending> : children;
+  // Aldeem mandate 2026-11-15: every control explains itself and loading text placeholders become a quiet progress line
+  const aldeem = isAldeemCafe({ slug: guard.cafeSlug });
+  const content = aldeem || guard.cafeSlug === "mind-hospital" ? <NavigationPending>{aldeem && <AldeemEnhancer />}{children}</NavigationPending> : children;
 
   function endMaintenanceMode() {
     if (isEndingMaintenance) return;
