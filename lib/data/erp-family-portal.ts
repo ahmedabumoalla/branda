@@ -10,9 +10,14 @@ export type FamilyPortalState = { state: "ready"; data: FamilyPortalSnapshot } |
 export async function readFamilyPortal(slug: string): Promise<FamilyPortalState> {
   if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(slug)) return { state: "missing" };
   try {
+    // Brands without the families section have no portal page at all
+    const admin = createAdminClient();
+    const enabled = await admin.rpc("erp_family_portal_enabled", { p_slug: slug });
+    if (enabled.error) return { state: "unavailable" };
+    if (enabled.data !== true) return { state: "missing" };
     const user = await getSessionUser();
     if (!user || !user.phone_confirmed_at || !normalizeSaudiPhone(user.phone ?? "")) return { state: "login" };
-    const { data, error } = await createAdminClient().rpc("erp_family_portal", { p_slug: slug, p_user: user.id });
+    const { data, error } = await admin.rpc("erp_family_portal", { p_slug: slug, p_user: user.id });
     if (error) {
       if (/FAMILY_UNAVAILABLE/.test(error.message ?? "")) return { state: "missing" };
       if (/FAMILY_NOT_FOUND|FAMILY_FORBIDDEN/.test(error.message ?? "")) return { state: "unlinked" };

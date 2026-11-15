@@ -239,6 +239,12 @@ CREATE FUNCTION public.erp_family_portal_phone(p_slug text,p_phone text) RETURNS
 $$;
 REVOKE ALL ON FUNCTION public.erp_family_portal_phone(text,text) FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.erp_family_portal_phone(text,text) TO service_role;
+-- The portal page exists only for brands with the families section switched on
+CREATE FUNCTION public.erp_family_portal_enabled(p_slug text) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
+ SELECT EXISTS(SELECT 1 FROM public.cafes b JOIN public.erp_family_settings s ON s.cafe_id=b.id AND s.enabled WHERE b.slug=p_slug AND b.deleted_at IS NULL AND b.status IN('active','published'))
+$$;
+REVOKE ALL ON FUNCTION public.erp_family_portal_enabled(text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.erp_family_portal_enabled(text) TO service_role;
 REVOKE ALL ON FUNCTION public.erp_family_read(uuid),public.erp_family_execute(uuid,text,jsonb),public.erp_family_portal(text,uuid) FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.erp_family_read(uuid),public.erp_family_execute(uuid,text,jsonb) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.erp_family_portal(text,uuid) TO service_role;
