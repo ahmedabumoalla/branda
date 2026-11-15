@@ -1,6 +1,7 @@
 "use client";
 
 import { DashboardNavigationLink as Link } from "@/components/dashboard/dashboard-navigation-link";
+import { AdminNavigationLink } from "@/components/admin/admin-navigation-link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BriefcaseBusiness,
@@ -124,7 +125,7 @@ export function AdminSidebar({
             href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
           return (
-            <Link
+            <AdminNavigationLink
               key={href}
               href={href}
               onClick={onNavigate}
@@ -142,7 +143,7 @@ export function AdminSidebar({
               <Icon
                 className={`h-4 w-4 ${active ? "text-[#F6C35B]" : "text-[#7A6255] group-hover:text-[#F6C35B]"}`}
               />
-            </Link>
+            </AdminNavigationLink>
           );
         })}
       </nav>

@@ -271,18 +271,18 @@ export async function getAdminDashboardOverview(): Promise<AdminDashboardOvervie
     )
   );
 
-  const actorsResult =
+  // Independent lookups run together to save one database round trip.
+  const [actorsResult, cafesResult] = await Promise.all([
     actorIds.length > 0
-      ? await supabase
+      ? supabase
           .from("profiles")
           .select("id, full_name, email")
           .in("id", actorIds)
-      : { data: [], error: null };
-
-  const cafesResult =
+      : { data: [], error: null },
     cafeIds.length > 0
-      ? await supabase.from("cafes").select("id, name").in("id", cafeIds)
-      : { data: [], error: null };
+      ? supabase.from("cafes").select("id, name").in("id", cafeIds)
+      : { data: [], error: null },
+  ]);
 
   if (actorsResult.error) throw actorsResult.error;
   if (cafesResult.error) throw cafesResult.error;
