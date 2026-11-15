@@ -103,7 +103,11 @@ export function AldeemEnhancer() {
         if (!parent || marked.has(parent) || !loadingText.test((text.nodeValue ?? "").trim())) continue;
         // The label of a button reports its own action and stays readable
         if (parent.closest("button, a, option, [class*='aldeem-ui-module']")) continue;
-        parent.setAttribute("data-aldeem-loading", ""); marked.add(parent);
+        // A short status block, such as the invoice preparation notice, is replaced as a whole
+        const status = parent.closest("[role='status']");
+        const host = status && (status.textContent ?? "").length < 200 && loadingText.test((status.textContent ?? "").trim()) ? status : parent;
+        if (marked.has(host)) continue;
+        host.setAttribute("data-aldeem-loading", ""); marked.add(host);
       }
     };
     // At most one pass every 150ms however often the page changes
