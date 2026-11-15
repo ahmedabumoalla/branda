@@ -106,10 +106,11 @@ export function AldeemEnhancer() {
         parent.setAttribute("data-aldeem-loading", ""); marked.add(parent);
       }
     };
-    const observer = new MutationObserver(() => { if (!frame) frame = window.requestAnimationFrame(scan); });
+    // At most one pass every 150ms however often the page changes
+    const observer = new MutationObserver(() => { if (!frame) frame = window.setTimeout(scan, 150); });
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     scan();
-    return () => { observer.disconnect(); if (frame) window.cancelAnimationFrame(frame); for (const node of marked) node.removeAttribute("data-aldeem-loading"); };
+    return () => { observer.disconnect(); if (frame) window.clearTimeout(frame); for (const node of marked) node.removeAttribute("data-aldeem-loading"); };
   }, []);
 
   return <>
