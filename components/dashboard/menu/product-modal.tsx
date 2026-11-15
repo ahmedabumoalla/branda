@@ -57,6 +57,7 @@ type Props = {
   productList: MenuProduct[];
   categories: MenuCategoryRecord[];
   businessCategory?: string;
+  cafeSlug?: string;
   onCategoriesChange: (
     categories: MenuCategoryRecord[]
   ) => Promise<MenuCategoryRecord[]> | MenuCategoryRecord[] | void;
@@ -162,6 +163,7 @@ function MenuProductEditor({
   productList,
   categories,
   businessCategory,
+  cafeSlug,
   onCategoriesChange,
   onClose,
   onSave,
@@ -174,6 +176,9 @@ function MenuProductEditor({
   const isRetail = copy.kind === "retail";
   const isGifts = copy.kind === "gifts" || isFashion || isRetail;
   const isButcher = businessCategory === "butcher_shops";
+  const isHospital = cafeSlug === "mind-hospital";
+  const [priceMode, setPriceMode] = useState<"fixed" | "cashier" | "">(() => editingProduct?.priceMode ?? "fixed");
+  const cashierPrice = isHospital && priceMode === "cashier";
   const [butcherDraft, setButcherDraft] = useState(() => createButcherProductDraft(editingProduct?.butcherDetails, editingProduct?.price));
   const [butcherError, setButcherError] = useState("");
   const [catalogKind, setCatalogKind] = useState<"service" | "product">(editingProduct?.catalogKind ?? (isSalon ? "service" : "product"));
@@ -378,7 +383,7 @@ function MenuProductEditor({
   }
   const previewProduct: MenuProduct = (() => {
     const promo = buildPromoFromForm(
-      promoLinked,
+      promoLinked && !cashierPrice,
       promoKind,
       promoDiscountMode,
       promoDiscount,
@@ -418,7 +423,8 @@ function MenuProductEditor({
             : []),
       ],
       imageVariant,
-      price: Number(isButcher ? butcherDraft.units[0]?.priceMode === "cashier" ? 0 : butcherDraft.units[0]?.price : price) || 0,
+      price: cashierPrice ? 0 : Number(isButcher ? butcherDraft.units[0]?.priceMode === "cashier" ? 0 : butcherDraft.units[0]?.price : price) || 0,
+      ...(isHospital && priceMode ? { priceMode } : {}),
       calories: calories.trim() ? Number(calories) || 0 : undefined,
       loyaltyPoints: 0,
       catalogKind,
@@ -428,7 +434,7 @@ function MenuProductEditor({
         : undefined,
       redeemableWithPoints: false,
       redemptionPoints: undefined,
-      availableForPickup,
+      availableForPickup: cashierPrice ? false : availableForPickup,
       pickupLeadTimeMinutes: pickupLeadTimeMinutes.trim()
         ? Number(pickupLeadTimeMinutes) || undefined
         : undefined,
@@ -473,7 +479,8 @@ function MenuProductEditor({
     }
     setButcherError("");
 
-    if (!isButcher && (!price || !Number.isFinite(Number(price)) || Number(price) < 0)) {
+    if (isHospital && !priceMode) { alert("اختر سعرًا ثابتًا أو تحديد السعر بواسطة الكاشير"); return; }
+    if (!isButcher && !cashierPrice && (!price || !Number.isFinite(Number(price)) || Number(price) < 0)) {
       alert("السعر مطلوب");
       return;
     }
@@ -488,7 +495,7 @@ function MenuProductEditor({
     }
 
     const parsedPriceOptions = priceOptions.trim() ? priceOptions.split(/[\/,،]/).map(value => value.trim()) : [];
-    if (!isButcher && (parsedPriceOptions.some(value => !value || !Number.isFinite(Number(value)) || Number(value) < 0) || new Set([Number(price), ...parsedPriceOptions.map(Number)]).size > 10)) {
+    if (!isButcher && !isHospital && (parsedPriceOptions.some(value => !value || !Number.isFinite(Number(value)) || Number(value) < 0) || new Set([Number(price), ...parsedPriceOptions.map(Number)]).size > 10)) {
       alert("أدخل أسعارًا صحيحة وافصل بينها بشرطة مائلة بحد أقصى عشرة أسعار");
       return;
     }
@@ -503,11 +510,11 @@ function MenuProductEditor({
       return;
     }
 
-    if (promoLinked && (!promoStart || !promoEnd || promoEnd < promoStart)) {
+    if (!cashierPrice && promoLinked && (!promoStart || !promoEnd || promoEnd < promoStart)) {
       alert("حدد بداية العرض ونهايته بترتيب صحيح");
       return;
     }
-    if (promoLinked && promoKind === "خصم" && (promoDiscountMode === "percent"
+    if (!cashierPrice && promoLinked && promoKind === "خصم" && (promoDiscountMode === "percent"
       ? !promoDiscount.trim() || !Number.isFinite(Number(promoDiscount)) || Number(promoDiscount) <= 0 || Number(promoDiscount) > 100
       : !promoDiscountedPrice.trim() || !Number.isFinite(Number(promoDiscountedPrice)) || Number(promoDiscountedPrice) < 0 || Number(promoDiscountedPrice) >= Number(price))) {
       alert("أدخل خصمًا صحيحًا أقل من السعر الأساسي");
@@ -529,13 +536,13 @@ function MenuProductEditor({
       setCreatingCategory(false);
     }
 
-    if (promoLinked && promoKind === "منتج مجاني مع الطلب" && !promoFreeId) {
+    if (!cashierPrice && promoLinked && promoKind === "منتج مجاني مع الطلب" && !promoFreeId) {
       alert(isEvents ? "اختر التذكرة أو الباقة المجانية" : "اختر المنتج المجاني");
       return;
     }
 
     const promo = buildPromoFromForm(
-      promoLinked,
+      promoLinked && !cashierPrice,
       promoKind,
       promoDiscountMode,
       promoDiscount,
@@ -605,8 +612,9 @@ function MenuProductEditor({
         mimeType: pendingVideoFile ? videoMimeFromFile(pendingVideoFile) : undefined,
       } : undefined, primaryKey === "video" ? "video" : "image"),
       imageVariant,
-      price: butcherResult?.success ? butcherResult.data.units[0].price : Number(price),
-      priceOptions: isButcher ? [] : priceOptions.trim() ? priceOptions.split(/[/,،]/).map(value => Number(value.trim())) : [],
+      price: cashierPrice ? 0 : butcherResult?.success ? butcherResult.data.units[0].price : Number(price),
+      priceOptions: isButcher || isHospital ? [] : priceOptions.trim() ? priceOptions.split(/[/,،]/).map(value => Number(value.trim())) : [],
+      ...(isHospital && priceMode ? { priceMode, commerceSnapshot: mode === "edit" ? editingProduct?.commerceSnapshot : undefined } : {}),
       ...(butcherResult?.success ? { butcherDetails: butcherResult.data } : {}),
       calories: calories.trim() ? Number(calories) || 0 : undefined,
       loyaltyPoints: 0,
@@ -617,7 +625,7 @@ function MenuProductEditor({
         : undefined,
       redeemableWithPoints: false,
       redemptionPoints: undefined,
-      availableForPickup,
+      availableForPickup: cashierPrice ? false : availableForPickup,
       pickupLeadTimeMinutes: pickupLeadTimeMinutes.trim()
         ? Number(pickupLeadTimeMinutes) || undefined
         : undefined,
@@ -895,6 +903,7 @@ function MenuProductEditor({
 
           {isGifts && !isFashion && !isRetail && <label className="block text-sm font-bold text-[#3A2117]">نوع العنصر<select className="mt-2 min-h-11 w-full rounded-xl border border-[#E5D8CD] bg-white p-3" value={catalogKind} onChange={e => { const next = e.target.value as "product" | "service"; setCatalogKind(next); if (next === "product") setCommerceDetails(current => ({ ...current, quoteOnly: false })); }}><option value="product">منتج</option><option value="service">خدمة أو ورشة</option></select></label>}
           {isGifts && <GiftProductFields value={commerceDetails} onChange={setCommerceDetails} service={catalogKind === "service"} fashion={isFashion} retail={isRetail} />}
+          {isHospital && <fieldset className="rounded-2xl border border-[#E5D8CD] bg-[#FAF5EC] p-4"><legend className="px-2 text-sm font-black text-[#3A2117]">طريقة تسعير المنتج</legend><div className="grid gap-3 sm:grid-cols-2">{([['fixed', 'سعر ثابت'], ['cashier', 'الكاشير يحدد السعر']] as const).map(([value, label]) => <label key={value} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-[#E5D8CD] bg-white px-4 py-3 text-sm font-bold text-[#3A2117]"><input type="radio" name="hospital-product-price-mode" value={value} required checked={priceMode === value} onChange={() => { setPriceMode(value); if (value === "cashier") setPromoLinked(false); }} className="h-4 w-4 accent-[#3A2117]" />{label}</label>)}</div><p className="mt-3 text-xs leading-6 text-[#7A6255]">{cashierPrice ? "يسجل الكاشير سعر الوحدة عند مراجعة الطلب قبل إصدار الفاتورة" : "حدد سعر الوحدة الذي يظهر في المنيو ويُستخدم عند البيع"}</p></fieldset>}
           {isButcher && <ButcherProductFields value={butcherDraft} onChange={setButcherDraft} disabled={submitting} error={butcherError} />}
           {isSalon && <label className="block text-sm font-bold">نوع العنصر<select className="mt-2 w-full rounded-xl border p-3" value={catalogKind} onChange={e => setCatalogKind(e.target.value as "service" | "product")}><option value="service">خدمة حلاقة وعناية</option><option value="product">منتج للعناية</option></select></label>}
           {!isButcher && <div className="grid gap-4 sm:grid-cols-2">
@@ -911,12 +920,13 @@ function MenuProductEditor({
               />
             </label>
 
-            <label className="block">
+            <label className={cashierPrice ? "hidden" : "block"}>
               <span className="text-xs font-black text-[#7A6255]">
                 {priceLabel}
               </span>
               <input
-                required
+                required={!cashierPrice}
+                disabled={cashierPrice}
                 inputMode="decimal"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
@@ -929,7 +939,7 @@ function MenuProductEditor({
           </div>
 
           }
-          {!isSalon && !isGifts && !isEvents && !isButcher && <label className="block"><span className="text-xs font-black text-[#7A6255]">أسعار الخيارات الأخرى إن وجدت</span><input value={priceOptions} onChange={e => setPriceOptions(e.target.value)} placeholder="مثال: 12 / 13" className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-sm text-[#3A2117]" /><span className="mt-2 block text-xs text-[#7A6255]">افصل الأسعار بشرطة مائلة واتركها فارغة للصنف ذي السعر الواحد</span></label>}
+          {!isSalon && !isGifts && !isEvents && !isButcher && !isHospital && <label className="block"><span className="text-xs font-black text-[#7A6255]">أسعار الخيارات الأخرى إن وجدت</span><input value={priceOptions} onChange={e => setPriceOptions(e.target.value)} placeholder="مثال: 12 / 13" className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-sm text-[#3A2117]" /><span className="mt-2 block text-xs text-[#7A6255]">افصل الأسعار بشرطة مائلة واتركها فارغة للصنف ذي السعر الواحد</span></label>}
 
           {!isButcher && <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
@@ -1132,13 +1142,14 @@ function MenuProductEditor({
                   {ingredient}
                   <button
                     type="button"
+                    aria-label={`حذف المكون ${ingredient}`}
                     onClick={() =>
                       setIngredients((prev) =>
                         prev.filter((item) => item !== ingredient)
                       )
                     }
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 </span>
               ))}
@@ -1171,7 +1182,7 @@ function MenuProductEditor({
             </div>
           </fieldset>
 
-          <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
+          <fieldset hidden={cashierPrice} disabled={cashierPrice} className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
             <legend className="px-2 text-xs font-black text-[#3A2117]">
               هل يوجد عرض مرتبط؟
             </legend>
@@ -1372,7 +1383,7 @@ function MenuProductEditor({
                     السعر
                   </p>
                   <p className="font-black text-[#3A2117]">
-                    {isButcher && butcherDraft.units[0]?.priceMode === "cashier" ? "السعر يحدد عند البيع" : formatSar(productFinalPrice(previewProduct.price, previewProduct.promo))}
+                    {cashierPrice ? "يحدد الكاشير السعر" : isButcher && butcherDraft.units[0]?.priceMode === "cashier" ? "السعر يحدد عند البيع" : formatSar(productFinalPrice(previewProduct.price, previewProduct.promo))}
                   </p>
                 </div>
 

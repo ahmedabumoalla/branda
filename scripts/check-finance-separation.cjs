@@ -14,7 +14,7 @@ async function main(){
  for(const who of ['cashier','finance-manager','anonymous']){identity=who;await assert.rejects(layout({children:'private'}),/REDIRECT \/login/);}assert.equal(analytics,0);
  for(const who of ['owner','admin']){identity=who;assert(await layout({children:'authorized'}));}assert.equal(analytics,2);
  identity='cashier';
- const finance=load('lib/data/brand-finance.ts',{...mocks,'@/lib/data/finance-cashier-maintenance':{getFinanceCashierMaintenance:async()=>null},'@/lib/data/cafes':cafes,'@/lib/menu/standalone-menu':{isOwnedMenuAsset:()=>true},'./finance-shift-alerts':{dispatchShiftAlerts:()=>{throw Error('Unexpected alert');}},'./finance-pos-customer-messages':{dispatchFinancePosCustomerMessages:()=>{throw Error('Unexpected message');}} });
+ const finance=load('lib/data/brand-finance.ts',{...mocks,'@/lib/data/finance-cashier-maintenance':{getFinanceCashierMaintenance:async()=>null},'@/lib/data/cafes':cafes,'@/lib/menu/standalone-menu':{isOwnedMenuAsset:()=>true},'./finance-pos-customer-messages':{dispatchFinancePosCustomerMessages:()=>{throw Error('Unexpected message');}},'./finance-shifts':{getFinanceMaintenanceActor:async()=>null,resetFinanceBalances:async()=>{throw Error('No reset in navigation test');}},'./finance-shift-alerts':{dispatchShiftAlerts:async()=>{throw Error('No notification in navigation test');}},'next/server':{after:()=>{throw Error('No side effects in read test');}}});
  await assert.rejects(finance.getBrandFinanceSnapshot(),/Unauthorized/);assert.equal(rpcCalls,0);
  await assert.rejects(finance.getBrandFinanceSnapshot('other-brand'));assert.equal(rpcCalls,1,'Explicit slug must still pass authenticated RPC authorization');
  let features=['finance'];
@@ -34,7 +34,7 @@ async function main(){
 
  let states=[],cursor=0,pathname='/dashboard/finance',search='section=sales',expandedSidebar=0,navigated=0,history=[];
  const menu=load('components/dashboard/finance-sidebar-menu.tsx',{react:{...React,useId:()=>`sidebar-${cursor++}`,useState:initial=>{const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return[states[i],v=>states[i]=typeof v==='function'?v(states[i]):v];}},'next/navigation':{usePathname:()=>pathname,useSearchParams:()=>new URLSearchParams(search)},'next/link':{__esModule:true,default:function Link(){}}}).FinanceSidebarMenu;
- let collapsed=false;const render=()=>{cursor=0;return menu({slug:'brand-test',collapsed,onExpand:()=>expandedSidebar++,onNavigate:()=>navigated++});};
+ let collapsed=false;const render=()=>{cursor=0;return menu({cafeSlug:'brand-test',collapsed,onExpand:()=>expandedSidebar++,onNavigate:()=>navigated++});};
  let tree=render();let button=nodes(tree).find(n=>n.type==='button');assert.equal(button.props['aria-expanded'],true);assert.equal(nodes(tree).filter(n=>n.props['aria-current']==='page').length,1);
  const panelId=button.props['aria-controls'];
  button.props.onClick();tree=render();assert.equal(nodes(tree).find(n=>n.props.id===panelId).props.hidden,true);

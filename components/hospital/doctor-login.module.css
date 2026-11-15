@@ -1,0 +1,12 @@
+.shell{width:min(100%,520px);margin:auto}
+.form{display:grid;gap:18px;padding:26px;background:var(--mind-paper);border:1px solid var(--mind-line);border-radius:18px}
+.field{display:grid;gap:10px;font-size:14px;font-weight:700}
+.field input{width:100%;min-width:0;min-height:48px;border:1px solid var(--mind-line);border-radius:10px;padding:10px 13px;color:var(--mind-ink);background:var(--mind-paper);font:inherit;font-size:17px}
+.field input:focus-visible{outline:3px solid var(--mind-ink);outline-offset:3px}
+.form button:disabled,.field input:disabled{opacity:.6;cursor:default}
+.hint{margin:0;color:var(--mind-muted);font-size:13px;line-height:1.8}
+.error{margin:0;color:#9b3428;background:#fff2ec;border-radius:9px;padding:12px;font-size:13px;line-height:1.8}
+.actions,.back{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.back{margin-top:18px}
+.back a{display:inline-flex;align-items:center;min-height:44px}
+@media(max-width:540px){.form{padding:20px}.actions>*{flex:1}}

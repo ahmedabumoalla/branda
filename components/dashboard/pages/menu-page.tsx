@@ -2,8 +2,11 @@
 
 import { ChevronDown, ExternalLink, LoaderCircle, Plus, Search, SlidersHorizontal, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
+import { InventoryCatalogTabs } from "@/components/erp/inventory/catalog-tabs";
+import catalogSkin from "@/components/erp/inventory/catalog-skin.module.css";
+import { prewarmMenuIngredients } from "@/components/erp/inventory/menu-ingredients-cache";
 import { useRouter } from "next/navigation";
-import { useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type SyntheticEvent } from "react";
 import {
   fetchOwnerMenuAction,
   deleteMenuCategoryAction,
@@ -28,6 +31,7 @@ import { captureProductPosition } from "@/lib/menu/product-position";
 import { notifyMenuChanged } from "@/lib/menu/menu-change";
 import { createProductCopy } from "@/lib/menu/product-copy";
 import { readCommerceDetails } from "@/lib/commerce/product-details";
+import { withMenuProductPriceMode } from "@/lib/menu/product-price-mode";
 import styles from "@/components/dashboard/menu/menu-dashboard.module.css";
 
 function ModalLoadingPlaceholder() {
@@ -64,6 +68,13 @@ const MenuImportModal = dynamic(
   { loading: ModalLoadingPlaceholder }
 );
 
+// Shared loader so the dialog code can be fetched ahead of the first click.
+const loadMenuInventoryIngredients = () => import("@/components/erp/inventory/menu-ingredients");
+const MenuInventoryIngredients = dynamic(
+  () => loadMenuInventoryIngredients().then(module => module.MenuInventoryIngredients),
+  { loading: ModalLoadingPlaceholder }
+);
+
 type Props = {
   initialProducts: MenuProduct[];
   initialCategories: MenuCategoryRecord[];
@@ -74,9 +85,11 @@ type Props = {
   branchSlug?: string;
   branches?: { id: string; name: string; slug: string }[];
   configError?: string;
+  inventoryCatalog?: boolean;
+  initialProductId?: string;
 };
 
-export function MenuPageClient({ initialProducts, initialCategories, businessCategory, cafeSlug, branchId, branchName, branchSlug, branches = [], configError }: Props) {
+export function MenuPageClient({ initialProducts, initialCategories, businessCategory, cafeSlug, branchId, branchName, branchSlug, branches = [], configError, inventoryCatalog = false, initialProductId }: Props) {
   const router = useRouter();
   const [branchPending, startBranchTransition] = useTransition();
   const [requestedBranchName, setRequestedBranchName] = useState("");
@@ -85,12 +98,29 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   const [categories, setCategories] = useState<MenuCategoryRecord[]>(initialCategories);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("الكل");
-  const [open, setOpen] = useState(false);
-  const [productModalRequested, setProductModalRequested] = useState(false);
+  const initialProduct = initialProducts.find(product => product.id === initialProductId) ?? null;
+  const [open, setOpen] = useState(Boolean(initialProduct));
+  const [productModalRequested, setProductModalRequested] = useState(Boolean(initialProduct));
   const [importOpen, setImportOpen] = useState(false);
   const [importModalRequested, setImportModalRequested] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
-  const [editing, setEditing] = useState<MenuProduct | null>(null);
+  const [editing, setEditing] = useState<MenuProduct | null>(initialProduct);
+  const [ingredientsProduct, setIngredientsProduct] = useState<MenuProduct | null>(null);
+  // Inventory catalog only: fetch the ingredients dialog code shortly after the page settles,
+  // and start its first data read when the pointer or focus reaches an ingredients button.
+  useEffect(() => {
+    if (!inventoryCatalog) return;
+    const timer = window.setTimeout(() => { void loadMenuInventoryIngredients().catch(() => undefined); }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [inventoryCatalog]);
+  const warmIngredients = (event: SyntheticEvent<HTMLElement>) => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (!cafeSlug || !target?.closest('button[aria-label^="مكونات المخزون"]')) return;
+    const productId = target.closest<HTMLElement>("[data-menu-product-id]")?.dataset.menuProductId;
+    if (!productId) return;
+    void loadMenuInventoryIngredients().catch(() => undefined);
+    prewarmMenuIngredients(cafeSlug, productId);
+  };
   const [saving, setSaving] = useState(false);
   const actionLock = useRef(false);
   const restorePosition = useRef<(() => void) | null>(null);
@@ -107,7 +137,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   const isSalon = copy.kind === "barbershop";
   const isFashion = copy.kind === "clothing";
   const isGifts = copy.kind === "gifts" || isFashion;
-  const menuTitle = isFashion ? "المتجر والمنتجات" : isGifts ? "المنتجات والخدمات" : isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "التذاكر والباقات" : "المنيو الرقمي";
+  const menuTitle = inventoryCatalog ? "المنيو" : isFashion ? "المتجر والمنتجات" : isGifts ? "المنتجات والخدمات" : isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "التذاكر والباقات" : "المنيو الرقمي";
   const importLabel = isFashion ? "استيراد المنتجات" : isGifts ? "استيراد المنتجات والخدمات" : isSalon ? "استيراد الخدمات والمنتجات" : copy.kind === "events" ? "استيراد التذاكر" : "استيراد المنيو";
   const addLabel = isFashion ? "إضافة منتج" : isGifts ? "إضافة منتج أو خدمة" : isSalon ? "إضافة خدمة أو منتج" : copy.kind === "events" ? "إضافة تذكرة أو باقة" : "إضافة منتج";
 
@@ -147,6 +177,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
       const id = await saveMenuProductAction(normalized);
       const saved = { ...normalized, id: id || normalized.id,
         ...(isGifts ? { commerceSnapshot: readCommerceDetails(normalized.commerceDetails) } : {}),
+        ...(cafeSlug === "mind-hospital" && normalized.priceMode ? { commerceSnapshot: withMenuProductPriceMode(normalized.commerceSnapshot, normalized.priceMode) } : {}),
       };
 
       setProducts((prev) => prev.some((item) => item.id === saved.id)
@@ -265,7 +296,8 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   </div>;
 
   return (
-    <div dir="rtl" className={styles.page}>
+    <div dir="rtl" className={inventoryCatalog ? `${styles.page} ${catalogSkin.menu}` : styles.page}>
+      {inventoryCatalog && <InventoryCatalogTabs active="menu" />}
       <DashboardPageShell
         title={branchName ? `${menuTitle} — ${branchName}` : menuTitle}
         subtitle={isFashion ? "أدر منتجات المتجر وصورها وأسعارها والمقاسات والألوان" : isGifts ? "أدر منتجاتك وخدماتك وصورها وأسعارها وخيارات العملاء" : isSalon ? "خدمات الصالون وأسعاره ومنتجات العناية كما يراها العميل" : "منتجاتك وأسعارك كما يراها العميل"}
@@ -304,7 +336,8 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
       >
         <MenuBranchSwitcher branches={branches} currentId={branchId} busy={saving} onSwitch={branch => {
           setRequestedBranchName(branch.name);
-          startBranchTransition(() => router.push(`/dashboard/menu?branch=${encodeURIComponent(branch.id)}`, { scroll: false }));
+          const destination = inventoryCatalog ? "/dashboard/system/inventory/items?view=products&branch=" : "/dashboard/menu?branch=";
+          startBranchTransition(() => router.push(`${destination}${encodeURIComponent(branch.id)}`, { scroll: false }));
         }} />
         <section className={styles.summaryGrid} aria-label={isGifts ? "ملخص المنتجات والخدمات" : "ملخص المنيو"}>
           {[
@@ -382,9 +415,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
               {query || categoryFilter !== "الكل" ? "لا توجد نتائج مطابقة جرّب اسمًا أو تصنيفًا آخر" : isFashion ? "أضف أول منتج لمتجرك" : isGifts ? "أضف أول منتج أو خدمة لمتجرك" : isSalon ? "أضف أول خدمة للصالون أو منتج للعناية" : copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
             </div>
           ) : (
-            <div className={styles.productGrid}>
+            <div className={styles.productGrid} onPointerOver={inventoryCatalog ? warmIngredients : undefined} onFocus={inventoryCatalog ? warmIngredients : undefined}>
               {filtered.map((product, index) => (
                   <MenuProductCard
+                    onInventoryIngredients={inventoryCatalog && cafeSlug ? () => setIngredientsProduct(product) : undefined}
                     key={product.id}
                     product={product}
                     busy={saving}
@@ -422,6 +456,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           )}
         </section>
 
+        {ingredientsProduct && cafeSlug && <MenuInventoryIngredients slug={cafeSlug} productId={ingredientsProduct.id} productName={ingredientsProduct.name} onClose={() => setIngredientsProduct(null)} />}
         {productModalRequested ? (
           <MenuProductFormModal
             open={open}
@@ -430,6 +465,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             productList={products}
             categories={categories}
             businessCategory={businessCategory}
+            cafeSlug={cafeSlug}
             onCategoriesChange={handleCategoriesChange}
             onClose={() => {
               if (editing && products.some((product) => product.id === editing.id)) restorePosition.current = captureProductPosition(editing.id);

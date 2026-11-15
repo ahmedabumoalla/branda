@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Eye, Plus, Save } from "lucide-react";
 import { saveRecurringInvoiceAction } from "@/app/actions/finance-recurring-invoices";
 import { companyInvoiceIssuerAction } from "@/app/actions/finance-company-invoices";
+import { invoiceIssuerFields } from "./use-company-invoice-issuer";
 import { recurrencePreview, recurringInvoiceAmounts, recurringInvoiceSchema, type RecurringInvoicePayload, type RecurringInvoiceRecord } from "@/lib/finance/recurring-invoice";
 import { newQuote, riyadhDate } from "@/lib/finance/quotation";
 import type { FinanceSnapshot } from "@/lib/finance/brand-finance";
@@ -44,7 +45,7 @@ export function RecurringInvoiceEditor({ snapshot, saved, disabled, onSaved, onC
     if (saved) return;
     let active = true;
     void companyInvoiceIssuerAction(snapshot.cafe.slug).then(result => {
-      if (active && !issuerTouched.current && result.ok) setPayload(p => ({ ...p, document: { ...p.document, issuer: result.data } }));
+      if (active && !issuerTouched.current && result.ok) setPayload(p => ({ ...p, document: { ...p.document, issuer: invoiceIssuerFields(result.data) } }));
     }).catch(() => { /* The issuer fields remain editable when the lookup fails. */ });
     return () => { active = false; };
   }, [saved, snapshot.cafe.slug]);

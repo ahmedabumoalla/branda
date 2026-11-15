@@ -71,6 +71,7 @@ export type MenuProduct = {
   media?: MenuProductMedia[];
   imageVariant: MenuImageVariant;
   price: number;
+  priceMode?: "fixed" | "cashier";
   priceOptions?: number[];
   butcherDetails?: ButcherProductDetails;
   calories?: number;

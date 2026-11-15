@@ -8,28 +8,6 @@ import { mapDbSettingsToCafeSettings } from "@/lib/data/mappers";
 import type { AppNotification } from "@/lib/mock/notifications";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import { createClient } from "@/lib/supabase/server";
-import {
-  resolvePublishedStoragePathToUrl,
-  storageBucketForLogo,
-} from "@/lib/storage/resolve-storage-url";
-
-function mapNotification(slug: string, row: Record<string, unknown>): AppNotification {
-  return {
-    id: String(row.id ?? ""),
-    cafeSlug: slug,
-    audience: String(row.audience ?? "cafe") as AppNotification["audience"],
-    customerId: row.customer_id ? String(row.customer_id) : undefined,
-    title: String(row.title ?? ""),
-    body: String(row.body ?? ""),
-    type: String(row.type ?? "experience_submission") as AppNotification["type"],
-    read: Boolean(row.read),
-    createdAt: String(row.created_at ?? new Date().toISOString()),
-    meta:
-      row.meta && typeof row.meta === "object"
-        ? (row.meta as Record<string, string>)
-        : undefined,
-  };
-}
 
 function fallbackSettings(cafe: { slug: string; name: string; businessCategory?: string }): CafeSettings {
   return {
@@ -64,7 +42,7 @@ export async function fetchOwnerDashboardShellAction() {
 
   const supabase = await createClient();
 
-  const [plans, serviceAccess, settingsResult, notificationsResult] = await Promise.all([
+  const [plans, serviceAccess, settingsResult] = await Promise.all([
     getPlatformPlans(),
     getCafeServiceAccess(cafe.id),
     supabase
@@ -72,20 +50,12 @@ export async function fetchOwnerDashboardShellAction() {
       .select("*")
       .eq("cafe_id", cafe.id)
       .maybeSingle(),
-    supabase
-      .from("notifications")
-      .select("*")
-      .eq("cafe_id", cafe.id)
-      .eq("audience", "cafe")
-      .order("created_at", { ascending: false })
-      .limit(20),
   ]);
 
   if (settingsResult.error) throw settingsResult.error;
-  if (notificationsResult.error) throw notificationsResult.error;
 
   const settings = settingsResult.data
-    ? mapDbSettingsToCafeSettings(cafe.slug, settingsResult.data as any)
+    ? mapDbSettingsToCafeSettings(cafe.slug, settingsResult.data as Parameters<typeof mapDbSettingsToCafeSettings>[1])
     : fallbackSettings(cafe);
   settings.cafeName = cafe.name;
   settings.businessCategory = cafe.businessCategory;
@@ -93,10 +63,8 @@ export async function fetchOwnerDashboardShellAction() {
   const logoStoragePath = settingsResult.data?.logo_storage_path as string | null | undefined;
   if (logoStoragePath) {
     settings.logoAssetId = logoStoragePath;
-    settings.logoDataUrl = await resolvePublishedStoragePathToUrl(
-      storageBucketForLogo(),
-      logoStoragePath,
-    );
+    // The sidebar already resolves this path through the authorized media API.
+    // Optional branding must not block the entire authenticated page on Storage.
   }
 
   return {
@@ -107,9 +75,8 @@ export async function fetchOwnerDashboardShellAction() {
     plans: plans.map(plan => plan.id === serviceAccess.planId ? { ...plan, features: serviceAccess.features as PlatformFeature[] } : plan),
     featureOverrides: [],
     settings,
-    notifications: ((notificationsResult.data ?? []) as Record<string, unknown>[]).map((row) =>
-      mapNotification(cafe.slug, row),
-    ),
+    // Optional notifications load after the authorized shell is visible.
+    notifications: [] as AppNotification[],
     pendingOrders: 0,
     pendingExperienceReviews: 0,
   };

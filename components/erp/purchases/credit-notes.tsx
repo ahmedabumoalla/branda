@@ -1,4 +1,5 @@
 'use client';
+import {FilePlus2} from 'lucide-react';
 import { useRef, useState } from 'react';
 import Link from '@/components/erp/navigation';
 import { Modal } from '@/components/dashboard/ui/modal';
@@ -12,7 +13,7 @@ import type { LedgerDocument } from '@/lib/finance/ledger';
 import { purchaseCreditInput, purchaseCreditTotals, type PurchaseCreditInput, type PurchaseCreditNote, type PurchaseCreditCommand } from '@/lib/erp/purchase-credit-notes';
 import type { PurchaseSnapshot } from '@/lib/erp/purchases';
 import { displayRecordNumber } from '@/lib/erp/settings-numbering';
-import s from '@/components/erp/installments/installments.module.css';
+import s from './purchases-ui.module.css';
 
 const statuses = { draft: 'مسودة', posted: 'مصدر', cancelled: 'ملغى' };
 export function PurchaseCreditNotes({ snapshot, templates, invoiceId, initialId }: { snapshot: PurchaseSnapshot; templates: DocumentTemplate[]; invoiceId?: string; initialId?: string }) {
@@ -57,13 +58,13 @@ export function PurchaseCreditNotes({ snapshot, templates, invoiceId, initialId 
   }
   const visible = rows.filter(row => (!invoiceId || row.source_document_id === invoiceId) && `${row.code} ${row.payload.description} ${supplier(row.supplierId)}`.includes(query));
   return <section className={s.panel} aria-label="الإشعارات الدائنة للمشتريات">
-    <div className={s.actions}><h2>الإشعارات الدائنة للمشتريات</h2>{snapshot.canCreate && <button type="button" className={s.primary} disabled={pending || !snapshot.settings.allowCreditNotes} onClick={create}>إنشاء إشعار دائن</button>}</div>
-    <p>زيادة مالية على فاتورة الشراء تُضاف إلى المستحق للمورد دون تغيير كميات المخزون أو تكلفة أصنافه</p>
+    <div className={`${s.actions} ${s.sectionHeading}`}><span className={s.sectionIcon} aria-hidden="true"><FilePlus2 size={19}/></span><h2>الإشعارات الدائنة للمشتريات</h2>{snapshot.canCreate && <button type="button" className={s.primary} disabled={pending || !snapshot.settings.allowCreditNotes} onClick={create}>إنشاء إشعار دائن</button>}</div>
+    <p className={s.hint}>زيادة مالية على فاتورة الشراء تُضاف إلى المستحق للمورد دون تغيير كميات المخزون أو تكلفة أصنافه</p>
     {!snapshot.settings.allowCreditNotes && <p>يمكن تفعيل إنشاء الإشعارات من <Link href="/dashboard/system/purchases/settings">إعدادات المشتريات</Link></p>}
     {error && <p role="alert" className={s.error}>{error}</p>}{notice && <p role="status" className={s.success}>{notice}</p>}
     <label>البحث<input value={query} onChange={event => setQuery(event.target.value)} placeholder="الرقم أو المورد أو الوصف" /></label>
-    <div className={s.tableScroll}><table><thead><tr><th>الإشعار</th><th>فاتورة الشراء</th><th>المورد</th><th>الحالة</th><th>المبلغ</th><th>المتبقي</th><th>الإجراء</th></tr></thead><tbody>{visible.map(row => <tr key={row.id}><td>{row.code}</td><td><Link href={`/dashboard/system/purchases/invoices/${row.source_document_id}`}>{row.sourceNumber}</Link></td><td>{supplier(row.supplierId)}</td><td>{statuses[row.status]}</td><td>{display.money(row.payload.total)}</td><td>{display.money(row.outstanding)}</td><td><button type="button" onClick={() => setSelected(row.id)}>عرض</button></td></tr>)}</tbody></table></div>
-    {!visible.length && <p>لا توجد إشعارات مطابقة</p>}
+    <div className={s.tableScroll}><table><thead><tr><th>الإشعار</th><th>فاتورة الشراء</th><th>المورد</th><th>الحالة</th><th>المبلغ</th><th>المتبقي</th><th>الإجراء</th></tr></thead><tbody>{visible.map(row => <tr key={row.id}><td>{row.code}</td><td><Link href={`/dashboard/system/purchases/invoices/${row.source_document_id}`}>{row.sourceNumber}</Link></td><td>{supplier(row.supplierId)}</td><td><span className={s.badge} data-status={row.status}>{statuses[row.status]}</span></td><td>{display.money(row.payload.total)}</td><td>{display.money(row.outstanding)}</td><td><button type="button" onClick={() => setSelected(row.id)}>عرض</button></td></tr>)}</tbody></table></div>
+    {!visible.length && <p className={s.empty}>لا توجد إشعارات مطابقة</p>}
     {note && <section className={s.panel}><h3>{note.code} — {statuses[note.status]}</h3><p>{note.payload.description}</p><p>{display.date(note.payload.date)} — {supplier(note.supplierId)}</p><p>الصافي {display.money(note.payload.net)} — الضريبة {display.money(note.payload.tax)} — الإجمالي {display.money(note.payload.total)} — المستحق {display.money(note.outstanding)}</p>
       <div className={s.actions}>
         {snapshot.canUpdate && note.status === 'draft' && <button type="button" disabled={pending} onClick={() => edit(note)}>تعديل</button>}
@@ -85,7 +86,7 @@ export function PurchaseCreditNotes({ snapshot, templates, invoiceId, initialId 
           <label>الخصم بالريال<input required type="number" min="0" max={form.amount} step="0.01" value={form.discount} onChange={event => setForm({ ...form, discount: event.target.valueAsNumber })} /></label>
           <label>الضريبة %<input required type="number" min="0" max="100" step="0.001" value={form.taxRate} onChange={event => setForm({ ...form, taxRate: event.target.valueAsNumber })} /></label>
           <label>حساب المصروف<select required value={form.expenseAccountId} onChange={event => setForm({ ...form, expenseAccountId: event.target.value })}><option value="">اختر الحساب</option>{snapshot.finance.accounts.filter(row => row.active && row.kind === 'expense').map(row => <option value={row.id} key={row.id}>{row.name}</option>)}</select></label>
-        </fieldset><p>الإجمالي {totals && Number.isFinite(totals.total) ? display.money(totals.total) : '—'}</p><button className={s.primary} disabled={pending}>حفظ المسودة</button>
+        </fieldset><p className={s.summaryCard}>الإجمالي {totals && Number.isFinite(totals.total) ? display.money(totals.total) : '—'}</p><button className={s.primary} disabled={pending}>حفظ المسودة</button>
       </form>}
     </Modal>
     <Modal open={Boolean(payment)} title="دفع الإشعار الدائن" onClose={() => { if (!pending) setPayment(null); }} panelClassName={s.dialog}>
@@ -93,6 +94,6 @@ export function PurchaseCreditNotes({ snapshot, templates, invoiceId, initialId 
         {error && <p role="alert" className={s.error}>{error}</p>}<fieldset disabled={pending}><label>الخزينة أو الحساب البنكي<select required value={account} onChange={event => setAccount(event.target.value)}><option value="">اختر الحساب</option>{snapshot.finance.accounts.filter(row => row.active && ['cash', 'bank'].includes(row.kind)).map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label>المبلغ<input required type="number" min="0.01" max={payment.outstanding} step="0.01" value={amount} onChange={event => setAmount(event.target.valueAsNumber)} /></label><label>التاريخ<input required type="date" value={paymentDate} onChange={event => setPaymentDate(event.target.value)} /></label></fieldset><button className={s.primary} disabled={pending}>تسجيل الدفع</button>
       </form>}
     </Modal>
-    <Modal open={Boolean(confirmation)} title="تأكيد الإجراء" onClose={() => { if (!pending) setConfirmation(null); }}><p>{confirmation?.action === 'draft' ? 'سيُنشأ قيد عكسي مع حفظ قيد الإصدار السابق وتُعاد المسودة للتعديل ولا يمكن ذلك بعد تسجيل دفعة أو معاملة لاحقة' : confirmation?.action === 'post' ? 'سيُضاف المبلغ إلى المستحق للمورد مع إنشاء قيد مالي متوازن دون حركة مخزون' : 'تأكيد إلغاء أو حذف المسودة المحددة'}</p>{error && <p role="alert" className={s.error}>{error}</p>}<div className={s.actions}><button type="button" disabled={pending} onClick={() => confirmation && void execute(confirmation)}>تأكيد</button><button type="button" disabled={pending} onClick={() => setConfirmation(null)}>تراجع</button></div></Modal>
+    <Modal panelClassName={s.dialog} open={Boolean(confirmation)} title="تأكيد الإجراء" onClose={() => { if (!pending) setConfirmation(null); }}><p>{confirmation?.action === 'draft' ? 'سيُنشأ قيد عكسي مع حفظ قيد الإصدار السابق وتُعاد المسودة للتعديل ولا يمكن ذلك بعد تسجيل دفعة أو معاملة لاحقة' : confirmation?.action === 'post' ? 'سيُضاف المبلغ إلى المستحق للمورد مع إنشاء قيد مالي متوازن دون حركة مخزون' : 'تأكيد إلغاء أو حذف المسودة المحددة'}</p>{error && <p role="alert" className={s.error}>{error}</p>}<div className={s.actions}><button type="button" disabled={pending} onClick={() => confirmation && void execute(confirmation)}>تأكيد</button><button type="button" disabled={pending} onClick={() => setConfirmation(null)}>تراجع</button></div></Modal>
   </section>;
 }

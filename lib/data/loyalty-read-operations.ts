@@ -25,6 +25,7 @@ const operationSchema = z.object({
 });
 export function loyaltyReadErrorMessage(code: string): string {
   const messages: Record<string, string> = {
+    finance_confirmation_required: "استخدم قارئ الولاء المؤكد من نقطة البيع لتنفيذ الختم وفق صلاحيات الموظف والموافقة المطلوبة",
     invalid_identifier: "تحقق من رقم البطاقة أو الجوال", queue_capacity: "طابور المزامنة ممتلئ مؤقتًا ستبقى القراءة محفوظة حتى تتاح المزامنة",
     cashier_disabled: "حساب الكاشير غير مفعّل", brand_disabled: "العلامة التجارية غير مفعّلة", operation_expired: "انتهت مهلة مزامنة القراءة وتحتاج مراجعة الإدارة",
     invalid_input: "تحقق من رقم البطاقة أو الجوال", invalid_phone: "أدخل رقم جوال سعودي صحيح", invalid_code: "رمز البطاقة غير صالح",

@@ -11,20 +11,26 @@ import { moneyRound } from "@/lib/finance/company-invoice";
 import { Numeric } from "./finance-ui";
 import styles from "./finance-invoice-detail.module.css";
 
-export function useInvoiceAdvanced(id: string, slug: string, enabled: boolean, revision: number, context: unknown) {
+type AdvancedRead = { extensions: Awaited<ReturnType<typeof getInvoiceExtensions>>; settings: Awaited<ReturnType<typeof getFinanceInvoiceSettings>> };
+type AdvancedReader = (() => Promise<AdvancedRead>) & { peek?: () => AdvancedRead | undefined; invalidate?: () => void };
+
+export function useInvoiceAdvanced(id: string, slug: string, enabled: boolean, revision: number, context: unknown, reader?: AdvancedReader) {
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<{ id: string; slug: string; revision: number; context: unknown; attempt: number; data?: InvoiceExtensionsState; settings?: InvoiceSettings; error?: string } | null>(null);
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || reader?.peek?.()) return;
     let active = true;
-    Promise.all([getInvoiceExtensions(slug, id), getFinanceInvoiceSettings(slug)]).then(([extensions, settings]) => {
+    const request = reader ? reader() : Promise.all([getInvoiceExtensions(slug, id), getFinanceInvoiceSettings(slug)]).then(([extensions, settings]) => ({ extensions, settings }));
+    request.then(({ extensions, settings }) => {
       if (!active) return;
       setLoaded({ id, slug, revision, context, attempt, ...(extensions.ok && settings.ok ? { data: extensions.data, settings: settings.data.settings } : { error: !extensions.ok ? extensions.message : !settings.ok ? settings.message : "تعذر تحميل خيارات الفاتورة" }) });
     }).catch(() => { if (active) setLoaded({ id, slug, revision, context, attempt, error: "تعذر تحميل خيارات الفاتورة أعد المحاولة" }); });
     return () => { active = false; };
-  }, [id, slug, enabled, revision, context, attempt]);
+  }, [id, slug, enabled, revision, context, attempt, reader]);
   const current = enabled && loaded?.id === id && loaded.slug === slug && loaded.revision === revision && loaded.context === context && loaded.attempt === attempt ? loaded : null;
-  return { loading: enabled && !current, data: current?.data, settings: current?.settings, error: current?.error, reload: () => setAttempt(value => value + 1) };
+  const cached = enabled ? reader?.peek?.() : undefined;
+  const ready = cached?.extensions.ok && cached.settings.ok ? { data: cached.extensions.data, settings: cached.settings.data.settings, error: undefined } : current;
+  return { loading: enabled && !ready, data: ready?.data, settings: ready?.settings, error: ready?.error, reload: () => { reader?.invalidate?.(); setAttempt(value => value + 1); } };
 }
 type Resource = ReturnType<typeof useInvoiceAdvanced>;
 

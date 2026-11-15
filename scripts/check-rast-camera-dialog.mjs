@@ -14,7 +14,9 @@ const slots = [], effects = [], detections = [];
 let cursor = 0, pending = [], tree, session, starts = 0, stops = 0;
 const body = { style: { overflow: "auto" } };
 const previousDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
-Object.defineProperty(globalThis, "document", { configurable: true, value: { body } });
+Object.defineProperty(globalThis, "document", { configurable: true, value: { body, documentElement: { style: { overflow: "scroll" } } } });
+const scrollModule = {};
+new Function("exports", ts.transpileModule(readFileSync("lib/ui/page-scroll-lock.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(scrollModule);
 const modal = { open: false, showModal() { this.open = true; }, close() { this.open = false; } };
 const video = { srcObject: null };
 const react = {
@@ -37,6 +39,7 @@ const react = {
 };
 const stubs = {
   react,
+  "@/lib/ui/page-scroll-lock": scrollModule,
   "@/components/cashier/cashier-language": { useCashierLanguage: () => ({ locale: "ar", dir: "rtl", t: value => value, errorText: value => value }) },
   "./camera-session": { startRastCameraSession(options) { starts++; session = options; return () => { stops++; }; } },
 };
@@ -88,8 +91,15 @@ try {
   assert.equal(starts, stops, "Pending cashier operations stop camera capture");
   find((node) => node.type === "button" && !node.props["aria-haspopup"]).props.onClick();
   render(); closed(); assert(trigger().props.disabled);
-  props.disabled = false; render(); open();
+  props.disabled = false; render();
+  const parentFirst = scrollModule.lockPageScroll(); open();
+  find((node) => node.type === "button" && !node.props["aria-haspopup"]).props.onClick(); render();
+  assert.equal(body.style.overflow, "hidden", "Closing camera preserves parent dialog lock");
+  parentFirst(); closed();
+  const parentLast = scrollModule.lockPageScroll(); open(); parentLast();
+  assert.equal(body.style.overflow, "hidden", "Closing parent before camera cleanup keeps scroll locked until final owner releases");
   effects.forEach((effect) => effect?.cleanup?.()); closed();
+  assert.equal(document.documentElement.style.overflow, "scroll", "Nested cleanup restores the original root overflow too");
   console.log("PASS: camera dialog open, close, Escape, detection, error recovery, pending guard and unmount cleanup.");
 } finally {
   if (previousDocument) Object.defineProperty(globalThis, "document", previousDocument);

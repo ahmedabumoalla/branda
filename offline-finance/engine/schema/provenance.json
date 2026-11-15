@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-11-14T04:19:38.291Z",
+  "finishedAt": "2026-11-14T04:19:46.850Z",
+  "querySha256": "b509d683765da7300688c43c10d8547b897abbd7770eb804d1c84220d66a6ea2",
+  "sha256": "7a83c7a2faa0d63124fcc79d84e4741d9e53b23b2aba9d682f32c4d540a0447d",
+  "tables": 410,
+  "functions": 1026,
+  "scope": "pg_catalog DDL only, finance and existing ERP wrapper dependencies, no business rows"
+}

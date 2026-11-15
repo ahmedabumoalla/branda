@@ -1,0 +1,35 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),crypto=require('node:crypto');
+const {executeAction,executeRoute,getActionNames}=require('./dist/actions.cjs');
+let checks=0;const ok=(value)=>{assert.ok(value);checks++;};
+const cafe={id:'11111111-1111-4111-8111-111111111111',slug:'local-finance',name:'Local fixture',businessCategory:'butcher_shops'};
+const owner='22222222-2222-4222-8222-222222222222',cashier='33333333-3333-4333-8333-333333333333';
+const calls=[];
+function context(id,role){return{user:{id,role,name:role},cafe,engine:{queryAs:async()=>{throw Error('No SQL expected in boundary fixture');},rpc:async(user,name,args)=>{await new Promise(r=>setTimeout(r,user===owner?3:1));calls.push({user,name,args});if(name==='brand_finance_context')return{...cafe,role};if(name==='brand_finance_inventory_unit_save')return{id:'44444444-4444-4444-8444-444444444444',name:args.p_name};if(name==='brand_finance_execute')return{id:'55555555-5555-4555-8555-555555555555'};if(name==='brand_finance_snapshot')return{cafe,userId:user,role,canAdminister:role==='owner',items:[],products:[],accounts:[],parties:[],documents:[],journal:[],movements:[],settings:{}};throw Error('Unexpected RPC '+name);}}};}
+(async()=>{
+ ok(Object.keys(getActionNames()).length>=39);
+ await assert.rejects(()=>executeAction(context(owner,'owner'),'../../private','x',[]));checks++;
+ await assert.rejects(()=>executeAction(context(owner,'owner'),'@/app/actions/brand-finance','constructor',[]));checks++;
+ const [a,b]=await Promise.all([executeAction(context(owner,'owner'),'@/app/actions/brand-finance','fetchBrandFinanceAction',[]),executeAction(context(cashier,'cashier'),'@/app/actions/brand-finance','fetchBrandFinanceAction',[])]);
+ ok(a.ok&&b.ok);ok(a.data.userId===owner&&b.data.userId===cashier);ok(a.data.ownerUserId===owner&&b.data.ownerUserId===undefined);
+ const saved=await executeAction(context(owner,'owner'),'@/app/actions/finance-inventory-catalog','saveFinanceInventoryUnitAction',[{requestId:crypto.randomUUID(),name:'كيلو'}]);ok(saved.ok&&saved.unit.name==='كيلو');
+ const denied=await executeAction(context(cashier,'cashier'),'@/app/actions/finance-inventory-catalog','saveFinanceInventoryUnitAction',[{requestId:crypto.randomUUID(),name:'كيلو'}]);ok(denied.ok===false&&/صلاحية/.test(denied.message));
+ const command={operation:'purchase',requestId:crypto.randomUUID(),payload:{note:'local'}};
+ const sold=await executeAction(context(owner,'owner'),'@/app/actions/brand-finance','executeBrandFinanceAction',[command]);ok(sold.ok);ok(calls.some(c=>c.name==='brand_finance_execute'&&c.user===owner&&c.args.p_operation==='purchase'&&c.args.p_request_id===command.requestId));
+ const deniedPurchase=await executeAction(context(cashier,'cashier'),'@/app/actions/brand-finance','executeBrandFinanceAction',[command]);ok(deniedPurchase.ok===false);ok(!calls.some(c=>c.name==='brand_finance_execute'&&c.user===cashier));
+ const unitInvalid=await executeAction(context(owner,'owner'),'@/app/actions/finance-inventory-catalog','saveFinanceInventoryUnitAction',[{requestId:'bad',name:''}]);ok(unitInvalid.ok===false);
+ await assert.rejects(()=>executeAction(context(owner,'owner'),'@/app/actions/menu-import','createMenuImportFromUrlAction',['https://example.invalid']),/غير متاحة/);checks++;
+ await assert.rejects(()=>executeAction(context(cashier,'cashier'),'@/app/actions/menu','fetchOwnerMenuAction',[]),/للمالك/);checks++;
+ const uploadContext=context(owner,'owner');let uploaded;
+ uploadContext.storage={upload:async(bucket,path,bytes,options)=>{uploaded={bucket,path,bytes,options};return{path};}};
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3n0AAAAASUVORK5CYII=','base64');const form=new FormData();form.set('file',new File([png],'product.png',{type:'image/png'}));
+ const upload=await executeAction(uploadContext,'@/app/actions/upload','uploadImageAction',['menu-products',form,'product','product-fixture']);ok(upload.storagePath===uploaded.path&&uploaded.path.startsWith(cafe.id+'/'));ok(uploaded.bucket==='menu-products'&&Buffer.from(uploaded.bytes).equals(png)&&uploaded.options.contentType==='image/png');
+ const routeContext=context(owner,'owner');routeContext.origin='http://127.0.0.1:41999';routeContext.engine.queryAs=async(user,sql,params)=>{ok(user===owner);ok(params[0]===cafe.id);return{rows:sql.includes('cafe_settings')?[{logo_storage_path:null,logo_url:null}]:[{palette:{primary:'#3a2117'},logo_storage_path:null,logo_url:null}]};};
+ const brand=await executeRoute(routeContext,'/api/finance/local-finance/receipt-brand',new Request(routeContext.origin+'/api/finance/local-finance/receipt-brand'));ok(brand.status===200);ok((await brand.json()).name===cafe.name);
+ const forbiddenRoute=await executeRoute(routeContext,'/api/finance/other/receipt-brand',new Request(routeContext.origin+'/api/finance/other/receipt-brand'));ok(forbiddenRoute.status===404);
+ const imagePath=cafe.id+'/44444444-4444-4444-8444-444444444444.webp';routeContext.storage={signRead:async()=>'/api/storage/file?ticket=fixture'};
+ const image=await executeRoute(routeContext,'/api/finance/local-finance/inventory-image',new Request(routeContext.origin+'/api/finance/local-finance/inventory-image?path='+encodeURIComponent(imagePath)));ok(image.status===307&&image.headers.get('location')===routeContext.origin+'/api/storage/file?ticket=fixture');ok(image.headers.get('cache-control').includes('no-store'));
+ const originalRpc=routeContext.engine.rpc;const invoiceId='66666666-6666-4666-8666-666666666666';routeContext.engine.rpc=async(user,name,args)=>{if(name==='brand_finance_company_invoice')return{id:invoiceId,number:1,type:'simplified',issuedAt:'2026-11-14T04:00:00Z',supplyDate:'2026-11-14',seller:{name:'اختبار محلي',vatNumber:'300000000000003',address:'الرياض'},customer:{name:'عميل',vatNumber:'',address:'',phone:''},lines:[{name:'صنف',description:'صنف',quantity:1,price:100,discount:0,net:100,tax:15,total:115}],subtotal:100,discount:0,tax:15,total:115,paid:115,taxInclusive:false,note:'',extraFields:[],template:'standard',deliveryMethod:'print'};if(name==='brand_finance_issued_line_notes')return{recorded:false,lines:[]};return originalRpc(user,name,args);};
+ const pdf=await executeRoute(routeContext,`/api/finance/local-finance/company-invoices/${invoiceId}/pdf`,new Request(`${routeContext.origin}/api/finance/local-finance/company-invoices/${invoiceId}/pdf`));ok(pdf.status===200&&pdf.headers.get('content-type')==='application/pdf');ok(Buffer.from(await pdf.arrayBuffer()).subarray(0,5).toString()==='%PDF-');
+ const outcome={at:new Date().toISOString(),scope:'Mock engine boundaries only; not proof of SQL persistence',checks,pass:true,actionsSha256:crypto.createHash('sha256').update(fs.readFileSync(require.resolve('./dist/actions.cjs'))).digest('hex')};fs.writeFileSync(require('path').join(__dirname,'dist/boundary-check.json'),JSON.stringify(outcome,null,2));console.log(outcome);
+})().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,6 +1,7 @@
 import {notFound,redirect} from 'next/navigation';
 import Link from 'next/link';
 import {createClient} from '@/lib/supabase/server';
+import {getActiveUser} from '@/lib/auth/active-user';
 import {readErpStaffShell} from '@/lib/data/erp-staff-shell';
 import {readBranchContext} from '@/lib/data/erp-branches';
 import {withErpRequest} from '@/lib/erp/request-context';
@@ -49,15 +50,14 @@ export default async function Page({params,searchParams}:{params:Promise<{slug:s
  const {slug,parts=[]}=await params;
  if(!/^[a-z0-9-]{1,120}$/.test(slug))notFound();
  const client=await createClient();
- const {data:{user}}=await client.auth.getUser();
+ const user=await getActiveUser(client);
  if(!user)redirect(`/finance/${slug}/system/login`);
- const shell=await readErpStaffShell(slug);
- const branch=await readBranchContext(slug);
+ const [shell,branch]=await Promise.all([readErpStaffShell(slug),readBranchContext(slug)]);
  const visibleDomains=shell.domains.filter(d=>mindErpNavigationVisible(slug,d.key));
  const [module,...rest]=parts;
  const domain=shell.domains.find(d=>d.href===`/dashboard/system/${module}`);
  if(module&&!domain)notFound();
- if(branch.scope.branchId?!branch.branches.some(b=>b.id===branch.scope.branchId):branch.requiresSelection){return <StaffShell slug={slug} name={shell.cafe.name} domains={shell.domains}><SystemAppearance slug={slug}><section role="status" className={s.home}><p>{branch.branches.length?'اختر فرع العمل من أعلى الصفحة لعرض سجلاته':'لا يوجد فرع عمل متاح لحسابك تواصل مع مسؤول العلامة لربط ملفك بأحد الفروع'}</p></section></SystemAppearance></StaffShell>;}
+ if(branch.scope.branchId?!branch.branches.some(b=>b.id===branch.scope.branchId):branch.requiresSelection){return <StaffShell slug={slug} name={shell.cafe.name} domains={shell.domains} initialBranchContext={branch}><SystemAppearance slug={slug}><section role="status" className={s.home}><p>{branch.branches.length?'اختر فرع العمل من أعلى الصفحة لعرض سجلاته':'لا يوجد فرع عمل متاح لحسابك تواصل مع مسؤول العلامة لربط ملفك بأحد الفروع'}</p></section></SystemAppearance></StaffShell>;}
  const q=await searchParams;
  const flat=Promise.resolve(Object.fromEntries(Object.entries(q).map(([k,v])=>[k,Array.isArray(v)?v[0]:v])));
  const props={params:Promise.resolve({segments:rest,path:rest,parts:rest,section:rest}),searchParams:flat};
@@ -81,5 +81,5 @@ export default async function Page({params,searchParams}:{params:Promise<{slug:s
     default:notFound();
    }
  }):<div className={s.home}>{visibleDomains.map(d=><Link key={d.key} href={erpHref(d.href,slug)}>{d.label}</Link>)}{!visibleDomains.length&&<p className={s.empty}>لا توجد أقسام متاحة لحسابك تواصل مع مسؤول العلامة لتعيين صلاحياتك</p>}</div>;
- return <StaffShell slug={slug} name={shell.cafe.name} domains={shell.domains}><SystemAppearance slug={slug}>{content}</SystemAppearance></StaffShell>;
+ return <StaffShell slug={slug} name={shell.cafe.name} domains={shell.domains} initialBranchContext={branch}><SystemAppearance slug={slug}>{content}</SystemAppearance></StaffShell>;
 }

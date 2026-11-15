@@ -7,6 +7,7 @@ function load(file, mocks) {
   new Function('require', 'module', 'exports', js)(name => {
     if (name === 'server-only') return {};
     if (name in mocks) return mocks[name];
+    if (name === '@/lib/data/account-cancellation') return { brandAllowsNewWork: async () => true, brandSlugAllowsNewWork: async () => true };
     throw Error('Unexpected dependency ' + name);
   }, module, module.exports);
   return module.exports;

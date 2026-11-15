@@ -23,6 +23,7 @@ export type StandaloneMenuProduct = Pick<MenuProduct,
   "id" | "name" | "category" | "categoryId" | "description" | "price" | "priceOptions" |
   "calories" | "preparationTimeMinutes" | "ingredients" | "available" | "promo" | "commerceDetails" | "butcherDetails"
 > & {
+  priceMode?: "fixed" | "cashier";
   priceRange?: MenuPriceRange;
   catalogKind?: "service" | "product";
   primaryMediaType?: "image" | "video";

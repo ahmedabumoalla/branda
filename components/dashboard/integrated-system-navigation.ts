@@ -1,14 +1,22 @@
 import type { LucideIcon } from "lucide-react";
-import { ReceiptText, Monitor, Store, Hammer, ClipboardCheck, CalendarDays, HardHat, BadgeDollarSign, KeyRound, ClipboardList, Workflow, Users, Coins, Star, BadgeCheck, Contact, ShieldCheck, Boxes, ShoppingBag, Timer, WalletCards, Landmark, Banknote, ListOrdered, UserRoundCog, Network, CalendarCheck, HandCoins, ChartNoAxesCombined, MapPin, FileText, Settings } from "lucide-react";
+import { ReceiptText, Monitor, Store, Hammer, ClipboardCheck, CalendarDays, HardHat, BadgeDollarSign, KeyRound, ClipboardList, Workflow, Users, Coins, Star, BadgeCheck, Boxes, ShoppingBag, Timer, WalletCards, Landmark, Banknote, ListOrdered, UserRoundCog, Network, CalendarCheck, HandCoins, ChartNoAxesCombined, MapPin, FileText, Settings } from "lucide-react";
 import { financeMenuGroups, financeMenuHref, type FinanceMenuEntry, type FinanceSection } from "@/components/finance/finance-navigation";
 import { NAQWA_SLUG } from "@/lib/platform/naqwa";
-import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 import { isAldeemCafe } from "@/lib/platform/aldeem";
-import { isHospitalStore } from "@/lib/commerce/hospital-profile";
-import { mindCafeSettingsLink } from "@/lib/platform/mind-navigation";
+import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
+import { isMindSalesSimplified, isSalesViewVisible } from "@/lib/finance/sales-features";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
-type SystemItem = { label: string; id?: string; view?: FinanceMenuEntry["view"]; unavailable?: boolean; section?: FinanceSection; href?: string; feature?: string; salonOnly?: boolean; giftsOnly?: boolean; pos?: boolean };
+type SystemItem = { label: string; id?: string; view?: FinanceMenuEntry["view"]; unavailable?: boolean; section?: FinanceSection; href?: string; feature?: string; salonOnly?: boolean; giftsOnly?: boolean; pos?: boolean; financeOnly?: boolean };
 type SystemGroup = { id: string; label: string; icon: LucideIcon; items: SystemItem[] };
+
+export function isIntegratedLoyaltyRoute(pathname: string, financeActive: boolean) {
+  return financeActive && (pathname === "/dashboard/loyalty" || pathname.startsWith("/dashboard/loyalty/") || pathname === "/dashboard/cashier" || pathname === "/dashboard/read-operations");
+}
+
+export function isIntegratedDashboardRoute(pathname: string, financeActive: boolean) {
+  return isIntegratedLoyaltyRoute(pathname, financeActive) || financeActive && ["/dashboard/branches", "/dashboard/settings", "/dashboard/subscription"].some(href => pathname === href || pathname.startsWith(`${href}/`));
+}
 
 // Items without destinations are explicitly unavailable, never placeholder links.
 export const integratedSystemGroups: SystemGroup[] = [
@@ -26,18 +34,22 @@ export const integratedSystemGroups: SystemGroup[] = [
   { id: "workflows", label: "دورات العمل", icon: Workflow, items: [{ label: "مسارات العمل والموافقات", href: "/dashboard/system/workflows" }, { label: "إضافة دورة عمل", href: "/dashboard/system/workflows/new" }, { label: "الإعدادات", href: "/dashboard/system/workflows/settings" }] },
   { id: "customers", label: "العملاء", icon: Users, items: [{ label: "إدارة العملاء", href: "/dashboard/system/customers" }, { label: "إضافة عميل", href: "/dashboard/system/customers/new" }, { label: "المواعيد", href: "/dashboard/system/customers/appointments" }, { label: "قائمة الاتصال", href: "/dashboard/system/customers/contacts" }, { label: "إدارة علاقات العملاء", href: "/dashboard/system/customers/crm" }, { label: "إعدادات العملاء", href: "/dashboard/system/customers/settings" }, { label: "العملاء والموردون", section: "parties" }] },
   { id: "credits", label: "النقاط والأرصدة", icon: Coins, items: [{ label: "إدارة شحن الأرصدة", href: "/dashboard/system/credits/charges" }, { label: "إدارة استهلاك الأرصدة", href: "/dashboard/system/credits/usages" }, { label: "إدارة الباقات", href: "/dashboard/system/credits/packages" }, { label: "أنواع الرصيد", href: "/dashboard/system/credits/types" }] },
-  { id: "loyalty", label: "نقاط الولاء", icon: Star, items: [{ label: "الولاء والمكافآت", href: "/dashboard/loyalty", feature: "loyalty" }, { label: "سجل عمليات القراءة", href: "/dashboard/read-operations", feature: "loyalty" }] },
+  { id: "loyalty", label: "الولاء", icon: Star, items: [
+    { label: "إدارة المكافآت", href: "/dashboard/loyalty", feature: "loyalty" },
+    { label: "إدارة الكاشير", href: "/dashboard/cashier", feature: "cashier" },
+    { label: "سجل عملاء الولاء", href: "/dashboard/loyalty/customers", feature: "loyalty" },
+    { label: "سجل عمليات الكاشير", href: "/dashboard/read-operations", feature: "loyalty" },
+    { label: "إدارة رسائل الولاء", href: "/dashboard/loyalty/messages", feature: "loyalty" },
+    { label: "إعدادات الولاء", href: "/dashboard/loyalty/settings", feature: "loyalty", financeOnly: true },
+  ] },
   { id: "memberships", label: "العضويات", icon: BadgeCheck, items: [{ label: "إدارة العضويات", href: "/dashboard/system/memberships" }, { label: "إدارة الاشتراكات", href: "/dashboard/system/memberships/renewals" }, { label: "سياسة العضويات", href: "/dashboard/system/memberships/policy" }] },
-  { id: "customer-attendance", label: "حضور العملاء", icon: Contact, items: [{ label: "سجل حضور العملاء", href: "/dashboard/system/customer-attendance" }] },
-  { id: "insurance", label: "وكلاء التأمين", icon: ShieldCheck, items: [{ label: "شركات التأمين", href: "/dashboard/system/insurance" }, { label: "تأمين العملاء", href: "/dashboard/system/insurance/customers" }, { label: "الفواتير والتحصيل", href: "/dashboard/system/insurance/invoices" }] },
-  { id: "inventory", label: "المخزون", icon: Boxes, items: [{ label: "المنتجات والخدمات", href: "/dashboard/system/inventory/items" }, { label: "الأذون المخزنية", href: "/dashboard/system/inventory/requisitions" }, { label: "قوائم الأسعار", href: "/dashboard/system/inventory/price-lists" }, { label: "المستودعات", href: "/dashboard/system/inventory/warehouses" }, { label: "جرد المخزون", href: "/dashboard/system/inventory/stocktaking" }, { label: "الطلبات المخزنية", href: "/dashboard/system/inventory/requests" }, { label: "مجموعات البنود", href: "/dashboard/system/inventory/groups" }, { label: "إعدادات المخزون والمنتجات", href: "/dashboard/system/inventory/settings" }, { label: "الأصناف وحركات المخزون", section: "inventory" }] },
-  { id: "purchases", label: "المشتريات", icon: ShoppingBag, items: [{ label: "فواتير الشراء", href: "/dashboard/system/purchases/invoices" }, { label: "مرتجعات المشتريات", href: "/dashboard/system/purchases/returns" }, { label: "الإشعارات المدينة", href: "/dashboard/system/purchases/debit-notes" }, { label: "الإشعارات الدائنة", href: "/dashboard/system/purchases/credit-notes" }, { label: "طلبات الشراء", href: "/dashboard/system/purchases/requests" }, { label: "طلبات عروض الأسعار", href: "/dashboard/system/purchases/rfqs" }, { label: "عروض أسعار الموردين", href: "/dashboard/system/purchases/quotations" }, { label: "أوامر الشراء", href: "/dashboard/system/purchases/orders" }, { label: "الموردون", href: "/dashboard/system/purchases/suppliers" }, { label: "مدفوعات الموردين", href: "/dashboard/system/purchases/payments" }, { label: "إعدادات المشتريات", href: "/dashboard/system/purchases/settings" }, { label: "فواتير الموردين", section: "purchases" }] },
+  { id: "inventory", label: "المخزون", icon: Boxes, items: [{ label: "المنتجات والخدمات", href: "/dashboard/system/inventory/items" }, { label: "المستودعات", href: "/dashboard/system/inventory/warehouses" }, { label: "جرد المخزون", href: "/dashboard/system/inventory/stocktaking" }, { label: "إعدادات المخزون والمنتجات", href: "/dashboard/system/inventory/settings" }] },
+  { id: "purchases", label: "المشتريات", icon: ShoppingBag, items: [{ label: "فواتير الشراء", href: "/dashboard/system/purchases/invoices" }, { label: "مرتجعات المشتريات", href: "/dashboard/system/purchases/returns" }, { label: "الموردون", href: "/dashboard/system/purchases/suppliers" }, { label: "مدفوعات الموردين", href: "/dashboard/system/purchases/payments" }, { label: "إعدادات المشتريات", href: "/dashboard/system/purchases/settings" }, { label: "فواتير الموردين", section: "purchases" }] },
   { id: "time", label: "تتبع الوقت", icon: Timer, items: [{ label: "سجلات الوقت", href: "/dashboard/system/time" }, { label: "فوترة الساعات", href: "/dashboard/system/time/billing" }, { label: "التقارير", href: "/dashboard/system/time/reports" }, { label: "الإعدادات", href: "/dashboard/system/time/settings" }] },
-  { id: "finance", label: "المالية", icon: WalletCards, items: [{ label: "نظرة مالية", section: "overview" }, { label: "الخزينة والأرصدة", section: "treasury" }, { label: "المصروفات", href: "/dashboard/system/finance/expenses" }, { label: "سندات القبض", href: "/dashboard/system/finance/receipts" }, { label: "الخزائن والحسابات البنكية", href: "/dashboard/system/finance/treasury" }, { label: "العهد المالية", href: "/dashboard/system/finance/custodies" }, { label: "أنواع التسوية", href: "/dashboard/system/finance/settlement-types" }, { label: "المطابقة البنكية", href: "/dashboard/system/finance/bank-statements" }, { label: "السندات المتكررة", href: "/dashboard/system/finance/schedules" }, { label: "إعدادات المالية", href: "/dashboard/system/finance/settings" }] },
-  { id: "accounting", label: "الحسابات العامة", icon: Landmark, items: [{ label: "القيود اليومية", href: "/dashboard/system/accounting/journals" }, { label: "أضف قيد", href: "/dashboard/system/accounting/journals/create" }, { label: "دليل الحسابات", href: "/dashboard/system/accounting/accounts" }, { label: "مراكز التكلفة", href: "/dashboard/system/accounting/cost-centers" }, { label: "الأصول", href: "/dashboard/system/assets" }, { label: "مواقع الأصول", href: "/dashboard/system/assets/locations" }, { label: "تقارير الحسابات", href: "/dashboard/system/accounting/reports" }, { label: "إعدادات الحسابات", href: "/dashboard/system/accounting/settings" }] },
-  { id: "cheques", label: "دورة الشيكات", icon: Banknote, items: [{ label: "الشيكات المدفوعة", href: "/dashboard/system/cheques/payable" }, { label: "الشيكات المستلمة", href: "/dashboard/system/cheques/receivable" }, { label: "دفاتر الشيكات", href: "/dashboard/system/cheques/books" }, { label: "إعدادات الشيكات", href: "/dashboard/system/cheques/settings" }] },
+  { id: "finance", label: "المالية", icon: WalletCards, items: [{ label: "نظرة مالية", section: "overview" }, { label: "الخزينة والأرصدة", section: "treasury" }, { label: "المصروفات", href: "/dashboard/system/finance/expenses" }, { label: "سندات القبض", href: "/dashboard/system/finance/receipts" }, { label: "العهد المالية", href: "/dashboard/system/finance/custodies" }, { label: "أنواع التسوية", href: "/dashboard/system/finance/settlement-types" }, { label: "المطابقة البنكية", href: "/dashboard/system/finance/bank-statements" }, { label: "إعدادات المالية", href: "/dashboard/system/finance/settings" }] },
+  { id: "accounting", label: "الحسابات العامة", icon: Landmark, items: [{ label: "القيود اليومية", href: "/dashboard/system/accounting/journals" }, { label: "أضف قيد", href: "/dashboard/system/accounting/journals/create" }, { label: "دليل الحسابات", href: "/dashboard/system/accounting/accounts" }, { label: "تقارير الحسابات", href: "/dashboard/system/accounting/reports" }] },
   { id: "requests", label: "الطلبات", icon: ListOrdered, items: [{ label: "طلبات الموظفين", href: "/dashboard/system/requests" }, { label: "أنواع الطلبات", href: "/dashboard/system/requests/types" }, { label: "إدارة الطلبات", href: "/dashboard/orders", feature: "menu", giftsOnly: true }] },
-  { id: "employees", label: "الموظفون", icon: UserRoundCog, items: [{ label: "إعدادات وفريق المالية", section: "settings" }, { label: "ملفات الموارد البشرية", href: "/dashboard/system/employees" }, { label: "أدوار الموظفين والصلاحيات", href: "/dashboard/system/roles" }, { label: "أنواع مستندات الموظفين", href: "/dashboard/system/employees/documents" }, { label: "تهيئة ومغادرة الموظفين", href: "/dashboard/system/employees/settings" }, { label: "عهد الموظفين", href: "/dashboard/system/employee-assets" }, { label: "أنواع العهد", href: "/dashboard/system/employee-assets/types" }] },
+  { id: "employees", label: "الموظفون", icon: UserRoundCog, items: [{ label: "إدارة الموظفين", section: "settings" }, { label: "أدوار الموظفين والصلاحيات", href: "/dashboard/system/roles" }, { label: "عهد الموظفين", href: "/dashboard/system/employee-assets" }, { label: "أنواع العهد", href: "/dashboard/system/employee-assets/types" }] },
   { id: "organization", label: "الهيكل التنظيمي", icon: Network, items: [{ label: "إدارة المسميات الوظيفية", href: "/dashboard/system/organization/designation" }, { label: "إدارة الأقسام", href: "/dashboard/system/organization/department" }, { label: "إدارة المستويات الوظيفية", href: "/dashboard/system/organization/level" }, { label: "إدارة أنواع الوظائف", href: "/dashboard/system/organization/type" }, { label: "الهيكل التنظيمي", href: "/dashboard/system/organization/chart" }] },
   { id: "attendance", label: "الحضور", icon: CalendarCheck, items: [{ label: "سجلات الحضور", href: "/dashboard/system/attendance/logs" }, { label: "أيام الحضور", href: "/dashboard/system/attendance/days" }, { label: "مسيرات الحضور", href: "/dashboard/system/attendance/sheets" }, { label: "الإجازات والأذونات", href: "/dashboard/system/attendance/leaves" }, { label: "الورديات", href: "/dashboard/system/attendance/shifts" }, { label: "جدول العمل", href: "/dashboard/system/attendance/schedule" }, { label: "جلسات الحضور", href: "/dashboard/system/attendance/sessions" }, { label: "تسويات الإجازة", href: "/dashboard/system/attendance/settlements" }, { label: "الإعدادات", href: "/dashboard/system/attendance/settings" }] },
   { id: "payroll", label: "المرتبات", icon: HandCoins, items: [{ label: "العقود", href: "/dashboard/system/payroll/contracts" }, { label: "مسير الرواتب", href: "/dashboard/system/payroll/runs" }, { label: "قسائم الرواتب", href: "/dashboard/system/payroll/payslips" }, { label: "السلف", href: "/dashboard/system/payroll/loans" }, { label: "بنود الراتب", href: "/dashboard/system/payroll/components" }, { label: "قوالب الراتب", href: "/dashboard/system/payroll/structures" }, { label: "الإعدادات", href: "/dashboard/system/payroll/settings" }] },
@@ -50,26 +62,39 @@ export const integratedSystemGroups: SystemGroup[] = [
 const storeGroupIds = new Set(["sales", "pos", "store", "customers", "loyalty", "inventory", "purchases", "finance", "accounting", "reports", "branches", "templates", "settings"]);
 const storeReportPaths = new Set(["sales", "purchases", "accounting", "customers", "inventory", "activity"]);
 
+/** Report families whose section exists in the MIND sidebar. Shared with the report catalog page. */
+export const mindReportFamilies = new Set(["sales", "purchases", "accounting", "employees", "customers", "inventory", "activity"]);
+
 /** Account-specific navigation; this deliberately does not grant or revoke permissions. */
+const mindHiddenGroups = new Set([
+  "store", "manufacturing", "tasks", "bookings", "contracting", "installments",
+  "targets", "rentals", "work-orders", "workflows", "credits", "memberships",
+  "time", "requests", "organization", "attendance", "payroll", "templates",
+  // User request 2026-11-15: the whole reports and branches sections are removed from the MIND sidebar.
+  "reports", "branches",
+]);
+
 export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] {
+  const groups = integratedSystemGroups.map(group => group.id === "settings" ? { ...group, items: [...group.items, { label: "إعدادات كوفي", href: "/dashboard/settings", feature: "settings" }, { label: "الباقات والاشتراكات", href: "/dashboard/subscription" }] } : group);
   if (cafeSlug === NAQWA_SLUG) return [
     { id: "overview", label: "نظرة مالية", icon: WalletCards, items: [{ label: "نظرة مالية", section: "overview" }] },
     ...financeMenuGroups.map(group => ({ id: group.id, label: group.label, icon: group.icon, items: group.entries.map(entry => ({ id: entry.id, section: entry.section, view: entry.view, label: entry.section === "cashiers" ? "إدارة المستخدمين والصلاحيات" : entry.label, href: financeMenuHref(entry) ?? undefined })) })),
+    ...groups.filter(group => group.id === "loyalty"),
     { id: "products", label: "المنتجات والأسعار", icon: Store, items: [{ label: "إضافة المنتجات وتعديل الأسعار", href: "/dashboard/menu" }, { label: "فتح نقطة البيع", pos: true }] },
     { id: "users", label: "إدارة المستخدمين والصلاحيات", icon: UserRoundCog, items: [{ label: "المستخدمون وكلمات المرور", section: "cashiers" }, { label: "تغيير كلمة مرور المالك", href: "/dashboard/settings" }] },
   ];
-  if (isAldeemCafe({ slug: cafeSlug })) return integratedSystemGroups.map(group => group.id === "manufacturing" ? { ...group, label: "المعمل والتصنيع", items: [{ label: "شاشة طلبات المعمل", href: "/dashboard/system/lab" }, ...group.items] } : group);
-  if (isHospitalStore(cafeSlug)) {
-    const allowed = new Set(["sales", "pos", "customers", "inventory", "purchases", "finance", "accounting", "reports", "settings"]);
-    return integratedSystemGroups.filter(group => allowed.has(group.id)).map(group => {
-      if (group.id === "settings") return { ...group, items: [mindCafeSettingsLink, ...group.items] };
-      if (group.id === "customers") return { ...group, label: "العملاء والمديونيات", items: [{ label: "مديونيات الأطباء والعيادات", section: "parties" }, { label: "إدارة العملاء", href: "/dashboard/system/customers" }, { label: "إضافة عميل", href: "/dashboard/system/customers/new" }] };
-      if (group.id === "reports") return { ...group, items: group.items.filter(item => item.section === "reports" || ["sales", "purchases", "accounting", "customers", "inventory"].includes(item.href?.split("/").at(-1) ?? "")) };
-      return group;
-    });
-  }
-  if (!isFawaselStore(cafeSlug)) return integratedSystemGroups;
-  return integratedSystemGroups.filter(group => storeGroupIds.has(group.id)).map(group => {
+  if (isAldeemCafe({ slug: cafeSlug })) return groups.map(group => group.id === "manufacturing" ? { ...group, label: "المعمل والتصنيع", items: [{ label: "شاشة طلبات المعمل", href: "/dashboard/system/lab" }, ...group.items] } : group);
+  if (isMindSalesSimplified(cafeSlug)) return groups.filter(group => !mindHiddenGroups.has(group.id)).map(group => {
+    if (group.id === "sales") return { ...group, items: group.items.filter(item => isSalesViewVisible(cafeSlug, item.view)) };
+    if (group.id === "pos") return { ...group, items: [...group.items, { label: "إعدادات نقاط البيع", section: "pos-settings" as const }] };
+    // User request 2026-11-15: MIND reports list only the families of sections present in its sidebar.
+    if (group.id === "reports") return { ...group, items: group.items.filter(item => item.href === "/dashboard/system/reports" || mindReportFamilies.has(item.href?.split("/").at(-1) ?? "")) };
+    // User request 2026-11-15: MIND finance menu drops settlement types, bank reconciliation and finance settings.
+    if (group.id === "finance") return { ...group, items: group.items.filter(item => !["/dashboard/system/finance/settlement-types", "/dashboard/system/finance/bank-statements", "/dashboard/system/finance/settings"].includes(item.href ?? "")) };
+    return group;
+  });
+  if (!isFawaselStore(cafeSlug)) return groups;
+  return groups.filter(group => storeGroupIds.has(group.id)).map(group => {
     if (group.id === "store") return { ...group, label: "المتجر والمنتجات", items: [
       { label: "إدارة المنتجات", href: "/dashboard/menu", feature: "menu" },
       { label: "طلبات المتجر", href: "/dashboard/orders", feature: "menu" },
@@ -86,9 +111,11 @@ export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] 
 }
 
 export function systemItemHref(item: SystemItem, context: { cafeSlug: string; enabledFeatures: readonly string[]; isSalon: boolean; isGifts: boolean }) {
+  if (item.section === "sales" && !isSalesViewVisible(context.cafeSlug, item.view)) return null;
   if (item.unavailable) return null;
   if (context.cafeSlug === NAQWA_SLUG && item.href) return item.href;
-  if (item.feature && !context.enabledFeatures.includes(item.feature)) return null;
+  if (item.financeOnly && !featureCodesAllow([...context.enabledFeatures], "finance")) return null;
+  if (item.feature && !featureCodesAllow([...context.enabledFeatures], item.feature)) return null;
   if (item.salonOnly && !context.isSalon) return null;
   if (item.giftsOnly && !context.isGifts && !isFawaselStore(context.cafeSlug)) return null;
   if (item.section) return `/dashboard/finance?section=${item.section}${item.view ? `&view=${item.view}` : ""}`;

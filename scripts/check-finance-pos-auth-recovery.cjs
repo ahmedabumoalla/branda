@@ -19,14 +19,15 @@ function hooks() {
 const snapshot = { cafe: { id: 'brand', slug: 'test-cafe' }, userId: 'cashier', shifts: [], documents: [] };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function scenario(kind, entry = false) {
-  const h = hooks(), navigations = [], events = {}, savedSales = [{ id: 'pending-invoice' }]; let locks = 0;
+  const h = hooks(), navigations = [], events = {}, savedSales = ['fresh', 'restored'].includes(kind) ? [] : [{ id: 'pending-invoice' }]; let locks = 0, requests = 0, interval;
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: kind !== 'offline' } });
   globalThis.location = { pathname: '/finance/test-cafe/pos' };
   globalThis.window = { location: { replace: href => navigations.push(href) }, addEventListener: (name, fn) => { events[name] = fn; }, removeEventListener() {} };
   globalThis.document = { visibilityState: 'visible', addEventListener() {}, removeEventListener() {} };
   globalThis.BroadcastChannel = undefined;
-  const realInterval = globalThis.setInterval; globalThis.setInterval = () => 0;
+  const realInterval = globalThis.setInterval; globalThis.setInterval = callback => { interval = callback; return 0; };
   globalThis.fetch = async () => {
+    requests++;
     if (kind === 'network') throw new Error('network');
     const status = Number(kind) || 200;
     return { status, ok: status === 200, json: async () => ({ message: 'login', snapshot: kind === 'mismatch' ? { ...snapshot, userId: 'other' } : snapshot }) };
@@ -38,19 +39,25 @@ async function scenario(kind, entry = false) {
   };
   try {
     const mod = load(entry ? 'components/finance/finance-offline-entry.tsx' : 'components/finance/use-pos-finance.ts', mocks);
-    const render = () => h.render(() => entry ? mod.FinanceOfflineEntry() : mod.usePosFinance(snapshot));
+    const render = () => h.render(() => entry ? mod.FinanceOfflineEntry() : mod.usePosFinance(snapshot, undefined, kind === 'restored'));
     let state = render(); await tick(); state = render(); await tick();
     if (!entry && ['signed-out', 'lock-failure'].includes(kind)) events['branda:pos-session-locked']();
     state = render(); await tick(); render();
     const shouldRedirect = ['401', '403', 'mismatch', 'post-auth', 'signed-out', 'lock-failure'].includes(kind);
     assert.deepEqual(navigations, shouldRedirect ? ['/finance/test-cafe/login'] : [], `${entry ? 'offline shell' : 'POS'} ${kind}`);
-    assert.deepEqual(savedSales, [{ id: 'pending-invoice' }], 'Invoices retained');
+    assert.deepEqual(savedSales, ['fresh', 'restored'].includes(kind) ? [] : [{ id: 'pending-invoice' }], 'Invoices retained');
+    if (kind === 'fresh') {
+      assert.equal(requests, 0, 'Fresh server snapshot is not immediately downloaded twice');
+      document.visibilityState = 'hidden'; interval(); await tick(); assert.equal(requests, 0, 'Idle hidden tab does not poll');
+      document.visibilityState = 'visible'; interval(); await tick(); assert(requests > 0, 'Visible cashier still refreshes');
+    }
+    if (kind === 'restored') assert(requests > 0, 'Offline-restored snapshot immediately revalidates');
     if (!entry && shouldRedirect) assert.equal(state.stale, true);
     if (entry && shouldRedirect) assert.equal(locks, 1);
   } finally { globalThis.setInterval = realInterval; }
 }
 (async () => {
-  for (const kind of ['401', '403', 'mismatch', 'post-auth', 'signed-out', 'lock-failure', 'network', '503', 'offline', 'valid']) await scenario(kind);
+  for (const kind of ['401', '403', 'mismatch', 'post-auth', 'signed-out', 'lock-failure', 'network', '503', 'offline', 'valid', 'fresh', 'restored']) await scenario(kind);
   for (const kind of ['401', '403', 'mismatch', 'network', '503', 'offline', 'valid']) await scenario(kind, true);
-  console.log('PASS 17 POS auth recovery cases: replace-once, auth/scope/logout, durable invoices, network/server/offline continuity');
+  console.log('PASS 19 POS auth recovery cases: replace-once, auth/scope/logout, durable invoices, network/server/offline continuity, fresh/restored startup and hidden polling');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1,0 +1,52 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto'),ts=require('typescript');
+let checks=0;const eq=(a,b,label)=>{assert.deepEqual(a,b,label);checks++;},ok=(value,label)=>{assert(value,label);checks++;};
+function load(file,mocks={},env={}){const out={};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;new Function('require','exports','process',code)(name=>name==='server-only'?{}:name in mocks?mocks[name]:require(name),out,{env});return out;}
+const active={NODE_ENV:'production',VERCEL:'1',VERCEL_ENV:'production',HOSPITAL_NOTIFICATIONS_ENABLED:'true'};
+const cafeId=crypto.randomUUID(),profileId=crypto.randomUUID(),cardId=crypto.randomUUID(),jobId=crypto.randomUUID(),lease=crypto.randomUUID();
+const receipt={brandName:'MIND',cafeId,number:17,createdAt:'2026-11-14T12:00:00Z',localReference:null,subtotal:115,discount:0,tax:15,total:115,paid:115,vatRate:15,taxInclusive:true,paymentMethod:'cash',lines:[{name:'Coffee',quantity:1,unitPrice:115,net:100,tax:15}]};
+const documentSchema=load('lib/finance/customer-receipt.ts');
+const tokens=load('lib/auth/loyalty-session-token.ts',{'@/lib/barndaksa/env':{getSupabaseServiceRoleKey:()=> 'mock-only-signature-secret-no-live-credentials'}});
+const context={kind:'account',phone:'966500000001',customerName:'Doctor',brand:{name:'MIND',slug:'mind-hospital'},document:null,invoiceEnabled:true,cafeId,profileId,cardId,googleIssued:false,cardCode:'never-place-raw-card-code-in-link'};
+function harness(options={}){
+ const calls=[];let queueStatus='pending';
+ const row={...context,...options.context};
+ const mocks={
+  '@/lib/supabase/admin':{createAdminClient(){calls.push({name:'client'});return{rpc:async(name,args)=>{
+   calls.push({name,args});
+   if(name==='hospital_customer_messages_claim'){if(options.claimError)return{error:{message:'offline'}};const data=queueStatus==='pending'?[{id:jobId,lease_token:lease}]:[];if(data.length)queueStatus='processing';return{data};}
+   if(name==='hospital_customer_message_context')return options.contextError?{error:{message:'offline'}}:{data:options.invalidContext?{kind:'wrong'}:row};
+   if(name==='hospital_customer_message_authorize'){if(options.authorizeError)return{error:{message:'timeout'}};queueStatus=options.denied?'skipped':'dispatching';return{data:!options.denied};}
+   if(name==='hospital_customer_message_finish'){if(options.finishError)return{data:false};queueStatus=args.p_outcome==='not_sent'?'pending':args.p_outcome;return{data:true};}
+   throw Error('Unexpected RPC '+name);
+  }};}},
+  '@/lib/auth/loyalty-session-token':tokens,
+  '@/lib/wallet/google':{getGoogleWalletSaveState:async identity=>{calls.push({name:'wallet',identity});if(options.walletError)throw Error('wallet offline');return options.walletSaved===true;}},
+  '@/lib/finance/customer-receipt':documentSchema,
+  '@/lib/data/finance-customer-receipt':{createFinanceCustomerReceiptPdf:async value=>{calls.push({name:'pdf',document:value});if(options.pdfError)throw Error('render unavailable');return Uint8Array.from([37,80,68,70]);}},
+  '@/lib/whatsapp/green-api':{
+   isGreenApiFinanceReceiptConfigured(){calls.push({name:'pdf-config'});return options.invoiceConfigured!==false;},
+   selectGreenApiPlatformSender:async()=>{calls.push({name:'sender'});if(options.senderError)throw Error('sender offline');return{mock:true};},
+   sendGreenApiCustomerMessage:async(sender,input)=>{calls.push({name:'send-text',sender,input});if(options.throwSend)throw Error('ambiguous transport');return{status:options.outcome??'queued',providerMessageId:(options.outcome??'queued')==='queued'?'provider-ack':undefined};},
+   sendGreenApiFinanceReceipt:async input=>{calls.push({name:'send-pdf',input});if(options.throwSend)throw Error('ambiguous transport');return{status:options.outcome??'queued',providerMessageId:(options.outcome??'queued')==='queued'?'provider-ack':undefined};},
+  },
+ };
+ const module=load('lib/commerce/hospital-customer-messages.ts',mocks,options.env??active);
+ return{calls,row,module,run:()=>module.runHospitalCustomerMessages(options.scope),status:()=>queueStatus};
+}
+const sent=h=>h.calls.filter(call=>call.name==='send-text'||call.name==='send-pdf');
+const outcome=h=>h.calls.filter(call=>call.name==='hospital_customer_message_finish').at(-1)?.args.p_outcome;
+(async()=>{
+ for(const env of [{},{...active,NODE_ENV:'development'},{...active,VERCEL_ENV:'preview'},{...active,VERCEL:undefined},{...active,HOSPITAL_NOTIFICATIONS_ENABLED:'false'}]){const h=harness({env});eq((await h.run()).disabled,true,'local/preview/disabled stays off');eq(h.calls.length,0,'disabled no DB, PDF, wallet or provider calls');}
+ let h=harness({scope:cafeId});let result=await h.run();eq(result.queued,1,'account accepted by provider');eq(h.calls.find(c=>c.name==='hospital_customer_messages_claim').args,{p_limit:1,p_cafe:cafeId},'scope and bounded claim');eq(sent(h).length,1,'single account message');const accountText=sent(h)[0].input.message;ok(accountText.includes('/c/mind-hospital/hospital-account'),'account URL on account kind');ok(!accountText.includes('/loyalty/'),'account message excludes loyalty URL');eq(h.calls.some(c=>c.name==='pdf'),false,'account does not create receipt');eq(outcome(h),'queued','provider acknowledgement recorded');
+ h=harness({context:{kind:'invoice',document:receipt}});result=await h.run();eq(result.queued,1,'invoice provider acknowledgement');eq(sent(h).map(c=>c.name),['send-pdf'],'invoice only sends PDF');const pdf=sent(h)[0].input;ok(pdf.message.includes('شكرًا لاختيارك مايند'),'invoice thanks customer');ok(pdf.message.includes('17'),'invoice number included');ok(!/https?:\/\/|\/hospital-account|\/loyalty\//.test(pdf.message),'invoice has no account/card link');eq(pdf.pdf,Uint8Array.from([37,80,68,70]),'rendered PDF attached');eq(pdf.invoiceNumber,17,'provider filename identifier');eq(h.calls.find(c=>c.name==='pdf').document,receipt,'real receipt schema accepts exact invoice projection');eq(h.calls.some(c=>c.name==='sender'),false,'invoice uses receipt sender path');
+ h=harness({context:{kind:'loyalty_card',googleIssued:true},walletSaved:false});await h.run();eq(sent(h).length,1,'unsaved wallet receives card');const cardText=sent(h)[0].input.message;ok(!cardText.includes('/hospital-account'),'card excludes account URL');const cardUrl=new URL(cardText.split('\n\n').at(-1));eq(cardUrl.pathname,'/loyalty/mind-hospital/access','card uses verified access route');const token=cardUrl.searchParams.get('token');ok(token,'signed token present');const identity=tokens.readLoyaltySessionToken(token,'mind-hospital');ok(identity,'real HMAC signature validates');eq([identity.cafeId,identity.profileId,identity.phoneHash],[cafeId,profileId,tokens.loyaltyIdentityHash(context.phone)],'card identity bound to tenant/profile/phone hash');ok(!cardText.includes(context.phone)&&!cardText.includes(context.cardCode),'link does not expose raw phone or card code');eq(tokens.readLoyaltySessionToken(token,'another-brand'),null,'cross-brand signed token rejected');const [payload,signature]=token.split('.');const tampered=Buffer.from(JSON.stringify({...JSON.parse(Buffer.from(payload,'base64url').toString()),profileId:crypto.randomUUID()})).toString('base64url')+'.'+signature;eq(tokens.readLoyaltySessionToken(tampered,'mind-hospital'),null,'tampered profile rejected');
+ h=harness({context:{kind:'loyalty_card',googleIssued:true},walletSaved:true});await h.run();eq(sent(h).length,0,'saved Google card not sent again');eq(outcome(h),'skipped','saved wallet skipped');eq(h.calls.some(c=>c.name==='hospital_customer_message_authorize'),false,'saved card skips before dispatch');
+ for(const patch of [{invoiceEnabled:false,document:receipt},{document:null}]){h=harness({context:{kind:'invoice',...patch}});await h.run();eq(sent(h).length,0,'disabled or missing invoice no send');eq(outcome(h),'skipped','disabled or missing invoice skipped');eq(h.calls.some(c=>c.name==='pdf'),false,'disabled or missing invoice no PDF work');}
+ h=harness({denied:true});await h.run();eq(sent(h).length,0,'authorize denial no send');eq(h.status(),'skipped','authorize denial is final DB state');
+ for(const options of [{contextError:true},{senderError:true},{authorizeError:true},{context:{kind:'invoice',document:receipt},invoiceConfigured:false},{context:{kind:'invoice',document:receipt},pdfError:true},{context:{kind:'loyalty_card',googleIssued:true},walletError:true}]){h=harness(options);await h.run();eq(sent(h).length,0,'pre-dispatch failure never sends');eq(outcome(h),'not_sent','transient pre-send safely released');}
+ for(const options of [{throwSend:true},{outcome:'unknown'},{context:{kind:'invoice',document:receipt},throwSend:true}]){h=harness(options);await h.run();eq(sent(h).length,1,'ambiguous provider attempted once');eq(outcome(h),'unknown','ambiguous provider state retained');await h.run();eq(sent(h).length,1,'unknown queue row not sent again');}
+ h=harness({outcome:'rejected'});await h.run();eq(outcome(h),'rejected','explicit rejection recorded');eq((await h.run()).claimed,0,'rejected queue row not re-claimed');
+ h=harness({invalidContext:true});await h.run();eq(sent(h).length,0,'malformed context no delivery');eq(outcome(h),'skipped','malformed context skipped');
+ h=harness({finishError:true});await assert.rejects(()=>h.run(),/acknowledgement unavailable/);checks++;eq(sent(h).length,1,'ack failure does not resend');
+ const files=['lib/commerce/hospital-customer-messages.ts','lib/auth/loyalty-session-token.ts','lib/finance/customer-receipt.ts','app/api/hospital/jobs/route.ts','scripts/check-hospital-customer-messages.cjs','package-lock.json'];const evidence={at:new Date().toISOString(),runtime:process.version,passed:true,checks,limits:['All database/provider/PDF/wallet operations mocked','Real receipt validation and loyalty HMAC token implementation','No actual messages or database writes'],inputs:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')]))};fs.mkdirSync('output/hospital-customer-messages-20261114',{recursive:true});fs.writeFileSync('output/hospital-customer-messages-20261114/verification.json',JSON.stringify(evidence,null,2));console.log(JSON.stringify({passed:true,checks}));
+})().catch(error=>{console.error(error);process.exitCode=1;});

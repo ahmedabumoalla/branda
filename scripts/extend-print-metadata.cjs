@@ -1,0 +1,1 @@
+const fs=require('fs');const file='lib/erp/templates.ts';let s=fs.readFileSync(file,'utf8');s=s.replace('"الكمية","الباركود"','"الكمية","الحالة","الباركود"');s=s.replace('<p>{{العميل}}</p><p>رقم المستند:', '<p>{{العميل}}</p><p>{{الموظف}}</p><p>{{التاريخ}}</p><p>{{الحالة}}</p><p>رقم المستند:');fs.writeFileSync(file,s);

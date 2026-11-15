@@ -11,6 +11,7 @@ import {
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { MenuProduct } from "@/lib/mock/menu";
 import { assertOwnerServiceEnabled } from "@/lib/data/owner-service-access";
+import { revalidatePath } from "next/cache";
 
 export async function fetchOwnerMenuAction(branchId?: string | null) {
   await assertOwnerServiceEnabled("menu");
@@ -34,6 +35,7 @@ export async function saveMenuProductAction(product: MenuProduct) {
     category: product.category,
     description: product.description,
     price: product.price,
+    priceMode: product.priceMode,
     priceOptions: product.priceOptions,
     butcherDetails: product.butcherDetails,
     calories: product.calories ?? null,
@@ -57,12 +59,15 @@ export async function saveMenuProductAction(product: MenuProduct) {
     promo: product.promo ?? null,
     eventTicketSettings,
   });
+  revalidatePath("/dashboard/system/inventory", "layout");
+  revalidatePath("/dashboard/system/purchases", "layout");
   return row.id;
 }
 
 export async function deleteMenuProductAction(productId: string) {
   await assertOwnerServiceEnabled("menu");
   await softDeleteMenuProduct(productId);
+  revalidatePath("/dashboard/system/inventory", "layout");
 }
 
 export async function saveMenuCategoriesAction(categories: MenuCategoryRecord[]) {

@@ -9,7 +9,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   disablePlatformMediaAction,
   savePlatformContactSettingsAction,
@@ -128,6 +128,9 @@ export function AdminContentPage({ initialData, configError }: Props) {
   );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const mediaActionLock = useRef(false);
+  const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
+  const [mediaError, setMediaError] = useState("");
 
   const media = initialData?.allMedia ?? [];
   const requests = initialData?.contactRequests ?? [];
@@ -169,15 +172,39 @@ export function AdminContentPage({ initialData, configError }: Props) {
 
   async function uploadMedia(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving || mediaActionLock.current) return;
     const formData = new FormData(event.currentTarget);
+    mediaActionLock.current = true;
     setSaving(true);
     setMessage("");
+    setMediaError("");
     try {
       await uploadPlatformMediaAction(formData);
-      window.location.reload();
+      // The action revalidates media props while preserving the text and contact drafts.
+      setMessage("تم رفع الملف وتحديث العرض");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "تعذر رفع الملف");
+      setMediaError(error instanceof Error ? error.message : "تعذر رفع الملف");
     } finally {
+      mediaActionLock.current = false;
+      setSaving(false);
+    }
+  }
+
+  async function deleteMedia(id: string) {
+    if (saving || mediaActionLock.current) return;
+    mediaActionLock.current = true;
+    setDeletingMediaId(id);
+    setSaving(true);
+    setMessage("");
+    setMediaError("");
+    try {
+      await disablePlatformMediaAction(id);
+      setMessage("تم حذف الملف من العرض");
+    } catch (error) {
+      setMediaError(error instanceof Error ? error.message : "تعذر حذف الملف حاول مجددًا");
+    } finally {
+      mediaActionLock.current = false;
+      setDeletingMediaId(null);
       setSaving(false);
     }
   }
@@ -189,7 +216,7 @@ export function AdminContentPage({ initialData, configError }: Props) {
       action={<BarndaksaLogo variant="dark" width={130} height={52} />}
     >
       {configError ? <p className="mb-5 rounded-2xl bg-red-500/10 p-4 font-black text-red-300">{configError}</p> : null}
-      {message ? <p className="mb-5 rounded-2xl bg-[#D9A33F]/10 p-4 font-black text-[#F6C35B]">{message}</p> : null}
+      {message ? <p role="status" className="mb-5 rounded-2xl bg-[#D9A33F]/10 p-4 font-black text-[#F6C35B]">{message}</p> : null}
 
       <BentoGrid className="mb-6">
         <BentoCard variant="cyber">
@@ -278,6 +305,7 @@ export function AdminContentPage({ initialData, configError }: Props) {
       <BentoGrid className="mb-6">
         <BentoCard variant="dark" span="2">
           <h2 className="mb-5 text-xl font-black text-[#F8F4EF]">الصور والفيديو المعروض</h2>
+          {mediaError ? <p role="alert" className="mb-5 rounded-2xl bg-red-500/10 p-4 font-black text-red-300">{mediaError}</p> : null}
           <form onSubmit={uploadMedia} className="mb-5 space-y-3 rounded-2xl border border-white/10 p-4">
             <select name="placement" required className="h-14 w-full rounded-2xl border border-[#D9A33F]/25 bg-[#211711] px-4 font-bold text-white">
               <option value="hero">الصورة الرئيسية مقاس مقترح 1200 × 900</option>
@@ -319,8 +347,9 @@ export function AdminContentPage({ initialData, configError }: Props) {
                     <p className="text-xs font-bold text-[#CBB29C]">{item.altText || "بدون وصف"}</p>
                   </div>
                 </div>
-                <button type="button" onClick={async () => { await disablePlatformMediaAction(item.id); window.location.reload(); }} className="rounded-xl bg-red-500/10 p-3 text-red-300">
-                  <Trash2 className="h-4 w-4" />
+                <button type="button" onClick={() => void deleteMedia(item.id)} disabled={saving} aria-busy={deletingMediaId === item.id} aria-label={`حذف ${item.altText || placementLabels[item.placement]}`} className="inline-flex items-center gap-2 rounded-xl bg-red-500/10 p-3 text-red-300 disabled:opacity-60">
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  {deletingMediaId === item.id ? <span>جار الحذف</span> : null}
                 </button>
               </div>
             ))}

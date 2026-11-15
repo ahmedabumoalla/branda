@@ -1,0 +1,17 @@
+.page { max-width:850px;display:grid;gap:20px;color:#3a2418 }
+.header { display:flex;gap:12px;align-items:flex-start }
+.header h2 { margin:0;font-size:23px;font-weight:800 }
+.header p,.card p { margin:8px 0 0;font-size:13px;line-height:1.8;color:#716052 }
+.card { display:flex;align-items:flex-start;gap:14px;border:1px solid #e6d9ca;background:#fffdf8;border-radius:18px;padding:22px }
+.card>div { flex:1;min-width:0 }
+.card>svg { flex-shrink:0 }
+.toggle { display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:44px;font-size:16px;font-weight:700;cursor:pointer }
+.toggle input { width:25px;height:25px;accent-color:#3a2418;flex-shrink:0;cursor:pointer }
+.save,.error button { display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:12px 20px;margin-top:16px;border:0;border-radius:12px;background:#3a2418;color:white;font:inherit;cursor:pointer }
+.save:disabled { opacity:.5;cursor:not-allowed }
+.error,.success { margin:0;border-radius:12px;padding:14px;line-height:1.8;font-size:13px }
+.error { color:#9b2c2c;background:#fff0ef }
+.error button { margin-inline-start:12px;margin-top:0 }
+.success { color:#276140;background:#edf7ef }
+.page :is(button,input,a):focus-visible { outline:3px solid #b67a30;outline-offset:4px }
+@media(max-width:550px) { .card { padding:16px;gap:10px }.toggle { font-size:14px }.header h2 { font-size:21px } }

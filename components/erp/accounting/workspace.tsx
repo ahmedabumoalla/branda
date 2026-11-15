@@ -17,6 +17,7 @@ import {ErpFiles} from '../files';
 import {TemplatePrintChooser} from '../templates/template-print-chooser';
 import {ErpFieldValues} from '../fields/field-values';
 import s from '../erp.module.css';
+import brand from '@/components/erp/brand-skin.module.css';
 const base='/dashboard/system/accounting';
 type Transition={action:'submit'|'approve'|'post'|'reverse'|'cancel';record:LedgerDraft};
 function CopyJournal({data,draft,today,busy,save}:{data:AccountingSnapshot;draft:LedgerDraft;today:string;busy:boolean;save:(action:string,payload:Record<string,unknown>,navigate?:boolean)=>Promise<boolean>}){const metadata=data.metadata[draft.id];return data.canCreate?<button className={s.button} disabled={busy} onClick={()=>void save('save',{title:`نسخة ${draft.title}`.slice(0,150),date:today,note:draft.note,currency:metadata?.currency||'SAR',exchangeRate:metadata?.exchangeRate||1,lines:(metadata?.lines||draft.lines).map(l=>({...l,debit:Number(l.debit),credit:Number(l.credit),costCenters:'costCenters'in l?l.costCenters:[]})),customValues:{}},true)}>نسخ القيد</button>:null;}
@@ -36,7 +37,7 @@ export function AccountingWorkspace({initial,section,recordId,edit,today,initial
  const accountWrite=['owner','accountant'].includes(data.role);
  function begin(action:Transition['action'],record:LedgerDraft){setReason('');setDate(today);setError('');setTransition({action,record});}
  const transitions:Record<Transition['action'],string>={submit:'إرسال للمراجعة',approve:'اعتماد القيد',post:'ترحيل القيد',reverse:'عكس القيد',cancel:'إلغاء القيد'};
- return <div dir="rtl" className={s.workspace}><header className={s.heading}><div><h1>الحسابات العامة</h1><small>{data.brand}</small></div><div className={s.inline}><Link className={s.button} href="/dashboard/system/assets">الأصول</Link><button className={s.button} disabled={busy} onClick={()=>{void refresh().catch(()=>setError('تعذر إعادة التحميل'));}}>تحديث</button></div></header>
+ return <div dir="rtl" className={`${s.workspace} ${brand.brand}`}><header className={s.heading}><div><h1>الحسابات العامة</h1><small>{data.brand}</small></div><div className={s.inline}><Link className={s.button} href="/dashboard/system/assets">الأصول</Link><button className={s.button} disabled={busy} onClick={()=>{void refresh().catch(()=>setError('تعذر إعادة التحميل'));}}>تحديث</button></div></header>
   <nav className={s.tabs} aria-label="الحسابات العامة">{accountingSections.map(([key,label])=><Link key={key} href={`${base}/${key}`} aria-current={section===key?'page':undefined}>{label}</Link>)}</nav>
   {notice&&<p className={s.notice} role="status">{notice}</p>}{error&&!catalog&&!transition&&!deleteCenter&&<p className={s.error} role="alert">{error}</p>}
   {section==='journals'&&(isNew||edit)?((isNew?data.canCreate:draft?.status==='draft'&&data.canUpdate)?<AccountingJournalEditor key={draft?.id||'new'} data={data} draft={draft} today={today} busy={busy} error={error} onSave={value=>void perform('save',value,true)}/>:<p className={s.empty}>لا يمكن تعديل هذا القيد</p>):section==='journals'&&recordId?(draft?<>

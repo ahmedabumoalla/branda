@@ -59,7 +59,7 @@ const boot = async h => { h.render(); h.effects(); runTimers(); await settle(); 
 const h = harness();
 check('initial state announces loading and sends no detail query', () => { assert.match(html(h), /جار تحميل سجل العملاء/); assert.equal(h.calls.length, 0); });
 h.effects(); runTimers(); await settle();
-check('directory requests one bounded name page only on mount', () => { assert.deepEqual(h.calls, [['list', { page: 0, query: '' }]]); });
+check('directory requests one bounded name page only on mount', () => { assert.deepEqual(h.calls, [['list', { page: 0, query: '', downloadedOnly: false }]]); });
 check('semantic table displays names without phone or hidden contact data', () => { const value = html(h); assert.match(value, /<table/); assert.match(value, /scope="col"/); assert.match(value, /عميل الاختبار/); assert.ok(!value.includes(detail.phone)); assert.ok(!value.includes('رقم الجوال')); });
 check('name is a keyboard accessible button that opens an individual dialog', () => { const target = button(h, `عرض ملف ${row.name}`); assert.equal(target.props['aria-haspopup'], 'dialog'); target.props.onClick(); const child = element(h, node => typeof node.type === 'function' && node.type.name === 'LoyaltyCustomerDetailDialog'); assert.equal(child.props.customer.id, row.id); assert.equal(h.calls.length, 1); child.props.onClose(); assert.ok(!element(h, node => typeof node.type === 'function' && node.type.name === 'LoyaltyCustomerDetailDialog')); });
 button(h, 'الصفحة التالية').props.onClick(); h.render(); h.effects(); runTimers(); await settle();
@@ -67,9 +67,9 @@ check('next page calls server with zero-based index', () => assert.equal(h.calls
 element(h, node => node.type === 'input').props.onChange({ target: { value: '  نورة ' } }); h.render(); h.effects();
 check('name search is debounced and resets pagination', () => { assert.equal([...timers.values()][0].delay, 300); assert.equal(h.calls.length, 2); });
 runTimers(); await settle();
-check('search sends trimmed query on first page', () => assert.deepEqual(h.calls.at(-1)[1], { page: 0, query: 'نورة' }));
+check('search sends trimmed query on first page', () => assert.deepEqual(h.calls.at(-1)[1], { page: 0, query: 'نورة', downloadedOnly: false }));
 button(h, 'مسح البحث').props.onClick(); h.render(); h.effects(); runTimers(); await settle();
-check('clear search resets name filter', () => assert.deepEqual(h.calls.at(-1)[1], { page: 0, query: '' }));
+check('clear search resets name filter', () => assert.deepEqual(h.calls.at(-1)[1], { page: 0, query: '', downloadedOnly: false }));
 h.cleanup();
 
 const deferred = [];
@@ -91,8 +91,23 @@ check('empty directory gives honest enrollment state without invented records', 
 const denial = await boot(harness(undefined, {}, { loadLoyaltyCustomersAction: async () => ({ ok: false, message: 'غير مصرح بعرض العملاء' }) }));
 check('server authorization error is shown without stale names or counts', () => { assert.match(html(denial), /غير مصرح/); assert.ok(!html(denial).includes(row.name)); }); denial.cleanup();
 
+const downloaded = await boot(harness(undefined, { downloadedOnly: true }));
+check('finance directory requests downloaded membership only', () => assert.deepEqual(downloaded.calls[0], ['list', { page: 0, query: '', downloadedOnly: true }]));
+button(downloaded, `عرض ملف ${row.name}`).props.onClick();
+check('selected finance customer preserves download membership for the phone dialog', () => {
+  const child = element(downloaded, node => typeof node.type === 'function' && node.type.name === 'LoyaltyCustomerDetailDialog');
+  assert.equal(child.props.downloadedOnly, true);
+});
+downloaded.cleanup();
+const downloadedModalCalls = [];
+const downloadedModal = harness('LoyaltyCustomerDetailDialog', { customer: row, downloadedOnly: true, onClose() {} }, { loadLoyaltyCustomerDetailAction: async (...args) => { downloadedModalCalls.push(args); return { ok: true, data: detail }; } });
+downloadedModal.render(); downloadedModal.effects(); await settle();
+check('finance phone request invokes membership-guarded detail action', () => assert.deepEqual(downloadedModalCalls, [[row.id, true]]));
+downloadedModal.cleanup();
+
 let closed = 0;
 const opener = document.activeElement;
+const previousFocusCount = opener.focused;
 const modal = harness('LoyaltyCustomerDetailDialog', { customer: row, onClose: () => { closed++; } });
 check('detail starts without any phone or copy-all control', () => { assert.ok(!html(modal).includes(detail.phone)); assert.ok(!html(modal).includes('نسخ')); });
 modal.effects(); await settle();
@@ -104,7 +119,7 @@ check('Escape delegates close to parent state', () => { assert.equal(prevented, 
 button(modal, 'إغلاق ملف العميل').props.onClick();
 check('visible close action dismisses the individual profile', () => assert.equal(closed, 2));
 modal.cleanup();
-check('dialog cleanup closes native modal and restores opener focus', () => { assert.equal(modal.modal.closes, 1); assert.equal(opener.focused, 1); });
+check('dialog cleanup closes native modal and restores opener focus', () => { assert.equal(modal.modal.closes, 1); assert.equal(opener.focused, previousFocusCount + 1); });
 
 let lateResolve;
 const late = harness('LoyaltyCustomerDetailDialog', { customer: row, onClose() {} }, { loadLoyaltyCustomerDetailAction: () => new Promise(resolve => { lateResolve = resolve; }) });

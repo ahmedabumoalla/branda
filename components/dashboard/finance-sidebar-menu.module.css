@@ -40,12 +40,11 @@
   .trigger { min-height: 36px; }
   .groupTrigger, .item { min-height: 32px; padding-block: 4px; }
 }
-@media (min-width: 1024px) {
   .direct .groups { margin: 0; padding: 0; border: 0; }
   .direct .groupTrigger { min-height: 46px; padding: 10px 13px; border-radius: 0; border-bottom: 1px solid var(--system-line); font-size: 12px; }
   .direct .groupTrigger .icon { width: 18px; height: 18px; }
   .direct .items { margin: 0; padding: 0; border: 0; }
-  .direct .item { min-height: 40px; padding: 9px 14px 9px 12px; border: 0; border-radius: 0; border-bottom: 1px solid var(--system-line); font-size: 11px; }
+  .direct .item { min-height: 44px; padding: 9px 14px 9px 12px; border: 0; border-radius: 0; border-bottom: 1px solid var(--system-line); font-size: 11px; }
   .direct .item[aria-current="page"] { box-shadow: inset -3px 0 var(--system-accent); }
   .direct .groupTrigger.active { box-shadow: 0 2px 5px rgb(0 0 0 / 15%); }
-}
+@media (min-width: 1024px) and (pointer: fine) { .direct .item { min-height: 40px; } }

@@ -1,5 +1,8 @@
 import { inventoryImageUrl, isInventoryImagePath } from "@/lib/finance/inventory-catalog";
 import "server-only";
+import { cashierPermissionsSchema } from "@/lib/finance/cashier-permissions";
+import { employeePermissionsSchema, type EmployeePermissions } from "@/lib/finance/employee-permissions";
+import { withEmployeeApproval } from "./employee-rpc-approval";
 import { cache } from "react";
 import { getActiveUser } from "@/lib/auth/active-user";
 import { getFinanceCashierMaintenance } from "@/lib/data/finance-cashier-maintenance";
@@ -14,6 +17,7 @@ import { getFinanceMaintenanceActor, resetFinanceBalances } from "./finance-shif
 import { after } from "next/server";
 import { dispatchShiftAlerts } from "./finance-shift-alerts";
 import { prepareFinancePosCustomerPayload } from "@/lib/finance/pos-customer-server";
+import { posPurchaseSchema, posSupplierPayoutSchema } from "@/lib/finance/pos-purchases";
 import { dispatchFinancePosCustomerMessages } from "./finance-pos-customer-messages";
 
 const commandSchema = z.object({
@@ -29,12 +33,9 @@ function throwIfFinanceUnavailable(error: { code?: string } | null) {
   }
 }
 
-export const getBrandFinanceContext = cache(async (slug?: string) => {
-  const client = await createClient();
-  const user = await getActiveUser(client);
-  if (!user) throw new Error("سجل الدخول للوصول إلى برندة المالية");
-  const scopedSlug = slug ?? erpRequestSlug();
-  const target = scopedSlug ? z.string().trim().min(1).max(120).regex(/^[a-z0-9-]+$/).parse(scopedSlug) : (await requireOwnerCafeContext()).slug;
+// Resolve aliases first so an implicit owner route and its explicit-slug child
+// share one authorized database read within this request, never between users.
+const readFinanceContext = cache(async (client: Awaited<ReturnType<typeof createClient>>, target: string) => {
   const { data, error } = await client.rpc("brand_finance_context", { p_slug: target });
   throwIfFinanceUnavailable(error);
   if (error) throw new Error("لا تملك صلاحية المالية لهذه العلامة أو أن الباقة غير مفعلة");
@@ -42,7 +43,18 @@ export const getBrandFinanceContext = cache(async (slug?: string) => {
   if (data?.maintenance && !await getFinanceCashierMaintenance(data.id)) {
     throw new Error("انتهت جلسة الصيانة افتح صيانة العلامة مجددًا");
   }
-  return { client, cafe: data as { id: string; name: string; slug: string; role: FinanceRole; businessCategory?: string; maintenance?: boolean } };
+  const cafe = data as { id: string; name: string; slug: string; role: FinanceRole; businessCategory?: string; maintenance?: boolean; employeePermissions?: EmployeePermissions };
+  const needsApproval = cafe.role !== "owner" && Object.values(cafe.employeePermissions ?? {}).some(rule => rule.enabled && !!rule.approverId);
+  return { client: withEmployeeApproval(client, cafe.id, needsApproval), cafe };
+});
+
+export const getBrandFinanceContext = cache(async (slug?: string) => {
+  const client = await createClient();
+  const user = await getActiveUser(client);
+  if (!user) throw new Error("سجل الدخول للوصول إلى برندة المالية");
+  const scopedSlug = slug ?? erpRequestSlug();
+  const target = scopedSlug ? z.string().trim().min(1).max(120).regex(/^[a-z0-9-]+$/).parse(scopedSlug) : (await requireOwnerCafeContext()).slug;
+  return readFinanceContext(client, target);
 });
 
 export async function getBrandFinanceSnapshot(slug?: string): Promise<FinanceSnapshot> {
@@ -88,12 +100,24 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
   if (command.operation === "staff" && cafe.role !== "owner") {
     const maintenance = await getFinanceCashierMaintenance(cafe.id);
     if (!maintenance) throw new Error("إدارة الكاشير تتطلب صلاحية المالك أو جلسة صيانة سارية");
-    const payload = z.object({ userId: z.uuid(), name: z.string().trim().min(2).max(100), role: z.literal("cashier"), active: z.boolean() }).parse(command.payload);
+    const payload = z.object({ userId: z.uuid(), name: z.string().trim().min(2).max(100), role: z.literal("cashier"), active: z.boolean(), posPermissions: cashierPermissionsSchema.optional(), employeePermissions: employeePermissionsSchema.optional() }).parse(command.payload);
     const result = await maintenance.execute("update", payload);
     if (result.error || !result.data?.id) throw new Error("تعذر تعديل الكاشير تحقق من جلسة الصيانة وحاول مجددًا");
     return result.data as FinanceCommandResult;
   }
-  if (!canFinanceOperation(cafe.role, command.operation)) throw new Error("لا تملك صلاحية تنفيذ هذه العملية");
+  if (!canFinanceOperation(cafe.role, command.operation, cafe.employeePermissions)) throw new Error("لا تملك صلاحية تنفيذ هذه العملية");
+  if (command.operation === "supplier_payout" && Object.hasOwn(command.payload, "supplierId")) {
+    const parsed = posSupplierPayoutSchema.safeParse(command.payload);
+    if (!parsed.success) throw new Error("راجع المورد والمبلغ وبيانات السداد");
+    command.payload = parsed.data;
+  }
+  if (command.operation === "shift_purchase" && Object.hasOwn(command.payload, "invoice")) {
+    const { expectedTotal, ...purchase } = command.payload;
+    const parsed = posPurchaseSchema.safeParse(purchase);
+    const total = z.number().finite().nonnegative().safeParse(expectedTotal);
+    if (!parsed.success || !total.success) throw new Error("راجع بيانات فاتورة المشتريات والمورد والأصناف");
+    command.payload = { ...parsed.data, expectedTotal: total.data };
+  }
   if (command.operation === "finance_reset") return resetFinanceBalances(cafe.id, command.payload, command.requestId);
   const butcherSale = command.operation === "sale" && cafe.businessCategory === "butcher_shops";
   if (butcherSale) {

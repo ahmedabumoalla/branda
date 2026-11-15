@@ -1,4 +1,6 @@
 import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+import { headers } from "next/headers";
+import { hospitalAccountRouteHeader } from "@/lib/commerce/hospital-account-routing";
 
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -33,8 +35,11 @@ async function loadCafeMeta(slug: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  requireStorefrontEnabled();
   const { slug } = await params;
+  if (slug === "mind-hospital" && (await headers()).get(hospitalAccountRouteHeader) === "1") {
+    return { title: "حسابك لدى مايند | MIND", robots: { index: false, follow: false }, referrer: "same-origin" };
+  }
+  requireStorefrontEnabled();
   const normalizedSlug = slug.trim().toLowerCase();
   const { cafe, settings, identity } = await cachedServerValue(
     `public-cafe-layout-meta:${normalizedSlug}`,
@@ -67,8 +72,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CafeSlugLayout({ children, params }: Props) {
-  requireStorefrontEnabled();
   const { slug } = await params;
+  if (slug === "mind-hospital" && (await headers()).get(hospitalAccountRouteHeader) === "1") return children;
+  requireStorefrontEnabled();
 
   return (
     <CafeThemePageProvider slug={slug}>

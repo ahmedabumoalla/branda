@@ -1,0 +1,22 @@
+.dialog { margin: auto; width: min(920px, calc(100vw - 24px)); max-width: none; max-height: calc(100dvh - 24px); padding: 0; overflow: hidden; border: 1px solid var(--finance-line, #e6dacb); border-radius: 24px; background: var(--finance-paper, #fffdf9); color: var(--finance-ink, #39251b); font: inherit; box-shadow: 0 24px 80px #39251b38; }
+.dialog[open] { display: flex; flex-direction: column; }
+.dialog::backdrop { background: #211b1780; backdrop-filter: blur(4px); }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-shrink: 0; padding: 20px 24px; border-bottom: 1px solid var(--finance-line, #e6dacb); }
+.header h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 21px; font-weight: 800; }
+.header button { display: grid; place-items: center; min-width: 44px; min-height: 44px; border: 0; border-radius: 14px; background: var(--finance-cream, #f7f2ea); color: inherit; cursor: pointer; }
+.dialog :is(button, a, input):focus-visible { outline: 3px solid var(--finance-accent, #82551d); outline-offset: 3px; }
+.content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px 24px; }
+.operator { margin: 0 0 16px; color: var(--finance-muted, #78675c); font-size: 13px; overflow-wrap: anywhere; }
+.issue { margin-block:0 18px; padding:14px; border:1px solid var(--finance-line,#e6dacb); border-radius:14px; }
+.issue summary { cursor:pointer; font-weight:700; min-height:36px; }
+.issueFields { margin:0; border:0; padding:12px 0 0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.issueFields label { display:grid; gap:7px; font-size:13px; }
+.issueFields input { min-height:44px; border:1px solid var(--finance-line,#e6dacb); border-radius:10px; padding:10px; font:inherit; min-width:0; width:100%; }
+.issueFields button { justify-self:start; }
+@media(max-width:600px) { .issueFields { grid-template-columns:minmax(0,1fr); } }
+.status { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px; padding: 24px 8px; line-height: 1.9; text-align: center; }
+.status p { flex-basis: 100%; margin: 0; }
+.spinner { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 600px) { .header, .content { padding: 16px; } .header h2 { font-size: 18px; } .dialog { border-radius: 18px; } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

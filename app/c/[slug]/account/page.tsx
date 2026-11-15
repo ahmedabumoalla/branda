@@ -746,9 +746,10 @@ function ExperienceProofPanel({
               <button
                 type="button"
                 onClick={onClose}
+                aria-label="إغلاق توثيق التجربة"
                 className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FCF8F3]"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
 

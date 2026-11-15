@@ -65,6 +65,11 @@
   .shiftReportPreview { padding: 8px; }
 }
 .header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+.sectionPage { min-width: 0; min-height: 0; padding: clamp(14px, 1.6vw, 24px); }
+.sectionPage .header { gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.sectionPage .header > div { min-width: 0; }
+.sectionPage .title { font-size: clamp(21px, 2vw, 27px); letter-spacing: 0; }
+.sectionPage .workspace { min-width: 0; }
 .invoiceManagementPage { --document-gutter: clamp(16px, 2.5vw, 36px); background: #f5f3ee; padding: 0 var(--document-gutter) var(--document-gutter); }
 .invoiceManagementHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; min-height: 45px; margin: 0 calc(-1 * var(--document-gutter)) 0; padding: 8px var(--document-gutter); background: var(--finance-ink); color: var(--finance-paper); }
 .invoiceManagementHeader > div { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }

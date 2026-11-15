@@ -53,7 +53,7 @@ export function FinanceReceipt({ document, snapshot, brand, copy = "customer", p
   const refund = document.kind === "refund";
   const original = snapshot.documents.find((item) => item.id === document.reference_id);
   const returned = document.refunded_total ?? (document.refunded ? document.total : 0);
-  const taxQr = !preparation && !preview ? financeReceiptQr(document, snapshot.cafe.businessCategory === "butcher_shops") : null;
+  const taxQr = !preparation && !preview ? financeReceiptQr(document, snapshot.cafe.slug === "mind-hospital" || snapshot.cafe.businessCategory === "butcher_shops") : null;
   const taxReady = taxQr?.kind === "tax";
   const title = preparation ? "طلب تحضير" : refund ? (taxReady ? "إشعار دائن ضريبي مبسط" : "فاتورة مرتجع") : document.kind === "sale" ? (taxReady ? "فاتورة ضريبية مبسطة" : "فاتورة مبيعات") : documentKindNames[document.kind] ?? "مستند مالي";
   return <article dir="rtl" data-finance-receipt data-receipt-preparation={preparation || undefined} className={receiptStyles.receipt} style={{ "--receipt-brand": brand?.color ?? "#3a2117" } as CSSProperties}>

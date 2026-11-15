@@ -8,12 +8,6 @@ function load(file, mocks = {}) {
   const compiled = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   new Function('require', 'exports', compiled)(name => {
     if (name in mocks) return mocks[name];
-    if (name === './use-pos-finance') return { usePosFinance: (...args) => ({ ...mocks['./use-finance'].useFinance(...args), offline: { sales: [], ready: true, online: true, logout: async () => {} } }) };
-    if (name === './use-finance-printer') return { useFinancePrinter: () => ({ ready: true, autoEnabled: true, handler: () => async () => {} }) };
-    if (name === '@/app/actions/finance-pos-customer') return {};
-    if (name === './finance-printer-settings') return { FinancePrinterSettings() {} };
-    if (name.startsWith('@/app/actions/')) return new Proxy({}, { get: (_, key) => () => { throw Error('Unmocked action: '+name+':'+String(key)); } });
-    if (name === 'server-only') return {};
     if (name.endsWith('.css')) return new Proxy({}, { get: (_, key) => key });
     if (name.startsWith('@/') || name.startsWith('./')) {
       const base = name.startsWith('@/') ? name.slice(2) : require('node:path').join(require('node:path').dirname(file), name);
@@ -65,20 +59,25 @@ const state=hooks();
 const POS=load('components/finance/finance-pos.tsx',{...common,react:state.api,'./use-finance':{useFinance:()=>({snapshot:data,pending:false,stale:false,clearFeedback(){}})}}).FinancePOS;
 const render=()=>state.render(POS,{initialSnapshot:data});let tree=render();
 const payment=t=>nodes(t).find(n=>n.type==='select'&&nodes(n).some(o=>o.type==='option'&&o.props.value==='credit'));
-const account=t=>find(t,n=>n.type?.name==='Field'&&n.props.label==='حساب التحصيل').props.children;
+const account=t=>nodes(t).find(n=>n.type==='select'&&nodes(n).some(o=>o.type==='option'&&o.props.value=== (payment(t).props.value==='cash'?'cash':payment(t).props.value+'-primary')));
 assert.equal(account(tree).props.value,'cash','Active shift drawer wins over primary cash');
-button(tree,'تحويل بنكي').props.onClick();tree=render();assert.equal(account(tree).props.value,'bank-primary');
+payment(tree).props.onChange({target:{value:'bank'}});tree=render();assert.equal(account(tree).props.value,'bank-primary');
 account(tree).props.onChange({target:{value:'bank'}});tree=render();assert.equal(account(tree).props.value,'bank','Explicit selection preserved');
-button(tree,'شبكة').props.onClick();tree=render();assert.equal(account(tree).props.value,'pos-primary');
+payment(tree).props.onChange({target:{value:'pos'}});tree=render();assert.equal(account(tree).props.value,'pos-primary');
 const saleState=hooks();const Sale=load('components/finance/finance-sale-form.tsx',{...common,react:saleState.api}).FinanceSaleForm;
 const saleRender=()=>saleState.render(Sale,{snapshot:data,pending:false,stale:false,error:'',onCancel(){},onSubmit:async()=>false});
 tree=saleRender();assert.equal(account(tree).props.value,'cash');payment(tree).props.onChange({target:{value:'bank'}});tree=saleRender();assert.equal(account(tree).props.value,'bank-primary');account(tree).props.onChange({target:{value:'bank'}});tree=saleRender();assert.equal(account(tree).props.value,'bank');
-// Shift custody now delegates to the dedicated cashier drawer flow, covered by
-// check-finance-cash-handovers-ui.cjs rather than the old primary-cash selector.
-const opState=hooks();const Operation=load('components/finance/finance-operation-form.tsx',{...common,react:opState.api}).FinanceOperationForm;
-const props={form:{operation:'shift_open'},snapshot:data,pending:false,error:'',onCancel(){},onSubmit:async()=>false};
-tree=opState.render(Operation,props);
-assert.equal(tree.type.name,'FinanceCashHandoverForm');
-assert.equal(tree.props.snapshot,data);
-assert.equal(tree.props.form.operation,'shift_open');
-console.log('PASS primary defaults: category selection, inactive exclusion, shift preservation, explicit choices, POS/invoice fallback and dedicated drawer delegation');
+if(fs.existsSync('components/finance/finance-shift-forms.tsx')) {
+const shiftState=hooks();const Shift=load('components/finance/finance-shift-forms.tsx',{...common,react:shiftState.api,'./finance-shift-attachments':{}}).FinanceShiftForm;
+const shiftProps={form:{operation:'shift_open'},snapshot:{...data,shifts:[]},pending:false,error:'',onCancel(){},onSubmit:async()=>false};
+tree=shiftState.render(Shift,shiftProps);assert.equal(find(tree,n=>n.type==='select').props.value,'cash-primary');
+const busyState=hooks();const BusyShift=load('components/finance/finance-shift-forms.tsx',{...common,react:busyState.api,'./finance-shift-attachments':{}}).FinanceShiftForm;
+tree=busyState.render(BusyShift,{...shiftProps,snapshot:{...shiftProps.snapshot,drawerAvailability:[{account_id:'cash-primary',busy:true}]}});assert.equal(find(tree,n=>n.type==='select').props.value,'cash');
+}
+else {
+ const opState=hooks();const Operation=load('components/finance/finance-operation-form.tsx',{...common,react:opState.api,'./finance-refund-form':{},'./sales-cashier-form':{}}).FinanceOperationForm;
+ const props={form:{operation:'shift_open'},snapshot:data,pending:false,error:'',onCancel(){},onSubmit:async()=>false};
+ tree=opState.render(Operation,props);assert.equal(find(tree,n=>n.type==='select'&&n.props.name==='accountId').props.defaultValue,'cash-primary');
+ tree=opState.render(Operation,{...props,form:{operation:'shift_open',values:{accountId:'cash'}}});assert.equal(find(tree,n=>n.type==='select'&&n.props.name==='accountId').props.defaultValue,'cash');
+}
+console.log('PASS primary defaults: category selection, inactive exclusion, shift preservation, explicit choices, POS and invoice fallback, new shift');

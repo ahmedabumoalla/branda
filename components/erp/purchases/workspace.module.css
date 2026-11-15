@@ -1,0 +1,63 @@
+.workspace.workspace { --ink:#39251b; --muted:#78675c; --gold:#d9b25e; --line:#e9dfd3; --wash:#faf7f2; background:var(--wash); border-radius:18px; overflow:visible; gap:12px; padding:12px 16px 16px; color:var(--ink); }
+.workspace.workspace > header { background:transparent; border:0; padding:0; gap:12px; }
+.workspace.workspace > header h1 { font-size:24px; font-weight:800; letter-spacing:-.4px; line-height:1.55; }
+.pageHeading { display:flex; align-items:center; gap:12px; min-width:0; }
+.pageIcon { width:46px; height:46px; flex:0 0 46px; display:grid; place-items:center; border:1px solid #e5d5bc; border-radius:12px; background:#f4ebdd; color:#92682d; }
+.recordCaption { display:flex; align-items:center; gap:10px; margin:5px 0 0; font-size:12px; color:var(--muted); }
+.subtitle { font-size:14px; color:var(--muted); margin:4px 0 0; }
+.headerActions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.workspace.workspace .headerActions a { display:inline-flex; align-items:center; justify-content:center; gap:8px; height:44px; min-height:44px; padding:0 15px; font-size:14px; line-height:1; white-space:nowrap; border:1px solid var(--line); background:#fff; color:var(--muted); }
+.workspace.workspace .headerActions a.createButton { padding-inline:18px; background:#39251b; color:#fff; border-color:#39251b; }
+.headerActions svg { flex-shrink:0; }
+.workspace.workspace .headerActions a:not(.createButton):hover { background:#f1e9dd; color:var(--ink); }
+.workspace.workspace a.createButton,.createButton { display:inline-flex; align-items:center; justify-content:center; gap:8px; background:#39251b; color:white; border:1px solid #39251b; font-weight:700; padding:11px 18px; border-radius:10px; text-decoration:none; }
+.workspace.workspace a.createButton:hover,.createButton:hover { background:#583a27; }
+.workspace.workspace .filters { margin:0; padding:18px 20px 22px; border:1px solid var(--line); border-radius:14px; background:white; min-width:0; box-shadow:0 3px 12px #39251b04; }
+.filterHeading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:15px; margin-bottom:17px; border-bottom:1px solid #f0e9e0; }
+.filterHeading > div { display:flex; align-items:center; flex-wrap:wrap; gap:9px; color:#95672a; }
+.filterHeading h2 { margin:0; color:var(--ink); font-size:15px; font-weight:700; }
+.filterCount { border-radius:6px; padding:2px 8px; background:#f2e8d8; color:#78501f; font-size:11px; }
+.workspace.workspace .filterHeading button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:34px; padding:6px 9px; border:0; background:transparent; color:#80634a; font-size:12px; white-space:nowrap; }
+.workspace.workspace .filterHeading button:hover:not(:disabled) { background:#f5eee4; }
+.workspace.workspace .filterHeading button:disabled { opacity:.45; }
+.filterFields { display:grid; grid-template-columns:minmax(200px,1.35fr) minmax(135px,.85fr) minmax(130px,.8fr) minmax(300px,1.45fr); gap:16px; align-items:end; }
+.filterFields[data-section="suppliers"],.filterFields[data-section="payments"] { grid-template-columns: minmax(200px,1.5fr) repeat(2,minmax(135px,1fr)); }
+.workspace.workspace .filterFields label { display:grid; gap:8px; font-size:12px; font-weight:500; color:var(--muted); min-width:0; }
+.workspace.workspace .filterFields :is(input,select) { height:46px; min-height:46px; padding:10px 12px; font-size:13px; background:#fffdfa; border-color:#e8ded1; }
+.searchControl { position:relative; min-width:0; }
+.searchControl > svg { position:absolute; inset-inline-start:14px; top:14px; color:#a08365; pointer-events:none; }
+.workspace.workspace .searchControl input { padding-inline-start:42px; background:#faf6ef; }
+.dateFilter { min-width:0; margin:0; padding:0; border:0; }
+.dateFilter legend { font-size:12px; color:var(--muted); padding:0; margin-bottom:8px; }
+.dateInputs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border:1px solid #e8ded1; border-radius:9px; background:#fffdfa; min-width:0; }
+.workspace.workspace .dateInputs label { display:flex; align-items:center; gap:5px; padding-inline:10px 6px; min-width:0; }
+.dateInputs label + label { border-inline-start:1px solid #e8ded1; }
+.dateInputs span { font-size:11px; flex-shrink:0; }
+.workspace.workspace .dateInputs input { width:100%; min-width:0; padding:8px 0; min-height:44px; height:44px; border:0; background:transparent; border-radius:4px; font-size:12px; }
+@media(max-width:1200px) { .filterFields { grid-template-columns:repeat(2,minmax(0,1fr)); }.searchField,.dateFilter { grid-column:1/-1; } }
+.invoiceList { min-width:0; background:white; border:1px solid var(--line,#e9dfd3); border-radius:14px; overflow:hidden; }
+.listHeading { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:17px 20px; border-bottom:1px solid var(--line,#e9dfd3); }
+.listHeading h2 { display:flex; gap:10px; align-items:center; margin:0; font-size:18px; font-weight:750; }
+.listHeading h2 span { font-size:12px; font-weight:600; background:#f3ede4; padding:3px 9px; border-radius:7px; }
+.listHeading p { margin:6px 0 0; font-size:13px; color:#78675c; }
+.listScroll { overflow-x:auto; }
+.workspace.workspace .listScroll table { width:100%; min-width:850px; border-collapse:collapse; }
+.workspace.workspace .listScroll th { padding:14px 20px; background:#faf8f4; font-size:12px; font-weight:600; color:#78675c; }
+.workspace.workspace .listScroll td { padding:14px 20px; font-size:14px; border-bottom:1px solid #f0e9df; }
+.listScroll tbody tr:hover { background:#fffcf7; }
+.workspace.workspace .invoiceLink { display:flex; align-items:center; gap:8px; color:#66421e; background:none; border:0; padding:0; font-weight:700; min-height:30px; }
+.workspace.workspace .openLink { border:0; background:#f7f2e9; padding:8px; min-height:36px; }
+.money { font-weight:750; font-variant-numeric:tabular-nums; }
+.status { display:inline-flex; align-items:center; border-radius:7px; padding:5px 10px; background:#f1eee9; color:#65574c; font-size:12px; }
+.status[data-status="posted"],.status[data-status="approved"] { background:#edf6ef; color:#2c6542; }
+.status[data-status="pending"] { background:#fff4db; color:#8a5b16; }
+.status[data-status="cancelled"],.status[data-status="rejected"] { background:#fbefed; color:#9c493f; }
+.emptyState { display:grid; justify-items:center; gap:12px; text-align:center; padding:54px 20px 58px; }
+.emptyIcon { display:grid; place-items:center; width:64px; height:64px; background:#f5eee2; border:1px solid #e9dcc7; border-radius:18px; color:#95692d; }
+.emptyState h3 { font-size:21px; margin:4px 0 0; color:#39251b; font-weight:750; }
+.emptyState p { max-width:440px; color:#78675c; line-height:1.9; margin:0 0 5px; font-size:14px; }
+.srOnly { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); }
+@media(max-width:760px) { .workspace.workspace { padding:14px; gap:16px; }.workspace.workspace > header h1 { font-size:23px; }.workspace.workspace .filters { padding:14px; }.filterFields { gap:12px; }.listHeading { padding:18px 16px; }.listHeading button { font-size:12px; }.emptyState { padding:36px 16px; } }
+@media(max-width:420px) { .filterFields { grid-template-columns:1fr; }.filterHeading { gap:6px; }.filterHeading h2 { font-size:14px; }.dateInputs { grid-template-columns:1fr; }.dateInputs label + label { border-inline-start:0; border-top:1px solid #e8ded1; }.listHeading { align-items:flex-start; }.emptyState h3 { font-size:19px; } }
+@media(max-width:900px) { .filterFields[data-section="suppliers"],.filterFields[data-section="payments"] { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .workspace.workspace > header { align-items:flex-start; }.pageIcon { width:40px; height:40px; flex-basis:40px; }.workspace.workspace > header h1 { font-size:21px; }.headerActions { width:100%; }.workspace.workspace .headerActions a.createButton { flex:1; }.subtitle { font-size:12px; }.filterFields[data-section="suppliers"],.filterFields[data-section="payments"] { grid-template-columns:1fr; }.listHeading { flex-wrap:wrap; }.listHeading button { min-height:40px; } }

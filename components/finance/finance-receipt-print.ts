@@ -22,7 +22,7 @@ th{text-align:right;font-size:11px;border-bottom:1px solid black}td,th{padding:1
 td{border-bottom:1px dashed #bbb}tr{break-inside:avoid}th:first-child{width:50%}th:nth-child(2){width:18%;text-align:center;white-space:nowrap}td:nth-child(2){text-align:center}th:last-child,td:last-child{text-align:left}
 td small{display:block;font-size:10px}[data-receipt-total]{border-top:1px solid black;border-bottom:2px solid black;font-size:16px;font-weight:700;padding:2mm 0;margin:1mm 0}
 [data-receipt-footer]{text-align:center;border-top:1px dashed #000;margin-top:3mm;padding-top:2mm;font-size:10px}
-[data-receipt-tax-qr]{display:block;width:32mm;height:32mm;max-width:100%;margin:3mm auto;break-inside:avoid}
+[data-receipt-qr]{display:flex;justify-content:center;margin:3mm 0;break-inside:avoid}[data-receipt-tax-qr]{display:block;width:32mm;height:32mm;max-width:100%}
 [data-receipt-note]{white-space:pre-wrap;margin:2mm 0}[data-receipt-preparation] th:first-child{width:78%}[data-receipt-preparation] td{font-size:16px;font-weight:700;padding:3mm 1mm}
 [data-receipt-preparation] td:last-child{font-size:20px;text-align:center}[data-receipt-preparation] th:last-child{text-align:center}
 article[data-finance-receipt]+article[data-finance-receipt]{break-before:page;page-break-before:always}

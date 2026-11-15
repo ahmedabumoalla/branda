@@ -99,6 +99,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             const codes = await detector.detect(canvas);
+            if (stopped) return;
             const rawValue = codes[0]?.rawValue?.trim();
             if (rawValue && rawValue !== lastDetectedRef.current) {
               lastDetectedRef.current = rawValue;
@@ -116,7 +117,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
         // نستمر بالمحاولة لأن بعض الإطارات تفشل حسب الإضاءة أو تركيز الكاميرا.
       }
 
-      timer = window.setTimeout(detectFrame, 180);
+      if (!stopped) timer = window.setTimeout(detectFrame, 180);
     }
 
     async function start() {
@@ -143,11 +144,18 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
           audio: false,
         });
 
+        // Permission may resolve after the dialog has closed or the effect restarted.
+        if (stopped) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
+        if (stopped) return;
 
         detector = new window.BarcodeDetector({
           formats: ["qr_code", "code_128", "code_39", "ean_13"],
@@ -156,6 +164,9 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
         setHint(`وجّه الكاميرا إلى QR ${codeLabel}`);
         timer = window.setTimeout(detectFrame, 250);
       } catch {
+        if (stopped) return;
+        streamRef.current?.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
         setError("تعذر تشغيل الكاميرا تأكد من السماح للمتصفح باستخدام الكاميرا");
       }
     }
@@ -203,7 +214,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
           <div className="w-full max-w-lg rounded-[28px] bg-[#17100d] p-4 text-white">
             <div className="mb-4 flex items-center justify-between">
               <p className="font-black">{label}</p>
-              <button type="button" onClick={() => setOpen(false)}>
+              <button type="button" aria-label="إغلاق قارئ البطاقة" onClick={() => setOpen(false)}>
                 <X className="h-5 w-5" />
               </button>
             </div>

@@ -1,4 +1,5 @@
 "use client";
+import { useFinancePosLocale } from "./finance-pos-locale";
 import { Ban, Check, CheckCheck, CircleAlert, CircleHelp, Clock3, LoaderCircle, Minus, WifiOff } from "lucide-react";
 import type { InvoiceMessageEntry } from "./invoice-message-cache";
 import styles from "./finance-invoice-message-status.module.css";
@@ -21,15 +22,16 @@ const reasons: Record<string, string> = {
   provider_failed: "تعذر الإرسال لدى مزود واتساب", provider_suspended: "خدمة واتساب متوقفة", status_unavailable: "تعذر التحقق من الحالة", cancelled: "أُلغيت الرسالة",
 };
 export function FinanceInvoiceMessageStatus({ entry, offline = false }: { entry?: InvoiceMessageEntry; offline?: boolean }) {
-  if (offline) return <span className={styles.status} data-tone="muted"><WifiOff size={15} aria-hidden="true" /><span>بعد مزامنة الفاتورة</span></span>;
-  if (!entry?.delivery) return <span className={styles.status} data-tone="muted" role="status">{entry?.error ? <CircleHelp size={15} aria-hidden="true" /> : <Clock3 size={15} aria-hidden="true" />}<span>{entry?.error ? "تعذر التحقق" : "جارٍ التحقق"}</span></span>;
+  const { t } = useFinancePosLocale();
+  if (offline) return <span className={styles.status} data-tone="muted"><WifiOff size={15} aria-hidden="true" /><span>{t("بعد مزامنة الفاتورة")}</span></span>;
+  if (!entry?.delivery) return <span className={styles.status} data-tone="muted" role="status">{entry?.error ? <CircleHelp size={15} aria-hidden="true" /> : <Clock3 size={15} aria-hidden="true" />}<span>{entry?.error ? t("تعذر التحقق") : t("جارٍ التحقق")}</span></span>;
   const state = states[entry.delivery.status] ?? states.unknown;
   const Icon = state.icon;
   const reason = entry.delivery.reason ? reasons[entry.delivery.reason] : undefined;
   return <div className={styles.cell} aria-busy={entry.loading}>
-    <span className={styles.status} data-tone={state.tone} title={state.hint}><Icon size={15} aria-hidden="true" /><span>{state.text}</span></span>
-    {reason && <small>{reason}</small>}
-    {entry.error && <small>آخر حالة محفوظة تعذر تحديثها</small>}
-    <span className={styles.srOnly}>{state.hint}</span>
+    <span className={styles.status} data-tone={state.tone} title={t(state.hint)}><Icon size={15} aria-hidden="true" /><span>{t(state.text)}</span></span>
+    {reason && <small>{t(reason)}</small>}
+    {entry.error && <small>{t("آخر حالة محفوظة تعذر تحديثها")}</small>}
+    <span className={styles.srOnly}>{t(state.hint)}</span>
   </div>;
 }

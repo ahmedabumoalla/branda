@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 
 export function SessionKeeper() {
   const pathname = usePathname();
+  const protectedArea = /^\/(dashboard|admin|finance|representative|cashier|pager)(\/|$)/.test(pathname);
   useEffect(() => {
-    if (!/^\/(dashboard|admin|finance|representative|cashier|pager)(\/|$)/.test(pathname)) return;
+    if (!protectedArea) return;
     let pending = false;
     const controller = new AbortController();
     const refresh = async () => {
@@ -23,6 +24,6 @@ export function SessionKeeper() {
     window.addEventListener("online", refresh);
     void refresh();
     return () => { controller.abort(); window.clearInterval(timer); window.removeEventListener("focus", refresh); window.removeEventListener("online", refresh); };
-  }, [pathname]);
+  }, [protectedArea]);
   return null;
 }

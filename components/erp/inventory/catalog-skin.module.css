@@ -1,0 +1,232 @@
+/* Branda identity skin for the menu view inside Inventory > Products and Services only.
+   The standalone menu page shares the same component and keeps its current look,
+   because this class is added only when the page runs as the inventory catalog.
+   Classes from menu-dashboard.module.css are matched by their local name. */
+.menu.menu {
+  --menu-ink: var(--barndaksa-espresso-dark, #311912);
+  --menu-muted: var(--barndaksa-muted-text, #806a5e);
+  --menu-line: var(--barndaksa-border-sand, #e7d7c6);
+  --menu-surface: #f8f1e7;
+  --menu-gold: #b8842c;
+  --c-espresso: var(--barndaksa-espresso-dark, #311912);
+  --c-coffee: var(--barndaksa-coffee-brown, #4a281d);
+  --c-brown: var(--barndaksa-brand-brown, #6b3a25);
+  --c-gold: var(--barndaksa-gold-accent, #d9a33f);
+  --c-soft-gold: var(--barndaksa-soft-gold, #f0c568);
+  --c-cream: var(--barndaksa-cream-base, #fcf8f3);
+  --c-sand: var(--barndaksa-warm-sand, #f2e7d9);
+  --c-in: #2f6b4f;
+  --c-in-soft: #e7f1ea;
+}
+
+/* Menu and stock switch */
+.menu.menu > nav a {
+  min-height: 78px;
+  padding: 14px 18px;
+  border-color: var(--menu-line);
+  border-radius: 18px;
+  color: var(--c-coffee);
+  box-shadow: 0 14px 30px -28px rgba(49, 25, 18, 0.6);
+}
+.menu.menu > nav a > svg {
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border-radius: 13px;
+  background: var(--c-sand);
+  color: var(--c-brown);
+}
+.menu.menu > nav a strong { font-size: 16px; font-weight: 800; }
+.menu.menu > nav a[aria-current="page"] {
+  border-color: var(--c-espresso);
+  background: linear-gradient(135deg, var(--c-espresso), var(--c-coffee) 60%, var(--c-brown));
+  color: var(--c-cream);
+  box-shadow: 0 20px 36px -26px rgba(49, 25, 18, 0.85), inset 0 -3px 0 var(--c-gold);
+}
+.menu.menu > nav a[aria-current="page"] small { color: var(--c-soft-gold); }
+.menu.menu > nav a[aria-current="page"] > svg {
+  background: rgba(240, 197, 104, 0.16);
+  color: var(--c-soft-gold);
+}
+.menu.menu > nav a:hover { border-color: var(--c-gold); }
+
+/* Header band */
+.menu.menu > div > header {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 20px;
+  padding: 24px 28px 28px;
+  border-bottom: 0;
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(240, 197, 104, 0.2), transparent 55%),
+    linear-gradient(135deg, var(--c-espresso), var(--c-coffee) 58%, var(--c-brown));
+  box-shadow: 0 22px 44px -30px rgba(49, 25, 18, 0.75);
+}
+.menu.menu > div > header::after {
+  content: "";
+  position: absolute;
+  inset-inline: 28px;
+  bottom: 12px;
+  border-bottom: 2px dotted rgba(240, 197, 104, 0.55);
+}
+.menu.menu > div > header h1 { color: var(--c-cream); font-weight: 800; }
+.menu.menu > div > header > div:first-child > p:first-child { color: var(--c-soft-gold); font-size: 12px; font-weight: 700; }
+.menu.menu > div > header > div:first-child > p:last-child { color: #ead8c5; }
+.menu.menu > div > header [class*="secondaryAction"] {
+  border-color: rgba(240, 197, 104, 0.45);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--c-cream);
+  font-weight: 700;
+}
+.menu.menu > div > header [class*="secondaryAction"]:hover { background: rgba(255, 255, 255, 0.16); }
+.menu.menu > div > header [class*="primaryAction"] {
+  border-color: var(--c-soft-gold);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--c-soft-gold), var(--c-gold));
+  color: var(--c-espresso);
+  font-weight: 800;
+  box-shadow: 0 10px 22px -12px rgba(240, 197, 104, 0.9);
+}
+
+/* Summary tiles */
+.menu.menu section[class*="summaryGrid"] {
+  gap: 14px;
+  border: 0;
+  background: none;
+}
+.menu.menu [class*="metricCard"] {
+  position: relative;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--menu-line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 14px 30px -26px rgba(49, 25, 18, 0.55);
+}
+.menu.menu [class*="metricCard"]::before {
+  content: "";
+  position: absolute;
+  inset-block: 16px;
+  inset-inline-start: 0;
+  width: 4px;
+  border-radius: 4px;
+  background: var(--c-gold);
+}
+.menu.menu [class*="metricCard"]:first-child {
+  border-color: transparent;
+  background: linear-gradient(160deg, var(--c-sand), var(--c-cream));
+}
+.menu.menu [class*="metricCard"]:nth-child(2)::before { background: var(--c-in); }
+.menu.menu [class*="metricCard"]:nth-child(4)::before { background: var(--menu-muted); }
+.menu.menu [class*="metricLabel"] { font-size: 13px; font-weight: 700; }
+.menu.menu [class*="metricValue"] { font-size: 30px; font-weight: 800; }
+
+/* Toolbar */
+.menu.menu section[class*="toolbar"] {
+  border-radius: 16px;
+  box-shadow: 0 14px 30px -26px rgba(49, 25, 18, 0.5);
+}
+.menu.menu section[class*="toolbar"] select,
+.menu.menu [class*="categoryButton"] {
+  border-radius: 11px;
+  font-weight: 700;
+}
+.menu.menu [class*="categoryButton"] { background: var(--c-sand); color: var(--c-coffee); }
+.menu.menu [class*="catalogTitle"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 800;
+}
+.menu.menu [class*="catalogTitle"]::before {
+  content: "";
+  width: 6px;
+  height: 22px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--c-soft-gold), var(--c-gold));
+}
+
+/* Product cards */
+.menu.menu [class*="productGrid"] {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
+  gap: 16px;
+}
+.menu.menu [class*="productCard"] {
+  border-radius: 18px;
+  box-shadow: 0 16px 34px -30px rgba(49, 25, 18, 0.6);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+.menu.menu [class*="productCard"]:hover {
+  border-color: var(--c-gold);
+  box-shadow: 0 22px 40px -28px rgba(49, 25, 18, 0.7);
+  transform: translateY(-2px);
+}
+.menu.menu [class*="productOverview"] > div:first-child {
+  border-color: var(--menu-line);
+  border-radius: 14px;
+  background: linear-gradient(160deg, var(--c-cream), var(--c-sand));
+}
+.menu.menu [class*="productCard"] [class*="categoryLabel"] { color: var(--c-brown); font-weight: 700; }
+.menu.menu [class*="productCard"] [class*="productName"] { font-weight: 800; }
+.menu.menu [class*="productCard"] [class*="availability"] {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.menu.menu [class*="productCard"] [class*="availabilityOn"] { background: var(--c-in-soft); color: var(--c-in); }
+.menu.menu [class*="productCard"]:not(:has([class*="availabilityOn"])) [class*="productOverview"] > div:first-child {
+  filter: grayscale(0.75);
+  opacity: 0.7;
+}
+.menu.menu [class*="productCard"] [class*="priceRow"] {
+  margin: 14px 0 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--c-cream);
+}
+.menu.menu [class*="productCard"] [class*="priceValues"] > strong { font-weight: 800; }
+.menu.menu [class*="productCard"] > [class*="secondaryAction"] {
+  width: 100%;
+  margin-bottom: 12px;
+  border-color: #ecd9b0;
+  border-radius: 11px;
+  background: #fdf6e6;
+  color: var(--c-brown);
+  font-weight: 700;
+}
+.menu.menu [class*="productCard"] > [class*="secondaryAction"]:hover:not(:disabled) { border-color: var(--c-gold); }
+.menu.menu [class*="productCard"] :is([class*="cardButton"], [class*="iconButton"]) {
+  border-radius: 11px;
+  font-weight: 700;
+  transition: background-color 0.15s, border-color 0.15s, filter 0.15s;
+}
+.menu.menu [class*="productCard"] [class*="editButton"] {
+  border-color: var(--c-espresso);
+  background: linear-gradient(180deg, var(--c-coffee), var(--c-espresso));
+  color: var(--c-soft-gold);
+}
+.menu.menu [class*="productCard"] [class*="editButton"]:hover:not(:disabled) { filter: brightness(1.15); }
+.menu.menu [class*="productCard"] [class*="toggleButton"] { background: var(--c-sand); color: var(--c-coffee); }
+.menu.menu [class*="productCard"] [class*="iconButton"]:hover:not(:disabled) { border-color: var(--c-gold); background: var(--c-cream); }
+.menu.menu [class*="emptyState"] { border-radius: 18px; background: #fff; font-weight: 700; }
+
+@media (max-width: 560px) {
+  .menu.menu > div > header { padding: 18px 18px 24px; border-radius: 16px; }
+  .menu.menu > div > header::after { inset-inline: 18px; }
+  .menu.menu > nav a { min-height: 68px; padding: 10px 12px; border-radius: 14px; }
+  .menu.menu > nav a > svg { width: 36px; height: 36px; padding: 8px; }
+  .menu.menu section[class*="summaryGrid"] { gap: 10px; }
+  .menu.menu [class*="metricCard"] { padding: 14px 16px; }
+  .menu.menu [class*="metricValue"] { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu.menu [class*="productCard"] { transition: none; }
+  .menu.menu [class*="productCard"]:hover { transform: none; }
+}

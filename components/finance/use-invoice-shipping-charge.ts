@@ -7,7 +7,7 @@ type Context = Extract<Awaited<ReturnType<typeof getFinanceInvoiceShippingCharge
 type Selection = Context["selection"];
 type Loaded = { slug: string; draftId: string | null; context: Context };
 
-export function useInvoiceShippingCharge(slug: string, initialDraftId?: string) {
+export function useInvoiceShippingCharge(slug: string, initialDraftId?: string, reader?: (draftId: string | null) => ReturnType<typeof getFinanceInvoiceShippingChargeContext>) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
   const [loading, setLoading] = useState(true), [error, setError] = useState("");
@@ -16,7 +16,7 @@ export function useInvoiceShippingCharge(slug: string, initialDraftId?: string) 
   const fetchContext = useCallback((draftId: string | null) => {
     const version = ++requests.current.version;
     activeDraft.current = draftId;
-    return getFinanceInvoiceShippingChargeContext(slug, draftId).then(result => {
+    return (reader ? reader(draftId) : getFinanceInvoiceShippingChargeContext(slug, draftId)).then(result => {
       if (version !== requests.current.version) return false;
       if (!result.ok) { setError(result.message); return false; }
       const next = { slug, draftId, context: result.data };
@@ -25,7 +25,7 @@ export function useInvoiceShippingCharge(slug: string, initialDraftId?: string) 
       return true;
     }).catch(() => { if (version === requests.current.version) setError("تعذر تحميل خيارات الشحن أعد المحاولة"); return false; })
       .finally(() => { if (version === requests.current.version) setLoading(false); });
-  }, [slug]);
+  }, [slug, reader]);
   const loadDraft = useCallback((draftId: string | null) => { setLoading(true); setError(""); return fetchContext(draftId); }, [fetchContext]);
   useEffect(() => {
     const pending = requests.current;

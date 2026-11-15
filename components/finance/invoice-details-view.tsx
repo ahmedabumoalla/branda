@@ -11,7 +11,7 @@ function dateOnly(value: string) {
 }
 
 /** Pure presentation of persisted invoice data; no inferred due date or salesperson. */
-export function renderInvoiceDetails(detail: InvoiceDetail, snapshot: FinanceSnapshot) {
+export function renderInvoiceDetails(detail: InvoiceDetail, snapshot: FinanceSnapshot, onCustomerStatement?: (id: string) => void) {
   const document = detail.document, issued = detail.invoice;
   const shippingCharge = issued?.shippingCharge;
   const shippingSubtotal = shippingCharge ? document.tax_inclusive ? shippingCharge.sar.total : shippingCharge.sar.amount : 0;
@@ -22,7 +22,7 @@ export function renderInvoiceDetails(detail: InvoiceDetail, snapshot: FinanceSna
   const ratio = collectible > 0 ? Math.min(100, Math.max(0, paid / collectible * 100)) : 0;
   const latest = [...detail.activity].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
   const creator = detail.creator.id === snapshot.userId ? "المستخدم الحالي" : detail.creator.name;
-  const rows = issued ? issued.lines.map((line, index) => ({ key: String(index), productId: line.productId, name: line.name, description: line.description, unitName: line.unitName, notes: line.notes ?? [], price: line.price, quantity: line.quantity, net: line.net, tax: line.tax })) : document.lines.map(line => ({ key: line.id, productId: line.product_id, name: line.name, description: "", unitName: undefined, notes: [] as string[], price: line.unit_price, quantity: line.quantity, net: line.net, tax: line.tax }));
+  const rows = issued ? issued.lines.map((line, index) => ({ key: String(index), productId: line.productId, name: line.name, description: line.description, unitName: line.unitName, notes: line.notes ?? [], price: line.price, quantity: line.quantity, net: line.net, tax: line.tax })) : document.lines.map(line => ({ key: line.id, productId: line.product_id, name: line.name, description: line.description || "", unitName: line.unit_label || undefined, notes: [] as string[], price: line.unit_price, quantity: line.quantity, net: line.net, tax: line.tax }));
   const methods = new Map<string, number>();
   function add(account: string | null, amount: number) { if (amount) methods.set(account ?? "", Math.round(((methods.get(account ?? "") ?? 0) + amount) * 100) / 100); }
   add(document.account_id, document.paid);
@@ -34,7 +34,7 @@ export function renderInvoiceDetails(detail: InvoiceDetail, snapshot: FinanceSna
   const delivery = detail.metadata.delivery ?? issued?.delivery;
   return <div className={styles.detailsView}>
     <div className={styles.detailsSummary}>
-      <div className={styles.customerCard}><span className={styles.customerAvatar} aria-hidden="true">{Array.from(customer.trim())[0] || <UserRound size={32} />}</span><div><span className={styles.caption}>فاتورة إلى</span><strong>{customer}</strong>{(detail.customer?.phone || issued?.customer.phone) && <small dir="ltr">{detail.customer?.phone || issued?.customer.phone}</small>}{(issued?.customer.vatNumber || detail.customer?.tax_number) && <small>الرقم الضريبي {issued?.customer.vatNumber || detail.customer?.tax_number}</small>}</div></div>
+      <div className={styles.customerCard}><span className={styles.customerAvatar} aria-hidden="true">{Array.from(customer.trim())[0] || <UserRound size={32} />}</span><div><span className={styles.caption}>فاتورة إلى</span><strong>{detail.customer && onCustomerStatement ? <button type="button" className={styles.customerStatement} title="فتح كشف حساب العميل" onClick={() => onCustomerStatement(detail.customer!.id)}>{customer}</button> : customer}</strong>{(detail.customer?.phone || issued?.customer.phone) && <small dir="ltr">{detail.customer?.phone || issued?.customer.phone}</small>}{(issued?.customer.vatNumber || detail.customer?.tax_number) && <small>الرقم الضريبي {issued?.customer.vatNumber || detail.customer?.tax_number}</small>}</div></div>
       <dl className={styles.dateTrack}><div><dt>تاريخ الإصدار</dt><dd><time dateTime={issued?.issuedAt ?? document.created_at} dir="ltr">{dateOnly(issued?.issuedAt ?? document.created_at)}</time></dd></div><div><dt>تاريخ الاستحقاق</dt><dd>غير محدد</dd></div></dl>
       <div className={styles.collectionCard}><span className={styles.caption}>إجمالي المبلغ</span><strong className={styles.grandAmount}><Numeric value={document.total} money /></strong><div className={styles.collectionTrack} role="img" aria-label={`نسبة السداد ${Math.round(ratio)}٪ من المبلغ بعد المرتجعات`}><span style={{ width: `${ratio}%` }} /></div><div className={styles.collectionAmounts}><div><strong><Numeric value={paid} /></strong><span>مدفوعة</span></div><div><strong><Numeric value={document.outstanding} /></strong><span>المبلغ المستحق</span></div></div>{returned > .009 && <small>المرتجع <Numeric value={returned} money /></small>}</div>
     </div>

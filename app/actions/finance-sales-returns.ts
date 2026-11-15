@@ -6,6 +6,8 @@ import { canFinance } from "@/lib/finance/permissions";
 import { normalizeSalesReturnQuery, salesReturnFiltersSchema, type SalesReturnDetail, type SalesReturnStockResult, type SalesReturnSummary } from "@/lib/finance/sales-return";
 import { actionResult } from "@/lib/platform/action-result";
 import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
+import { salesReturnPreview } from "@/lib/finance/sales-return-print";
+import type { InvoiceDetail } from "@/lib/finance/invoice-management";
 
 function failure(error: { code?: string; message: string }): never {
   if (["PGRST202", "42P01", "42883"].includes(error.code ?? "")) throw new Error("تحتاج الفواتير المرتجعة إلى تحديث قاعدة البيانات");
@@ -34,6 +36,22 @@ export async function readSalesReturnAction(id: string, slug: string) {
     return data as SalesReturnDetail;
   }, "تعذر تحميل الفاتورة المرتجعة");
 }
+export async function readSalesReturnPrintAction(id: string, slug: string) {
+  return actionResult(async () => {
+    if (!z.uuid().safeParse(id).success) throw new Error("الفاتورة المرتجعة غير متاحة");
+    const { client, cafe } = await getBrandFinanceContext(slug);
+    if (!canFinance(cafe.role, "reports")) throw new Error("لا تملك صلاحية عرض الفاتورة المرتجعة");
+    const returned = await client.rpc("brand_finance_sales_returns", { p_cafe_id: cafe.id, p_id: id });
+    if (returned.error) failure(returned.error);
+    if (!returned.data) throw new Error("المرتجع غير معتمد أو غير متاح");
+    const record = returned.data as SalesReturnDetail;
+    const source = await client.rpc("brand_finance_invoice_detail", { p_cafe_id: cafe.id, p_id: record.sourceId });
+    if (source.error) failure(source.error);
+    if (!source.data) throw new Error("تعذر تحميل الفاتورة الأصلية للمرتجع");
+    return salesReturnPreview(record, { cafe }, source.data as InvoiceDetail);
+  }, "تعذر إعداد مستند المرتجع للطباعة");
+}
+
 export async function transitionSalesReturnStockAction(input: unknown, slug: string) {
   return actionResult(async () => {
     const parsed = z.object({ id: z.uuid(), revision: z.number().int().positive(), operation: z.enum(["receive", "reject"]), requestId: z.uuid(), note: z.string().max(500).default("") }).strict().safeParse(input);

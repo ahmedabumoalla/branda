@@ -1,5 +1,75 @@
 # Branda current handoff
 
+الأولوية الحالية — ١٥ نوفمبر ٢٠٢٦: [فحص المنصة وتحسين الأداء والإصدار المجمع](PLATFORM_AUDIT_20261115.md)
+أجاز المستخدم النشر بعد الفحص، والدمج المعزول والفحص النهائي قيد التنفيذ، وتُراجع حالة النشر الفعلية في [متابعة الإصدار](GITHUB_VERCEL_STATUS.md)
+حالات عدم النشر أدناه توثيق للجولات السابقة
+
+الحالة الأحدث — ١٥ نوفمبر ٢٠٢٦: [تسليم مايند والمالية المحلي](MIND_FINANCE_LOCAL_CURRENT_20261115.md) و[متابعة GitHub وVercel](GITHUB_VERCEL_STATUS.md)
+
+التعديلات الأخيرة غير منشورة، وترحيلات قاعدة البيانات المصرح بها موثقة منفصلة، وعبارات النشر أدناه تخص الإصدارات التاريخية
+
+مايند ونقوة الحاشي: [الكاشير العربي والإنجليزي وتوحيد الواجهة والفاتورة الحرارية — منشور ومتحقق](NAQWA_RECEIPTS_MIND_CASHIER_20261114.md)
+
+الديم: [التقرير المختصر للحساب والمتجر والمعمل — منشور ومفعل](ALDEEM_CLIENT_BRIEF_20261114.md)
+
+مقص ٧٧: [تبديل العدادات وتنظيف الزخارف وتحديث اسم بطاقة المحفظة](MQAS77_WALLET_REFINE_20261114.md)
+
+مايند المستشفى: [الحساب والمالية والمنيو والكاشير مفعلون ونقل الفرع مكتمل](MIND_HOSPITAL_20261114.md)
+
+أحدث نسخة محلية: [المالية الأصلية الأوف لاين مع المستخدمين والمخزون والكاشير](OFFLINE_ORIGINAL_FINANCE_20261114.md)
+
+تحديث متجر فواصل: [التصميم الجديد وحركة المتجر وتجربة الجوال](FAWASEL_CAMPAIGN_MOTION_20261114.md)
+
+أحدث تصحيح: [تصميم الكاشير المحلي مطابق لترتيب الكاشير الحالي](OFFLINE_POS_MATCH_20261114.md)
+
+أحدث تسليم: [متجر فواصل ونسخة الملحمة المحلية](FAWASEL_STORE_AND_BUTCHER_20261114.md)
+
+إصلاح لاحق: [تعذر حفظ إعدادات الفواتير وحدود الخصم أثناء الصيانة](FINANCE_INVOICE_SAVE_FIX_20261114.md)
+
+أحدث تحديث: [صلاحيات الصيانة المالية وإعدادات الفواتير والاستيراد](FINANCE_MAINTENANCE_AND_IMPORT_20261114.md)
+
+أحدث طلب مستقل: [نسخة المحاسبة الأساسية المحلية لويندوز](OFFLINE_ACCOUNTING_WINDOWS_20261113.md) جاهزة لجهاز واحد دون إنترنت، منفصلة عن حالة النشر السحابي التالية
+
+النظام المتكامل وتحسينات السرعة وترتيب العمليات وإعادة المرسل الأساسي منشورة ومتحقق منها، والدليل المصور النهائي جاهز
+
+- [سجل المهمة](../task-state.md)
+- [التسليم النهائي للنظام والدليل](INTEGRATED_RELEASE_AND_GUIDE_20261113.md)
+- [التسليم الحالي والأدلة التاريخية](ERP_CURRENT_EXECUTION_20261113.md)
+- [تحسينات السرعة وحدود قياسها](PLATFORM_PERFORMANCE_20261113.md)
+- [إعادة المرسل الأساسي والاحتياطي](PRIMARY_SENDER_RESTORATION_20261113.md)
+- [الدليل المصور](../../output/coffee-dashboard-guide/دليل-لوحة-تجربة-الكوفي.pdf)
+
+## سجل الانتقال السابق — تاريخي
+
+تحديث الانتقال للحساب الثاني — ١٣ نوفمبر ٢٠٢٦
+
+- [سجل المهمة](../task-state.md) ثم [تسليم التنفيذ والاستئناف](ERP_CURRENT_EXECUTION_20261113.md) هما مدخل الحالة الحالية
+- [ابدأ هنا](../../ابدأ-هنا-تسليم-خريطة-النظام.md) مدخل مختصر للحساب الثاني
+- النظام المتكامل محلي وغير منشور، ترحيلات نطاق النظام والأرشفة الموثقة ٧٣، والفجوات الخمس الأخيرة مغلقة وفق أدلتها، لا تدل هذه الحالة على اكتمال كل تفاصيل المرجع
+- الفحص المجمع السابق نجحت أوامره لكن مدخلاته تغيرت أثناء التشغيل، لا يُعتمد نجاحًا كليًا مستقرًا، المتبقي وحدود التحقق في التسليم الحالي
+- مهمة الانتقال توثيقية فقط، لا بدء تنفيذ أو نشر أو تجارب بيانات جديدة لمجرد تغيير الحساب
+
+## آخر نطاقات مكتملة
+
+- [المتجر العام](ERP_PUBLIC_STORE_20261113.md)
+- [علاقات منشئ التقارير](ERP_REPORT_RELATIONS_20261113.md)
+- [حقول ونماذج المقاولات](ERP_CONTRACTING_FORMS_20261113.md)
+- ملاحظات المهام ووسومها: التنفيذ والتطبيق والتحقق اللاحق موثقة في التسليم الحالي
+
+## آخر إصدارات منشورة منفصلة
+
+- [فلاتر فترات عملاء البيجر](PAGER_CUSTOMER_PERIOD_FILTERS_20261113.md): آخر نسخة إنتاج موثقة
+- [تذكيرات التجديد وقسم العملاء الموحد](SUBSCRIPTION_REMINDERS_CUSTOMER_SECTION_20261113.md)
+- [دليل عملاء البيجر وأيقونات المحفظة](PAGER_DIRECTORY_WALLET_ICONS_20261113.md)
+- [المرسل الاحتياطي وجلسات الكاشير](BACKUP_SENDER_PERSISTENT_CASHIER_20261113.md): مع استثناء تذكيرات التجديد اللاحق
+
+## المرجع والسجل التاريخي
+
+- [الخريطة المكتملة](REFERENCE_MAP_COMPLETED_20261113.md) و[العارض](../../خريطة-المنصة-المرجعية.html)
+- [انتقال الحساب التاريخي](CODEX_ACCOUNT_TRANSFER_20261108.md): اقرأ التجاوز الحالي أولًا
+- [السجل المستمر السابق](REFERENCE_MAP_COMPLETION_IN_PROGRESS_20261112.md) و[نقطة ١٠٢٣](REFERENCE_MAP_CONTINUATION_20261112_1023.md) و[اتصال المرجع القديم](CODEX_ACCOUNT_TRANSFER_20261112_REFERENCE_MAP.md) مراجع تاريخية لا نقطة استئناف
+- تعليمات إيقاف التنفيذ السابقة وإعلانات المراحل أثناء العمل لا تتقدم على التسليم الحالي، لا تعِد العينات المحفوظة أو الترحيلات المطبقة
+
 - OWNER CONTACT PRE-DELIVERY FIX 2026-11-11: Auth completion was blocked by settings entitlement before trial start. Applied20261111154614: dedicated settings guard permits only private admin-proven same-owner contact-only nested edits; shared entitlement guard/owner Auth trigger/other columns and services retained. Actual pre/post rollback PASS;14SQL/4server/9handoff/35subscription/types/text/lint PASS;323advisors unchanged. Concurrent owner save observed with new phone synchronized and handoff ready; no task-committed customer edits/messages/trial activation. See [handoff](OWNER_CONTACT_PRE_DELIVERY_20261111.md)
 
 - JAMILA OLIVE CARD 2026-11-11: Default loyalty background #53621c, cream #ffe8c5, lime accent #d5ed60; original logo/six stamps/free drink retained, saved palettes retain precedence. Live identity row absent. Jamila26/types/text PASS. No DB/customer/message changes or installed-wallet push. Generated inline color preview requested. See [handoff](JAMILA_OLIVE_CARD_20261111.md)

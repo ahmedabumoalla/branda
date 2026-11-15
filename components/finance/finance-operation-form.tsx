@@ -6,6 +6,9 @@ import type { FinanceOperation, FinanceSnapshot } from "@/lib/finance/brand-fina
 import { getPrimaryFinanceAccount, previewFinanceTotals } from "@/lib/finance/brand-finance";
 import { Field, Numeric, accountKindNames } from "./finance-ui";
 import { canFinance, financeStaffRoles, financeRoleLabels } from "@/lib/finance/permissions";
+import { EmployeePermissionFields, readEmployeePermissions } from "./employee-permission-fields";
+import { cashierPermissionsFromEmployeePolicy, type EmployeePermissions } from "@/lib/finance/employee-permissions";
+import type { FinanceRole } from "@/lib/finance/permissions";
 import styles from "./finance.module.css";
 import { FinanceRefundForm } from "./finance-refund-form";
 import { SalesCashierForm } from "./sales-cashier-form";
@@ -30,6 +33,7 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
   const [discount, setDiscount] = useState(0);
   const [treasuryKind, setTreasuryKind] = useState(String(values.kind ?? "receipt"));
   const [staffMode, setStaffMode] = useState(operation === "staff_create" ? "new" : "existing");
+  const [staffRole, setStaffRole] = useState<FinanceRole>((values.role as FinanceRole) ?? "cashier");
   const [localError, setLocalError] = useState("");
   const [lastCompletedDay] = useState(() => new Date(Date.now()-86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Riyadh"}));
   const [stockMode, setStockMode] = useState("adjust");
@@ -48,7 +52,7 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
 
   if (operation === "supplier_payout") return <FinanceSupplierPayoutForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
   if (operation === "shift_open" || operation === "shift_close") return <FinanceCashHandoverForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
-  if (operation === "sales_cashier_create") return (snapshot.canAdminister || snapshot.canManageCashiers) ? <SalesCashierForm pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} /> : <p className={styles.notice}>إضافة الكاشيرات متاحة لمالك العلامة</p>;
+  if (operation === "sales_cashier_create") return (snapshot.canAdminister || snapshot.canManageCashiers) ? <SalesCashierForm snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} /> : <p className={styles.notice}>إضافة الكاشيرات متاحة لمالك العلامة</p>;
   if (operation === "refund") return <FinanceRefundForm document={snapshot.documents.find(document => document.id === values.documentId)} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
   if (operation === "shift_purchase") return <FinancePosPurchaseForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} onBusyChange={onInventoryBusyChange} onInventorySaved={onInventorySaved} onInventoryUnitsChanged={onInventoryUnitsChanged} />;
   if (["shift_open", "shift_close", "shift_accept", "shift_handover", "supplier_payout"].includes(operation)) return <FinanceShiftForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
@@ -90,6 +94,13 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
       delete payload.quantity;
     }
     if (operation === "party" || operation === "staff") payload.active = data.get("active") === "on";
+    if (operation === "staff" || operation === "staff_create") {
+      try {
+        const policy = readEmployeePermissions(data);
+        payload.employeePermissions = policy;
+        if (policy) payload.posPermissions = cashierPermissionsFromEmployeePolicy(policy);
+      } catch { setLocalError("راجع الصلاحيات ومسؤولي الموافقة ثم أعد المحاولة"); return; }
+    }
     for (const key of ["accountId", "partyId", "menuProductId", "toAccountId"]) if (payload[key] === "") delete payload[key];
     await onSubmit(operation === "staff" && staffMode === "new" ? "staff_create" : operation, payload);
   }}>
@@ -128,8 +139,8 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
       </>}
       {(operation === "staff" || operation === "staff_create") && <>
         {!values.userId && <Field label="طريقة إضافة الموظف"><select value={staffMode} onChange={(event) => setStaffMode(event.target.value)}><option value="existing">ربط حساب مسجل</option><option value="new">إنشاء حساب مالي جديد</option></select></Field>}
-        <div className={styles.fields}><Field label="اسم الموظف"><input name="name" required maxLength={100} defaultValue={String(values.name ?? "")} /></Field>{!values.userId && <Field label="البريد الإلكتروني"><input name="email" type="email" required maxLength={180} defaultValue={String(values.email ?? "")} /></Field>}<Field label="الصلاحية"><select name="role" defaultValue={String(values.role ?? "cashier")}>{financeStaffRoles.filter(role => snapshot.canAdminister || role === "cashier").map(role=><option key={role} value={role}>{financeRoleLabels[role]}</option>)}</select></Field>{staffMode === "new" && <Field label="كلمة المرور المؤقتة"><input name="password" type="password" required minLength={12} autoComplete="new-password" /></Field>}</div>
-        {staffMode === "existing" && <label className={styles.check}><input type="checkbox" name="active" defaultChecked={values.active !== false} />موظف نشط</label>}
+        <div className={styles.fields}><Field label="اسم الموظف"><input name="name" required maxLength={100} defaultValue={String(values.name ?? "")} /></Field>{!values.userId && <Field label="البريد الإلكتروني"><input name="email" type="email" required maxLength={180} defaultValue={String(values.email ?? "")} /></Field>}<Field label="الدور الوظيفي"><select name="role" value={staffRole} onChange={event => setStaffRole(event.target.value as FinanceRole)}>{financeStaffRoles.filter(role => snapshot.canAdminister || role === "cashier").map(role=><option key={role} value={role}>{financeRoleLabels[role]}</option>)}</select></Field>{staffMode === "new" && <Field label="كلمة المرور المؤقتة"><input name="password" type="password" required minLength={12} autoComplete="new-password" /></Field>}</div>
+        <EmployeePermissionFields snapshot={snapshot} role={staffRole} employeeId={typeof values.userId === "string" ? values.userId : undefined} value={values.employeePermissions as EmployeePermissions | undefined} posPermissions={values.posPermissions as import("@/lib/finance/cashier-permissions").CashierPermissions | undefined} />{staffMode === "existing" && <label className={styles.check}><input type="checkbox" name="active" defaultChecked={values.active !== false} />موظف نشط</label>}
       </>}
       {operation === "journal" && <>
         {journalLines.map((line, index) => <div className={styles.rowFields} key={line.key}><Field label={`الحساب ${index + 1}`}><select required value={line.accountId} onChange={(event) => setJournalLines(journalLines.map((item) => item.key === line.key ? { ...item, accountId: event.target.value } : item))}><option value="">اختر الحساب</option>{activeAccounts.filter((account) => !["inventory", "receivable", "payable", "employee"].includes(account.kind)).map((account) => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field><Field label="مدين"><input type="number" min="0" step="0.01" value={line.debit} onChange={(event) => setJournalLines(journalLines.map((item) => item.key === line.key ? { ...item, debit: Number(event.target.value) } : item))} /></Field><Field label="دائن"><input type="number" min="0" step="0.01" value={line.credit} onChange={(event) => setJournalLines(journalLines.map((item) => item.key === line.key ? { ...item, credit: Number(event.target.value) } : item))} /></Field><button className={styles.iconButton} type="button" disabled={journalLines.length <= 2} aria-label={`حذف سطر القيد ${index + 1}`} onClick={() => setJournalLines(journalLines.filter((item) => item.key !== line.key))}><Trash2 size={16} /></button></div>)}

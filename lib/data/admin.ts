@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
@@ -221,7 +222,7 @@ function mapDbPlan(row: Record<string, unknown>, defaultPlanIds?: Set<string>): 
   };
 }
 
-export async function getPlatformPlans(): Promise<PlatformPlan[]> {
+export const getPlatformPlans = cache(async (): Promise<PlatformPlan[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("platform_plans")
@@ -231,7 +232,7 @@ export async function getPlatformPlans(): Promise<PlatformPlan[]> {
 
   if (error) throw error;
   return (data ?? []).map((row) => mapDbPlan(row));
-}
+});
 
 export async function getAdminPlatformPlans(): Promise<PlatformPlan[]> {
   await requirePlatformAdmin();

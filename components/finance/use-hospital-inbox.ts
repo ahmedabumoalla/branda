@@ -19,11 +19,12 @@ export function useHospitalInbox(slug: string, cafeId: string, userId: string) {
       if (!result.ok) { setFailed(true); return; }
       const initialLoad = !started.current;
       if (initialLoad) { try { const value = JSON.parse(sessionStorage.getItem(`mind-inbox:${slug}:${userId}`) ?? "[]"); if (Array.isArray(value)) value.filter(item => typeof item === "string").slice(-500).forEach(id => seen.current.add(id)); } catch { /* The in-memory seen set remains available. */ } started.current = true; }
-      const fresh = initialLoad ? null : unseenHospitalMenuOrder(result.orders, seen.current);
+      const fresh = unseenHospitalMenuOrder(result.orders, seen.current);
       result.orders.forEach(order => seen.current.add(order.id));
       if (seen.current.size > 500) seen.current = new Set([...seen.current].slice(-500));
       try { sessionStorage.setItem(`mind-inbox:${slug}:${userId}`, JSON.stringify([...seen.current])); } catch { /* Never persist names, phones or order details. */ }
-      setOrders(result.orders); setFailed(false); setLoaded(true); if (fresh) setNotice(fresh);
+      setOrders(result.orders); setFailed(false); setLoaded(true);
+      setNotice(current => fresh ?? (current && result.orders.some(order => order.id === current.id && order.source === "menu" && order.status === "pending") ? current : null));
     } catch { if (alive.current) setFailed(true); }
     finally {
       inFlight.current = false;
@@ -34,7 +35,7 @@ export function useHospitalInbox(slug: string, cafeId: string, userId: string) {
     alive.current = true;
     const first = setTimeout(() => void refresh(), 0);
     const visible = () => { if (document.visibilityState === "visible") void refresh(); };
-    const timer = setInterval(visible, 15000);
+    const timer = setInterval(() => void refresh(), 15000);
     let realtimeCleanup = () => {};
     try {
       const client = createClient();

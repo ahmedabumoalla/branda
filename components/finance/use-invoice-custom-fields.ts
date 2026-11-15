@@ -5,7 +5,7 @@ import { getFinanceInvoiceCustomFieldContext, saveFinanceInvoiceCustomFieldValue
 import { invoiceCustomFieldValueError, type InvoiceCustomFieldContext, type InvoiceCustomFieldValues } from "@/lib/finance/invoice-custom-fields";
 
 type Loaded = { slug: string; draftId: string | null; context: InvoiceCustomFieldContext };
-export function useInvoiceCustomFields(slug: string, initialDraftId?: string) {
+export function useInvoiceCustomFields(slug: string, initialDraftId?: string, reader?: (draftId: string | null) => ReturnType<typeof getFinanceInvoiceCustomFieldContext>) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [values, setValues] = useState<InvoiceCustomFieldValues>({});
   const [loading, setLoading] = useState(true), [error, setError] = useState("");
@@ -14,7 +14,7 @@ export function useInvoiceCustomFields(slug: string, initialDraftId?: string) {
   const fetchContext = useCallback((draftId: string | null) => {
     const version = ++requests.current.version;
     activeDraft.current = draftId;
-    return getFinanceInvoiceCustomFieldContext(slug, draftId).then(result => {
+    return (reader ? reader(draftId) : getFinanceInvoiceCustomFieldContext(slug, draftId)).then(result => {
       if (version !== requests.current.version) return false;
       if (!result.ok) { setError(result.message); return false; }
       const next = { slug, draftId, context: result.data };
@@ -24,11 +24,11 @@ export function useInvoiceCustomFields(slug: string, initialDraftId?: string) {
       setLoaded(next); setValues(nextValues); setError(""); return true;
     }).catch(() => { if (version === requests.current.version) setError("تعذر تحميل حقول الفاتورة أعد المحاولة"); return false; })
       .finally(() => { if (version === requests.current.version) setLoading(false); });
-  }, [slug]);
+  }, [slug, reader]);
   const loadDraft = useCallback((draftId: string | null) => { setLoading(true); setError(""); return fetchContext(draftId); }, [fetchContext]);
   useEffect(() => { const pending = requests.current; if (!initialDraftId) void fetchContext(null); return () => { pending.version++; }; }, [initialDraftId, fetchContext]);
   const context = loaded?.slug === slug ? loaded.context : null;
-  const settings = context?.issued && context.savedSettings ? context.savedSettings : context?.settings ?? null;
+  const settings = context?.supported === false ? null : context?.issued && context.savedSettings ? context.savedSettings : context?.settings ?? null;
   function validate(required = false) {
     for (const field of settings?.fields ?? []) { const message = invoiceCustomFieldValueError(field, chosen.current[field.id], required); if (message) return `${field.label}: ${message}`; }
     return null;
@@ -36,9 +36,16 @@ export function useInvoiceCustomFields(slug: string, initialDraftId?: string) {
   async function save(draftId: string, draftRevision: number) {
     const current = state.current;
     if (!current || current.slug !== slug || loading || error) return { ok: false as const, message: "أعد تحميل حقول الفاتورة قبل الحفظ" };
+    if (current.context.supported === false && Object.keys(chosen.current).length > 0) return { ok: false as const, message: "تعذر حفظ قيم الحقول الإضافية قبل تفعيلها" };
     const invalid = validate(); if (invalid) return { ok: false as const, message: invalid };
     const result = await saveFinanceInvoiceCustomFieldValues(slug, { draftId, draftRevision, revision: current.draftId === draftId ? current.context.revision : 0, settingsRevision: current.context.settingsRevision, values: chosen.current });
     if (!result.ok) { activeDraft.current = draftId; setError(result.message); return result; }
+    if (result.data.skipped) {
+      // No custom-field record was saved. The original draft/issuer remains authoritative.
+      const next = { ...current, draftId, context: { ...current.context, supported: false } };
+      state.current = next; activeDraft.current = draftId; setLoaded(next);
+      return { ok: true as const, skipped: true as const };
+    }
     const next = { ...current, draftId, context: { ...current.context, ...result.data, hasSelection: true } };
     state.current = next; activeDraft.current = draftId; chosen.current = result.data.values;
     setLoaded(next); setValues(result.data.values); return { ok: true as const };

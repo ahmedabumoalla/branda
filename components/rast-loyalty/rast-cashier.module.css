@@ -1,6 +1,11 @@
 /* The cashier may also run in a narrow embedded panel. Size to its container. */
 .page { min-height: 100dvh; min-width: 0; width: 100%; padding: 12px; background: var(--cashier-paper); color: var(--cashier-ink); }
 .page, .page * { box-sizing: border-box; }
+.page.embedded { min-height: 0; padding: 0; background: transparent; font: inherit; }
+.embedded .frame { max-width: none; }
+.embedded .body { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.embedded .scanPanel { padding: 16px; border-radius: 14px; }
+.embedded .readStatus { margin-bottom: 0; }
 .frame { width: 100%; max-width: 56rem; min-width: 0; margin-inline: auto; container-type: inline-size; }
 .header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid color-mix(in srgb, var(--cashier-ink) 20%, transparent); }
 .identity { min-width: 0; overflow-wrap: anywhere; }

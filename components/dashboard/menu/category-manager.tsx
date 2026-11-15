@@ -225,13 +225,14 @@ export function CategoryManager({
             </h3>
             <button
               type="button"
+              aria-label="إغلاق نموذج التصنيف"
               onClick={() => {
                 setFormOpen(false);
                 setForm(emptyForm);
               }}
               className="rounded-xl p-2 hover:bg-[#F8F4EF]"
             >
-              <X className="h-5 w-5" />
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
 
@@ -416,17 +417,19 @@ export function CategoryManager({
                 <button
                   type="button"
                   onClick={() => openEdit(category)}
+                  aria-label={`تعديل تصنيف ${category.name}`}
                   className="grid h-9 w-9 place-items-center rounded-xl bg-[#F8F4EF]"
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Pencil className="h-4 w-4" aria-hidden="true" />
                 </button>
                 <button
                   type="button"
                   onClick={() => void removeCategory(category.id)}
+                  aria-label={`حذف تصنيف ${category.name}`}
                   disabled={deletingCategoryId === category.id}
                   className="grid h-9 w-9 place-items-center rounded-xl bg-red-50 text-red-700"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
             </div>

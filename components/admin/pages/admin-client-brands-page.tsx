@@ -94,7 +94,7 @@ function PreviewCard({ item }: { item: PlatformHomePromotionItem }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           {item.brandLogoUrl ? (
-            <img src={item.brandLogoUrl} alt={item.brandName} className="h-12 w-12 rounded-2xl bg-white object-contain" />
+            <img src={item.brandLogoUrl} alt={item.brandName} loading="lazy" decoding="async" className="h-12 w-12 rounded-2xl bg-white object-contain" />
           ) : (
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F6C35B]/15">
               <Building2 className="h-5 w-5 text-[#F6C35B]" />
@@ -247,7 +247,7 @@ export function AdminClientBrandsPage({ initialData, configError }: Props) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 gap-3">
                       {item.imageUrl || item.brandLogoUrl ? (
-                        <img src={item.imageUrl || item.brandLogoUrl} alt={item.title} className="h-14 w-14 rounded-2xl bg-white object-cover" />
+                        <img src={item.imageUrl || item.brandLogoUrl} alt={item.title} loading="lazy" decoding="async" className="h-14 w-14 rounded-2xl bg-white object-cover" />
                       ) : (
                         <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F6C35B]/15">
                           <Icon className="h-5 w-5 text-[#F6C35B]" />
@@ -299,8 +299,8 @@ export function AdminClientBrandsPage({ initialData, configError }: Props) {
                         <p className="text-xs font-bold text-[#7A6255]">{item.brandName}</p>
                       </div>
                     </div>
-                    <button type="button" onClick={() => removePromotion(index)} className="rounded-xl bg-red-500/10 p-3 text-red-300">
-                      <Trash2 className="h-4 w-4" />
+                    <button type="button" onClick={() => removePromotion(index)} aria-label={`حذف عرض ${item.title || item.brandName}`} className="rounded-xl bg-red-500/10 p-3 text-red-300">
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </button>
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">

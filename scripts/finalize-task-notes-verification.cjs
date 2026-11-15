@@ -1,0 +1,11 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
+const apply=read('output/erp-database/20261113163332_erp_task_rich_notes.sql.result.json'),ui=read('output/integrated-system/erp-task-notes-ui-verification.json');
+const probe=read('output/erp-database/task-notes-before-apply.result.json'),cleanup=read('output/erp-database/task-notes-readback.result.json'),post=read('output/erp-database/task-notes-postapply.result.json');
+const file='supabase/migrations/20261113163332_erp_task_rich_notes.sql',md5=crypto.createHash('md5').update(fs.readFileSync(file)).digest('hex');
+assert.equal(apply.exitCode,0);assert.equal(apply.md5,md5);assert.equal(ui.passed,true);assert.equal(probe.exitCode,0);assert.equal(post.exitCode,0);assert.equal(cleanup.exitCode,0);
+const live=JSON.parse(probe.stdout).rows[0].verification,after=JSON.parse(post.stdout).rows[0];assert.equal(live.passed,true);assert.equal(after.actual_owner_reader,'passed');for(const v of Object.values(JSON.parse(cleanup.stdout).rows[0]))assert.equal(v,true);
+for(const [p,sha]of Object.entries(ui.inputs))assert.equal(crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'),sha,p+' changed after UI verification');
+const result={passed:true,status:'APPLIED_VERIFIED',at:new Date().toISOString(),runtime:process.version,source:{file,md5},checks:{ui:ui.checks,linkedRollback:live.checks,independentCleanup:4,postApply:after.checks},evidence:{ui:'output/integrated-system/erp-task-notes-ui-verification.json',probe:probe.file,post:post.file},limits:['No browser inspection','No real user note persisted','Global application gate recorded separately']};
+fs.writeFileSync('output/integrated-system/erp-task-notes-verification.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));

@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useSyncExternalStore, type ComponentProps, type ReactNode } from "react";
 import { Modal } from "@/components/dashboard/ui/modal";
-import { FINANCE_POS_LANGUAGE_KEY, financePosCategoryName, financePosProductName, financePosText, type FinancePosLanguage } from "@/lib/finance/pos-locale";
+import { FINANCE_POS_LANGUAGE_KEY, financePosCategoryName, financePosProductName, financePosText, financePosDisplayName, type FinancePosLanguage } from "@/lib/finance/pos-locale";
 
 const eventName = "branda:finance-pos-language";
 let memoryLanguage: FinancePosLanguage = "ar";
@@ -20,8 +20,9 @@ function readLanguage(): FinancePosLanguage { if (volatileLanguage) return volat
 const defaultLanguage = (): FinancePosLanguage => "ar";
 const FinancePosLocaleContext = createContext<{ language: FinancePosLanguage; setLanguage: (value: FinancePosLanguage) => void }>({ language: "ar", setLanguage: () => {} });
 
-export function FinancePosLocaleProvider({ children }: { children: ReactNode }) {
-  const language = useSyncExternalStore(subscribe, readLanguage, defaultLanguage);
+export function FinancePosLocaleProvider({ children, enabled = true }: { children: ReactNode; enabled?: boolean }) {
+  const savedLanguage = useSyncExternalStore(subscribe, readLanguage, defaultLanguage);
+  const language = enabled ? savedLanguage : "ar";
   const setLanguage = useCallback((value: FinancePosLanguage) => {
     memoryLanguage = value;
     try { localStorage.setItem(FINANCE_POS_LANGUAGE_KEY, value); volatileLanguage = null; } catch { volatileLanguage = value; }
@@ -33,11 +34,13 @@ export function FinancePosLocaleProvider({ children }: { children: ReactNode }) 
 export function useFinancePosLocale() {
   const context = useContext(FinancePosLocaleContext);
   const { language } = context;
-  const t = useCallback((text: string) => financePosText(language, text), [language]);
+  const t = useCallback((text: string, english?: string) => financePosText(language, text, english), [language]);
   return { ...context, dir: language === "ar" ? "rtl" as const : "ltr" as const,
     t,
     productName: (product: { name: string; nameEn?: string | null }) => financePosProductName(product, language),
     categoryName: (name: string) => financePosCategoryName(name, language),
+    displayName: (name: string | null | undefined) => financePosDisplayName(name, language),
+    date: (value: string | null | undefined) => !value || Number.isNaN(new Date(value).getTime()) ? "—" : new Intl.DateTimeFormat(language === "ar" ? "ar-SA" : "en-GB", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Riyadh" }).format(new Date(value)),
     number: (value: number, maximumFractionDigits = 3) => new Intl.NumberFormat(language === "ar" ? "ar-SA" : "en-SA", { maximumFractionDigits }).format(value),
     money: (value: number) => new Intl.NumberFormat(language === "ar" ? "ar-SA" : "en-SA", { style: "currency", currency: "SAR" }).format(value),
   };

@@ -1,4 +1,5 @@
 import { canFinance } from "@/lib/finance/permissions";
+import type { EmployeePermissions } from "@/lib/finance/employee-permissions";
 import { BookOpen, Boxes, Clock3, Landmark, LayoutDashboard, Printer, ReceiptText, Settings2, ShoppingBag, UserRoundCog, Users } from "lucide-react";
 
 export const financeSections = [
@@ -12,6 +13,7 @@ export const financeSections = [
   { id: "shifts", label: "الورديات", icon: Clock3 },
   { id: "reports", label: "الدفاتر والتقارير", icon: BookOpen },
   { id: "printer", label: "إعداد الطابعة", icon: Printer },
+  { id: "pos-settings", label: "إعدادات نقاط البيع", icon: Settings2 },
   { id: "settings", label: "الإعدادات والفريق", icon: Settings2 },
 ] as const;
 
@@ -55,6 +57,7 @@ export const financeMenuGroups: { id: string; label: string; icon: typeof BookOp
     { id: "cashiers", label: "إدارة الكاشير", section: "cashiers" },
     { id: "shifts", label: "الورديات والتسليم", section: "shifts" },
     { id: "printer", label: "إعداد الطابعة", section: "printer" },
+    { id: "pos-settings", label: "إعدادات نقاط البيع", section: "pos-settings" },
   ] },
   { id: "settings", label: "الإعدادات والفريق", icon: Settings2, entries: [
     { id: "settings", label: "السياسة المحاسبية والفريق", section: "settings" },
@@ -86,13 +89,24 @@ export function resolveFinanceMenuEntry(section: FinanceSection, party: string |
 }
 
 export function resolveFinanceSection(value: string | null, canAdminister: boolean, canManageCashiers = canAdminister): FinanceSection {
-  return financeSections.find(item => item.id === value && (item.id !== "settings" || canAdminister) && (item.id !== "cashiers" || canManageCashiers))?.id ?? "overview";
+  return financeSections.find(item => item.id === value && (!["settings", "pos-settings"].includes(item.id) || canAdminister) && (item.id !== "cashiers" || canManageCashiers))?.id ?? "overview";
 }
 
-export function financeSectionAllowed(section: FinanceSection, role: string, canManageCashiers = false) {
+export function financeSectionAllowed(section: FinanceSection, role: string, canManageCashiers = false, policy?: EmployeePermissions) {
+  if (role !== "owner" && policy && !["cashiers", "settings", "pos-settings"].includes(section)) {
+    if (section === "sales") return policy["sales.read"]?.enabled === true;
+    if (section === "purchases") return policy["purchases.read"]?.enabled === true;
+    if (section === "parties") return policy["suppliers.read"]?.enabled === true || policy["sales.read"]?.enabled === true;
+    if (section === "treasury") return policy["finance.read"]?.enabled === true;
+    if (section === "inventory") return canFinance(role, "inventory_read", policy);
+    if (section === "shifts") return canFinance(role, "shifts_read", policy);
+    if (section === "printer") return canFinance(role, "pos", policy);
+    return canFinance(role, "reports", policy);
+  }
   if (section === "inventory") return canFinance(role,"inventory_read");
   if (section === "cashiers") return canManageCashiers || canFinance(role,"staff_manage");
   if (section === "settings") return canFinance(role,"settings_manage");
+  if (section === "pos-settings") return role === "owner";
   if (section === "shifts") return canFinance(role,"shifts_read");
   if (section === "printer") return canFinance(role,"pos");
   return canFinance(role,"reports");

@@ -1,0 +1,7 @@
+'use strict';
+const fs=require('node:fs');
+for(const file of ['components/erp/reports/builder.tsx','components/erp/reports/grouping.tsx']){let source=fs.readFileSync(file,'utf8');source=source.replace(/columnLabel\((\w+)\)/g,'columnLabel($1,query.source)');fs.writeFileSync(file,source);}
+let file='components/erp/reports/workspace.tsx',source=fs.readFileSync(file,'utf8');source=source.replaceAll('reportCsv(applied.columns,r.data.rows)','reportCsv(applied.columns,r.data.rows,applied.source)').replaceAll('columnLabel(c)','columnLabel(c,applied.source)').replaceAll('columnLabel(f)','columnLabel(f,query.source)').replaceAll('<ReportChart rows={result.rows} config={draft.chart}/>','<ReportChart rows={result.rows} config={draft.chart} source={applied.source}/>');fs.writeFileSync(file,source);
+file='components/erp/reports/chart.tsx';source=fs.readFileSync(file,'utf8').replace('ReportChart({rows,config}:{rows:ReportRow[];', 'ReportChart({rows,config,source}:{rows:ReportRow[];source?:string;').replace(/columnLabel\((config\.\w+)\)/g,'columnLabel($1,source)');fs.writeFileSync(file,source);
+file='lib/erp/reports.ts';source=fs.readFileSync(file,'utf8').replace('reportCsv(columns:ReportColumnKey[],rows:ReportRow[])','reportCsv(columns:ReportColumnKey[],rows:ReportRow[],source?:string)').replace('escape(columnLabel(c))','escape(columnLabel(c,source))');fs.writeFileSync(file,source);
+console.log('Source-aware relation labels updated');

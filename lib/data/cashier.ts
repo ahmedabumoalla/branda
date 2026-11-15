@@ -1,4 +1,5 @@
 import { getActiveUser } from "@/lib/auth/active-user";
+import { enforceFinanceLoyaltySession } from "@/lib/data/finance-loyalty-session";
 import { SESSION_COOKIE_SECONDS } from "@/lib/auth/session-policy";
 import { cookies } from "next/headers";
 import { randomUUID } from "node:crypto";
@@ -27,6 +28,7 @@ export type CashierConsole = {
     loyaltyCardEnabled?: boolean;
   };
   cashier: {
+    financeLinked?: boolean;
     id: string;
     fullName: string;
     email: string;
@@ -348,6 +350,7 @@ export async function startOwnerCashierSession() {
 }
 
 export type CashierSessionContext = {
+  financeLinked?: boolean;
   canUseLoyalty: boolean;
   canUsePager: boolean;
   pagerStation: string;
@@ -480,8 +483,10 @@ export async function requireCashierPermission(
   if (!allowed || !featureCodesAllow(features, permission)) {
     throw new Error("لا تملك صلاحية استخدام هذه الخدمة أو أن اشتراكها غير مفعّل");
   }
+  const financeLinked = permission === "loyalty" ? await enforceFinanceLoyaltySession(context.token) : false;
   return {
     ...context,
+    financeLinked,
     canUseLoyalty: context.canUseLoyalty && featureCodesAllow(features, "loyalty"),
     canUsePager: context.canUsePager && featureCodesAllow(features, "pager"),
   };
@@ -586,7 +591,7 @@ async function loadCashierOrders(
   return { orders, dataError: null };
 }
 
-export async function getCashierConsole({ recordEntry = true }: { recordEntry?: boolean } = {}): Promise<CashierConsole | null> {
+export async function getCashierConsole({ recordEntry = true, includeOrders = true }: { recordEntry?: boolean; includeOrders?: boolean } = {}): Promise<CashierConsole | null> {
   const admin = createAdminClient();
   const verifiedSession = await requireCashierPermission("loyalty", admin).catch((error) => {
     console.warn("[cashier-console]", {
@@ -597,7 +602,7 @@ export async function getCashierConsole({ recordEntry = true }: { recordEntry?: 
   });
   if (!verifiedSession) return null;
 
-  const { orders, dataError } = await loadCashierOrders(admin, verifiedSession);
+  const { orders, dataError } = includeOrders ? await loadCashierOrders(admin, verifiedSession) : { orders: [], dataError: null };
   if (recordEntry) await recordCashierConsoleEntry({
     cafeId: verifiedSession.cafeId,
     cafeSlug: verifiedSession.cafeSlug,
@@ -614,6 +619,7 @@ export async function getCashierConsole({ recordEntry = true }: { recordEntry?: 
       businessCategory: verifiedSession.businessCategory,
     },
     cashier: {
+      financeLinked: verifiedSession.financeLinked,
       id: verifiedSession.cashierId,
       fullName: verifiedSession.cashierName,
       email: verifiedSession.cashierEmail,
@@ -841,6 +847,8 @@ export async function cashierScanLoyalty(input: {
   const { data, error } = await admin.rpc("execute_loyalty_audited_operation", {
     p_session_token: token, p_code: normalizedCardCode, p_request_id: randomUUID(), p_operation: "stamp",
   });
+  if (data?.status === "approval_pending") throw new Error("أرسل طلب الختم لمسؤول الموافقة أعد المسح بعد اعتماده");
+  if (data?.status === "approval_rejected") throw new Error("رفض مسؤول الموافقة طلب الختم راجع طلبات الموافقة");
   if (error || data?.ok !== true) throw new Error("تعذر تسجيل الختم تحقق من البطاقة وجلسة الموظف");
   return data as Record<string, unknown>;
 }

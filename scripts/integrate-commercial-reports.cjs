@@ -1,0 +1,14 @@
+'use strict';
+const fs=require('node:fs');
+const file='lib/erp/report-catalog.ts';
+let s=fs.readFileSync(file,'utf8');
+const replace=(a,b)=>{if(!s.includes(a))throw Error('Missing anchor '+a);s=s.replace(a,b);};
+replace("export const reportSources=[","export const reportSources=[\n ['business-sales','مبيعات الأعمال دون الدفعات المقدمة','sales'],");
+replace("add('sales','sales','المبيعات','sales',","add('sales','sales','المبيعات','business-sales',");
+replace("add('customers','customer-sales','مبيعات العملاء','sales',","add('customers','customer-sales','مبيعات العملاء','business-sales',");
+replace("={cheques:['cashMovement'],sales:financialDimensions,","={cheques:['cashMovement'],'business-sales':financialDimensions,sales:financialDimensions,");
+replace("const bases:Partial<Record<ReportSource,string>>={","const bases:Partial<Record<ReportSource,string>>={'business-sales':'تستبعد فواتير الدفعات المقدمة من إيراد الأعمال وتبقى تحصيلاتها في تقارير النقد',");
+replace("'sales-lines':'","'sales-lines':'تستبعد فواتير الدفعات المقدمة من إيراد الأعمال وتبقى تحصيلاتها في تقارير النقد — ");
+replace("'purchase-documents':'المبالغ تخص","'purchase-documents':'تظهر الإشعارات الدائنة للمشتريات بأرقامها وسدادها مع الاحتفاظ بقيود الإصدار المعكوسة — المبالغ تخص");
+replace("'customer-credits':'الرصيد النقدي المتاح للعميل حتى وقت إعداد التقرير'","'customer-credits':'الرصيد المتاح الحالي للعميل ويشمل فواتير الدفعات المقدمة المحصلة بعد الإشعارات والتخصيصات والعكس ولا يمثل رصيدًا تاريخيًا'");
+fs.writeFileSync(file,s);

@@ -5,6 +5,7 @@ import { ArrowRight, Copy, ExternalLink, FileDown, FileText, Pencil, Printer, Ro
 import { Modal } from "@/components/dashboard/ui/modal";
 import { fetchJournalDetailAction } from "@/app/actions/finance-journal-detail";
 import type { JournalDetail } from "@/lib/finance/journal-detail";
+import { isMindSalesSimplified } from "@/lib/finance/sales-features";
 import { createFinanceJournalPdf, journalPrintable } from "@/lib/export/finance-journal-pdf";
 import { documentKindNames, financeDate, Numeric } from "./finance-ui";
 import styles from "./finance-journal-detail.module.css";
@@ -73,7 +74,7 @@ export function FinanceJournalDetail({ id, slug, brand, disabled = false, onBack
   const ready = exported?.data === data && exported?.serial === exportRequest?.serial ? exported : null;
   const exporting = !!data && journalPrintable(data) && exportRequest?.id === id && !ready;
   const printable = !!data && journalPrintable(data) && !disabled && !loading;
-  const canCopy = !!data?.capabilities?.canCopy && (data.capabilities.copyMode === "manual" ? !!data.manualDraft && !!onOpenDraft : ["invoice", "payment"].includes(data.capabilities.copyMode) && !!onCopySource);
+  const canCopy = !!data?.capabilities?.canCopy && !(isMindSalesSimplified(slug) && data.capabilities.copyMode === "invoice") && (data.capabilities.copyMode === "manual" ? !!data.manualDraft && !!onOpenDraft : ["invoice", "payment"].includes(data.capabilities.copyMode) && !!onCopySource);
   const canReverse = !!data?.capabilities?.canReverse && (data.capabilities.reverseMode === "manual" ? !!data.manualDraft : ["refund", "payment"].includes(data.capabilities.reverseMode) && !!onReverseSource);
   const startExport = () => { if (printable) setExportRequest(value => ({ id, serial: (value?.serial ?? 0) + 1 })); };
   function moveTab(event: KeyboardEvent<HTMLButtonElement>) {

@@ -1,13 +1,12 @@
 "use client";
 import { useFinancePosLocale } from "./finance-pos-locale";
 
-
 import { Printer } from "lucide-react";
 import { findCompanyInvoiceAction, sendCompanyInvoiceWhatsAppAction } from "@/app/actions/finance-company-invoices";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FinancePosModal as Modal } from "./finance-pos-locale";
 import type { FinanceDocument, FinanceSnapshot } from "@/lib/finance/brand-finance";
-import { FinanceReceipt } from "./finance-ui";
+import { FinanceReceipt } from "./finance-pos-receipt";
 import { claimAutomaticReceiptPrint, printThermalReceipt, type ReceiptBrand, type ReceiptCopy, type ReceiptPaper, type ReceiptPrintHandler } from "./finance-receipt-print";
 import styles from "./finance-receipt.module.css";
 import { InvoiceFileDownloads } from "./company-invoice-files";
@@ -40,8 +39,8 @@ export function FinanceReceiptDialog({ document, snapshot, onClose, preview = fa
   const pairedReceipt = useRef<HTMLDivElement>(null);
   const resolvedBrand = receiptBrand === undefined ? brand : receiptBrand ?? { name: snapshot.cafe.name, logoUrl: null, color: "#3a2117" };
   const ready = receiptBrand !== undefined || !loading;
-  const preparationAllowed = snapshot.cafe.businessCategory !== "butcher_shops";
-  const selectedCopy = document.kind === "sale" && preparationAllowed ? copy : "customer";
+  const customerOnly = snapshot.cafe.slug === "mind-hospital" || snapshot.cafe.businessCategory === "butcher_shops";
+  const selectedCopy = document.kind === "sale" && !customerOnly ? copy : "customer";
   useEffect(() => {
     if (receiptBrand !== undefined) return;
     const controller = new AbortController();
@@ -58,13 +57,14 @@ export function FinanceReceiptDialog({ document, snapshot, onClose, preview = fa
     if (busy.current || !ready) return;
     busy.current = true; setPrinting(true); setError(""); setPrintStatus("");
     try {
-      const result = await (onPrint ?? printThermalReceipt)(both ? pairedReceipt.current : receipt.current, paper, { allCopies: both && preparationAllowed, newCopy: !automatic });
+      const printBoth = both && !customerOnly;
+      const result = await (onPrint ?? printThermalReceipt)(backgroundAutoPrint || printBoth ? pairedReceipt.current : receipt.current, paper, { allCopies: printBoth, newCopy: !automatic });
       if (automatic && backgroundAutoPrint) { onClose(); return; }
-      setPrintStatus(`${result.submittedToDevice ? t("أُرسلت مهمة الطباعة إلى خدمة الطابعة") : both && preparationAllowed ? t("فُتحت طباعة إيصال العميل ونسخة المطبخ معًا") : t("فُتحت نافذة الطباعة")}${t(" تأكد من خروج النسخ من الطابعة")}${result.usedAssetFallback ? t(" استُخدم خط بديل أو أُخفي شعار غير متاح") : ""}`);
+      setPrintStatus((result.submittedToDevice ? t("أُرسلت مهمة الطباعة إلى خدمة الطابعة") : printBoth ? t("فُتحت طباعة إيصال العميل ونسخة المطبخ معًا") : t("فُتحت نافذة الطباعة")) + t(" تأكد من خروج النسخ من الطابعة") + (result.usedAssetFallback ? t(" استُخدم خط بديل أو أُخفي شعار غير متاح") : ""));
     }
     catch (reason) { setAutomaticFailed(true); setError(reason instanceof Error ? reason.message : t("تعذر فتح الطباعة حاول مجددًا")); }
     finally { busy.current = false; setPrinting(false); }
-  }, [ready, paper, onPrint, backgroundAutoPrint, onClose, preparationAllowed, t]);
+  }, [ready, paper, onPrint, backgroundAutoPrint, onClose, t, customerOnly]);
   useEffect(() => {
     if (!autoPrint || preview || document.kind !== "sale" || !ready) return;
     const frame = requestAnimationFrame(() => {
@@ -74,35 +74,35 @@ export function FinanceReceiptDialog({ document, snapshot, onClose, preview = fa
   }, [autoPrint, preview, document.kind, document.id, ready, snapshot.cafe.slug, autoPrintKey, print]);
   if (companyInvoice) {
     const url = `/api/finance/${encodeURIComponent(snapshot.cafe.slug)}/company-invoices/${companyInvoice.id}/pdf`;
-    return <Modal open title={`${t("فاتورة ضريبية رقم ")}${companyInvoice.number}`} onClose={onClose} panelClassName="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-auto rounded-3xl bg-white p-5 shadow-2xl">
+    return <Modal open title={t("فاتورة ضريبية رقم ") + (companyInvoice.number)} onClose={onClose} panelClassName="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-auto rounded-3xl bg-white p-5 shadow-2xl">
       <div className={styles.controls}><a href={url} target="_blank" rel="noreferrer">{t("فتح الفاتورة للطباعة أو التنزيل")}</a><button type="button" disabled={companyBusy} onClick={async () => {
         if (companyLock.current) return; companyLock.current = true; setCompanyBusy(true); setError("");
         try { const result = await sendCompanyInvoiceWhatsAppAction(companyInvoice.id, snapshot.cafe.slug); if (!result.ok) setError(result.message); else setPrintStatus(result.data.status === "queued" ? t("قبل مزود الواتساب طلب إرسال الفاتورة") : t("الفاتورة محفوظة وحالة الإرسال تحتاج مراجعة لن نكررها تلقائيًا")); }
         catch { setError(t("تعذر تأكيد حالة الإرسال")); } finally { companyLock.current = false; setCompanyBusy(false); }
-      }}>{companyBusy ? t("جار الإرسال") : t("إرسال بالواتساب")}</button>{printStatus && <p role="status">{printStatus}</p>}{error && <p role="alert">{error}</p>}</div>
+      }}>{companyBusy ? t("جار الإرسال") : t("إرسال بالواتساب")}</button>{printStatus && <p role="status">{t(printStatus)}</p>}{error && <p role="alert">{t(error)}</p>}</div>
       <InvoiceFileDownloads files={companyInvoice.attachments} slug={snapshot.cafe.slug} />
-      <iframe src={url} title={`${t("فاتورة ضريبية رقم ")}${companyInvoice.number}`} style={{ width: "100%", height: "65dvh", border: 0 }} />
+      <iframe src={url} title={t("فاتورة ضريبية رقم ") + (companyInvoice.number)} style={{ width: "100%", height: "65dvh", border: 0 }} />
     </Modal>;
   }
   if (backgroundAutoPrint && autoPrint && !preview && document.kind === "sale" && !automaticFailed) {
-    return <div hidden aria-hidden="true" ref={pairedReceipt}><FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="customer" />{preparationAllowed && <FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="preparation" />}</div>;
+    return <div hidden aria-hidden="true" ref={pairedReceipt}><FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="customer" />{!customerOnly && <FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="preparation" />}</div>;
   }
-  return <Modal open title={preview ? t("معاينة الإيصال") : document.kind === "refund" ? `${t("فاتورة مرتجع #")}${document.number}` : `${t("طباعة الفاتورة ")}${document.number ? `#${document.number}` : document.local_reference ?? ""}`} onClose={onClose}
+  return <Modal open title={preview ? t("معاينة الإيصال") : document.kind === "refund" ? t("فاتورة مرتجع #") + (document.number) : t("طباعة الفاتورة ") + (document.number ? "#" + (document.number) : document.local_reference ?? "")} onClose={onClose}
     panelClassName="flex max-h-[94dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
-    footer={<div className={styles.tabs}>{preparationAllowed && document.kind === "sale" && !preview && <button type="button" className={styles.print} disabled={printing || !ready} onClick={() => void print(true)}><Printer size={18} aria-hidden="true" />{printing ? t("جارٍ تجهيز الطباعة") : t("طباعة الإيصال والمطبخ")}</button>}<button type="button" className={styles.print} disabled={printing || !ready} onClick={() => void print()}><Printer size={18} aria-hidden="true" />{printing ? t("جارٍ تجهيز الطباعة") : preview ? t("طباعة المعاينة") : selectedCopy === "preparation" ? t("طباعة نسخة التحضير") : t("طباعة إيصال العميل")}</button></div>}>
+    footer={<div className={styles.tabs}>{document.kind === "sale" && !customerOnly && !preview && <button type="button" className={styles.print} disabled={printing || !ready} onClick={() => void print(true)}><Printer size={18} aria-hidden="true" />{printing ? t("جارٍ تجهيز الطباعة") : t("طباعة الإيصال والمطبخ")}</button>}<button type="button" className={styles.print} disabled={printing || !ready} onClick={() => void print()}><Printer size={18} aria-hidden="true" />{printing ? t("جارٍ تجهيز الطباعة") : preview ? t("طباعة المعاينة") : selectedCopy === "preparation" ? t("طباعة نسخة التحضير") : t("طباعة إيصال العميل")}</button></div>}>
     <div className={styles.controls}>
       {preview && <p role="status">{t("معاينة قبل تأكيد البيع لا تُسجل فاتورة ولا تُرسل إشعارات")}</p>}
-      {preparationAllowed && document.kind === "sale" && <div className={styles.tabs} aria-label={t("نسخة الطباعة")}><button type="button" aria-pressed={selectedCopy === "customer"} onClick={() => setCopy("customer")}>{t("فاتورة العميل")}</button><button type="button" aria-pressed={selectedCopy === "preparation"} onClick={() => setCopy("preparation")}>{t("المطبخ أو البار")}</button></div>}
+      {document.kind === "sale" && !customerOnly && <div className={styles.tabs} aria-label={t("نسخة الطباعة")}><button type="button" aria-pressed={selectedCopy === "customer"} onClick={() => setCopy("customer")}>{t("فاتورة العميل")}</button><button type="button" aria-pressed={selectedCopy === "preparation"} onClick={() => setCopy("preparation")}>{t("المطبخ أو البار")}</button></div>}
       <label>{t("عرض ورق الطباعة")}<select value={paper} onChange={event => setPaper(event.target.value as ReceiptPaper)}><option value="auto">{t("حسب إعداد الطابعة")}</option><option value="80">{t("حراري ٨٠ مم")}</option><option value="58">{t("حراري ٥٨ مم")}</option></select></label>
       <p>{t("تتكيف الفاتورة مع عرض الورق المختار في نافذة الطباعة مع حد أقصى ٨٠ مم")}<br />{t("إذا لم يظهر المقاس الصحيح اختر ٥٨ أو ٨٠ مم هنا وفي إعدادات الطابعة وأوقف رؤوس الصفحة وتذييلاتها")}</p>
       {!ready && <p role="status">{t("جارٍ تحميل هوية العلامة للطباعة")}</p>}
-      {ready && !resolvedBrand?.logoUrl && <p>{brandWarning || t("ستظهر الفاتورة باسم العلامة دون شعار")}</p>}
+      {ready && !resolvedBrand?.logoUrl && <p>{t(brandWarning) || t("ستظهر الفاتورة باسم العلامة دون شعار")}</p>}
       {!preview && <p>{onPrint ? t("تُرسل النسخ بحسب إعداد الطابعة على هذا الجهاز وتبقى إعادة الطباعة متاحة هنا") : t("يفتح المتصفح نافذة الطباعة ولا يؤكد خروج الورق إذا ألغيتها يمكنك إعادة الطباعة من هنا")}</p>}
       {printStatus && <p role="status">{printStatus}</p>}
       {error && <div className={styles.error} role="alert"><p>{error}</p></div>}
       {brandWarning && receiptBrand === undefined && <button type="button" className={styles.retry} onClick={() => { setError(""); setBrandWarning(""); setBrand(null); setLoading(true); setRetry(value => value + 1); }}>{t("إعادة تحميل الشعار")}</button>}
     </div>
     <div className={styles.preview}><div ref={receipt} className={styles.paper} data-paper={paper}><FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy={selectedCopy} preview={preview} /></div></div>
-    {document.kind === "sale" && !preview && <div hidden aria-hidden="true" ref={pairedReceipt}><FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="customer" />{preparationAllowed && <FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="preparation" />}</div>}
+    {document.kind === "sale" && !preview && <div hidden aria-hidden="true" ref={pairedReceipt}><FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="customer" />{!customerOnly && <FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="preparation" />}</div>}
   </Modal>;
 }

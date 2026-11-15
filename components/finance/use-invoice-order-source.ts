@@ -7,7 +7,7 @@ type Context = Extract<Awaited<ReturnType<typeof getFinanceOrderSourceContext>>,
 type Loaded = { slug: string; draftId: string | null; context: Context };
 
 /** The selection is persisted against the saved draft revision before issuing it. */
-export function useInvoiceOrderSource(slug: string, initialDraftId?: string) {
+export function useInvoiceOrderSource(slug: string, initialDraftId?: string, reader?: (draftId: string | null) => ReturnType<typeof getFinanceOrderSourceContext>) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ export function useInvoiceOrderSource(slug: string, initialDraftId?: string) {
   const fetchContext = useCallback((draftId: string | null) => {
     const version = ++request.current.version;
     activeDraft.current = draftId;
-    return getFinanceOrderSourceContext(slug, draftId).then(result => {
+    return (reader ? reader(draftId) : getFinanceOrderSourceContext(slug, draftId)).then(result => {
       if (version !== request.current.version) return false;
       if (!result.ok) { setError(result.message); return false; }
       const next = { slug, draftId, context: result.data };
@@ -32,7 +32,7 @@ export function useInvoiceOrderSource(slug: string, initialDraftId?: string) {
       if (version === request.current.version) setError("تعذر تحميل مصدر الطلب أعد المحاولة");
       return false;
     }).finally(() => { if (version === request.current.version) setLoading(false); });
-  }, [slug]);
+  }, [slug, reader]);
 
   const loadDraft = useCallback((draftId: string | null) => {
     setLoading(true); setError("");

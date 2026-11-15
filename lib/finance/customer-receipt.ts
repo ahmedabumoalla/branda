@@ -5,6 +5,7 @@ const amount = z.number().finite().nonnegative().max(99_999_999_999_999.99);
 /** A customer-safe projection of a posted invoice, not the internal finance document. */
 export const financeCustomerReceiptSchema = z.object({
   brandName: z.string().trim().min(1).max(300),
+  receiptSeller: z.object({ name: z.string().trim().min(1).max(300), vatNumber: z.string().max(30) }).strict().nullable().optional(),
   cafeId: z.uuid().optional(),
   number: z.number().int().positive().safe(),
   createdAt: z.string().datetime({ offset: true }),

@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Camera, X } from "lucide-react";
 import { startRastCameraSession } from "./camera-session";
 import { useCashierLanguage } from "@/components/cashier/cashier-language";
+import { lockPageScroll } from "@/lib/ui/page-scroll-lock";
 
 /** QR decoder also works on browsers without the experimental BarcodeDetector API. */
 export function RastCameraScanner({ onDetected, disabled = false }: { onDetected: (value: string) => void; disabled?: boolean }) {
@@ -20,11 +21,10 @@ export function RastCameraScanner({ onDetected, disabled = false }: { onDetected
     const modal = dialog.current;
     if (!modal) return;
     modal.showModal();
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlock = lockPageScroll();
     return () => {
       modal.close();
-      document.body.style.overflow = previousOverflow;
+      unlock();
     };
   }, [open]);
   useEffect(() => {

@@ -1,0 +1,12 @@
+{
+  "passed": 10,
+  "base": "C:\\Users\\pc\\AppData\\Local\\Temp\\branda-backup-check-wpjOtv",
+  "archiveBytes": 15551720,
+  "checkedAt": "2026-11-14T04:27:24.001Z",
+  "node": "v20.20.2",
+  "hashes": {
+    "backup.cjs": "a035192f2d91684e09548f557ca6bc908c77367d035fa06da0fa7c44f339cf70",
+    "check-backup.cjs": "7f339aa56866e878f3c9f1fd98a435236a3a39f7ef22ae40039a1fcbeaab795a",
+    "engine/index.mjs": "89b8416754a78fc979d857bcfbfaa29805a0860ccc1f1fba81da1ea86c3fa3b4"
+  }
+}

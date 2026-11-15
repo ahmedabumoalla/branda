@@ -1,0 +1,182 @@
+/* Branda identity for the treasury and balances page, applied through one wrapper class.
+   Classes from finance-treasury.module.css are matched by their local name. */
+.skin,
+.fee {
+  --k-espresso: var(--barndaksa-espresso-dark, #311912);
+  --k-coffee: var(--barndaksa-coffee-brown, #4a281d);
+  --k-brown: var(--barndaksa-brand-brown, #6b3a25);
+  --k-gold: var(--barndaksa-gold-accent, #d9a33f);
+  --k-soft-gold: var(--barndaksa-soft-gold, #f0c568);
+  --k-cream: var(--barndaksa-cream-base, #fcf8f3);
+  --k-sand: var(--barndaksa-warm-sand, #f2e7d9);
+  --k-line: var(--barndaksa-border-sand, #e7d7c6);
+  --k-muted: var(--barndaksa-muted-text, #806a5e);
+  --k-bad: #a1382a;
+}
+
+/* Page heading band */
+.skin.skin > [class*="heading"] {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 26px 26px;
+  border-radius: 20px;
+  color: var(--k-cream);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(240, 197, 104, 0.2), transparent 55%),
+    linear-gradient(135deg, var(--k-espresso), var(--k-coffee) 58%, var(--k-brown));
+  box-shadow: 0 22px 44px -30px rgba(49, 25, 18, 0.75);
+}
+.skin.skin > [class*="heading"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 26px;
+  bottom: 11px;
+  border-bottom: 2px dotted rgba(240, 197, 104, 0.55);
+}
+.skin.skin > [class*="heading"] h2 { color: var(--k-cream); font-weight: 800; }
+.skin.skin > [class*="heading"] p { color: #ead8c5; }
+.skin.skin > [class*="heading"] [class*="eyebrow"] { color: var(--k-soft-gold); font-weight: 700; }
+.skin.skin > [class*="heading"] button {
+  border-color: rgba(240, 197, 104, 0.45);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--k-cream);
+  font-weight: 700;
+}
+.skin.skin > [class*="heading"] button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.16); }
+
+/* Totals */
+.skin.skin > [class*="summary"] { gap: 14px; }
+.skin.skin > [class*="summary"] > div {
+  position: relative;
+  padding: 18px 20px;
+  border: 1px solid var(--k-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 16px 34px -30px rgba(49, 25, 18, 0.6);
+}
+.skin.skin > [class*="summary"] > div::before {
+  content: "";
+  position: absolute;
+  inset-block: 18px;
+  inset-inline-start: 0;
+  width: 4px;
+  border-radius: 4px;
+  background: var(--k-gold);
+}
+.skin.skin > [class*="summary"] > div > span { color: var(--k-muted); font-size: 13px; font-weight: 700; }
+.skin.skin > [class*="summary"] > div > strong { color: var(--k-espresso); font-weight: 800; }
+
+/* Actions and search */
+.skin.skin > [class*="toolbar"] :is(button, a) { border-radius: 12px; font-weight: 700; }
+.skin.skin > [class*="toolbar"] [class*="primary"] {
+  border-color: var(--k-espresso);
+  background: linear-gradient(180deg, var(--k-coffee), var(--k-espresso));
+  color: var(--k-soft-gold);
+  font-weight: 800;
+}
+.skin.skin > [class*="toolbar"] [class*="secondary"] { border-color: var(--k-line); background: #fff; color: var(--k-coffee); }
+.skin.skin > [class*="toolbar"] [class*="secondary"]:hover:not(:disabled) { border-color: var(--k-gold); background: var(--k-cream); }
+.skin.skin > [class*="toolbar"] [class*="search"] { border-color: var(--k-line); border-radius: 12px; background: #fff; }
+.skin.skin > [class*="toolbar"] [class*="search"]:focus-within { border-color: var(--k-gold); box-shadow: 0 0 0 4px rgba(217, 163, 63, 0.2); }
+
+/* Account groups */
+.skin.skin > [class*="groups"] { gap: 14px; }
+.skin.skin section[class*="group"] {
+  overflow: hidden;
+  border: 1px solid var(--k-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 16px 34px -30px rgba(49, 25, 18, 0.55);
+}
+.skin.skin section[class*="group"] > header {
+  border-bottom: 1px solid var(--k-line);
+  background: linear-gradient(160deg, var(--k-cream), var(--k-sand));
+}
+.skin.skin [class*="groupName"] > svg { color: var(--k-brown); }
+.skin.skin [class*="groupName"] h3 { color: var(--k-espresso); font-weight: 800; }
+.skin.skin [class*="groupName"] > span {
+  padding: 4px 12px;
+  border: 1px solid var(--k-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--k-coffee);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.skin.skin [class*="groupName"] > span[data-full="true"] { border-color: #f0dcae; background: #fbf0d6; color: #8a5f12; }
+.skin.skin section[class*="group"] > header p { color: var(--k-muted); }
+.skin.skin [class*="accountCard"]:not([class*="Actions"]) { border-bottom-color: var(--k-line); }
+.skin.skin [class*="accountCard"]:not([class*="Actions"]):hover { background: #fdf9f3; }
+.skin.skin [class*="accountName"] strong { color: var(--k-espresso); font-weight: 800; }
+.skin.skin [class*="primaryBadge"] {
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--k-espresso), var(--k-brown));
+  color: var(--k-soft-gold);
+  font-weight: 800;
+}
+.skin.skin [class*="accountAmount"] strong { color: var(--k-espresso); font-weight: 800; }
+.skin.skin [class*="accountCard"]:not([class*="Actions"])[data-negative] [class*="accountAmount"] strong {
+  padding: 2px 10px;
+  border-radius: 8px;
+  background: #fbece8;
+  color: var(--k-bad);
+}
+.skin.skin section[class*="group"] > footer { border-top-color: var(--k-line); background: var(--k-cream); }
+.skin.skin section[class*="group"] > footer [class*="add"] { color: var(--k-brown); font-weight: 800; }
+.skin.skin section[class*="group"] > footer [class*="add"][data-paid="true"] { color: #8a5f12; }
+.skin.skin section[class*="group"] > footer small { color: var(--k-muted); line-height: 1.8; }
+
+/* Paid add-on dialog */
+.fee { display: grid; justify-items: center; gap: 12px; padding: 4px 2px; text-align: center; color: var(--k-espresso); }
+.feeIcon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--k-espresso), var(--k-brown));
+  color: var(--k-soft-gold);
+  box-shadow: 0 16px 28px -16px rgba(49, 25, 18, 0.9);
+}
+.fee h3 { margin: 4px 0 0; font-size: 20px; font-weight: 800; line-height: 1.5; }
+.fee p { margin: 0; color: var(--k-muted); font-size: 14px; font-weight: 600; line-height: 1.9; }
+.feePrice {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  margin: 2px 0;
+  padding: 16px;
+  border: 1px dashed var(--k-gold);
+  border-radius: 16px;
+  background: linear-gradient(160deg, var(--k-cream), var(--k-sand));
+}
+.feePrice span { color: var(--k-brown); font-size: 13px; font-weight: 700; }
+.feePrice strong { font-size: 36px; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.feePrice small { color: var(--k-brown); font-size: 15px; font-weight: 800; }
+.feePhone { color: var(--k-espresso); font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.feeWhatsapp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
+  border: 1px solid #1f8f52;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #27a862, #1f8f52);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 14px 26px -16px rgba(31, 143, 82, 0.9);
+}
+.feeWhatsapp:hover { filter: brightness(1.06); }
+.feeWhatsapp:focus-visible { outline: 2px solid var(--k-gold); outline-offset: 3px; }
+.fee > small { color: var(--k-muted); font-size: 12px; line-height: 1.8; }
+@media (max-width: 560px) {
+  .skin.skin > [class*="heading"] { padding: 18px 18px 24px; border-radius: 16px; }
+  .skin.skin > [class*="heading"]::after { inset-inline: 18px; }
+}

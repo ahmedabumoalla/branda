@@ -1,0 +1,74 @@
+/* Print preview: a real panel size so the document is never squeezed to the iframe default width. */
+.panel {
+  --t-espresso: var(--barndaksa-espresso-dark, #311912);
+  --t-coffee: var(--barndaksa-coffee-brown, #4a281d);
+  --t-gold: var(--barndaksa-gold-accent, #d9a33f);
+  --t-soft-gold: var(--barndaksa-soft-gold, #f0c568);
+  --t-cream: var(--barndaksa-cream-base, #fcf8f3);
+  --t-line: var(--barndaksa-border-sand, #e7d7c6);
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, 96vw);
+  max-height: 94dvh;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #fff;
+  color: var(--t-espresso);
+  box-shadow: 0 30px 70px -28px rgba(49, 25, 18, 0.7);
+}
+.frame {
+  display: block;
+  width: 100%;
+  height: min(70vh, 900px);
+  border: 1px solid var(--t-line);
+  border-radius: 14px;
+  background: #fff;
+}
+.note {
+  margin: 0 0 12px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--t-cream);
+  color: var(--t-coffee);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.8;
+}
+.error { margin: 0 0 12px; color: #a1382a; font-size: 13px; font-weight: 700; }
+.trigger,
+.print {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 11px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, filter 0.15s;
+}
+.trigger {
+  border: 1px solid var(--barndaksa-border-sand, #e7d7c6);
+  background: #fff;
+  color: var(--barndaksa-coffee-brown, #4a281d);
+}
+.trigger:hover:not(:disabled) { border-color: var(--barndaksa-gold-accent, #d9a33f); background: var(--barndaksa-cream-base, #fcf8f3); }
+.print {
+  min-width: 190px;
+  border: 1px solid var(--t-espresso);
+  background: linear-gradient(180deg, var(--t-coffee), var(--t-espresso));
+  color: var(--t-soft-gold);
+  font-size: 14px;
+  font-weight: 800;
+}
+.print:hover:not(:disabled) { filter: brightness(1.15); }
+.trigger:disabled, .print:disabled { opacity: 0.55; cursor: not-allowed; }
+.trigger:focus-visible, .print:focus-visible { outline: 2px solid var(--barndaksa-gold-accent, #d9a33f); outline-offset: 2px; }
+@media (max-width: 560px) {
+  .panel { width: 96vw; border-radius: 16px; }
+  .frame { height: 64vh; }
+  .print { width: 100%; }
+}

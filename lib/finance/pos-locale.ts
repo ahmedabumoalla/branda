@@ -1,11 +1,24 @@
 import { hospitalProductName, hospitalCategoryName } from "@/lib/commerce/hospital-labels";
 import { financePosCustomerEnglish } from "./pos-customer-labels";
 import { financePosShiftLabels } from "./pos-shift-labels";
+import { financePosOperationEnglish } from "./pos-operation-labels";
 export type FinancePosLanguage = "ar" | "en";
 export const FINANCE_POS_LANGUAGE_KEY = "branda.finance.pos.language";
 export const financePosEnglish: Record<string, string> = {
   ...financePosCustomerEnglish,
   ...financePosShiftLabels,
+  ...financePosOperationEnglish,
+  "المخزن الرئيسي": "Main warehouse", "المستودع الرئيسي": "Main warehouse", "صندوق الكاشير الرئيسي": "Main cashier drawer", "حساب الشبكة": "Card account", "المستشفى": "Hospital",
+  "إجمالي المرتجع": "Refund total", "المبلغ المعاد للعميل": "Customer refund", "تخفيض الرصيد الآجل": "Credit balance reduction", "المبلغ المتوقع تحصيله": "Expected collection", "صافي المدفوع بعد المرتجع": "Net paid after refund", "المدفوع": "Paid", "ملاحظة": "Note", "معاينة فقط وليست إثبات دفع": "Preview only Not proof of payment", "نسخة تحضير وليست فاتورة تحصيل": "Preparation copy Not a payment invoice", "شكرًا لزيارتكم": "Thank you for visiting",
+  "طلب تحضير": "Preparation order", "فاتورة مرتجع": "Refund invoice", "فاتورة مبيعات": "Sales invoice", "مستند مالي": "Financial document", "معاينة فقط لم تُسجل الفاتورة": "Preview only No invoice has been recorded",
+  "المرجع المحلي": "Local reference", "محفوظة على الجهاز بانتظار المزامنة": "Saved on this device Awaiting sync", "نسخة المطبخ أو البار": "Kitchen or bar copy",
+  "العميل:": "Customer:", "رقم العميل:": "Customer phone:", "رقم العميل الضريبي:": "Customer VAT number:", "طريقة إعادة المبلغ": "Refund method", "طريقة التحصيل": "Payment method", "نقدي": "Cash", "نقاط البيع": "Card",
+  "جميع المبالغ بالريال السعودي": "All amounts in Saudi riyals", "مرجع الفاتورة:": "Original invoice:", "الصنف": "Item", "سعر الوحدة": "Unit price", "المجموع قبل الخصم": "Subtotal before discount", "القيمة قبل الضريبة": "Amount before VAT", "ضريبة القيمة المضافة": "Value added tax",
+  "الأسعار شاملة الضريبة": "Prices include VAT", "الأسعار غير شاملة الضريبة": "Prices exclude VAT", "صافي الفاتورة": "Invoice total", "المبلغ المدفوع": "Amount paid", "المتبقي": "Outstanding", "المبلغ المرتجع": "Refunded amount", "المبلغ بعد المرتجع": "Amount after refund",
+  "لم تُطلب رسالة": "No message requested", "لم تُنشأ رسالة واتساب لهذه الفاتورة": "No WhatsApp message was created for this invoice", "في قائمة الإرسال": "Queued", "الرسالة قيد المعالجة ولم يتأكد إرسالها بعد": "Message is queued Sending has not been confirmed", "جارٍ الإرسال": "Sending", "تجري محاولة إرسال الرسالة": "A send attempt is in progress",
+  "بانتظار تأكيد الوصول": "Awaiting delivery", "قبل مزود واتساب طلب الإرسال ولم يتأكد وصولها للعميل": "WhatsApp accepted the message Delivery is not confirmed", "وصلت للعميل": "Delivered", "أكد واتساب وصول الرسالة إلى جهاز العميل": "WhatsApp confirmed delivery to the customer's device", "قرأها العميل": "Read", "أكد واتساب قراءة العميل للرسالة": "WhatsApp confirmed the customer read the message",
+  "فشل الإرسال": "Send failed", "لم ينجح إرسال الرسالة": "The message was not sent", "تحتاج مراجعة": "Needs review", "نتيجة الإرسال غير مؤكدة ولا تُعاد الرسالة تلقائيًا": "Send result is uncertain The message will not be retried automatically", "غير مؤكدة": "Unconfirmed", "لا تتوفر حالة مؤكدة للرسالة": "No confirmed message status is available", "أُلغي الإرسال": "Send cancelled", "أُلغيت رسالة هذه الفاتورة": "The invoice message was cancelled",
+  "بعد مزامنة الفاتورة": "After invoice sync", "تعذر التحقق": "Unable to check", "جارٍ التحقق": "Checking", "آخر حالة محفوظة تعذر تحديثها": "Last saved status Could not refresh", "لم يُسجل رقم جوال": "No phone number recorded", "خدمة الولاء غير متاحة": "Loyalty unavailable", "لم تُدرج الرسالة للإرسال": "Message was not queued", "رفض مزود واتساب الرسالة": "WhatsApp provider rejected the message", "نتيجة الإرسال غير مؤكدة": "Send result is uncertain", "انتهت مهلة محاولة الإرسال": "Send attempt timed out", "تعذر الإرسال لدى مزود واتساب": "WhatsApp provider could not send", "خدمة واتساب متوقفة": "WhatsApp service stopped", "تعذر التحقق من الحالة": "Could not check status", "أُلغيت الرسالة": "Message cancelled",
   "بانتظار اعتماد السعر": "Awaiting price approval",
   "صنف": "items", "قطعة": "items", "جار حفظ العملية انتظر حتى تكتمل": "Saving the transaction Please wait",
   "لم يكتمل تجهيز الكاشير حدّث المزامنة قبل الدفع": "Cashier is not ready Refresh sync before payment",
@@ -107,15 +120,31 @@ export const financePosEnglish: Record<string, string> = {
   "إعادة تحميل الشعار": "Reload logo",
 };
 
-export function financePosText(language: FinancePosLanguage, text: string): string {
+/** Display-only spelling of personal names; never use this value as a persisted identity. */
+export function financePosDisplayName(text: string | null | undefined, language: FinancePosLanguage): string {
+  if (!text) return "";
+  if (language === "ar" || !/[\u0600-\u06ff]/u.test(text)) return text;
+  const names: Record<string, string> = { "مايند": "MIND", "المستشفى": "Hospital", "الدكتور": "Dr", "دكتور": "Dr", "الدكتورة": "Dr", "دكتورة": "Dr", "محمد": "Mohammed", "أحمد": "Ahmed", "احمد": "Ahmed", "محمود": "Mahmoud", "عبدالله": "Abdullah", "عبدالرحمن": "Abdulrahman", "عبدالعزيز": "Abdulaziz", "خالد": "Khalid", "علي": "Ali", "عمر": "Omar", "يوسف": "Yousef", "حسن": "Hassan", "حسين": "Hussein", "سعيد": "Saeed", "سعود": "Saud", "فيصل": "Faisal", "فهد": "Fahad", "إبراهيم": "Ibrahim", "ابراهيم": "Ibrahim", "مصطفى": "Mostafa", "سارة": "Sarah", "فاطمة": "Fatima", "مريم": "Maryam", "نورة": "Noura", "نور": "Noor", "عبد": "Abdul", "الله": "Allah", "بن": "bin", "بنت": "bint" };
+  const letters: Record<string, string> = { "ا": "a", "أ": "a", "إ": "i", "آ": "aa", "ب": "b", "ت": "t", "ث": "th", "ج": "j", "ح": "h", "خ": "kh", "د": "d", "ذ": "dh", "ر": "r", "ز": "z", "س": "s", "ش": "sh", "ص": "s", "ض": "d", "ط": "t", "ظ": "dh", "ع": "a", "غ": "gh", "ف": "f", "ق": "q", "ك": "k", "ل": "l", "م": "m", "ن": "n", "ه": "h", "و": "w", "ي": "y", "ى": "a", "ة": "a", "ء": "'", "ئ": "y", "ؤ": "w", "پ": "p", "چ": "ch", "ڤ": "v", "گ": "g", "،": ",", "؛": ";", "؟": "?", "٫": ".", "٬": "," };
+  return text.normalize("NFKC").replace(/[\u064b-\u065f\u0670\u0640]/gu, "").replace(/[\u0660-\u0669]/gu, digit => String(digit.charCodeAt(0) - 0x660)).replace(/[\u06f0-\u06f9]/gu, digit => String(digit.charCodeAt(0) - 0x6f0)).replace(/[\u0621-\u064a\u0671-\u06d3]+/gu, word => names[word] ?? Array.from(word).map(letter => letters[letter] ?? letter).join("").replace(/^./, letter => letter.toUpperCase())).replace(/[،؛؟٫٬]/gu, character => letters[character]);
+}
+
+export function financePosText(language: FinancePosLanguage, text: string, english?: string): string {
   if (language === "ar") return text;
+  if (english !== undefined) return english;
   const normalized = text.trim().replace(/\s+/g, " ");
   const translation = financePosEnglish[normalized];
-  if (!translation) return text;
+  if (!translation) {
+    const catalog = hospitalCategoryName(hospitalProductName(normalized, language), language);
+    if (catalog !== normalized) return catalog;
+    const phrases = normalized.split(/(\s+[·•|]\s+)/u);
+    if (phrases.length > 1) return phrases.map(phrase => financePosEnglish[phrase.trim()] ?? financePosDisplayName(phrase, language)).join("");
+    return text.split(/(\s+)/u).map(part => financePosEnglish[part] ?? financePosDisplayName(part, language)).join("");
+  }
   return text.slice(0, text.length - text.trimStart().length) + translation + text.slice(text.trimEnd().length);
 }
 
 export function financePosProductName(product: { name: string; nameEn?: string | null }, language: FinancePosLanguage) {
-  return language === "en" && product.nameEn?.trim() ? product.nameEn.trim() : hospitalProductName(product.name, language);
+  return language === "en" && product.nameEn?.trim() ? product.nameEn.trim() : financePosDisplayName(hospitalProductName(product.name, language), language);
 }
-export const financePosCategoryName = hospitalCategoryName;
+export const financePosCategoryName = (name: string, language: FinancePosLanguage) => financePosDisplayName(hospitalCategoryName(name, language), language);

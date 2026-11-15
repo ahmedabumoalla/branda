@@ -1,10 +1,12 @@
 "use client";
+import { useFinancePosLocale } from "./finance-pos-locale";
 import { useEffect, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import shared from "./finance.module.css";
 import styles from "./finance-inventory-item-form.module.css";
 
 export function FinanceInventoryBarcode({ value, name }: { value: string; name: string }) {
+  const { t } = useFinancePosLocale();
   const svg = useRef<SVGSVGElement>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
@@ -17,13 +19,13 @@ export function FinanceInventoryBarcode({ value, name }: { value: string; name: 
     }).catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
   }, [value]);
-  return <div className={styles.barcode}><span>الباركود المحفوظ للصنف {name}</span><div className={styles.barcodeScroll}><svg ref={svg} role="img" aria-label={`باركود ${value}`} /></div>
-    {error && <span role="alert">تعذر إنشاء صورة الباركود</span>}
+  return <div className={styles.barcode}><span>{t("الباركود المحفوظ للصنف ")}{name}</span><div className={styles.barcodeScroll}><svg ref={svg} role="img" aria-label={t("باركود ") + (value)} /></div>
+    {error && <span role="alert">{t("تعذر إنشاء صورة الباركود")}</span>}
     <button type="button" className={shared.secondary} disabled={!ready} onClick={() => {
       if (!svg.current) return;
       const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg.current)], { type: "image/svg+xml;charset=utf-8" }));
       const link = document.createElement("a"); link.href = url; link.download = "inventory-barcode.svg"; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }}><Download size={16} />تنزيل الباركود للطباعة</button>
+    }}><Download size={16} />{t("تنزيل الباركود للطباعة")}</button>
   </div>;
 }

@@ -1,3 +1,13 @@
+# Combined platform release ? VERIFIED, publication in progress ? 2026-11-15
+
+- User authorizes publishing completed combined platform source after performance/interface audit; browser audit explicitly requested. Preserve Claude and remote production fixes; no real test messages or financial transactions
+- Integration uses release/platform-complete-20261115 based on origin/main de452fa6bf508d176312665d046beee69f2c9307, never resets the shared older root. Production project is branda-2, not root's stale Vercel link
+- Performance fixes: contact-only home query; batched admin brand media signing with fresh storage URLs and lazy thumbnails; on-demand finance sections; asynchronous session/brand-scoped notifications; no per-route heartbeat restart; removed cancelled-navigation loading overlay; retained POS image nodes; camera cancellation cleanup and admin media action states
+- Browser read-only samples: home desktop/mobile, core admin routes, MIND inventory/purchases/suppliers/payments/loyalty/POS/invoice tabs/menu. Confirmed89 image nodes retained across category changes and390px purchase modal fits. Admin brand page previously timed out20s; after batch signing loaded at6.2s DOM on development server, not a controlled production benchmark
+- Live DB metadata: all26 reviewed migrations functionally present;42 guarded procedures and9 protected tables verified. Narrow contact service-role SELECT restored by migration20261115130759. Claude's two unregistered fixes already exist; do not reapply
+- RUN exact merged release TypeScript exit0 at13:26Z; production build exit0 at13:28:20Z with2742 unchanged input hashes; Node24.19. Source/doc text integrity passed. Details: docs/BARNDAKSA_HANDOFF/PLATFORM_AUDIT_20261115.md and GITHUB_VERCEL_STATUS.md. Private evidence output/platform-audit-20261115 and output/erp-database/release-migration-readiness.json remains local
+- Not verified: every possible button/role, real payment/refund/message sends, physical scanners/printers/camera, stable production speed guarantee. No publication yet
+
 # Current task state
 
 - MQAS77 WALLET PREPARED 2026-11-13: Wallet-only black/gold 77/scissors artwork, live stamp tiles, native counts/secure QR, separate Apple strip and Google hero/logo. Program remains4stamps; other brands/customer data unchanged. Node24.21.0 artwork34 + signed-pass/security/sync/performance27 + TypeScript/scoped lint/text PASS. Actual PNGs reviewed; handset not tested. Scoped publication and refresh of existing passes pending. See [handoff](BARNDAKSA_HANDOFF/MQAS77_WALLET_20261113.md)

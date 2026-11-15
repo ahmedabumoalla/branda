@@ -1,0 +1,201 @@
+[
+  {
+    "file": "components/finance/finance-invoice-detail.tsx",
+    "lines": [
+      {
+        "line": 80,
+        "text": "  const pdf = issued ? `/api/finance/${encodeURIComponent(slug)}/company-invoices/${issued.id}/pdf` : \"\";"
+      }
+    ]
+  },
+  {
+    "file": "components/finance/finance-receipt-dialog.tsx",
+    "lines": [
+      {
+        "line": 46,
+        "text": "    fetch(`/api/finance/${encodeURIComponent(snapshot.cafe.slug)}/receipt-brand`, { signal: controller.signal, cache: \"no-store\" })"
+      },
+      {
+        "line": 72,
+        "text": "    const url = `/api/finance/${encodeURIComponent(snapshot.cafe.slug)}/company-invoices/${companyInvoice.id}/pdf`;"
+      }
+    ]
+  },
+  {
+    "file": "components/finance/finance-sale-form.tsx",
+    "lines": [
+      {
+        "line": 208,
+        "text": "        if (posted.data.deliveryMethod === \"both\") { setPreviewOpen(true); setPdfUrl(`/api/finance/${encodeURIComponent(data.cafe.slug)}/company-invoices/${posted.data.id}/pdf`); }"
+      },
+      {
+        "line": 312,
+        "text": "      const response = await fetch(`/api/finance/${encodeURIComponent(data.cafe.slug)}/company-invoices/${issued.id}/pdf`);"
+      },
+      {
+        "line": 328,
+        "text": "    if (issued) { setPdfLoading(false); setPdfUrl(`/api/finance/${encodeURIComponent(data.cafe.slug)}/company-invoices/${issued.id}/pdf`); return; }"
+      }
+    ]
+  },
+  {
+    "file": "components/finance/finance-shift-attachments.tsx",
+    "lines": [
+      {
+        "line": 17,
+        "text": "  const base = `/api/finance/${encodeURIComponent(slug)}/shift-attachments`;"
+      },
+      {
+        "line": 30,
+        "text": "          const prepared = await fetch(base, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ shiftId, name: file.name, mime: file.type, size: file.size }) });"
+      },
+      {
+        "line": 35,
+        "text": "          const finalized = await fetch(`${base}/${upload.attachment.id}`, { method: \"POST\" });"
+      }
+    ]
+  },
+  {
+    "file": "components/finance/finance-shift-details.tsx",
+    "lines": [
+      {
+        "line": 40,
+        "text": "        {tab === \"payouts\" && (!detail.payouts.length ? <Empty title=\"لا توجد مستندات موردين في هذه الوردية\" /> : detail.payouts.map(payout => <section className={styles.panel} key={payout.id}><div className={styles.panelHeader}><div><h3 className={styles.panelTitle}>{payout.supplier_name}</h3><p className={styles.muted}>{payout.kind === \"purchase\" ? \"فاتورة مشتريات\" : \"سند صرف\"} #{payout.number} — {financeDate(payout.created_at)}</p></div><span className={styles.badge}>{payout.payment === \"credit\" ? \"آجل\" : \"نقدي\"}</span><strong><Numeric value={payout.amount} money /></strong></div><div className={styles.panelBody}><p>جوال المورد <bdi>{payout.supplier_phone || \"غير مسجل\"}</bdi></p><div className={styles.shiftSummaryGrid}><div><span>المدفوع من الصندوق</span><strong><Numeric value={payout.paid} money /></strong></div><div><span>المتبقي للمورد</span><strong><Numeric value={Math.max(0, payout.amount - payout.paid)} money /></strong></div><div><span>الضريبة {payout.vat_rate}% {payout.tax_inclusive ? \"ضمن السعر\" : \"\"}</span><strong><Numeric value={payout.tax} money /></strong></div></div>{payout.lines.length > 0 && <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الصافي</th><th>الضريبة</th></tr></thead><tbody>{payout.lines.map((line, index) => <tr key={index}><td>{line.name}</td><td><Numeric value={line.quantity} /></td><td><Numeric value={line.unit_price} money /></td><td><Numeric value={line.net} money /></td><td><Numeric value={line.tax} money /></td></tr>)}</tbody></table></div>}{payout.note && <p className={styles.muted}>{payout.note}</p>}<div className={styles.actions}>{payout.attachments.map(file => <a className={styles.secondary} key={file.id} href={`/api/finance/${encodeURIComponent(snapshot.cafe.slug)}/shift-attachments/${encodeURIComponent(file.id)}`} download><ArrowDownToLine size={16} aria-hidden=\"true\" /><span className={styles.shiftFilename}>{file.original_name}</span></a>)}</div>{!payout.attachments.length && <p className={styles.muted}>لم ترفق مستندات مع هذا السند</p>}</div></section>))}"
+      }
+    ]
+  },
+  {
+    "file": "components/finance/finance-shift-report.tsx",
+    "lines": [
+      {
+        "line": 27,
+        "text": "    fetch(`/api/finance/${encodeURIComponent(slug)}/receipt-brand`, { signal: controller.signal, cache: \"no-store\" }).then(async response => { if (!response.ok) throw new Error(\"تعذر تحميل هوية العلامة للطباعة\"); return response.json() as Promise<ReceiptBrand>; }).then(value => { if (!controller.signal.aborted) setBrand(value); }).catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : \"تعذر تحميل التقرير\"); });"
+      }
+    ]
+  },
+  {
+    "file": "components/finance/finance-treasury-attachments.tsx",
+    "lines": [
+      {
+        "line": 20,
+        "text": "  const base = `/api/finance/${encodeURIComponent(slug)}/treasury-attachments`;"
+      },
+      {
+        "line": 45,
+        "text": "          const response = await fetch(base, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ documentId, id: entry.id, name: entry.file.name, size: entry.file.size }) });"
+      },
+      {
+        "line": 51,
+        "text": "            let finish = await fetch(`${base}/${entry.id}${query}`, { method: \"POST\" });"
+      },
+      {
+        "line": 57,
+        "text": "              finish = await fetch(`${base}/${entry.id}${query}`, { method: \"POST\" });"
+      },
+      {
+        "line": 118,
+        "text": "    fetch(base + query, { cache: \"no-store\", signal: controller.signal }).then(async (response) => {"
+      }
+    ]
+  },
+  {
+    "file": "components/finance/use-pos-finance.ts",
+    "lines": [
+      {
+        "line": 42,
+        "text": "  const endpoint = `/api/finance/${encodeURIComponent(targetSlug)}/pos-sync`;"
+      },
+      {
+        "line": 55,
+        "text": "        const auth = await fetch(endpoint, { cache: \"no-store\", signal: AbortSignal.timeout(15_000) });"
+      },
+      {
+        "line": 70,
+        "text": "              const response = await fetch(endpoint, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ cafeId: initialSnapshot.cafe.id, userId: initialSnapshot.userId, command: sale.command }), signal: AbortSignal.timeout(25_000) });"
+      },
+      {
+        "line": 91,
+        "text": "            return fetch(endpoint.replace(\"pos-sync\", \"shift-heartbeat\"), { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ shiftId, deviceId: deviceId.current, pending: rows.length, conflicts: rows.filter(s => s.status === \"conflict\").length }), signal: AbortSignal.timeout(8000) });"
+      }
+    ]
+  },
+  {
+    "file": "lib/export/company-invoice-preview-pdf.ts",
+    "lines": [
+      {
+        "line": 131,
+        "text": "    const response = await fetch(path);"
+      }
+    ]
+  },
+  {
+    "file": "lib/export/finance-journal-pdf.ts",
+    "lines": [
+      {
+        "line": 51,
+        "text": "    const response = await fetch(\"/fonts/\" + file);"
+      }
+    ]
+  },
+  {
+    "file": "lib/export/finance-price-list-pdf.ts",
+    "lines": [
+      {
+        "line": 6,
+        "text": "    const response = await fetch(`/fonts/tajawal-${style}.ttf`);"
+      }
+    ]
+  },
+  {
+    "file": "lib/export/payment-receipt-pdf.ts",
+    "lines": [
+      {
+        "line": 34,
+        "text": "    const response = await fetch(\"/fonts/\" + file);"
+      }
+    ]
+  },
+  {
+    "file": "lib/finance/pos-offline-assets.ts",
+    "lines": [
+      {
+        "line": 36,
+        "text": "        const response = await fetch(url, { mode: external ? \"no-cors\" : \"same-origin\", priority: \"low\", signal: AbortSignal.timeout(15000) });"
+      },
+      {
+        "line": 45,
+        "text": "    const response = await fetch(`/api/finance/${encodeURIComponent(snapshot.cafe.slug)}/receipt-brand`, { cache: \"no-store\" });"
+      },
+      {
+        "line": 48,
+        "text": "      if (next.logoUrl) { const logo = await fetch(next.logoUrl); if (!logo.ok) throw Error(); next.logoUrl = await blobDataUrl(await logo.blob()); }"
+      }
+    ]
+  },
+  {
+    "file": "lib/finance/printer-settings.ts",
+    "lines": [
+      {
+        "line": 51,
+        "text": "    response = await fetch(`${FINANCE_PRINTER_BRIDGE}${path}`, {"
+      }
+    ]
+  },
+  {
+    "file": "lib/finance/treasury-upload.ts",
+    "lines": [
+      {
+        "line": 36,
+        "text": "    const response = await fetch(location, { method: \"HEAD\", headers, cache: \"no-store\", redirect: \"error\", signal: deadline(60_000) });"
+      },
+      {
+        "line": 43,
+        "text": "    const response = await fetch(endpoint, {"
+      },
+      {
+        "line": 59,
+        "text": "    const response = await fetch(location, {"
+      }
+    ]
+  }
+]

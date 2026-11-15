@@ -18,14 +18,16 @@ export type CompanyInvoicePreview = {
   savedDraft?: boolean;
   quote?: { number?: number; displayNumber?: string; date: string; validUntil: string; warehouse: string; draft: boolean };
   creditNote?: { number?: number; displayNumber?: string; date: string; issueDate: string; warehouse: string; draft: boolean; reason: string };
-  salesReturn?: { number: number; date: string; sourceNumber: string; warehouse: string; paid: number; debtReduced: number; taxInclusive: boolean };
+  salesReturn?: { number: number; date: string; sourceNumber: string; warehouse: string; paid: number; debtReduced: number; taxInclusive: boolean;
+    fiscal?: { sellerName: string; sellerVat: string; sellerAddress: string; customerAddress: string; invoiceType: "standard" | "simplified"; issuedAt: string; sourceDate: string } };
   recurring?: { name: string; date: string; issueDate: string; dueDate: string; periodStart?: string; periodEnd?: string; taxInclusive: boolean };
   issued?: { id?: string; number: number; displayNumber?: string; invoiceType?: "standard" | "simplified"; issuedAt: string; supplyDate: string; sellerName: string; sellerVat: string; sellerAddress: string; customerAddress: string; taxInclusive: boolean };
 };
 
 export function companyInvoiceQr(data: CompanyInvoicePreview) {
-  if (!data.issued) throw new Error("Issued invoice required");
-  const values = [data.issued.sellerName, data.issued.sellerVat, new Date(data.issued.issuedAt).toISOString(), (data.sar?.total ?? data.total).toFixed(2), (data.sar?.tax ?? data.tax).toFixed(2)];
+  const identity = data.salesReturn?.fiscal ?? data.issued;
+  if (!identity) throw new Error("Issued fiscal identity required");
+  const values = [identity.sellerName, identity.sellerVat, new Date(identity.issuedAt).toISOString(), (data.sar?.total ?? data.total).toFixed(2), (data.sar?.tax ?? data.tax).toFixed(2)];
   const bytes = values.flatMap((value, index) => {
     const encoded = new TextEncoder().encode(value);
     if (encoded.length > 255) throw new Error("Invoice QR field too long");
@@ -58,7 +60,7 @@ export function buildCompanyInvoicePreviewPdf(data: CompanyInvoicePreview, fonts
     }
   }
   doc.setLanguage("ar-SA");
-  const draftLabel = data.recurring ? "معاينة فاتورة دورية غير صادرة" : data.salesReturn ? `فاتورة مرتجعة رقم ${data.salesReturn.number}` : data.creditNote ? `${data.creditNote.draft ? "مسودة إشعار دائن" : "إشعار دائن"}${data.creditNote.number ? ` رقم ${displayRecordNumber(data.creditNote)}` : " غير محفوظ"}` : data.documentType === "advance" ? "فاتورة دفعة مقدمة" : data.documentType === "debit" ? "إشعار مدين" : data.quote ? `${data.quote.draft ? "مسودة عرض سعر" : "عرض سعر"}${data.quote.number ? ` رقم ${displayRecordNumber(data.quote)}` : " غير محفوظ"}` : data.issued ? data.issued.invoiceType === "simplified" ? "فاتورة ضريبية مبسطة" : "فاتورة ضريبية" : data.savedDraft ? "مسودة فاتورة غير معتمدة" : "معاينة غير محفوظة";
+  const draftLabel = data.recurring ? "معاينة فاتورة دورية غير صادرة" : data.salesReturn ? `${data.salesReturn.fiscal ? data.salesReturn.fiscal.invoiceType === "simplified" ? "إشعار دائن ضريبي مبسط" : "إشعار دائن ضريبي" : "مستند مرتجع مبيعات"} رقم ${data.salesReturn.number}` : data.creditNote ? `${data.creditNote.draft ? "مسودة إشعار دائن" : "إشعار دائن"}${data.creditNote.number ? ` رقم ${displayRecordNumber(data.creditNote)}` : " غير محفوظ"}` : data.documentType === "advance" ? "فاتورة دفعة مقدمة" : data.documentType === "debit" ? "إشعار مدين" : data.quote ? `${data.quote.draft ? "مسودة عرض سعر" : "عرض سعر"}${data.quote.number ? ` رقم ${displayRecordNumber(data.quote)}` : " غير محفوظ"}` : data.issued ? data.issued.invoiceType === "simplified" ? "فاتورة ضريبية مبسطة" : "فاتورة ضريبية" : data.savedDraft ? "مسودة فاتورة غير معتمدة" : "معاينة غير محفوظة";
   doc.setProperties({ title: draftLabel, creator: "Barnda" });
   const width = doc.internal.pageSize.getWidth(), margin = data.thermal ? 5 : 14;
   const table = (body: string[][], head?: string[][], headerPanel = false) => autoTable(doc, {
@@ -75,15 +77,23 @@ export function buildCompanyInvoicePreviewPdf(data: CompanyInvoicePreview, fonts
     doc.setFillColor(255, 255, 255).rect(x, y, size, size, "F").setFillColor(0, 0, 0);
     for (let row = 0; row < count; row++) for (let col = 0; col < count; col++) if (qr.isDark(row, col)) doc.rect(x + (col + 4) * cell, y + (row + 4) * cell, cell + .01, cell + .01, "F");
   };
-  table([[data.brand], [draftLabel], [data.customer], ...(data.taxNumber ? [[`الرقم الضريبي: ${data.taxNumber}`]] : [])], undefined, !!data.issued && !data.thermal);
+  table([[data.brand], [draftLabel], [data.customer], ...(data.taxNumber ? [[`الرقم الضريبي: ${data.taxNumber}`]] : [])], undefined, !!(data.issued || data.salesReturn?.fiscal) && !data.thermal);
+  if (data.salesReturn?.fiscal && !data.thermal) {
+    const header = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable;
+    header.finalY = Math.max(header.finalY, 50);
+  }
   if (data.recurring) table([[data.recurring.name, "الاشتراك"], [data.recurring.date, "تاريخ الفاتورة"], [data.recurring.issueDate, "موعد الإنشاء"], [data.recurring.dueDate, "تاريخ الاستحقاق"], ...(data.recurring.periodStart ? [[data.recurring.periodStart, "الفترة من"], [data.recurring.periodEnd || "", "الفترة حتى"]] : []), [data.recurring.taxInclusive ? "شاملة الضريبة" : "غير شاملة الضريبة", "أسعار الوحدات"], ["معاينة فقط يُخصص الرقم وتُحفظ الفاتورة عند الإصدار"]]);
   if (data.quote) table([[data.quote.date, "تاريخ العرض"], [data.quote.validUntil || "غير محدد", "صالح حتى"], [data.quote.warehouse, "المستودع"], ["عرض سعر وليس فاتورة ضريبية"]]);
   if (data.creditNote) table([[data.creditNote.date, "تاريخ الإشعار"], [data.creditNote.issueDate, "تاريخ الإصدار"], [data.creditNote.warehouse, "المستودع"], [data.creditNote.reason, "سبب الإشعار"]]);
   if (data.salesReturn) table([[String(data.salesReturn.number), "رقم الفاتورة المرتجعة"], [data.salesReturn.sourceNumber, "رقم الفاتورة الأصلية"], [data.salesReturn.date, "تاريخ المرتجع"], [data.salesReturn.warehouse, "المستودع"], [data.salesReturn.taxInclusive ? "شاملة الضريبة" : "غير شاملة الضريبة", "أسعار الوحدات"]]);
-  if (data.issued && !data.thermal) {
+  if ((data.issued || data.salesReturn?.fiscal) && !data.thermal) {
     drawQr(margin, 14);
     const previous = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable;
     previous.finalY = Math.max(previous.finalY, 50);
+  }
+  if (data.salesReturn?.fiscal) {
+    const identity = data.salesReturn.fiscal;
+    table([[identity.sellerName, "اسم البائع"], [identity.sellerVat, "الرقم الضريبي للبائع"], ...(identity.sellerAddress ? [[identity.sellerAddress, "عنوان البائع"]] : []), [data.customer, "المشتري"], ...(data.taxNumber ? [[data.taxNumber, "الرقم الضريبي للمشتري"]] : []), ...(identity.customerAddress ? [[identity.customerAddress, "عنوان المشتري"]] : []), [identity.sourceDate, "تاريخ الفاتورة الأصلية"], [money(data.total - data.tax), "المبلغ المرتجع قبل الضريبة"]]);
   }
   if (data.issued) table([
     [data.issued.displayNumber || String(data.issued.number), data.documentType === "debit" ? "رقم الإشعار" : "رقم الفاتورة"],
@@ -110,8 +120,8 @@ export function buildCompanyInvoicePreviewPdf(data: CompanyInvoicePreview, fonts
   if (data.salesReturn) table([[money(data.salesReturn.paid), "المبلغ المعاد للعميل"], [money(data.salesReturn.debtReduced), "تخفيض المبلغ الآجل"]]);
   if (data.issued) table([[money(data.total - data.tax), "إجمالي المبلغ الخاضع للضريبة"], [money(data.paid ?? 0), "المبلغ المدفوع عند الإصدار"], [money(data.total - (data.paid ?? 0)), "المتبقي عند الإصدار"]]);
   else if (data.paid !== undefined) table([[money(data.paid), "مدفوع"], [money(data.total - data.paid), "المبلغ المستحق"]]);
-  if (data.note) table([[data.note]], [["الملاحظات والشروط"]]);
-  if (data.issued && data.thermal) {
+  if (data.note) table([[data.note]], [[data.salesReturn ? "سبب المرتجع" : "الملاحظات والشروط"]]);
+  if ((data.issued || data.salesReturn?.fiscal) && data.thermal) {
     const size = 36;
     let y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
     if (y + size > doc.internal.pageSize.getHeight() - 18) { doc.addPage(); y = 14; }

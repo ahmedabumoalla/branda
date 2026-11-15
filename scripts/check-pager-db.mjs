@@ -23,6 +23,8 @@ try {
     CREATE TABLE public.brand_feature_overrides(cafe_id uuid,feature_id text,enabled boolean);
     GRANT SELECT ON ALL TABLES IN SCHEMA public TO service_role;`);
   await db.exec(await readFile("supabase/migrations/20261011013350_pager_system.sql","utf8"));
+  const capMigration=await readFile("supabase/migrations/20261113081516_pager_two_ready_messages.sql","utf8");
+  await db.exec(capMigration);
   await query("INSERT INTO cafes(id,name) VALUES($1,'Alpha'),($2,'Beta')",[id(1),id(2)]);
   await query(`INSERT INTO platform_plans(id,features) VALUES('pager','["pager"]'),('loyalty','["loyalty"]'),('all','["all"]')`);
   await query("INSERT INTO subscriptions(cafe_id,plan_id,status) VALUES($1,'pager','active'),($2,'loyalty','active')",[id(1),id(2)]);
@@ -116,5 +118,37 @@ try {
   check(await value("SELECT due_at>now() AND due_at<now()+interval '20 seconds' FROM pager_message_jobs WHERE id=$1",[j.id]),"next scheduled slot excludes provider completion latency");
   check((await claim()).length===0,"overdue backlog never creates catch-up storm");
   await transition(14,"cancelled");
+  // Failed sends do not consume the cap; two accepted sends stop without collecting.
+  await create(15,1,"Two messages");await transition(15,"ready");
+  j=(await claim())[0];check(await dispatch(j),"first capped notification authorized");await finish(j);
+  const makeDue=async n=>{
+    await query("UPDATE pager_message_jobs SET due_at=now()-interval '1 second' WHERE order_id=$1",[id(n)]);
+    await query("UPDATE pager_orders SET last_message_at=now()-interval '61 seconds' WHERE id=$1",[id(n)]);
+  };
+  await makeDue(15);j=(await claim())[0];check(await dispatch(j),"second notification attempt authorized");await finish(j,null,"temporary_failure");
+  check(await value("SELECT message_count=1 FROM pager_orders WHERE id=$1",[id(15)]),"failed send does not consume second notification");
+  await makeDue(15);j=(await claim())[0];check(await dispatch(j),"second notification retry authorized");await finish(j);
+  check(await value("SELECT state='done' FROM pager_message_jobs WHERE id=$1",[j.id]),"second accepted notification finishes job");
+  check(await value("SELECT status='ready' AND message_count=2 FROM pager_orders WHERE id=$1",[id(15)]),"cap leaves order awaiting actual collection");
+  await makeDue(15);await transition(15,"ready");
+  check((await claim()).length===0,"recall and later cron cannot send a third notification");
+  // Defense in depth against a legacy pending/leased job above the cap.
+  await query("UPDATE pager_message_jobs SET state='pending' WHERE id=$1",[j.id]);
+  check((await claim()).length===0,"claim rejects pending job at cap");
+  await query("UPDATE pager_message_jobs SET state='leased',lease_token=$2,lease_until=now()+interval '90 seconds' WHERE id=$1",[j.id,j.lease_token]);
+  check(!await dispatch(j),"final dispatch rejects already leased job at cap");
+  await transition(15,"received");jobs=await claim();
+  check(jobs.length===1&&jobs[0].kind==="rating","collection after cap queues rating independently");
+  check(await dispatch(jobs[0]),"rating authorized after two ready messages");await finish(jobs[0]);
+  await transition(15,"received");check((await claim()).length===0,"rating remains single after repeated collection");
+  // Upgrade existing queues without resetting their successful send count.
+  for(const n of [16,17,18]){await create(n,1,`Legacy ${n}`);await transition(n,"ready");}
+  await query("UPDATE pager_orders SET message_count=CASE WHEN id=$1 THEN 1 ELSE 3 END WHERE id IN ($1,$2,$3)",[id(16),id(17),id(18)]);
+  await query("UPDATE pager_message_jobs SET state='leased',lease_token=$2,lease_until=now()+interval '90 seconds' WHERE order_id=$1",[id(18),id(99)]);
+  await db.exec("RESET ROLE");await db.exec(capMigration);await db.exec("SET ROLE service_role");
+  check(await value("SELECT count(*)=2 FROM pager_message_jobs WHERE order_id IN ($1,$2) AND state='done' AND lease_token IS NULL",[id(17),id(18)]),"migration stops legacy pending and leased jobs above cap");
+  jobs=await claim();check(jobs.length===1&&jobs[0].order_id===id(16),"legacy one-message order retains exactly its second message");
+  check(await dispatch(jobs[0]),"legacy second message authorized");await finish(jobs[0]);
+  check((await claim()).length===0,"legacy second message finishes queue");
   console.log(`PASS ${checks} isolated pager database checks`);
 } finally { await db.close(); }

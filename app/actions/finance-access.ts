@@ -31,7 +31,7 @@ export async function resetSalesCashierPasswordAction(phone: string, code: strin
   }
 }
 
-export async function createSalesCashierAccountAction(input: { name: string; phone: string; password: string }) {
+export async function createSalesCashierAccountAction(input: { name: string; phone: string; password: string; posPermissions?: unknown; employeePermissions?: unknown }) {
   try {
     const result = await provisionSalesCashier(input);
     if (result.ok) invalidateFinanceViews();
@@ -62,7 +62,7 @@ export async function loginFinanceAction(slug: string, identity: string, passwor
   catch { return { ok: false as const, message: "تعذر تسجيل الدخول حاول مرة أخرى" }; }
 }
 
-export async function createFinanceStaffAccountAction(input: { email: string; name: string; password: string; role: "manager" | "cashier" }) {
+export async function createFinanceStaffAccountAction(input: { email: string; name: string; password: string; posPermissions?: unknown; employeePermissions?: unknown; role: FinanceStaffRole }) {
   try {
     const result = await provisionFinanceStaff(input);
     if (result.ok) invalidateFinanceViews();

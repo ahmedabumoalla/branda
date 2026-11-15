@@ -7,6 +7,8 @@ import { canFinance } from "@/lib/finance/permissions";
 import { actionResult } from "@/lib/platform/action-result";
 import type { InvoiceDetail } from "@/lib/finance/invoice-management";
 import { withInvoiceLineNotes } from "@/lib/data/invoice-line-notes";
+import { getInvoiceExtensions } from "./finance-invoice-extensions";
+import { getFinanceInvoiceSettings } from "./finance-invoice-settings";
 
 const change = z.discriminatedUnion("action", [
   z.object({ action: z.literal("sync"), ids: z.array(z.uuid()).min(1).max(500) }).strict(),
@@ -24,6 +26,16 @@ export async function readInvoiceDetailAction(id: string, slug: string) {
     const detail = data as InvoiceDetail;
     return detail.invoice ? { ...detail, invoice: await withInvoiceLineNotes(client, cafe.id, detail.invoice) } : detail;
   }, "تعذر تحميل تفاصيل الفاتورة");
+}
+
+/** Parallel authorized reads in one request, instead of queued client Server Actions. */
+export async function readInvoiceDetailPageAction(id: string, slug: string) {
+  const [detail, extensions, settings] = await Promise.all([
+    readInvoiceDetailAction(id, slug),
+    getInvoiceExtensions(slug, id),
+    getFinanceInvoiceSettings(slug),
+  ]);
+  return { detail, extensions, settings };
 }
 
 export async function updateInvoiceManagementAction(input: unknown, slug: string) {

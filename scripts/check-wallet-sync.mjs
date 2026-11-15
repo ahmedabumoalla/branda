@@ -16,6 +16,7 @@ function load(relative, stubs = {}, cache = new Map()) {
   const exports = {}; cache.set(relative, exports);
   new Function("require", "exports", output)(name => {
     if (Object.hasOwn(stubs, name)) return stubs[name];
+    if (name === '@/lib/data/account-cancellation') return { brandAllowsNewWork: async () => true, brandSlugAllowsNewWork: async () => true };
     if (name === "server-only") return {};
     if (name.startsWith("@/") || name.startsWith(".")) return load(`${name.startsWith("@/") ? name.slice(2) : path.join(path.dirname(relative), name)}.ts`, stubs, cache);
     return dependency(name);

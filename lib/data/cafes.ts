@@ -1,4 +1,5 @@
 import { getActiveUser } from "@/lib/auth/active-user";
+import { readActiveProfileRole } from "@/lib/auth/active-profile-role";
 import { createClient } from "@/lib/supabase/server";
 import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -65,11 +66,7 @@ export const getOwnerCafeContext = cache(async (): Promise<CafeContext | null> =
   const user = await getActiveUser(supabase);
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { data: profile } = await readActiveProfileRole(supabase, user.id);
 
   if (profile?.role === "platform_admin") {
     const maintenanceSession = await readMaintenanceSessionCookie();
@@ -174,11 +171,7 @@ export const requirePlatformAdmin = cache(async () => {
   const user = await getActiveUser(supabase);
   if (!user) throw new Error("Unauthorized");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { data: profile } = await readActiveProfileRole(supabase, user.id);
 
   if (profile?.role !== "platform_admin") {
     throw new Error("Forbidden: platform admin required");

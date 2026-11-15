@@ -142,6 +142,7 @@ const revisionSchema = z.number().int().min(0).max(2_147_483_647);
 export const invoiceCustomFieldValuesSchema = z.record(z.uuid(), valueSchema).refine(values => Object.keys(values).length <= 50, 'الحد الأقصى ٥٠ قيمة');
 export type InvoiceCustomFieldValues = z.infer<typeof invoiceCustomFieldValuesSchema>;
 export const invoiceCustomFieldContextSchema = z.object({
+  supported: z.boolean().default(true),
   settings: invoiceCustomFieldSettingsSchema, settingsRevision: revisionSchema,
   savedSettings: invoiceCustomFieldSettingsSchema.nullable(), savedSettingsRevision: revisionSchema.nullable(),
   values: invoiceCustomFieldValuesSchema, revision: revisionSchema, hasSelection: z.boolean(), issued: z.boolean(),
@@ -151,6 +152,9 @@ export const invoiceCustomFieldValuesInputSchema = z.object({ draftId: z.uuid(),
 export type InvoiceCustomFieldValuesInput = z.infer<typeof invoiceCustomFieldValuesInputSchema>;
 export const invoiceCustomFieldValuesSavedSchema = z.object({ revision: revisionSchema, values: invoiceCustomFieldValuesSchema, issued: z.boolean() }).strict();
 export type InvoiceCustomFieldValuesSaved = z.infer<typeof invoiceCustomFieldValuesSavedSchema>;
+export type InvoiceCustomFieldSaveResult =
+  | (InvoiceCustomFieldValuesSaved & { supported: true; skipped: false })
+  | { supported: false; skipped: true };
 export const invoiceCustomFieldMediaSchema = z.object({ fileId: z.uuid(), sourceFileId: z.uuid(), thumbnailFileId: z.uuid().nullable(), kind: z.enum(['file', 'image']), mime: z.string(), sha256: z.string().regex(/^[a-f0-9]{64}$/), size: z.number().int().positive() }).strict();
 const historicalFieldSchema = z.object({ field: invoiceCustomFieldSchema, value: valueSchema, media: invoiceCustomFieldMediaSchema.nullable() }).strict();
 export const issuedInvoiceCustomFieldsSchema = z.object({ recorded: z.boolean(), title: z.string(), settingsRevision: revisionSchema, fields: z.array(historicalFieldSchema).max(50) }).strict();

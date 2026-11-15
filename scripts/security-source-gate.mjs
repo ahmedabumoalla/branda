@@ -12,11 +12,11 @@ const MIGRATIONS = path.join(ROOT, "supabase", "migrations");
 const UNIFIED_INSTALL = path.join(ROOT, "supabase", "manual", "BARNDAKSA_STAGING_INITIAL_INSTALL.sql");
 
 const MOJIBAKE_PATTERNS = [
-  { label: "ط·ظ", re: /ط·ظ/ },
-  { label: "طھظ", re: /طھظ/ },
-  { label: "ظ…ظ", re: /ظ…ظ/ },
-  { label: "â€\"", re: /â€"/ },
-  { label: "â•گ", re: /â•گ/ },
+  { label: "\u0637\u00b7\u0638", re: /\u0637\u00b7\u0638/ },
+  { label: "\u0637\u06be\u0638", re: /\u0637\u06be\u0638/ },
+  { label: "\u0638\u2026\u0638", re: /\u0638\u2026\u0638/ },
+  { label: "\u00e2\u20ac\"", re: /\u00e2\u20ac"/ },
+  { label: "\u00e2\u2022\u06af", re: /\u00e2\u2022\u06af/ },
 ];
 
 const UNSAFE_PROFILES_INSERT =

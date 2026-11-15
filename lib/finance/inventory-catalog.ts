@@ -6,6 +6,8 @@ export type FinanceInventoryLink = { product_id: string; quantity: number };
 export type FinanceInventoryCatalog = { items: FinanceItem[]; units: FinanceInventoryUnit[] };
 export const INVENTORY_IMAGE_BUCKET = "bf-inventory-images";
 export const INVENTORY_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
+// Imported menu IDs are PostgreSQL UUIDs, including hash-derived IDs without RFC version bits.
+export const inventoryMenuProductIdSchema = z.guid();
 export const inventoryItemInputSchema = z.object({
   requestId: z.uuid(),
   payload: z.object({
@@ -15,7 +17,7 @@ export const inventoryItemInputSchema = z.object({
     imagePath: z.string().max(150).nullable().optional(),
     minQuantity: z.number().finite().min(0).max(99999999),
     costMode: z.enum(["equal_split", "full"]),
-    productLinks: z.array(z.object({ productId: z.uuid(), quantity: z.number().finite().positive().max(1000000).refine(n=>Math.abs(n*1000-Math.round(n*1000))<0.000001,"استخدم ثلاث منازل عشرية كحد أقصى") })).max(200)
+    productLinks: z.array(z.object({ productId: inventoryMenuProductIdSchema, quantity: z.number().finite().positive().max(1000000).refine(n=>Math.abs(n*1000-Math.round(n*1000))<0.000001,"استخدم ثلاث منازل عشرية كحد أقصى") })).max(200)
       .refine(links=>new Set(links.map(link=>link.productId)).size===links.length,"لا تكرر المنتج في الربط"),
   }).strict(),
 }).strict();

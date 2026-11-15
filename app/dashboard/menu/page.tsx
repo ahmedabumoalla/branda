@@ -9,15 +9,20 @@ import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { getOwnerMenu } from "@/lib/data/menu";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getOwnerMenuBranches } from "@/lib/data/menu-branches";
+import { redirect } from "next/navigation";
 
 type MenuLoadResult =
   | { status: "ready"; menu: Awaited<ReturnType<typeof getOwnerMenu>>; branches: Awaited<ReturnType<typeof getOwnerMenuBranches>>["branches"]; branch: Awaited<ReturnType<typeof getOwnerMenuBranches>>["branches"][number] | null }
   | { status: "blocked" }
+  | { status: "integrated" }
   | { status: "error" };
 
 async function loadDashboardMenu(branchId?: string): Promise<MenuLoadResult> {
   try {
     const features = await getOwnerFeatureCodes();
+    if (featureCodesAllow(features, "finance") && featureCodesAllow(features, "menu")) {
+      return { status: "integrated" };
+    }
     if (!featureCodesAllow(features, "menu")) {
       return { status: "blocked" };
     }
@@ -49,7 +54,14 @@ export default async function DashboardMenuPage({ searchParams }: { searchParams
     );
   }
 
-  const result = await loadDashboardMenu((await searchParams).branch);
+  const branchId = (await searchParams).branch;
+  const result = await loadDashboardMenu(branchId);
+
+  if (result.status === "integrated") {
+    const query = new URLSearchParams({ view: "products" });
+    if (branchId) query.set("branch", branchId);
+    redirect(`/dashboard/system/inventory/items?${query}`);
+  }
 
   if (result.status === "blocked") {
     return <DashboardFeatureBlockedState title="المنيو والمنتجات" />;

@@ -1,0 +1,162 @@
+/* Branda identity and reading order for the finance overview section only.
+   Owner numbers first (sales, profit, receivables), then where the money is, then the accounting control.
+   Classes from finance.module.css and finance-control-panel.module.css are matched by their local name. */
+.overview,
+.control {
+  --o-espresso: var(--barndaksa-espresso-dark, #311912);
+  --o-coffee: var(--barndaksa-coffee-brown, #4a281d);
+  --o-brown: var(--barndaksa-brand-brown, #6b3a25);
+  --o-gold: var(--barndaksa-gold-accent, #d9a33f);
+  --o-soft-gold: var(--barndaksa-soft-gold, #f0c568);
+  --o-cream: var(--barndaksa-cream-base, #fcf8f3);
+  --o-sand: var(--barndaksa-warm-sand, #f2e7d9);
+  --o-line: var(--barndaksa-border-sand, #e7d7c6);
+  --o-muted: var(--barndaksa-muted-text, #806a5e);
+  --o-good: #2f6b4f;
+  --o-bad: #a1382a;
+}
+.overview { display: grid; gap: 18px; min-width: 0; }
+
+/* Key numbers: three lead cards, four supporting cards */
+.overview.overview [class*="metrics"] {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 0;
+}
+.overview.overview [class*="metrics"] > div {
+  position: relative;
+  grid-column: span 3;
+  order: 5;
+  padding: 18px 20px;
+  border: 1px solid var(--o-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 16px 34px -30px rgba(49, 25, 18, 0.6);
+  animation: rise 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.overview.overview [class*="metrics"] > div::before {
+  content: "";
+  position: absolute;
+  inset-block: 18px;
+  inset-inline-start: 0;
+  width: 4px;
+  border-radius: 4px;
+  background: var(--o-gold);
+}
+/* 1 gross sales, 3 net sales, 5 book profit lead the row */
+.overview.overview [class*="metrics"] > div:is(:nth-child(1), :nth-child(3), :nth-child(5)) { grid-column: span 4; padding: 22px 24px; }
+.overview.overview [class*="metrics"] > div:nth-child(1) {
+  order: 1;
+  border-color: transparent;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(240, 197, 104, 0.22), transparent 55%),
+    linear-gradient(135deg, var(--o-espresso), var(--o-coffee) 58%, var(--o-brown));
+  color: var(--o-cream);
+  box-shadow: 0 24px 44px -30px rgba(49, 25, 18, 0.85);
+}
+.overview.overview [class*="metrics"] > div:nth-child(1)::before { display: none; }
+.overview.overview [class*="metrics"] > div:nth-child(1) [class*="metricLabel"] { color: var(--o-soft-gold); }
+.overview.overview [class*="metrics"] > div:nth-child(1) [class*="metricValue"] { color: #fff; }
+.overview.overview [class*="metrics"] > div:nth-child(1) :is([class*="metricNote"], small) { color: #ead8c5; }
+.overview.overview [class*="metrics"] > div:nth-child(3) { order: 2; animation-delay: 0.05s; }
+.overview.overview [class*="metrics"] > div:nth-child(5) { order: 3; animation-delay: 0.1s; }
+.overview.overview [class*="metrics"] > div:nth-child(5)::before { background: var(--o-good); }
+.overview.overview [class*="metrics"] > div:nth-child(4) { order: 4; }
+.overview.overview [class*="metrics"] > div:nth-child(4)::before { background: var(--o-good); }
+.overview.overview [class*="metrics"] > div:nth-child(2) { order: 5; }
+.overview.overview [class*="metrics"] > div:nth-child(7) { order: 6; }
+.overview.overview [class*="metrics"] > div:nth-child(6) { order: 7; }
+.overview.overview [class*="metrics"] > div:nth-child(6)::before { background: var(--o-bad); }
+.overview.overview [class*="metricLabel"] { color: var(--o-muted); font-size: 13px; font-weight: 700; }
+.overview.overview [class*="metricValue"] { margin-top: 10px; color: var(--o-espresso); font-size: clamp(24px, 2.1vw, 32px); font-weight: 800; }
+.overview.overview [class*="metrics"] > div:is(:nth-child(1), :nth-child(3), :nth-child(5)) [class*="metricValue"] { font-size: clamp(28px, 2.6vw, 40px); }
+.overview.overview [class*="metricNote"] { margin-top: 8px; color: var(--o-muted); font-size: 12px; line-height: 1.7; }
+
+/* Balances and operations panels */
+.overview.overview [class*="twoColumns"] { gap: 14px; }
+.overview.overview section[class*="panel"] {
+  border-color: var(--o-line);
+  border-radius: 18px;
+  box-shadow: 0 16px 34px -30px rgba(49, 25, 18, 0.55);
+}
+.overview.overview [class*="panelHeader"] {
+  padding: 16px 20px;
+  border-bottom-color: var(--o-line);
+  background: linear-gradient(160deg, var(--o-cream), var(--o-sand));
+}
+.overview.overview [class*="panelHeader"] h2 { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; color: var(--o-espresso); }
+.overview.overview [class*="panelHeader"] h2::before { content: ""; width: 6px; height: 20px; border-radius: 4px; background: linear-gradient(180deg, var(--o-soft-gold), var(--o-gold)); }
+.overview.overview [class*="panelHeader"] > svg { color: var(--o-brown); }
+.overview.overview [class*="panelBody"] { padding: 8px 20px 12px; }
+.overview.overview [class*="balanceLine"] { padding: 14px 0; border-bottom: 1px dashed var(--o-line); color: var(--o-coffee); font-size: 14px; font-weight: 600; }
+.overview.overview [class*="balanceLine"]:last-child { border-bottom: 0; }
+.overview.overview [class*="balanceLine"] strong { color: var(--o-espresso); font-size: 16px; font-weight: 800; }
+.overview.overview [class*="balanceLine"][data-negative] strong {
+  padding: 2px 10px;
+  border-radius: 8px;
+  background: #fbece8;
+  color: var(--o-bad);
+}
+
+/* Accounting control, shown after the owner numbers */
+.control.control section[aria-label="الرقابة المحاسبية"] {
+  margin-block: 0;
+  padding: 20px;
+  border-color: var(--o-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 16px 34px -30px rgba(49, 25, 18, 0.55);
+}
+.control.control section[aria-label="الرقابة المحاسبية"] > header h2 { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 800; }
+.control.control section[aria-label="الرقابة المحاسبية"] > header h2::before { content: ""; width: 6px; height: 22px; border-radius: 4px; background: linear-gradient(180deg, var(--o-soft-gold), var(--o-gold)); }
+.control.control article[data-state] {
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid #d5e7db;
+  border-inline-start: 4px solid var(--o-good);
+  border-radius: 14px;
+  background: #f1f8f3;
+}
+.control.control article[data-state="warning"] { border-color: #f0dcae; border-inline-start-color: var(--o-gold); background: #fdf6e6; }
+.control.control article[data-state] > span { color: var(--o-muted); font-weight: 700; }
+.control.control article[data-state] strong { color: var(--o-espresso); font-size: 17px; font-weight: 800; }
+.control.control article[data-state="ok"] strong { color: var(--o-good); }
+.control.control section[aria-label="الرقابة المحاسبية"] section {
+  padding: 4px 18px 14px;
+  border-color: var(--o-line);
+  border-radius: 14px;
+  background: var(--o-cream);
+}
+.control.control section[aria-label="الرقابة المحاسبية"] section h3 {
+  margin: 0 -18px 4px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--o-line);
+  border-radius: 14px 14px 0 0;
+  background: var(--o-sand);
+  color: var(--o-espresso);
+  font-size: 14px;
+  font-weight: 800;
+}
+.control.control [class*="line"] { padding-block: 11px; border-bottom: 1px dashed var(--o-line); color: var(--o-coffee); font-weight: 600; }
+.control.control [class*="line"] strong { color: var(--o-espresso); font-weight: 800; }
+.control.control section[aria-label="الرقابة المحاسبية"] section > [class*="line"]:nth-last-of-type(1) { border-bottom: 0; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@media (max-width: 1100px) {
+  .overview.overview [class*="metrics"] > div { grid-column: span 6; }
+  .overview.overview [class*="metrics"] > div:nth-child(1) { grid-column: span 12; }
+  .overview.overview [class*="metrics"] > div:is(:nth-child(3), :nth-child(5)) { grid-column: span 6; }
+}
+@media (max-width: 700px) {
+  .overview.overview [class*="twoColumns"] { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .overview.overview [class*="metrics"] > div,
+  .overview.overview [class*="metrics"] > div:is(:nth-child(3), :nth-child(5)) { grid-column: span 12; padding: 16px 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overview.overview [class*="metrics"] > div { animation: none; }
+}

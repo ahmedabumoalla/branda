@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { withMenuProductPriceMode } from "@/lib/menu/product-price-mode";
 import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 import { butcherProductDetailsSchema, type ButcherProductDetails } from "@/lib/menu/butcher-products";
 import { commerceDetailsSchema, type CommerceDetails } from "@/lib/commerce/product-details";
@@ -317,6 +318,7 @@ const productSchema = z.object({
   category: z.string().optional(),
   description: z.string().optional().default(""),
   price: z.number().finite().min(0),
+  priceMode: z.enum(["fixed", "cashier"]).optional(),
   priceOptions: z.array(z.number().finite().min(0)).max(10).optional(),
   butcherDetails: butcherProductDetailsSchema.optional(),
   calories: z.number().optional().nullable(),
@@ -391,7 +393,7 @@ type MenuProductPayload = {
   calories: number | null;
   loyalty_points: number;
   catalog_kind: "product" | "service";
-  commerce_details?: CommerceDetails;
+  commerce_details?: CommerceDetails | Record<string, unknown>;
   preparation_time_minutes: number | null;
   redeemable_with_points: boolean;
   redemption_points: number | null;
@@ -525,10 +527,20 @@ async function upsertEventTicketSettings(
 export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
   const parsed = productSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
+  if (parsed.priceMode !== undefined && cafe.slug !== "mind-hospital") {
+    throw new Error("طريقة تسعير الكاشير متاحة لمنتجات مايند المستشفى فقط");
+  }
   if (parsed.butcherDetails && cafe.businessCategory !== "butcher_shops") {
     throw new Error("مواصفات اللحوم متاحة لحساب الملحمة فقط");
   }
   const supabase = await createClient();
+  let hospitalPreviousDetails: Record<string, unknown> | null | undefined;
+  if (parsed.priceMode !== undefined && parsed.id) {
+    const { data: existingPrice, error: priceError } = await supabase.from("menu_products")
+      .select("commerce_details").eq("id", parsed.id).eq("cafe_id", cafe.id).is("deleted_at", null).maybeSingle();
+    if (priceError) throw priceError;
+    if (existingPrice) hospitalPreviousDetails = existingPrice.commerce_details as Record<string, unknown> | null;
+  }
   if (cafe.businessCategory === "butcher_shops" && !parsed.butcherDetails) {
     if (!parsed.id) throw new Error("حدد نوع اللحم ووحدات البيع وأسعارها");
     const { data: existing, error: existingError } = await supabase.from("menu_products")
@@ -591,6 +603,16 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
     media,
     promo: parsed.promo ?? null,
   };
+  if (parsed.priceMode !== undefined) {
+    payload.commerce_details = withMenuProductPriceMode(hospitalPreviousDetails, parsed.priceMode);
+    payload.price_options = [];
+    if (parsed.priceMode === "cashier") {
+      payload.price = 0;
+      payload.price_options = [];
+      payload.promo = null;
+      payload.available_for_pickup = false;
+    }
+  }
 
   if (parsed.id) {
     let update = supabase
@@ -600,6 +622,10 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
       .eq("cafe_id", cafe.id);
     const compareCommerce = isCommerceBusinessCategory(cafe.businessCategory) && parsed.expectedCommerceDetails !== undefined;
     if (compareCommerce) update = update.eq("commerce_details", JSON.stringify(parsed.expectedCommerceDetails));
+    if (hospitalPreviousDetails !== undefined) {
+      const expected = parsed.expectedCommerceDetails ?? hospitalPreviousDetails;
+      update = expected === null ? update.is("commerce_details", null) : update.eq("commerce_details", JSON.stringify(expected));
+    }
     const { data, error } = await update.select("*").maybeSingle();
 
     if (error) throw error;
@@ -611,7 +637,7 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
       return data as DbMenuProduct;
     }
 
-    if (compareCommerce) throw new Error("تغيرت بيانات المنتج أو مخزونه حدث الصفحة وأعد التعديل");
+    if (compareCommerce || hospitalPreviousDetails !== undefined) throw new Error("تغيرت بيانات المنتج أو مخزونه حدث الصفحة وأعد التعديل");
     if (cafe.businessCategory === "butcher_shops" && !parsed.butcherDetails) {
       throw new Error("تغير المنتج حدث الصفحة وأعد المحاولة");
     }

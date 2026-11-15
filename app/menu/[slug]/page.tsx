@@ -71,9 +71,11 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   if (loyaltyBrand) redirect(`/loyalty/${loyaltyBrand.identity.slug}/qr`);
   const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) notFound();
-  if (isHospitalStore(slug)) {
-    const hospital = <HospitalMenu menu={menu} />;
-    return showcase ? <div inert>{hospital}</div> : <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={slug} />{hospital}</>;
+  if (isHospitalStore(menu.slug)) {
+    const program = menu.loyaltyEnabled ? await getPublicLoyaltyProgramBySlug(menu.slug).catch(() => null) : null;
+    const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;
+    const hospital = <HospitalMenu menu={menu} loyalty={loyalty} />;
+    return showcase ? <div inert>{hospital}</div> : <><PublicPageAnalytics slug={menu.slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{hospital}</>;
   }
   if (menu.businessCategory === "hair_salons") redirect(`/salon/${menu.slug}`);
   const fawasel = isFawaselStore(menu.slug);

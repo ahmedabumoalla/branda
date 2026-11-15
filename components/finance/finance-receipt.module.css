@@ -18,6 +18,8 @@
 .receipt [data-receipt-row] > :last-child { flex-shrink:0; }
 .receipt [data-receipt-total] { padding:10px 0; margin:6px 0; border-block:2px solid var(--receipt-brand); font-size:18px; font-weight:800; }
 .receipt [data-receipt-note] { white-space:pre-wrap; margin:12px 0; }
+.receipt [data-receipt-qr] { display:flex;justify-content:center;margin:12px 0;break-inside:avoid }
+.receipt [data-receipt-tax-qr] { display:block;width:32mm;height:32mm;max-width:100% }
 .receipt [data-receipt-footer] { border-top:1px dashed #9b8d80; padding-top:12px; margin-top:16px; text-align:center; font-size:11px; }
 .receipt [data-receipt-tax-qr] { display:block; width:32mm; height:32mm; max-width:100%; margin:12px auto; }
 .receipt[data-receipt-preparation] td { font-size:18px; }

@@ -22,6 +22,8 @@ const brands: Record<string, LoadingBrand> = {
   "barber-55": { name: "Barber 55", logo: "/salon/barber-55/logo.webp", background: "#101727", accent: "#ff6b88", foreground: "#e7edf5", greeting: "تفاصيل تصنع إطلالتك", detail: "نجهّز لك الخدمات والحجز", salon: true, blend: true },
   "brand-04cb352c9f44": { name: "صالون عناية", logo: "/menu-art/care/care-logo-v1.webp", background: "#10120f", accent: "#d4b780", foreground: "#faf3e7", greeting: "عناية تليق بتفاصيلك", detail: "نجهّز لك الخدمات والحجز", salon: true },
   "brand-7a92e7b3cb30": { name: "Fine Cut", logo: "/salon/fine-cut/logo-transparent-v2.webp", background: "#10120f", accent: "#d4b780", foreground: "#faf3e7", greeting: "إطلالتك تستحق العناية", detail: "نجهّز لك الخدمات والحجز", salon: true },
+  // MIND keeps its dark wordmark, so its loading screen uses the cream paper and warm orange of its own menu.
+  "mind-hospital": { name: "MIND Café & Bakery", logo: "/menu-art/dabab/dabab-hospital-logo-v1.webp", background: "#f6efe2", accent: "#a14d0d", foreground: "#2d221d", greeting: "لحظة هادئة تكمّل يومك", detail: "نجهّز لك اختيارات مايند" },
 };
 
 export function menuLoadingBrand(slug: string | undefined) {

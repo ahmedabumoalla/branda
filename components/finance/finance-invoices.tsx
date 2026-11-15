@@ -22,10 +22,11 @@ const sortOptions = [
 ] as const;
 type InvoiceSort = typeof sortOptions[number]["id"];
 
-export function FinanceInvoices({ documents, parties, staff = [], shifts = [], currentUserId, pending, disabled, hasMore, onRefresh, onLoadMore, onCreate, onReceipt, onSettle, onRefund, onSettings, onReports, onImport }: {
+export function FinanceInvoices({ documents, parties, staff = [], shifts = [], currentUserId, emptyHint, pending, disabled, hasMore, onRefresh, onLoadMore, onCreate, onReceipt, onSettle, onRefund, onSettings, onReports, onImport }: {
   documents: FinanceDocument[]; parties: FinanceParty[]; pending: boolean; disabled: boolean; hasMore: boolean;
   staff?: FinanceStaff[]; shifts?: FinanceShift[];
   currentUserId?: string;
+  emptyHint?: string;
   onRefresh: () => void; onLoadMore: () => void; onCreate?: () => void; onReceipt: (id: string) => void;
   onSettle?: (document: FinanceDocument) => void; onRefund?: (document: FinanceDocument) => void;
   onSettings?: () => void; onReports?: () => void;
@@ -239,7 +240,7 @@ export function FinanceInvoices({ documents, parties, staff = [], shifts = [], c
         </div>
       </div>
     </form>
-    {!results.length ? <div className={styles.empty} role="status"><FileText size={22} aria-hidden="true" /><div><strong>{sales.length ? "لا توجد فواتير تطابق البحث" : "لا توجد فواتير مبيعات حتى الآن"}</strong><p>{sales.length ? "جرّب تغيير العميل أو رقم الفاتورة أو إلغاء الفلاتر" : "ابدأ بإضافة أول فاتورة وستظهر تفاصيلها وحالة سدادها هنا"}</p></div>{sales.length ? <button type="button" className={styles.secondary} onClick={reset}>إلغاء الفلاتر</button> : onCreate && <button type="button" className={styles.primary} disabled={disabled} onClick={onCreate}>إضافة فاتورة</button>}</div>
+    {!results.length ? <div className={styles.empty} role="status"><FileText size={22} aria-hidden="true" /><div><strong>{sales.length ? "لا توجد فواتير تطابق البحث" : "لا توجد فواتير مبيعات حتى الآن"}</strong><p>{sales.length ? "جرّب تغيير العميل أو رقم الفاتورة أو إلغاء الفلاتر" : (emptyHint ?? "ابدأ بإضافة أول فاتورة وستظهر تفاصيلها وحالة سدادها هنا")}</p></div>{sales.length ? <button type="button" className={styles.secondary} onClick={reset}>إلغاء الفلاتر</button> : onCreate && <button type="button" className={styles.primary} disabled={disabled} onClick={onCreate}>إضافة فاتورة</button>}</div>
       : <div className={styles.invoiceList}><table className={styles.listTable}><caption className={styles.srOnly}>سجل فواتير المبيعات</caption><thead><tr>
         <th scope="col" className={styles.identityColumn}>رقم الفاتورة</th><th scope="col" className={styles.creatorColumn}>أُنشئ بواسطة</th><th scope="col" className={styles.stateColumn}>الحالة</th><th scope="col" className={styles.amountColumn}>المبلغ</th><th scope="col" className={styles.menuColumn}>{sortControl}</th>
       </tr></thead><tbody>{rows.map(document => {

@@ -1,0 +1,14 @@
+{
+  "passed": 22,
+  "directory": "C:\\Users\\pc\\AppData\\Local\\Temp\\branda-finance-engine-check-621a4a",
+  "restored": "C:\\Users\\pc\\AppData\\Local\\Temp\\branda-finance-engine-restore-vnbVT9",
+  "archiveBytes": 15815079,
+  "checkedAt": "2026-11-14T04:27:48.036Z",
+  "node": "v20.20.2",
+  "hashes": {
+    "index.mjs": "89b8416754a78fc979d857bcfbfaa29805a0860ccc1f1fba81da1ea86c3fa3b4",
+    "local-boundary.sql": "840c08d72fb5555a141ee7e1a69fb0a9785ee934a0c12ca90614d2851d3562f4",
+    "schema/finance-schema.json": "7a83c7a2faa0d63124fcc79d84e4741d9e53b23b2aba9d682f32c4d540a0447d",
+    "check-engine.mjs": "b6b868e164c6ed778d54a013449b4e515db8e46356405a9b415c85e143e8b633"
+  }
+}

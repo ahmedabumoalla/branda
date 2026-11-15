@@ -23,9 +23,9 @@ async function load(file,stubs={}){
 const customerId=n=>`00000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
 const fixture=(n,cafe="brand-one")=>({id:customerId(n),cafe_id:cafe,full_name:`Customer ${n}`,created_at:"2026-10-10T12:00:00Z",phone:`private-phone-${n}`,email:`private-${n}@example.test`});
 async function harness(options={}){
-  const calls=[],customerRequests=[];let contextCalls=0,featureCalls=0,dbCalls=0;
+  const calls=[],customerRequests=[],rpcCalls=[];let contextCalls=0,featureCalls=0,dbCalls=0;
   const rows=options.rows??[fixture(1),fixture(2),fixture(3,"brand-two")];
-  const db={auth:{getUser:async()=>({data:{user:options.user===false?null:{id:"owner-id"}}})},from:table=>{
+  const db={rpc:async(name,args)=>{rpcCalls.push({name,args});return options.rpcError?{data:null,error:{message:"denied"}}:{data:options.rpcData,error:null};},auth:{getUser:async()=>({data:{user:options.user===false?null:{id:"owner-id"}}})},from:table=>{
     const entry={table,select:null,selectOptions:null,eq:[],is:[],orders:[],range:null,ilike:null,single:false};calls.push(entry);
     const chain={
       select:(fields,settings)=>{entry.select=fields;entry.selectOptions=settings;return chain;},
@@ -54,7 +54,7 @@ async function harness(options={}){
     "@/lib/data/feature-entitlements":{getCafeFeatureCodes:async cafe=>{featureCalls++;equal(cafe,"brand-one","entitlement uses server-resolved cafe");return options.features??["loyalty"]; }},
     "@/lib/supabase/server":{createClient:async()=>{dbCalls++;return db;}},
   });
-  return{api,calls,customerRequests,counters:()=>({contextCalls,featureCalls,dbCalls})};
+  return{api,calls,customerRequests,rpcCalls,counters:()=>({contextCalls,featureCalls,dbCalls})};
 }
 
 for(const options of [{contextError:true},{role:"staff"},{role:"unknown"},{features:[]},{user:false},
@@ -98,6 +98,20 @@ h=await harness({rows:[{...fixture(1),full_name:"",phone:null}]});detail=await h
 equal(detail.phone,null,"missing contact remains explicitly unavailable");check(detail.name.length>0,"missing name has readable fallback");
 h=await harness({customerError:true});await rejects(()=>h.api.getOwnerLoyaltyCustomerDetail(customerId(1)),"detail DB failure rejected");
 
+const downloadedPage={rows:[{id:customerId(1),name:"Wallet customer",joinedAt:"2026-11-14T00:00:00Z"}],total:1,page:0,pageSize:20};
+h=await harness({rpcData:downloadedPage});
+equal(await h.api.getOwnerLoyaltyCustomers({downloadedOnly:true,page:2,query:"  Wallet  "}),downloadedPage,"downloaded directory uses bounded authorized RPC result");
+equal(h.rpcCalls,[{name:"finance_loyalty_customers_read",args:{p_cafe:"brand-one",p_page:2,p_query:"Wallet"}}],"downloaded RPC uses server-resolved tenant and parsed filters");
+equal(h.customerRequests.length,0,"downloaded directory never falls back to all profiles");
+const downloadedDetail={id:customerId(1),name:"Wallet customer",phone:"selected-phone"};
+h=await harness({rpcData:downloadedDetail});
+equal(await h.api.getOwnerLoyaltyCustomerDetail(customerId(1),true),downloadedDetail,"downloaded modal uses membership-guarded detail RPC");
+equal(h.rpcCalls,[{name:"finance_loyalty_customer_detail",args:{p_cafe:"brand-one",p_customer:customerId(1)}}],"downloaded detail remains exact tenant and customer");
+equal(h.customerRequests.length,0,"downloaded detail cannot fall back to unrelated profile");
+for(const run of [api=>api.getOwnerLoyaltyCustomers({downloadedOnly:true}),api=>api.getOwnerLoyaltyCustomerDetail(customerId(1),true)]){
+ h=await harness({rpcError:true});await rejects(()=>run(h.api),"downloaded RPC denial is not empty success");equal(h.customerRequests.length,0,"downloaded RPC denial never widens membership");
+ h=await harness({profileStatus:"suspended"});await rejects(()=>run(h.api),"downloaded mode keeps account authorization");equal(h.rpcCalls.length,0,"suspended account never reaches download RPC");
+}
 let throwAction=false,actionCalls=[];
 const actions=await load("app/actions/loyalty-customers.ts",{"@/lib/data/loyalty-customers":{
   getOwnerLoyaltyCustomers:async input=>{actionCalls.push(input);if(throwAction)throw new Error("private-query-token customer-phone");return{rows:[],total:0,page:0,pageSize:20};},
@@ -114,14 +128,15 @@ for(const operation of [()=>actions.loadLoyaltyCustomersAction(),()=>actions.loa
 const jsx=(type,props)=>({type,props});
 let brandAvailable=true;
 let pageSlug="rast";
-const page=await load("app/dashboard/loyalty/page.tsx",{
+const page=await load("components/loyalty/owner-loyalty-page.tsx",{
+  "next/navigation":{redirect:()=>{throw new Error("redirect");}},
   "react/jsx-runtime":{jsx,jsxs:jsx,Fragment:"Fragment"},
   "@/components/dashboard/pages/loyalty-dashboard-page":{LoyaltyDashboardPage:"GenericLoyalty"},
   "@/components/dashboard/feature-blocked-state":{DashboardFeatureBlockedState:"Blocked"},
-  "@/lib/data/feature-entitlements":{getOwnerFeatureCodes:async()=>["loyalty"]},
+  "@/lib/data/feature-entitlements":{getOwnerFeatureCodes:async()=>["loyalty","menu"]},
   "@/lib/data/loyalty-cards":{getOwnerLoyaltyProgramSettings:async()=>({cafeSlug:pageSlug,cafeId:"brand-one",program:{enabled:true}}),getOwnerLoyaltyRewardProducts:async()=>[{id:"product-one",name:"Tea"}]},
   "@/lib/data/loyalty":{getOwnerLoyalty:async()=>({settings:{}})},
-  "@/lib/platform/feature-gates":{featureCodesAllow:()=>true},
+  "@/lib/platform/feature-gates":{featureCodesAllow:(features,code)=>features.includes(code)},
   "@/components/rast-loyalty/rast-dashboard":{RastLoyaltyDashboard:"RastLoyaltyDashboard"},
   "@/lib/data/loyalty-experience":{getLoyaltyBrand:async()=>brandAvailable?({identity:{brandName:"Kawakib"}}):null,getLoyaltyExperience:async()=>({})},
   "@/lib/loyalty/experience-types":{defaultLoyaltyExperience:{}},
@@ -130,15 +145,15 @@ const page=await load("app/dashboard/loyalty/page.tsx",{
   "@/app/actions/loyalty-activity":{loadLoyaltyActivityAction:async()=>({ok:true,data:[]})},
   "@/lib/loyalty/activity-types":{defaultLoyaltyActivityFilters:()=>({})},
 });
-const rendered=await page.default();
+const rendered=await page.OwnerLoyaltyPage();
 const find=node=>{if(!node||typeof node!=="object")return null;if(node.type==="RastLoyaltyDashboard")return node;for(const child of [node.props?.children].flat(Infinity)){const found=find(child);if(found)return found;}return null;};
 const rast=find(rendered);check(!!rast,"Rast owner receives intended client component");
 equal(rast.props.initialDashboard,{program:{enabled:true}},"server passes program only to Rast client");
 check(!JSON.stringify(rendered).includes("private-bulk-phone")&&!JSON.stringify(rendered).includes("private-bulk-email"),"rendered client props exclude bulk customer contacts");
 equal(rast.props.products,[{id:"product-one",name:"Tea"}],"product props also use explicit safe projection");
-for(const slug of ["basilico","test-cafe","new-brand"]){pageSlug=slug;const tree=await page.default();const shared=find(tree);check(!!shared,"every entitled brand receives approved loyalty experience");check(shared.props.signupUrl.endsWith(`/loyalty/${slug}?source=qr`),"signup URL belongs to current brand");check(!JSON.stringify(tree).includes("private-bulk"),"all brands omit bulk contact props");}
+for(const slug of ["basilico","test-cafe","new-brand"]){pageSlug=slug;const tree=await page.OwnerLoyaltyPage();const shared=find(tree);check(!!shared,"every entitled brand receives approved loyalty experience");check(shared.props.signupUrl.endsWith(`/loyalty/${slug}?source=qr`),"signup URL belongs to current brand");check(!JSON.stringify(tree).includes("private-bulk"),"all brands omit bulk contact props");}
 brandAvailable=false;
-const unavailable=await page.default();
+const unavailable=await page.OwnerLoyaltyPage();
 equal(unavailable.props.role,"alert","missing brand fails closed with an alert");
 check(!JSON.stringify(unavailable).includes("private-bulk"),"missing brand never falls through to bulk contact dashboard");
 console.log(`PASS ${checks} mocked loyalty directory authorization privacy pagination and server-prop checks`);

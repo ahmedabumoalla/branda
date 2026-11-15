@@ -1,0 +1,11 @@
+'use strict';
+const fs=require('node:fs');const file='components/erp/tasks/tasks-workspace.tsx';let s=fs.readFileSync(file,'utf8');
+const replace=(a,b)=>{if(!s.includes(a))throw Error('Missing anchor '+a);s=s.replace(a,b);};
+replace('import s from "../erp.module.css";','import s from "../erp.module.css";\nimport {RichText} from "../fields/field-values";\nimport {taskNoteHasText,taskNoteTags} from "@/lib/erp/task-notes";\nimport {TaskNoteContent} from "./task-note-content";');
+replace('const [dialog,setDialog]','const [noteTags,setNoteTags]=useState("");\n const [dialog,setDialog]');
+replace('<p className={s.body} style={{whiteSpace:\'pre-wrap\'}}>{n.note}</p>','<TaskNoteContent note={n}/>');
+replace('data:{id:task.id,note,occurredAt:new Date(noteDate).toISOString()}','data:{id:task.id,note,format:"rich",tags:taskNoteTags(noteTags),occurredAt:new Date(noteDate).toISOString()}');
+replace('setDialog(null);setNote("");','setDialog(null);setNote("");setNoteTags("");');
+replace('<label className={s.field}><span>ملاحظة *</span><textarea required maxLength={20000} value={note} onChange={e=>setNote(e.target.value)}/></label>','<div className={s.field}><span>ملاحظة *</span><RichText key={dialog} value={note} onChange={setNote} label="نص الملاحظة" readOnly={busy}/></div><label className={s.field}><span>الوسوم</span><input maxLength={1640} value={noteTags} onChange={e=>setNoteTags(e.target.value)} placeholder="افصل الوسوم بفاصلة"/><small>حتى عشرين وسمًا دون تكرار</small></label>');
+replace('className={dialog==="delete"?s.danger:s.primary} disabled={busy}','className={dialog==="delete"?s.danger:s.primary} disabled={busy||(dialog==="note"&&!taskNoteHasText(note))}');
+fs.writeFileSync(file,s);

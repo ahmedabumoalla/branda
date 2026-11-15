@@ -10,6 +10,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Continuity and execution
 
+- USER RELEASE AUTHORIZATION 2026-11-15: After the requested platform performance/interface audit, publish the completed combined source to GitHub and Vercel. Preserve concurrent Claude work and fixes already in production through the isolated release worktree; this supersedes prior frontend-local-only restrictions for this release. Browser inspection is explicitly requested. Do not send real test messages or retain test financial records
+
+- USER CATALOG RULE 2026-11-15: Menu products are sold prepared products; stock items are stored materials. Do not auto-create a stock item for an espresso or auto-copy the menu to stock. Owners may optionally link stock ingredients and consumption quantities to a menu product
+- USER CANCELLED FAWASEL: Do not send, resend or retry the cancelled Fawasel announcement or change its trial/subscription as part of this release
+
 - On a Codex account switch, read `docs/BARNDAKSA_HANDOFF/CODEX_ACCOUNT_TRANSFER_20261108.md` before acting. Account transfer does not authorize new implementation, data recovery or resuming cancelled work; preserve the workflow and verification limits recorded there.
 
 - Start with `docs/task-state.md`, then `docs/BARNDAKSA_HANDOFF/00_MASTER_INDEX.md`. Read historical records only for a relevant unresolved detail.

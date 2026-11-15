@@ -20,7 +20,7 @@ const hashes = () => Object.fromEntries([...visited].sort().map(file => [file,cr
 const startedAt = new Date().toISOString(), before = hashes();
 const result = cp.spawnSync(process.execPath,['scripts/check-clothing-commerce-db.mjs'],{encoding:'utf8',timeout:120000});
 const after = hashes(), stable = JSON.stringify(before) === JSON.stringify(after);
-const evidence = {startedAt,finishedAt:new Date().toISOString(),command:'node scripts/check-clothing-commerce-db.mjs',runtime:process.version,platform:process.platform,exitCode:result.status,inputStable:stable,inputHashes:after,stdout:result.stdout,stderr:result.stderr,productionMigration:'NOT APPLIED: both available Management API access tokens returned HTTP 401; no business data mutated',security:'Reuses existing order reservation, settlement, RLS and private Storage path authorization; only category predicates expanded'};
+const evidence = {startedAt,finishedAt:new Date().toISOString(),command:'node scripts/check-clothing-commerce-db.mjs',runtime:process.version,platform:process.platform,exitCode:result.status,inputStable:stable,inputHashes:after,stdout:result.stdout,stderr:result.stderr,productionMigration:'Not checked by this local-only test; consult output/erp-database/fawasel-commerce-postapply.result.json for live evidence',security:'Reuses existing order reservation, settlement, RLS and private Storage path authorization; only category predicates expanded'};
 fs.mkdirSync('output/fawasel-backend-20261114',{recursive:true});
 fs.writeFileSync(path.join('output/fawasel-backend-20261114','verification.json'),JSON.stringify(evidence,null,2));
 console.log(JSON.stringify({exitCode:result.status,inputStable:stable,stdout:result.stdout,inputs:visited.size}));

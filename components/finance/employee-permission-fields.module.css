@@ -1,0 +1,23 @@
+.root { --ink:#38271c; --muted:#766653; --gold:#b58943; --line:#e5d9c7; --paper:#fffdf9; --wash:#f5f0e7; display:grid; gap:14px; color:var(--ink); min-width:0; }
+.header { display:flex; gap:16px; align-items:start; justify-content:space-between; padding-block:12px; border-block-end:2px solid var(--gold); }
+.header h3 { font-size:17px; font-weight:800; margin:0 0 6px; }
+.header p,.hint { margin:0; color:var(--muted); font-size:12px; line-height:1.8; }
+.count { padding:6px 12px; background:var(--wash); border:1px solid var(--line); border-radius:8px; white-space:nowrap; font-size:12px; font-weight:700; }
+.search,.approver { display:grid; gap:7px; font-size:12px; font-weight:600; }
+.root input[type="search"],.root select { width:100%; min-height:42px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); padding:9px 11px; font:inherit; }
+.groups { display:grid; gap:9px; }
+.group { min-width:0; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--paper); }
+.group summary { cursor:pointer; padding:14px 16px; min-height:48px; background:var(--wash); font-size:13px; }
+.group summary strong { margin-inline-start:7px; }
+.group summary>span { float:inline-end; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
+.actions { padding:12px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.action { padding:10px 12px; border:1px solid var(--line); border-radius:9px; align-content:start; display:grid; gap:9px; }
+.action[data-enabled="true"] { border-color:var(--gold); }
+.check { display:flex; gap:10px; align-items:center; min-height:36px; font-size:13px; font-weight:700; cursor:pointer; }
+.root input[type="checkbox"] { width:18px; height:18px; flex-shrink:0; accent-color:var(--gold); }
+.approver { border-block-start:1px solid var(--line); padding-block-start:10px; color:var(--muted); }
+.approver small { font-size:10px; margin-inline-start:5px; font-weight:400; }
+.warning { color:#9a3b28; line-height:1.7; }
+.description { margin:0; color:var(--muted); font-size:11px; line-height:1.8; font-weight:400; }
+.root :is(input,select,summary):focus-visible { outline:2px solid var(--gold); outline-offset:3px; }
+@media(max-width:560px) { .actions { grid-template-columns:minmax(0,1fr); } .header { gap:8px; } .header h3 { font-size:16px; } }

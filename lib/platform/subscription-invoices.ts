@@ -14,10 +14,10 @@ export const subscriptionInvoiceSchema = z.object({
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0,10) === v),
   lines: z.array(z.object({ planId: text(120).min(1), months: z.union([z.literal(1),z.literal(3),z.literal(6),z.literal(9),z.literal(12)]), amountCents: z.number().int().min(0).max(9_999_999_999) }).strict()).min(1).max(8),
 }).strict();
-export type InvoiceCustomer = z.infer<typeof invoiceCustomerSchema>;
+export type InvoiceCustomer = z.infer<typeof invoiceCustomerSchema> & { street?: string; fullAddress?: string };
 export type SubscriptionInvoiceDraft = z.infer<typeof subscriptionInvoiceSchema>;
-export type SubscriptionInvoiceLine = { planId: string; planName: string; months: number; description: string; amountCents: number; netCents: number; taxCents: number; totalCents: number };
-export type SubscriptionInvoice = { id: string; number: string; issuedAt: string; dueDate: string; seller: InvoiceCustomer; customer: InvoiceCustomer; taxInclusive: boolean; taxRate: number; lines: SubscriptionInvoiceLine[]; netCents: number; taxCents: number; totalCents: number; templateVersion: 1 };
+export type SubscriptionInvoiceLine = { planId: string; planName: string; months: number; description: string; amountCents: number; netCents: number; taxCents: number; totalCents: number; kind?: "subscription" | "item"; quantity?: number; unitPriceCents?: number };
+export type SubscriptionInvoice = { id: string; number: string; issuedAt: string; dueDate: string; seller: InvoiceCustomer; customer: InvoiceCustomer; taxInclusive: boolean; taxRate: number; lines: SubscriptionInvoiceLine[]; netCents: number; taxCents: number; totalCents: number; templateVersion: 1; documentKind?: "invoice" | "quote"; scopeWork?: string; sourceQuoteNumber?: string };
 export type InvoicePlan = { id: string; name: string };
 export type InvoiceRow = { id: string; invoice_number: string; issued_at: string; customer_name: string; total_cents: number };
 export type InvoiceList = { rows: InvoiceRow[]; total: number; page: number; search: string };

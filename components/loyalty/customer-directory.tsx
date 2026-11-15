@@ -13,9 +13,10 @@ function initials(name: string) {
   return name.trim().split(/\s+/u).slice(0, 2).map((part) => Array.from(part)[0]).join(" ") || "؟";
 }
 
-export function LoyaltyCustomerDetailDialog({ customer, onClose }: {
+export function LoyaltyCustomerDetailDialog({ customer, onClose, downloadedOnly = false }: {
   customer: Pick<LoyaltyCustomerRow, "id" | "name">;
   onClose: () => void;
+  downloadedOnly?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const headingId = useId();
@@ -37,7 +38,7 @@ export function LoyaltyCustomerDetailDialog({ customer, onClose }: {
     let current = true;
     setDetail(null);
     setError("");
-    void loadLoyaltyCustomerDetailAction(customer.id).then((result) => {
+    void loadLoyaltyCustomerDetailAction(customer.id, downloadedOnly).then((result) => {
       if (!current) return;
       if (result.ok) setDetail(result.data);
       else setError(result.message);
@@ -45,7 +46,7 @@ export function LoyaltyCustomerDetailDialog({ customer, onClose }: {
       if (current) setError("تعذر تحميل بيانات العميل حاول مرة أخرى");
     });
     return () => { current = false; };
-  }, [customer.id, retry]);
+  }, [customer.id, retry, downloadedOnly]);
 
   return (
     <dialog ref={dialog} className={styles.dialog} dir="rtl" aria-labelledby={headingId}
@@ -72,7 +73,7 @@ export function LoyaltyCustomerDetailDialog({ customer, onClose }: {
   );
 }
 
-export function LoyaltyCustomerDirectory() {
+export function LoyaltyCustomerDirectory({ downloadedOnly = false }: { downloadedOnly?: boolean } = {}) {
   const searchId = useId();
   const headingId = useId();
   const [query, setQuery] = useState("");
@@ -90,7 +91,7 @@ export function LoyaltyCustomerDirectory() {
     setError("");
     setData(null);
     const timer = window.setTimeout(() => {
-      void loadLoyaltyCustomersAction({ page, query: query.trim() }).then((result) => {
+      void loadLoyaltyCustomersAction({ page, query: query.trim(), downloadedOnly }).then((result) => {
         if (!current) return;
         if (result.ok) setData(result.data);
         else setError(result.message);
@@ -101,7 +102,7 @@ export function LoyaltyCustomerDirectory() {
       });
     }, query ? 300 : 0);
     return () => { current = false; window.clearTimeout(timer); };
-  }, [page, query, retry]);
+  }, [page, query, retry, downloadedOnly]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
@@ -141,7 +142,7 @@ export function LoyaltyCustomerDirectory() {
         <p>عرض <bdi>{number.format(data.page * data.pageSize + 1)}–{number.format(Math.min((data.page + 1) * data.pageSize, data.total))}</bdi> من <bdi>{number.format(data.total)}</bdi> عميل</p>
         <nav aria-label="صفحات سجل العملاء"><button type="button" disabled={data.page <= 0} onClick={() => setPage(Math.max(0, data.page - 1))} aria-label="الصفحة السابقة"><ChevronRight size={18} aria-hidden="true" /></button><span>صفحة {number.format(data.page + 1)} من {number.format(pages)}</span><button type="button" disabled={data.page + 1 >= pages} onClick={() => setPage(data.page + 1)} aria-label="الصفحة التالية"><ChevronLeft size={18} aria-hidden="true" /></button></nav>
       </footer>}
-      {selected && <LoyaltyCustomerDetailDialog key={selected.id} customer={selected} onClose={closeDetail} />}
+      {selected && <LoyaltyCustomerDetailDialog key={selected.id} customer={selected} onClose={closeDetail} downloadedOnly={downloadedOnly} />}
     </section>
   );
 }

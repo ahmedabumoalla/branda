@@ -7,6 +7,7 @@ function load(file, mocks = {}) {
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new Function('require', 'exports', code)(name => {
     if (name in mocks) return mocks[name];
+    if (name === '@/lib/data/account-cancellation') return { brandAllowsNewWork: async () => true, brandSlugAllowsNewWork: async () => true };
     if (name === 'zod' || name === 'node:crypto') return require(name);
     if (name === 'server-only') return {};
     throw Error('Unexpected dependency ' + name);
@@ -92,6 +93,7 @@ const lease = '33333333-3333-4333-8333-333333333333';
 
   let saleError = null, customerDispatches = 0, financeRpcCalls = [], deferred = [], businessCategory = 'cafes';
   const finance = load('lib/data/brand-finance.ts', { '@/lib/finance/inventory-catalog':load('lib/finance/inventory-catalog.ts'), '@/lib/finance/permissions':load('lib/finance/permissions.ts'),
+    '@/lib/auth/active-user': { getActiveUser: async () => ({ id }) }, '@/lib/erp/request-context': { erpRequestSlug: () => undefined }, '@/lib/data/finance-cashier-maintenance': { getFinanceCashierMaintenance: async () => null }, '@/lib/finance/product-media-server': { financeProductMedia: async (_cafe,products) => products },
     '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id } } }) }, rpc: async (name, args) => {
       financeRpcCalls.push({ name, args });
       return name === 'brand_finance_context' ? { data: { id, slug: 'brand', role: 'cashier', businessCategory }, error: null } : { data: { id: orderId, number: 19 }, error: saleError };

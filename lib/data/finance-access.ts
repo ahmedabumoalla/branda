@@ -1,8 +1,10 @@
+import { cashierPermissionsSchema, defaultCashierPermissions } from "@/lib/finance/cashier-permissions";
+import { employeePermissionsSchema } from "@/lib/finance/employee-permissions";
 import "server-only";
 import { ownerLoginAliasEmail } from "@/lib/auth/owner-login-alias";
 import { isHospitalStore } from "@/lib/commerce/hospital-profile";
 import { getFinanceCashierMaintenance } from "@/lib/data/finance-cashier-maintenance";
-import { financeStaffRoles } from "@/lib/finance/permissions";
+import { financeStaffRoles, type FinanceStaffRole } from "@/lib/finance/permissions";
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -20,6 +22,8 @@ import { greenApiProviderInstanceKey, sendGreenApiSalesCashierWelcome, sendGreen
 
 const slugSchema = z.string().trim().regex(/^[a-z0-9][a-z0-9-]{0,79}$/);
 const staffSchema = z.object({
+  employeePermissions: employeePermissionsSchema.optional(),
+  posPermissions: cashierPermissionsSchema.default(defaultCashierPermissions),
   email: z.string().trim().toLowerCase().email().max(254),
   name: z.string().trim().min(2).max(100),
   password: z.string().min(12).max(128),
@@ -31,6 +35,8 @@ const salesPhoneSchema = z.string().trim().max(30)
   .refine(value => /^[+\d\s()-]+$/.test(value))
   .transform(normalizeSaudiPhone).refine((value): value is string => value !== null);
 const salesCashierSchema = z.object({
+  employeePermissions: employeePermissionsSchema.optional(),
+  posPermissions: cashierPermissionsSchema.default(defaultCashierPermissions),
   name: z.string().trim().min(2).max(100),
   phone: salesPhoneSchema,
   password: z.string().refine(isSalesCashierPassword, SALES_CASHIER_PASSWORD_HINT),
@@ -168,7 +174,7 @@ export async function resetSalesCashierPassword(phone: string, code: string, pas
 }
 
 /** Owner may link an existing customer; its personal credentials and profile stay unchanged. */
-export async function provisionSalesCashier(input: { name: string; phone: string; password: string }) {
+export async function provisionSalesCashier(input: { name: string; phone: string; password: string; posPermissions?: unknown; employeePermissions?: unknown }) {
   const parsed = salesCashierSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
   const maintenance = cafe.role === "platform_admin" ? await getFinanceCashierMaintenance(cafe.id) : null;
@@ -185,7 +191,7 @@ export async function provisionSalesCashier(input: { name: string; phone: string
   });
   if (created.error || !created.data.user) {
     if (created.error?.code === "phone_exists" || created.error?.code === "user_already_exists") {
-      const linked = maintenance ? await maintenance.execute("link", { phone: parsed.phone, name: parsed.name }) : await supabase.rpc("brand_finance_link_sales_cashier", { p_cafe_id: cafe.id, p_phone: parsed.phone, p_name: parsed.name });
+      const linked = maintenance ? await maintenance.execute("link", { phone: parsed.phone, name: parsed.name, posPermissions: parsed.posPermissions, employeePermissions: parsed.employeePermissions }) : await supabase.rpc("brand_finance_cashier_with_permissions", { p_cafe: cafe.id, p_mode: "link", p_payload: { phone: parsed.phone, name: parsed.name, posPermissions: parsed.posPermissions, employeePermissions: parsed.employeePermissions } });
       if (linked.error || !linked.data?.id) throw new SalesCashierCreationError("existing_account_unavailable");
       if (!linked.data.changed) return { ok: true as const, delivery: "unchanged" as const, message: "الموظف مضاف بالفعل ككاشير مبيعات لهذه العلامة حساب العميل وكلمة مروره لم يتغيرا" };
       try {
@@ -200,8 +206,8 @@ export async function provisionSalesCashier(input: { name: string; phone: string
   }
   const userId = created.data.user.id;
   try {
-    const grant = maintenance ? await maintenance.execute("add", { userId, name: parsed.name }) : await supabase.rpc("brand_finance_add_sales_cashier", {
-      p_cafe_id: cafe.id, p_user_id: userId, p_name: parsed.name,
+    const grant = maintenance ? await maintenance.execute("add", { userId, name: parsed.name, posPermissions: parsed.posPermissions, employeePermissions: parsed.employeePermissions }) : await supabase.rpc("brand_finance_cashier_with_permissions", {
+      p_cafe: cafe.id, p_mode: "add", p_payload: { userId, name: parsed.name, posPermissions: parsed.posPermissions, employeePermissions: parsed.employeePermissions },
     });
     if (grant.error) throw new Error("Sales cashier grant failed");
   } catch {
@@ -271,7 +277,7 @@ export async function signInFinance(slug: string, identity: string, password: st
 }
 
 /** Owner-controlled account provisioning; existing accounts are never reset or overwritten. */
-export async function provisionFinanceStaff(input: z.infer<typeof staffSchema>) {
+export async function provisionFinanceStaff(input: { email: string; name: string; password: string; role: FinanceStaffRole; posPermissions?: unknown; employeePermissions?: unknown }) {
   const parsed = staffSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
   const maintenance = cafe.role === "platform_admin" ? await getFinanceCashierMaintenance(cafe.id) : null;
@@ -295,7 +301,7 @@ export async function provisionFinanceStaff(input: z.infer<typeof staffSchema>) 
   const result = await supabase.rpc("brand_finance_execute", {
     p_cafe_id: cafe.id,
     p_operation: "staff",
-    p_payload: { email: parsed.email, name: parsed.name, role: parsed.role, active: true },
+    p_payload: { email: parsed.email, name: parsed.name, role: parsed.role, active: true, posPermissions: parsed.posPermissions, employeePermissions: parsed.employeePermissions },
     p_request_id: crypto.randomUUID(),
   });
   if (result.error) {
@@ -321,7 +327,7 @@ async function requirePhoneStaffOwner() {
 }
 
 /** Phone identities belong to this employer and never replace an existing customer identity. */
-export async function provisionFinancePhoneStaff(input: z.infer<typeof phoneStaffSchema>) {
+export async function provisionFinancePhoneStaff(input: z.input<typeof phoneStaffSchema>) {
   const parsed = phoneStaffSchema.parse(input);
   const { cafe, supabase } = await requirePhoneStaffOwner();
   const admin = createAdminClient();

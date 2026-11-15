@@ -37,6 +37,7 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
   useLayoutEffect(() => { current.current = { snapshot, sales, ready, blocked }; }, [snapshot, sales, ready, blocked]);
   const deviceId = useRef<string | null>(null);
   const busy = useRef(false), syncBusy = useRef(false), alive = useRef(true);
+  const syncDone = useRef<Promise<void> | null>(null);
   const checkoutRetry = useRef<{ fingerprint: string; requestId: string } | null>(null);
   const channel = useRef<BroadcastChannel | null>(null);
   const endpoint = `/api/finance/${encodeURIComponent(targetSlug)}/pos-sync`;
@@ -47,8 +48,11 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
     if (session) setServerSnapshot(session.snapshot);
     setSales(rows);
   }, [scope]);
-  const sync = useCallback(async () => {
-    if (syncBusy.current || !current.current.ready || !navigator.onLine) return;
+  const sync = useCallback(async (force = false) => {
+    if (syncBusy.current) { await syncDone.current; if (!force) return; }
+    if (!current.current.ready || !navigator.onLine) return;
+    let finishSync!: () => void;
+    syncDone.current = new Promise<void>(resolve => { finishSync = resolve; });
     syncBusy.current = true; if (alive.current) setSyncing(true);
     try {
       await withOfflineSyncLease(scope, async () => {
@@ -76,7 +80,9 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
           conflict: flagOfflineConflict,
           authRequired: message => { setBlocked(true); setError(message); void lockOfflineSession(); },
         });
-        // Telemetry is advisory and never controls durable sale acknowledgement.
+        await reload(); notify();
+        // Telemetry is advisory; do not hold shift confirmation for heartbeat requests.
+        void (async () => {
         // Report closed shifts too when this device still has unresolved local sales.
         try {
           if (!deviceId.current) {
@@ -91,10 +97,10 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
             return fetch(endpoint.replace("pos-sync", "shift-heartbeat"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shiftId, deviceId: deviceId.current, pending: rows.length, conflicts: rows.filter(s => s.status === "conflict").length }), signal: AbortSignal.timeout(8000) });
           }));
         } catch { /* Missing heartbeat turns yellow without blocking offline storage or retries. */ }
-        await reload(); notify();
+        })();
       });
     } catch { if (alive.current) setConnected(false); }
-    finally { syncBusy.current = false; if (alive.current) setSyncing(false); }
+    finally { syncBusy.current = false; finishSync(); if (alive.current) setSyncing(false); }
   }, [endpoint, initialSnapshot.cafe.id, initialSnapshot.userId, reload, scope]);
 
   useEffect(() => {
@@ -131,11 +137,15 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
   async function execute(operation: FinanceFormOperation, payload: Record<string, unknown>): Promise<FinanceCommandResult | null> {
     if (busy.current || blocked || !ready) return null;
     if (operation !== "sale") {
+      busy.current = true; setSaving(true);
+      try {
       if (!navigator.onLine || !connected) { setError("هذه العملية تحتاج اتصالًا بالإنترنت المبيعات والفواتير المحلية محفوظة"); return null; }
       if (pendingSales(await listOfflineSales(scope)).length) { setError("انتظر مزامنة الفواتير قبل إقفال الوردية أو تعديل أرصدتها"); return null; }
-      const result = await base.execute(operation, payload);
-      if (result) await sync();
+      const shiftOperation = ["shift_open", "shift_close", "shift_accept", "shift_handover"].includes(operation);
+      const result = await base.execute(operation, payload, !shiftOperation);
+      if (result) await sync(true);
       return result;
+      } finally { busy.current = false; setSaving(false); }
     }
     busy.current = true; setSaving(true); setError(""); setMessage("");
     try {

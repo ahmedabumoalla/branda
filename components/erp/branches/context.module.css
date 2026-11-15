@@ -1,0 +1,11 @@
+.bar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; width:fit-content; max-width:100%; margin:0 16px 4px; padding:0; color:#78675c; }
+.field { display:flex; align-items:center; gap:9px; min-width:0; font-size:13px; }
+.field select { min-height:40px; width:auto; max-width:240px; min-width:135px; border:1px solid #e9dfd3; border-radius:9px; background:#fff; color:#39251b; font:inherit; font-weight:600; padding:8px 12px; }
+.field select:focus-visible,.help summary:focus-visible { outline:2px solid #95672a; outline-offset:3px; }
+.field select:disabled { opacity:.6; cursor:wait; }
+.help { position:relative; }
+.help summary { display:grid; place-items:center; list-style:none; cursor:pointer; width:32px; height:32px; border-radius:50%; font-size:14px; color:#78675c; background:#f2ebe2; }
+.help summary::-webkit-details-marker { display:none; }
+.help p { position:absolute; z-index:20; top:36px; inset-inline-end:0; width:min(290px,75vw); margin:0; padding:14px 16px; border:1px solid #e9dfd3; border-radius:12px; background:white; color:#655245; font-size:13px; line-height:1.9; box-shadow:0 8px 24px #39251b15; }
+.error { flex-basis:100%; font-size:13px; color:#a12b32; margin:0; }
+@media(max-width:420px) { .bar { margin-inline:10px; }.field select { max-width:210px; } }

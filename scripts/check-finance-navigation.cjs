@@ -63,96 +63,26 @@ let currentUrl = new URL('https://example.test/dashboard/finance');
 const pushes = [];
 const assignments = [];
 const oldWindow = global.window;
-global.window = { location:{assign(href){assignments.push(href)}}, history: { pushState(_state, _unused, href) { pushes.push(href); currentUrl = new URL(href, currentUrl); }, replaceState(_state, _unused, href) { currentUrl = new URL(href, currentUrl); } } };
+global.window = { location:{get href(){return currentUrl.href},assign(href){assignments.push(href)}}, history: { pushState(_state, _unused, href) { pushes.push(href); currentUrl = new URL(href, currentUrl); }, replaceState(_state, _unused, href) { currentUrl = new URL(href, currentUrl); } } };
 const navigation = { usePathname: () => currentUrl.pathname, useSearchParams: () => currentUrl.searchParams };
 let assertions = 0;
 function check(condition, message) { assert.ok(condition, message); assertions++; }
 function equal(actual, expected, message) { assert.deepEqual(actual, expected, message); assertions++; }
 
 (async()=>{try {
-  const h = hooks();
-  let expanded = 0, navigated = 0;
-  const props = { slug: 'test-brand', collapsed: false, onExpand: () => expanded++, onNavigate: () => navigated++ };
-  const { FinanceSidebarMenu } = load('components/dashboard/finance-sidebar-menu.tsx', {
-    react: h.api, 'next/navigation': navigation, './dashboard-navigation-link': { DashboardNavigationLink: Link },
-  });
-  const render = () => h.render(FinanceSidebarMenu, props);
-  let tree = render();
-  equal(nodes(tree, true).filter(node => node.props?.href)[0].props.href, '/dashboard/finance?section=overview', 'Overview is first');
-  equal(nodes(tree, true).filter(node => node.props?.['aria-current'] === 'page').map(text), ['نظرة عامة']);
-  equal(button(tree, 'المبيعات').props['aria-expanded'], false);
-  button(tree, 'المبيعات').props.onClick();
-  tree = render();
-  equal(button(tree, 'المبيعات').props['aria-expanded'], true);
-  equal(controlled(tree, button(tree, 'المبيعات')).props.hidden, false);
-  const salesPanel = controlled(tree, button(tree, 'المبيعات'));
-  equal(salesPanel.props.children[0].map(node => text(node).replace('غير مفعّل','')), ['إدارة الفواتير','إنشاء فاتورة','إدارة عروض الأسعار','إنشاء عرض سعر','إشعارات دائنة','الفواتير المرتجعة','الفواتير الدورية','مدفوعات العملاء','إعدادات المبيعات']);
-  const unavailable = nodes(salesPanel).filter(node => node.props?.['aria-disabled']);
-  equal(unavailable.length, 2);
-  check(unavailable.every(node => !node.props.href && !node.props.onClick && node.type !== 'a'), 'Unavailable entries cannot navigate or mutate');
-  for (const [label, view] of [['إدارة عروض الأسعار','quotes'],['إنشاء عرض سعر','quote-create'],['إنشاء فاتورة','create'],['الفواتير المرتجعة','returns'],['مدفوعات العملاء','payments'],['إعدادات المبيعات','sales-settings']]) {
-    equal(new URL(link(tree,label).props.href,currentUrl).searchParams.get('view'),view);
-  }
-  button(tree, 'المبيعات').props.onClick();
-  equal(controlled(render(), button(render(), 'المبيعات')).props.hidden, true);
-
-  currentUrl = new URL('https://example.test/dashboard/finance?section=parties&party=customer');
-  tree = render();
-  equal(button(tree, 'الإعدادات والفريق').props['aria-expanded'], true, 'A direct customer URL reveals the correct branch');
-  equal(nodes(tree, true).filter(node => node.props?.['aria-current'] === 'page').map(text), ['بيانات العملاء وأرصدتهم']);
-  const customerUrl = currentUrl.href;
-  currentUrl = new URL('https://example.test/dashboard/finance?section=parties&party=supplier');
-  equal(button(render(), 'المشتريات والموردون').props['aria-expanded'], true);
-  equal(nodes(render(), true).filter(node => node.props?.['aria-current'] === 'page').map(text), ['بيانات الموردين وأرصدتهم']);
-  currentUrl = new URL(customerUrl);
-  equal(button(render(), 'الإعدادات والفريق').props['aria-expanded'], true, 'Back navigation reveals the old selection');
-  button(render(), 'الإعدادات والفريق').props.onClick();
-  equal(button(render(), 'الإعدادات والفريق').props['aria-expanded'], false, 'An active branch remains collapsible');
-
-  const event = (extras = {}) => ({ button: 0, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, prevented: false, preventDefault() { this.prevented = true; }, ...extras });
-  let e = event();
-  link(render(), 'فواتير المشتريات').props.onClick(e);
-  equal(e.prevented, true);
-  equal(currentUrl.searchParams.get('section'), 'purchases');
-  equal(navigated, 1, 'Mobile navigation callback still fires');
-  const count = pushes.length;
-  for (const extras of [{ctrlKey:true}, {metaKey:true}, {shiftKey:true}, {altKey:true}, {button:1}]) {
-    e = event(extras); link(render(), 'نظرة عامة').props.onClick(e); equal(e.prevented, false);
-  }
-  equal(pushes.length, count, 'Modified links use normal browser navigation');
-
-  currentUrl = new URL('https://example.test/dashboard/finance/ledger?document=fixture');
-  tree = render();
-  equal(button(tree, 'الحسابات والخزينة').props['aria-expanded'], true);
-  equal(nodes(tree, true).filter(node => node.props?.['aria-current'] === 'page').map(text), ['الدفاتر والتقارير']);
-  e = event(); link(tree, 'نظرة عامة').props.onClick(e); equal(e.prevented, false, 'Ledger must navigate through the router to the workspace');
-  props.collapsed = true;
-  equal(button(render(), 'برندة المالية').props['aria-expanded'], false);
-  button(render(), 'برندة المالية').props.onClick();
-  equal(expanded, 1);
-  props.collapsed = false;
-  equal(button(render(), 'برندة المالية').props['aria-expanded'], true);
-  button(render(), 'برندة المالية').props.onClick();
-  equal(controlled(render(), button(render(), 'برندة المالية')).props.hidden, true);
-
-  const otherHooks = hooks();
-  const OtherMenu = load('components/dashboard/finance-sidebar-menu.tsx', { react: otherHooks.api, 'next/navigation': navigation, './dashboard-navigation-link': { DashboardNavigationLink: Link } }).FinanceSidebarMenu;
-  const otherTree = otherHooks.render(OtherMenu, props);
-  const ids = nodes(render()).filter(node => node.props?.id).map(node => node.props.id);
-  const otherIds = nodes(otherTree).filter(node => node.props?.id).map(node => node.props.id);
-  equal(ids.filter(id => otherIds.includes(id)), [], 'Desktop and mobile control IDs do not collide');
-  for (const control of nodes(otherTree).filter(node => node.props?.['aria-controls'])) {
-    check(!!controlled(otherTree, control), 'Every disclosure references a panel');
-    check(control.props.className.includes('focus-visible:'), 'Disclosure has visible keyboard focus');
-    check(control.props.className.includes('min-h-11'), 'Disclosure retains a 44px minimum target');
-  }
-  const reachable = new Set(nodes(otherTree).filter(node => node.props?.href?.startsWith('/dashboard/finance?')).map(node => new URL(node.props.href, currentUrl).searchParams.get('section')));
-  equal([...reachable].sort(), ['overview','sales','purchases','parties','inventory','treasury','cashiers','shifts','reports','printer','settings'].sort(), 'All established sections remain reachable');
-  equal(link(otherTree, 'فتح كاشير المالية').props.href, '/finance/test-brand/pos');
-
+  // Sidebar behavior is exercised by check-integrated-sidebar.cjs for the current 32-group navigation.
   const workspaceHooks = hooks();
   const componentCache = {};
   const children = new Proxy({}, { get: (_, name) => componentCache[name] ??= Object.defineProperty(function Child() {}, 'name', { value: name }) });
+  // The workspace now defers sections with next/dynamic. These checks inspect the
+  // same child props and event handlers, without mounting React's lazy boundary.
+  const lazySections = { __esModule:true, default: loader => {
+    const body = String(loader), modulePath = body.match(/require\(["']([^"']+)["']\)/)?.[1], exportName = body.match(/module\.(\w+)/)?.[1];
+    assert(modulePath && exportName, 'Expected a named dynamic section import');
+    const base = path.join('components/finance', modulePath);
+    assert(fs.existsSync(base+'.tsx') || fs.existsSync(base+'.ts'), 'Missing dynamic section '+modulePath);
+    return children[exportName];
+  }};
   const fixture = {
     cafe: { id: 'fixture-brand', name: 'Fixture', slug: 'test-brand' }, userId: 'owner', role: 'owner', canManage: true, canAdminister: true,
     settings: { vat_rate: 15, tax_inclusive: true, currency: 'SAR', closed_through: null },
@@ -165,17 +95,24 @@ function equal(actual, expected, message) { assert.deepEqual(actual, expected, m
     summary: { sales:0, purchases:0, expenses:0, profit:0, receivables:0, payables:0, inventoryValue:0 },
   };
   const state = { snapshot: fixture, pending:false, stale:false, error:'', message:'', historyMore:{movements:true}, refresh(){}, clearFeedback(){}, execute(){ throw Error('No mutation is expected'); } };
-  const mocks = { react:workspaceHooks.api, 'next/navigation':navigation, 'next/link':{__esModule:true,default:Link}, './use-finance':{useFinance:()=>state}, '@/lib/finance/ledger':{ledgerPilotEnabled:()=>false} };
+  const mocks = { react:workspaceHooks.api, 'next/dynamic':lazySections, 'next/navigation':navigation, 'next/link':{__esModule:true,default:Link}, './use-finance':{useFinance:()=>state}, '@/lib/finance/ledger':{ledgerPilotEnabled:()=>false} };
   const sourceReads=[],sourceCopies=[];
   let sourceDetail={document:{id:'source-invoice',number:50,kind:'sale',party_id:'customer',warehouse_id:'warehouse',subtotal:100,discount:0,tax:15,total:115,outstanding:75,paid:40,refunded:false,note:'Source note',vat_rate:15,tax_inclusive:false,lines:[{id:'source-line',product_id:'product',quantity:1,unit_price:100,net:100,tax:15}]},invoice:null,paymentCollectors:[],payments:[{id:'source-payment',invoiceId:'source-invoice',amount:40,accountId:'bank',details:'Actual payment note',canDelete:true}]};
   mocks['@/app/actions/finance-invoice-management']={async readInvoiceDetailAction(id,slug){sourceReads.push({id,slug});return{ok:true,data:sourceDetail}}};
   mocks['@/app/actions/finance-invoice-drafts']={async saveInvoiceDraftAction(input,slug){sourceCopies.push({input,slug});return{ok:true,data:{id:input.id,revision:1}}}};
+  mocks['@/app/actions/finance-invoice-line-notes']={async copyFinanceInvoiceLineNotes(){return{ok:true,data:null}}};
+  mocks['@/app/actions/finance-invoice-shipping-charge']={async copyFinanceInvoiceShippingCharge(){return{ok:true,data:null}}};
   mocks['./finance-payment-editor']=children;
   mocks['./finance-invoice-detail'] = children;
   mocks['./finance-customer-detail'] = children;
   mocks['./finance-journal-detail'] = children;
   mocks['./finance-invoice-settings'] = children;
-  for (const name of ['./finance-shift-monitor','./finance-cashier-management','./finance-printer-settings','@/components/dashboard/ui/modal','./finance-sale-form','./finance-quotes','./finance-invoices','./finance-customer-form','./finance-operation-form','./finance-refund-requests','./finance-receipt-dialog','./finance-treasury','./finance-trial-balance','./finance-cash-differences','./finance-cash-handovers','./finance-inventory-report','./finance-control-panel']) mocks[name] = children;
+  mocks['./finance-credit-notes'] = children;
+  mocks['./finance-recurring-invoices'] = children;
+  mocks['./finance-customer-payments'] = children;
+  const returnedReceipts = [];
+  mocks['./finance-sales-returns'] = { FinanceSalesReturns: children.FinanceSalesReturns, navigateSalesReturns: id => returnedReceipts.push(id) };
+  for (const name of ['./finance-shift-details','./finance-shift-monitor','./finance-cashier-management','./finance-printer-settings','@/components/dashboard/ui/modal','./finance-sale-form','./finance-quotes','./finance-invoices','./finance-customer-form','./finance-operation-form','./finance-refund-requests','./finance-receipt-dialog','./finance-treasury','./finance-trial-balance','./finance-cash-differences','./finance-cash-handovers','./finance-inventory-report','./finance-control-panel']) mocks[name] = children;
   mocks['./finance-ui'] = { Panel:children.Panel, Empty:children.Empty, Metric:children.Metric, Numeric:children.Numeric, documentKindNames:{}, financeDate:value=>value, financeDocumentStatus:()=>'', downloadFinanceCsv(){} };
   const { FinanceWorkspace } = load('components/finance/finance-workspace.tsx', mocks);
   const workspace = (slug) => workspaceHooks.render(FinanceWorkspace, { initialSnapshot:fixture, slug });
@@ -208,6 +145,23 @@ function equal(actual, expected, message) { assert.deepEqual(actual, expected, m
     currentUrl = new URL('https://example.test/dashboard/finance?section=sales' + (view ? '&view='+view : ''));
     return workspace();
   };
+  for (const view of ['credit-notes', 'credit-create', 'credit-note']) {
+    currentUrl = new URL(`https://example.test/dashboard/finance?section=sales&view=${view}&creditNote=credit-fixture&copy=1`);
+    const credit = find(workspace(), node => node.type?.name === 'FinanceCreditNotes');
+    equal(credit.props.view, view);
+    equal(credit.props.noteId, 'credit-fixture');
+    equal(credit.props.copy, true);
+    equal(credit.props.snapshot, fixture);
+    check(!nodes(workspace()).some(node => node.type?.name === 'FinanceInvoices'), 'Credit notes render their own view, not the invoice list');
+  }
+  for (const view of ['recurring', 'recurring-create', 'recurring-detail']) {
+    currentUrl = new URL(`https://example.test/dashboard/finance?section=sales&view=${view}&recurring=subscription-fixture`);
+    const recurring = find(workspace(), node => node.type?.name === 'FinanceRecurringInvoices');
+    equal(recurring.props.view, view);
+    equal(recurring.props.recurringId, 'subscription-fixture');
+    equal(recurring.props.snapshot, fixture);
+    check(!nodes(workspace()).some(node => node.type?.name === 'FinanceInvoices'), 'Recurring invoices have a dedicated workspace view');
+  }
   fixture.documents = [
     {id:'sale-a',number:1,kind:'sale',party_id:'customer',total:100,outstanding:40,paid:60,refunded:false,note:'',created_at:'2026-11-09T10:00:00Z'},
     {id:'sale-b',number:2,kind:'sale',party_id:'customer',total:80,outstanding:0,paid:80,refunded:false,refunded_total:20,note:'',created_at:'2026-11-09T10:00:00Z'},
@@ -259,9 +213,26 @@ function equal(actual, expected, message) { assert.deepEqual(actual, expected, m
   const olderCustomer={...fixture.parties[0],id:'customer-not-in-snapshot',name:'Actual older customer'};
   customerDetail.props.onCreateInvoice(olderCustomer);let customerCreation=find(workspace(),node=>node.type?.name==='FinanceSaleForm');equal(customerCreation.props.initialCustomerId,olderCustomer.id);check(customerCreation.props.snapshot.parties.some(party=>party.id===olderCustomer.id),'Customer omitted from snapshot is available for exact-ID preselection');
   currentUrl=new URL('https://example.test/dashboard/finance?section=parties&view=customer&customer=customer');customerDetail=find(workspace(),node=>node.type?.name==='FinanceCustomerDetail');customerDetail.props.onCreateQuote(olderCustomer);const customerQuote=find(workspace(),node=>node.type?.name==='FinanceQuotes');equal(customerQuote.props.initialCustomerId,olderCustomer.id);equal(customerQuote.props.create,true);check(customerQuote.props.snapshot.parties.some(party=>party.id===olderCustomer.id));
-  equal(nodes(sales('returns')).filter(node=>node.type==='strong'&&text(node).startsWith('#')).map(text),['#2'],'Sales returns never list purchase returns');
-  check(nodes(sales('payments')).some(node=>node.type==='th'&&text(node)==='المحصّل بعد الاسترداد'));
-  equal(nodes(sales('payments')).filter(node=>node.type==='button'&&text(node)==='تسجيل دفعة').length,1);
+  for (const view of ['returns', 'return-detail']) {
+    currentUrl = new URL(`https://example.test/dashboard/finance?section=sales&view=${view}&return=refund-fixture`);
+    const returned = find(workspace(), node => node.type?.name === 'FinanceSalesReturns');
+    equal(returned.props.view, view);
+    equal(returned.props.returnId, 'refund-fixture');
+    equal(returned.props.snapshot, fixture);
+    check(!nodes(workspace()).some(node => node.type?.name === 'FinanceInvoices'), 'Returns use the dedicated actual-refund view');
+  }
+  // The review panel appears only while a refund request is awaiting review.
+  fixture.refundRequests = [{ id:'pending-request', status:'pending' }];
+  find(sales('returns'), node => node.type?.name === 'FinanceRefundRequests').props.onReceipt('approved-refund');
+  equal(returnedReceipts, ['approved-refund'], 'Approved request opens the actual return detail route');
+  for (const view of ['payments', 'payment-detail', 'payment-edit', 'payment-delete']) {
+    currentUrl = new URL(`https://example.test/dashboard/finance?section=sales&view=${view}&payment=payment-fixture`);
+    const payments = find(workspace(), node => node.type?.name === 'FinanceCustomerPayments');
+    equal(payments.props.view, view);
+    equal(payments.props.paymentId, 'payment-fixture');
+    equal(payments.props.snapshot, fixture);
+    check(!nodes(workspace()).some(node => node.type?.name === 'FinanceInvoices'), 'Payments show actual payment rows instead of invoice aggregates');
+  }
   let creation = nodes(sales('create')).find(node=>node.type?.name==='FinanceSaleForm');
   check(!!creation,'Create route opens existing sale form directly');
   creation.props.onCancel();equal(currentUrl.search,'?section=sales');
@@ -274,11 +245,11 @@ function equal(actual, expected, message) { assert.deepEqual(actual, expected, m
   settingsPage().props.onEditInvoices();
   const settingsForm=find(workspace(),node=>node.type?.name==='FinanceOperationForm');
   equal(settingsForm.props.form.operation,'settings');equal(settingsForm.props.form.values.vatRate,15);settingsForm.props.onCancel();
-  const settingsHooks=hooks(),{FinanceSalesSettings,salesSettingsGroups}=load('components/finance/finance-sales-settings.tsx',{react:settingsHooks.api,'./finance-invoice-settings':children});
+  const settingsHooks=hooks(),{FinanceSalesSettings,salesSettingsGroups}=load('components/finance/finance-sales-settings.tsx',{react:settingsHooks.api,'next/navigation':navigation,'./finance-invoice-settings':children,'./finance-price-lists':children,'./finance-order-sources':children,'./finance-invoice-line-notes':children,'./finance-invoice-custom-fields':children,'./finance-shipping':{FinanceShipping:children.FinanceShipping,shippingUrlKeys:['shippingView','shippingOption','shippingTab','shippingQuery','shippingStatus','shippingPage','shippingSort','shippingDirection']}});
   equal(salesSettingsGroups.map(group=>group.cards.length),[9,1,1]);
   equal(salesSettingsGroups[0].cards.map(card=>card.title),['إعدادات الفواتير','إعدادات الفاتورة الإلكترونية','تصميمات الفواتير وعروض الأسعار','حقول الفواتير الإضافية','ملاحظات البنود','قوائم الأسعار','مصادر الطلب','خيارات الشحن','العروض']);
   let edits=0;const settingsProps={slug:fixture.cafe.slug,settings:fixture.settings,disabled:false,onEditInvoices:()=>edits++};const renderSettings=()=>settingsHooks.render(FinanceSalesSettings,settingsProps);
-  let hub=renderSettings();equal(nodes(hub).filter(node=>node.type==='h2').map(text),['الفواتير والمدفوعات','عروض الأسعار','أوامر البيع']);equal(nodes(hub).filter(node=>node.type==='h3').length,11);equal(nodes(hub).filter(node=>node.type==='article').length,10,'Unspecified settings remain content cards rather than fake working controls');
+  let hub=renderSettings();equal(nodes(hub).filter(node=>node.type==='h2').map(text),['الفواتير والمدفوعات','عروض الأسعار','أوامر البيع']);equal(nodes(hub).filter(node=>node.type==='h3').length,11);equal(nodes(hub).filter(node=>node.type==='article').length,5,'Only unimplemented settings remain content cards');equal(nodes(hub).filter(node=>node.type==='button').length,6,'Implemented settings have interactive entry controls');
   find(hub,node=>node.type==='button'&&text(node).includes('إعدادات الفواتير')).props.onClick();hub=renderSettings();equal(hub.type.name,'FinanceInvoiceSettings');equal(hub.props.slug,fixture.cafe.slug);equal(hub.props.settings,fixture.settings);equal(hub.props.canEdit,true);hub.props.onEditTax();equal(edits,1);settingsProps.disabled=true;hub=renderSettings();equal(hub.props.disabled,true);settingsProps.onEditInvoices=undefined;hub=renderSettings();equal(hub.props.canEdit,false);equal(hub.props.onEditTax,undefined);hub.props.onBack();equal(nodes(renderSettings()).filter(node=>node.type==='h3').length,11);
   fixture.role='auditor';fixture.canAdminister=false;
   check(!nodes(sales('create')).some(node=>node.type?.name==='FinanceSaleForm'),'Read-only role cannot create invoices');

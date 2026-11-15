@@ -5,7 +5,7 @@ import { isCashierLoyaltyCode, normalizeLoyaltyDigits } from "@/lib/loyalty/read
 
 export type RastScanKind = "stamp" | "redeem";
 export type RastCardPreview = { customerName: string; stampsInCycle: number; purchasesRequired: number; availableRewards: number; rewardName: string; catalog?: import("@/lib/cashier/catalog-translation").CashierCatalog };
-export type RastScanPreview = ({ kind: "stamp"; value: string; card: RastCardPreview } | { kind: "redeem"; value: string; reward: CashierRewardPreview }) & { retryPending?: boolean };
+export type RastScanPreview = ({ kind: "stamp"; value: string; card: RastCardPreview } | { kind: "redeem"; value: string; reward: CashierRewardPreview }) & { retryPending?: boolean; approvalPending?: boolean };
 
 type Dependencies = {
   lookupCard: (value: string) => Promise<RastCardPreview>;
@@ -73,6 +73,10 @@ export function createRastScanSession(dependencies: Dependencies) {
       busy = true;
       try {
         const result = await dependencies.commit({ value: targetCode, kind, requestId });
+        if (result.status === "approval_pending") {
+          preview = { ...confirmedPreview, retryPending: true, approvalPending: true };
+          return result;
+        }
         // A definite response ends this attempt, including a rejected scan.
         // An interrupted response retains its id across re-scans and tab changes.
         uncertainRequests.delete(key);

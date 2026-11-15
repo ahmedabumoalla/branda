@@ -5,6 +5,7 @@ import { ArrowRight, RotateCcw, Save } from "lucide-react";
 import { getFinanceInvoiceSettings, saveFinanceInvoiceSettings } from "@/app/actions/finance-invoice-settings";
 import type { FinanceSnapshot } from "@/lib/finance/brand-finance";
 import type { InvoiceSettings, InvoiceSettingsState } from "@/lib/finance/invoice-settings";
+import { isMindSalesSimplified } from "@/lib/finance/sales-features";
 import { invoiceSettingsCache, invoiceSettingsCacheTtl, type EditableInvoiceSettings } from "@/lib/finance/invoice-settings-cache";
 import { FinanceInvoiceSettingsManagement } from "./finance-invoice-settings-management";
 import styles from "./finance-invoice-settings.module.css";
@@ -125,7 +126,7 @@ function InvoiceSettingsForm({ slug, snapshot, settings, canEdit, disabled, onBa
         <Field id="invoice-billing-method" title="طريقة الفوترة" hint="تحدد وسيلة العرض والمشاركة الافتراضية ويُراجع المستخدم الإرسال قبل تنفيذه"><select id="invoice-billing-method" disabled={blocked} value={advanced.billingMethod} onChange={event => changeAdvanced("billingMethod", event.target.value as typeof advanced.billingMethod)} aria-describedby="invoice-billing-method-help"><option value="print">طباعة</option><option value="email">البريد الإلكتروني</option><option value="both">الطباعة والبريد الإلكتروني</option></select></Field>
         <Toggle id="line-editing" title="الإدخال الحر وتعديل بيانات الأصناف في الفاتورة" hint="يسمح بتعديل بيانات الأصناف المسجلة وإضافة منتج أو خدمة حرة دون حركة مخزون للصنف الحر" checked={draft.allowLineEditing} disabled={blocked} onChange={value => change("allowLineEditing", value)} />
         <Toggle id="price-hints" title="عرض الحد الأدنى للسعر وآخر سعر بيع لكل صنف" hint="يعرض آخر سعر بيع للعميل والحد الأدنى المحدد في سياسة الصنف عند توفره" checked={draft.priceHints === "last"} disabled={blocked} onChange={value => change("priceHints", value ? "last" : "hidden")} />
-        <Toggle id="conversion-notes" title="نسخ الملاحظات والشروط عند تحويل عرض سعر أو أمر بيع إلى فاتورة" hint="ينطبق على تحويل عروض الأسعار أوامر البيع غير متاحة حاليًا" checked={draft.copyNotesOnConversion} disabled={blocked} onChange={value => change("copyNotesOnConversion", value)} />
+        {!isMindSalesSimplified(slug) && <Toggle id="conversion-notes" title="نسخ الملاحظات والشروط عند تحويل عرض سعر أو أمر بيع إلى فاتورة" hint="ينطبق على تحويل عروض الأسعار أوامر البيع غير متاحة حاليًا" checked={draft.copyNotesOnConversion} disabled={blocked} onChange={value => change("copyNotesOnConversion", value)} />}
         <Toggle id="preview" title="معاينة الفاتورة قبل الحفظ" checked={draft.previewBeforeSave} disabled={blocked} onChange={value => change("previewBeforeSave", value)} />
         <div><Toggle id="custom-status" title="حالات الفاتورة المخصصة" hint="تظل حالات السداد الحالية مرتبطة بالدفعات الفعلية" checked={advanced.customStatusesEnabled} disabled={blocked} onChange={value => changeAdvanced("customStatusesEnabled", value)} />{advanced.customStatusesEnabled && manage("statuses", "إدارة الحالات المخصصة")}</div>
         <Toggle id="profit-tab" title="تبويب الربح في الفاتورة" hint="يظهر للحسابات المصرح لها ولا يظهر للعملاء" checked={advanced.profitEnabled} disabled={blocked} onChange={value => changeAdvanced("profitEnabled", value)} />

@@ -71,6 +71,7 @@ const React = require('react'), { renderToStaticMarkup } = require('react-dom/se
 let slots = [], cursor = 0, effects = [], documentResponse = { ok: false, message: 'تعذر تحميل المستند التجريبي' };
 let ledgerResponse = { ok: false, message: 'تعذر قراءة دفتر الاختبار' }, mutationResponse = { ok: false, message: 'تعذر حفظ قيد الاختبار' };
 const mutationCalls = [], startTransition = callback => callback();
+let routeParams = new URLSearchParams();
 const hooks = { ...React, useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === 'function' ? initial() : initial; return [slots[i], v => { slots[i] = typeof v === 'function' ? v(slots[i]) : v; }]; },
   useRef(initial) { const i = cursor++; return slots[i] ??= { current: initial }; },
   useEffect(fn, deps) { const i = cursor++, old = slots[i]; if (!old || deps.some((v, j) => v !== old[j])) { slots[i] = deps; effects.push(fn); } },
@@ -78,6 +79,7 @@ const hooks = { ...React, useState(initial) { const i = cursor++; if (!(i in slo
   useTransition() { return [false, startTransition]; },
   useId() { return 'test-field'; } };
 const ui = load('components/finance/ledger-workspace.tsx', { react: hooks, 'next/link': ({ children, ...props }) => React.createElement('a', props, children),
+  'next/navigation': { useSearchParams: () => routeParams },
   '@/lib/finance/ledger': ledger, '@/lib/finance/csv': csv,
   '@/app/actions/finance-ledger': { fetchLedgerDocumentAction: async () => documentResponse,
     fetchLedgerAction: async () => ledgerResponse,
@@ -102,7 +104,9 @@ check('treasury account has no ledger edit form', () => assert.doesNotMatch(rend
 function findComponent(node, component) { if (!node || typeof node !== 'object') return null; if (node.type === component) return node; for (const child of React.Children.toArray(node.props?.children)) { const match = findComponent(child, component); if (match) return match; } return null; }
 slots = []; cursor = 0; effects = [];
 const priorWindow = globalThis.window;
-globalThis.window = { addEventListener() {}, removeEventListener() {}, confirm: () => true };
+globalThis.window = { addEventListener() {}, removeEventListener() {}, confirm: () => true,
+  location: { href: 'http://localhost:3000/dashboard/finance/ledger?document=' + documentId },
+  history: { pushState(_state, _unused, url) { globalThis.window.location.href = new URL(url, globalThis.window.location.href).href; routeParams = new URL(globalThis.window.location.href).searchParams; } } };
 const finance = { role: 'owner', cafe: { name: 'اختبار', id: ledger.ledgerPilotCafeId }, userId: documentId };
 const renderWorkspace = () => { cursor = 0; return ui.LedgerWorkspace({ finance, slug: 'test-cafe' }); };
 const snapshot = { accounts, drafts: [], periods: [], hasMore: false, settings: { maker_checker: true, revision: 1 } };
@@ -123,6 +127,22 @@ check('read recovery preserves unresolved mutation error and retry', () => { con
 mutationResponse = { ok: true, data: { id: documentId } };
 findButton(tree, 'إعادة المحاولة بنفس الطلب').props.onClick(); await flush(); tree = renderWorkspace();
 check('mutation retry preserves request identity and success clears its error', () => { assert.equal(mutationCalls.length, 2); assert.equal(mutationCalls[0].requestId, mutationCalls[1].requestId); const html = renderToStaticMarkup(tree); assert.doesNotMatch(html, /role="alert"/); assert.match(html, /تم حفظ الإجراء/); });
+findButton(tree, 'دليل الحسابات').props.onClick(); tree = renderWorkspace();
+check('account navigation uses the actual account editor and addressable tab', () => { assert.equal(routeParams.get('tab'), 'accounts'); assert.equal(routeParams.has('document'), false); assert.ok(findComponent(tree, ui.AccountEditor)); assert.equal(findButton(tree, 'دليل الحسابات').props['aria-current'], 'page'); });
+routeParams = new URLSearchParams('tab=journals'); tree = renderWorkspace();
+check('history back to journals restores the journal section from the URL', () => { assert.equal(findComponent(tree, ui.AccountEditor), null); assert.equal(findButton(tree, 'القيود والاعتماد').props['aria-current'], 'page'); });
+routeParams = new URLSearchParams('tab=accounts'); tree = renderWorkspace();
+check('history forward to accounts restores its actual editor', () => assert.ok(findComponent(tree, ui.AccountEditor)));
+routeParams = new URLSearchParams('tab=unknown'); tree = renderWorkspace();
+check('unknown ledger tab safely resolves to journals', () => assert.equal(findButton(tree, 'القيود والاعتماد').props['aria-current'], 'page'));
+const Page = load('app/dashboard/finance/ledger/page.tsx', {
+  '@/lib/data/brand-finance': { getBrandFinanceSnapshot: async () => finance },
+  '@/components/finance/ledger-workspace': ui,
+  '@/components/finance/finance-access-denied': { FinanceAccessDenied: () => null },
+  '@/lib/finance/ledger': ledger
+}).default;
+const page = await Page({ searchParams: Promise.resolve({ document: documentId, draft: requestId, tab: 'accounts' }) });
+check('ledger page forwards both canonical document and copied draft links', () => { assert.equal(page.props.initialDocument, documentId); assert.equal(page.props.initialDraft, requestId); });
 if (priorWindow === undefined) delete globalThis.window; else globalThis.window = priorWindow;
 const files = ['app/actions/finance-ledger.ts', 'lib/finance/ledger.ts', 'lib/finance/csv.ts', 'components/finance/ledger-workspace.tsx', 'components/finance/ledger.module.css', 'components/finance/finance-workspace.tsx', 'app/dashboard/finance/ledger/page.tsx', 'app/finance/[slug]/ledger/page.tsx', 'scripts/check-finance-ledger-pilot.mjs'];
 const evidence = { executedAt: new Date().toISOString(), runtime: process.version, checks: results.length, results, sourceHashes: Object.fromEntries(files.map(file => [file, createHash('sha256').update(fs.readFileSync(file)).digest('hex')])), scope: 'Pure money/CSV behavior, transpiled actual Server Actions with controlled context/RPC mocks, actual component markup/retry with controlled hooks; not real Auth, browser, or PostgreSQL proof' };

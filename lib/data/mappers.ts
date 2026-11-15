@@ -7,6 +7,7 @@ import type { CafeOrder, OrderStatus } from "@/lib/mock/orders";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 import type { CafeThemeId } from "@/lib/mock/cafe-theme";
 import { readCommerceDetails } from "@/lib/commerce/product-details";
+import { readMenuProductPriceMode } from "@/lib/menu/product-price-mode";
 
 /** DB row shapes (snake_case) */
 export type DbCafeSettings = {
@@ -261,6 +262,7 @@ export function mapDbProductToMenuProduct(row: DbMenuProduct, categoryName?: str
     media,
     imageVariant: row.image_variant as MenuProduct["imageVariant"],
     price: Number(row.price),
+    priceMode: readMenuProductPriceMode(row.commerce_details),
     priceOptions: row.price_options?.map(Number) ?? [],
     butcherDetails: readButcherDetails(row.butcher_details),
     calories: row.calories ?? undefined,

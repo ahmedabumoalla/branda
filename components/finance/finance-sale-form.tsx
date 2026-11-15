@@ -1,7 +1,7 @@
 "use client";
 
 import {CustomerPriceListSuggestion} from '@/components/erp/customers/price-list-suggestion';
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronDown, CircleHelp, Eye, Plus, Save, Trash2 } from "lucide-react";
 import { Modal } from "@/components/dashboard/ui/modal";
 import { FinanceCustomerForm } from "./finance-customer-form";
@@ -18,13 +18,15 @@ import { useInvoiceOrderSource } from "./use-invoice-order-source";
 import { useInvoiceLineNotes } from "./use-invoice-line-notes";
 import { useInvoiceShippingCharge } from "./use-invoice-shipping-charge";
 import { useInvoiceCustomFields } from "./use-invoice-custom-fields";
+import { InvoiceLoadStatus } from "./invoice-load-status";
+import { createInvoiceContextLoader } from "@/lib/finance/invoice-context-loader";
 import { InvoiceCustomFieldValues } from "./invoice-custom-field-values";
 import { InvoiceShippingChargeEditor } from "./invoice-shipping-charge-editor";
 import { invoiceShippingAmounts } from "@/lib/finance/invoice-shipping-amounts";
 import { canFinance } from "@/lib/finance/permissions";
-import { getFinanceInvoiceSettings } from "@/app/actions/finance-invoice-settings";
 import { defaultInvoiceSettings, invoiceSettingsMoney, type InvoiceSettings } from "@/lib/finance/invoice-settings";
-import { companyInvoiceIssuerAction, findCompanyInvoiceAction, issueCompanyInvoiceAction, sendCompanyInvoiceEmailAction, sendCompanyInvoiceWhatsAppAction } from "@/app/actions/finance-company-invoices";
+import { findCompanyInvoiceAction, issueCompanyInvoiceAction, sendCompanyInvoiceEmailAction, sendCompanyInvoiceWhatsAppAction } from "@/app/actions/finance-company-invoices";
+import { useCompanyInvoiceIssuer } from "./use-company-invoice-issuer";
 import type { InvoiceDraftPayload, InvoiceDraftSummary } from "@/lib/finance/invoice-draft";
 import { companyAmounts, moneyRound } from "@/lib/finance/company-invoice";
 import { getPrimaryFinanceAccount, type FinanceSnapshot } from "@/lib/finance/brand-finance";
@@ -83,8 +85,9 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
   initialDraftId?: string;
   initialCustomerId?: string;
 }) {
+  const contextLoader = useMemo(() => createInvoiceContextLoader(data.cafe.slug), [data.cafe.slug]);
   const [invoice, setInvoice] = useState<Invoice>({ lines: [{ key: 1, productId: "", quantity: 1 }], warehouseId: data.warehouses.find(item => item.active)?.id ?? "", partyId: data.parties.find(party => party.id === initialCustomerId && party.kind === "customer" && party.active)?.id ?? "", paymentKind: "cash", accountId: "", discountKind: "amount", discountValue: 0, discountEnabled: false, vatRate: data.settings.vat_rate, taxInclusive: data.settings.tax_inclusive, note: "" });
-  const inventoryCatalog = useInventorySalesCatalog(data.cafe.slug);
+  const inventoryCatalog = useInventorySalesCatalog(data.cafe.slug, contextLoader.inventoryCatalog);
   const invoiceProducts: InvoiceCatalogProduct[] = [...data.products, ...inventoryCatalog.products];
   const [settingsAttempt, setSettingsAttempt] = useState(0);
   const settingsKey = JSON.stringify([data.cafe.slug, settingsAttempt]);
@@ -100,15 +103,9 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
   const [previewOpen, setPreviewOpen] = useState(false);
   const [template, setTemplate] = useState<"standard" | "thermal">("standard");
   const [deliveryMethod, setDeliveryMethod] = useState<InvoiceDraftPayload["deliveryMethod"]>("print");
-  const [issuer, setIssuer] = useState({ name: data.cafe.name, vatNumber: "", address: "" });
+  const { issuer, restoreIssuer } = useCompanyInvoiceIssuer(data.cafe.slug, data.cafe.name, contextLoader.issuer);
   const [supplyDate, setSupplyDate] = useState(() => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh" }).format(new Date()));
   const [issued, setIssued] = useState<{ id: string; number: number; displayNumber?: string; deliveryMethod: string } | null>(null);
-  const issuerTouched = useRef(false);
-  useEffect(() => {
-    let cancelled = false;
-    void companyInvoiceIssuerAction(data.cafe.slug).then(result => { if (!cancelled && !issuerTouched.current && result.ok) setIssuer(result.data); });
-    return () => { cancelled = true; };
-  }, [data.cafe.slug]);
   const [pdfUrl, setPdfUrl] = useState("");
   const [pdfLoading, setPdfLoading] = useState(false);
   const previewMenu = useRef<HTMLDetailsElement>(null);
@@ -139,19 +136,19 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
   const [drafts, setDrafts] = useState<InvoiceDraftSummary[]>([]);
   const [draftChoice, setDraftChoice] = useState("");
   const [initialDraftLoaded, setInitialDraftLoaded] = useState(!initialDraftId);
-  const orderSource = useInvoiceOrderSource(data.cafe.slug, initialDraftId);
+  const orderSource = useInvoiceOrderSource(data.cafe.slug, initialDraftId, contextLoader.orderSource);
   const loadOrderSource = orderSource.loadDraft;
-  const lineNotes = useInvoiceLineNotes(data.cafe.slug, initialDraftId);
+  const lineNotes = useInvoiceLineNotes(data.cafe.slug, initialDraftId, contextLoader.lineNotes);
   const loadLineNotes = lineNotes.loadDraft;
-  const shippingCharge = useInvoiceShippingCharge(data.cafe.slug, initialDraftId);
+  const shippingCharge = useInvoiceShippingCharge(data.cafe.slug, initialDraftId, contextLoader.shippingCharge);
   const loadShippingCharge = shippingCharge.loadDraft;
-  const customFields = useInvoiceCustomFields(data.cafe.slug, initialDraftId);
+  const customFields = useInvoiceCustomFields(data.cafe.slug, initialDraftId, contextLoader.customFields);
   const loadCustomFields = customFields.loadDraft;
   const [customFilesBusy, setCustomFilesBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
-    void getFinanceInvoiceSettings(data.cafe.slug).then(result => {
+    void contextLoader.settings().then(result => {
       if (!active) return;
       if (!result.ok) { setSettingsResult({ key: settingsKey, error: result.message }); return; }
       if (!initialDraftId && !draftIdentity.current.id && !defaultsApplied.current) {
@@ -164,7 +161,7 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
       setSettingsResult({ key: settingsKey, settings: result.data.settings, nextNumber: result.data.nextNumber });
     }).catch(() => { if (active) setSettingsResult({ key: settingsKey, error: "تعذر تحميل إعدادات الفواتير أعد المحاولة" }); });
     return () => { active = false; };
-  }, [data.cafe.slug, initialDraftId, settingsKey]);
+  }, [contextLoader, initialDraftId, settingsKey]);
 
   const deliverIssued = async (id: string) => {
     const result = await sendCompanyInvoiceWhatsAppAction(id, data.cafe.slug);
@@ -239,7 +236,7 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
       setFiles(restored as InvoiceFile[]); setDeposit(draft.payload.deposit); setShipping(draft.payload.shipping); setDelivery(draft.payload.delivery);
       setInvoice(draft.payload.invoice); setTemplate(draft.payload.template); setExtraFields(draft.payload.extraFields);
       setDeliveryMethod(draft.payload.deliveryMethod); setSupplyDate(draft.payload.supplyDate || new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh" }).format(new Date()));
-      if (draft.payload.issuer) { issuerTouched.current = true; setIssuer(draft.payload.issuer); }
+      restoreIssuer(draft.payload.issuer);
       setIssued(posted.data);
       extraKey.current = Math.max(0, ...draft.payload.extraFields.map(field => field.key));
       draftIdentity.current = { id: draft.id, revision: draft.revision };
@@ -248,7 +245,7 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
       setDraftsOpen(false); setDraftNotice("تم فتح المسودة لإكمال التعديل");
     } catch { setLocalError("تعذر فتح المسودة أعد المحاولة"); }
     finally { draftLock.current = false; setDraftBusy(false); }
-  }, [data.cafe.slug, loadOrderSource, loadLineNotes, loadShippingCharge, loadCustomFields]);
+  }, [data.cafe.slug, loadOrderSource, loadLineNotes, loadShippingCharge, loadCustomFields, restoreIssuer]);
 
   useEffect(() => {
     if (!initialDraftId) return;
@@ -365,13 +362,15 @@ export function FinanceSaleForm({ snapshot: data, pending, stale, error, onCance
       <div className={styles.actions}><button type="submit" className={styles.primary} disabled={disabled || !issueReady}><Save size={16} aria-hidden="true" />{draftBusy ? "جار تنفيذ الطلب" : issued ? `فاتورة رقم ${issued.displayNumber || issued.number}` : deliveryMethod === "whatsapp" ? "إصدار وإرسال بالواتساب" : deliveryMethod === "email" || deliveryMethod === "both" ? "إصدار وإرسال بالبريد" : "إصدار الفاتورة"}</button><button type="button" className={styles.secondary} disabled={pending || draftBusy || filesBusy} onClick={onCancel}>{issued ? "العودة للفواتير" : "إلغاء"}</button></div>
     </div>
     {(localError || error) && <p className={styles.error} role="alert">{localError || error}</p>}
-    {orderSource.loading ? <p className={styles.notice} role="status">جار تحميل مصادر الطلب</p> : orderSource.error && <div><p className={styles.error} role="alert">{orderSource.error}</p><button type="button" className={styles.secondary} onClick={() => void orderSource.retry()}>إعادة تحميل مصدر الطلب</button></div>}
-    {lineNotes.loading ? <p className={styles.notice} role="status">جار تحميل ملاحظات البنود</p> : lineNotes.error && <div><p className={styles.error} role="alert">{lineNotes.error}</p><button type="button" className={styles.secondary} onClick={() => void lineNotes.retry()}>إعادة تحميل ملاحظات البنود</button></div>}
-    {shippingCharge.loading ? <p className={styles.notice} role="status">جار تحميل خيارات الشحن</p> : shippingCharge.error && <div><p className={styles.error} role="alert">{shippingCharge.error}</p><button type="button" className={styles.secondary} onClick={() => void shippingCharge.retry()}>إعادة تحميل خيارات الشحن</button></div>}
-    {customFields.loading ? <p className={styles.notice} role="status">جار تحميل حقول الفاتورة</p> : customFields.error && <div><p className={styles.error} role="alert">{customFields.error}</p><button type="button" className={styles.secondary} disabled={customFilesBusy || draftBusy} onClick={() => { if (window.confirm("إعادة التحميل تستبدل تعديلات الحقول غير المحفوظة هل تريد المتابعة؟")) void customFields.retry(); }}>إعادة تحميل حقول الفاتورة</button></div>}
-    {!inventoryCatalog.ready && (inventoryCatalog.error ? <div role="alert"><p className={styles.error}>{inventoryCatalog.error}</p><button type="button" className={styles.secondary} onClick={inventoryCatalog.retry}>إعادة تحميل أصناف المخزون</button></div> : <p role="status">جار تحميل أصناف المخزون</p>)}
-    {!settingsReady && (currentSettings?.error ? <div><p className={styles.error} role="alert">{currentSettings.error}</p><button type="button" className={styles.secondary} onClick={() => setSettingsAttempt(value => value + 1)}>إعادة تحميل إعدادات الفواتير</button></div> : <p className={styles.notice} role="status">جار تحميل إعدادات الفواتير</p>)}
-    {settingsReady && !issued && (pricingContext.loading ? <p className={styles.notice} role="status">جار تحميل سياسات الأسعار ورصيد العميل قبل الإصدار</p> : pricingContext.error && <div><p className={styles.error} role="alert">{pricingContext.error}</p><button type="button" className={styles.secondary} onClick={pricingContext.retry}>إعادة تحميل الأسعار والرصيد</button></div>)}
+    <InvoiceLoadStatus resources={[
+      { key: "order-source", label: "مصادر الطلب", loading: orderSource.loading, error: orderSource.error, retry: () => { void orderSource.retry(); } },
+      { key: "line-notes", label: "ملاحظات البنود", loading: lineNotes.loading, error: lineNotes.error, retry: () => { void lineNotes.retry(); } },
+      { key: "shipping", label: "خيارات الشحن", loading: shippingCharge.loading, error: shippingCharge.error, retry: () => { void shippingCharge.retry(); } },
+      { key: "custom-fields", label: "حقول الفاتورة", loading: customFields.loading, error: customFields.error, retryDisabled: customFilesBusy || draftBusy, retry: () => { if (window.confirm("إعادة التحميل تستبدل تعديلات الحقول غير المحفوظة هل تريد المتابعة؟")) void customFields.retry(); } },
+      { key: "inventory", label: "أصناف المخزون", loading: !inventoryCatalog.ready && !inventoryCatalog.error, error: inventoryCatalog.error, retry: inventoryCatalog.retry },
+      { key: "settings", label: "إعدادات الفواتير", loading: !settingsReady && !currentSettings?.error, error: currentSettings?.error, retry: () => setSettingsAttempt(value => value + 1) },
+      { key: "pricing", label: "الأسعار ورصيد العميل", loading: settingsReady && !issued && pricingContext.loading, error: settingsReady && !issued ? pricingContext.error : undefined, retry: pricingContext.retry },
+    ]} />
     {paid > totals.total && <p className={styles.error} role="alert">الدفعة المحصلة تتجاوز المتبقي بعد استخدام رصيد العميل عدّل الدفعة أو ألغ استخدام الرصيد</p>}
     {shippingLineLimit && <p className={styles.error} role="alert">الفاتورة التي تحتوي رسوم شحن تقبل حتى ٩٩ بندًا احذف بندًا أو أزل رسوم الشحن قبل الإصدار</p>}
     {!initialDraftLoaded && <button type="button" className={styles.secondary} disabled={draftBusy} onClick={() => { setDraftBusy(true); void restoreDraft(initialDraftId!); }}>{draftBusy ? "جار فتح الفاتورة المحفوظة" : "إعادة فتح الفاتورة المحفوظة"}</button>}

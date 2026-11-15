@@ -71,9 +71,12 @@ export async function lookupRastCashierRewardAction(value: string) {
     product: typeof terms.rewardProductName === "string" ? terms.rewardProductName : "", terms: typeof terms.terms === "string" ? terms.terms : "" }) };
 }
 
-export async function scanLoyaltyExperienceAction(input: { value: string; requestId: string; kind: "stamp" | "redeem" }) {
-  const parsed = z.object({ value: z.string().trim().min(1).max(500), requestId: z.string().uuid(), kind: z.enum(["stamp", "redeem"]) }).parse(input);
+export async function scanLoyaltyExperienceAction(input: { value: string; requestId: string; kind: "stamp" | "redeem"; expectedScope?: { cafeId: string; cashierId: string } }) {
+  const parsed = z.object({ value: z.string().trim().min(1).max(500), requestId: z.string().uuid(), kind: z.enum(["stamp", "redeem"]), expectedScope: z.object({ cafeId: z.string().uuid(), cashierId: z.string().uuid() }).strict().optional() }).parse(input);
   const session = await requireCashierPermission("loyalty");
+  if (parsed.expectedScope && (parsed.expectedScope.cafeId !== session.cafeId || parsed.expectedScope.cashierId !== session.cashierId)) {
+    throw new Error("تغيرت جلسة كاشير الولاء افتح القارئ مجددًا");
+  }
   const token = session.token;
   if (!featureCodesAllow(await getPublicCafeFeatureCodesBySlug(session.cafeSlug), "loyalty")) {
     throw new Error("برنامج الولاء غير متاح حاليًا");
@@ -86,6 +89,7 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
   });
   if (error) throw new Error("تعذر تسجيل العملية تحقق من صلاحية البطاقة وجلسة الموظف");
   const result = (Array.isArray(data) ? data[0] : data) as Record<string, unknown>;
+  if (result?.status === "approval_pending" || result?.status === "approval_rejected") return { ok: false, status: String(result.status) };
   // An audited rejection means its transaction did not commit. Transport errors remain uncertain.
   if (result?.ok === false && ["invalid_code", "session_invalid", "request_conflict", "program_disabled", "card_unavailable", "reward_unavailable", "operation_failed", "daily_stamp_limit"].includes(String(result.errorCode))) {
     return { ok: false, status: String(result.errorCode) };

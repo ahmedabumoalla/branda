@@ -6,6 +6,7 @@ export function hospitalLineKey(line: Pick<HospitalCartLine, "productId" | "pric
 }
 export function hospitalProductPrice(product: StandaloneMenuProduct, priceOptionIndex?: number) {
   if (product.available === false) return null;
+  if (product.priceMode === "cashier") return priceOptionIndex === undefined ? { min: 0, max: 0, cashierPriced: true } : null;
   if (product.priceOptions?.length) {
     if (priceOptionIndex === undefined || !Number.isInteger(priceOptionIndex)) return null;
     const price = product.priceOptions[priceOptionIndex];
@@ -16,13 +17,14 @@ export function hospitalProductPrice(product: StandaloneMenuProduct, priceOption
   return { min: product.price, max: range && range.min === product.price && Number.isFinite(range.max) && range.max > product.price ? range.max : product.price };
 }
 export function hospitalCartTotal(products: StandaloneMenuProduct[], lines: HospitalCartLine[]) {
-  let min = 0, max = 0;
+  let min = 0, max = 0, cashierPriced = false;
   for (const line of lines) {
     const product = products.find(item => item.id === line.productId);
     const price = product && hospitalProductPrice(product, line.priceOptionIndex);
     if (!price || !Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 20) return null;
+    cashierPriced ||= price.cashierPriced === true;
     min += Math.round(price.min * 100) * line.quantity;
     max += Math.round(price.max * 100) * line.quantity;
   }
-  return { min: min / 100, max: max / 100 };
+  return { min: min / 100, max: max / 100, cashierPriced };
 }

@@ -1,0 +1,598 @@
+{
+  "generatedAt": "2026-11-14T04:17:52.979Z",
+  "modules": [
+    {
+      "module": "@/app/actions/brand-finance",
+      "names": [
+        "fetchBrandFinanceAction",
+        "fetchBrandFinanceHistoryAction",
+        "executeBrandFinanceAction"
+      ],
+      "file": "app/actions/brand-finance.ts"
+    },
+    {
+      "module": "@/app/actions/erp-system-sale-defaults",
+      "names": [
+        "getSystemSalePriceSuggestion"
+      ],
+      "file": "app/actions/erp-system-sale-defaults.ts"
+    },
+    {
+      "module": "@/app/actions/finance-access",
+      "names": [
+        "loginSalesCashierAction",
+        "requestSalesCashierOtpAction",
+        "verifySalesCashierOtpAction",
+        "resetSalesCashierPasswordAction",
+        "createSalesCashierAccountAction",
+        "loginFinanceAction",
+        "createFinanceStaffAccountAction",
+        "logoutFinanceAction"
+      ],
+      "file": "app/actions/finance-access.ts"
+    },
+    {
+      "module": "@/app/actions/finance-cash-differences",
+      "names": [
+        "fetchFinanceCashDifferencesAction",
+        "settleFinanceCashDifferenceAction"
+      ],
+      "file": "app/actions/finance-cash-differences.ts"
+    },
+    {
+      "module": "@/app/actions/finance-cash-handovers",
+      "names": [
+        "fetchFinanceCashHandoversAction",
+        "receiveFinanceShiftCashAction"
+      ],
+      "file": "app/actions/finance-cash-handovers.ts"
+    },
+    {
+      "module": "@/app/actions/finance-company-invoices",
+      "names": [
+        "companyInvoiceIssuerAction",
+        "issueCompanyInvoiceAction",
+        "findCompanyInvoiceAction",
+        "sendCompanyInvoiceWhatsAppAction",
+        "sendCompanyInvoiceEmailAction"
+      ],
+      "file": "app/actions/finance-company-invoices.ts"
+    },
+    {
+      "module": "@/app/actions/finance-control-report",
+      "names": [
+        "fetchFinanceControlReportAction",
+        "fetchFinanceJournalExportAction",
+        "fetchFinancePeriodClosuresAction"
+      ],
+      "file": "app/actions/finance-control-report.ts"
+    },
+    {
+      "module": "@/app/actions/finance-credit-notes",
+      "names": [
+        "readCreditNotesAction",
+        "readCreditNoteAction",
+        "saveCreditNoteAction",
+        "transitionCreditNoteAction"
+      ],
+      "file": "app/actions/finance-credit-notes.ts"
+    },
+    {
+      "module": "@/app/actions/finance-customer-detail",
+      "names": [
+        "fetchCustomerDetailAction"
+      ],
+      "file": "app/actions/finance-customer-detail.ts"
+    },
+    {
+      "module": "@/app/actions/finance-customer-payments",
+      "names": [
+        "readCustomerPaymentsAction",
+        "readCustomerPaymentAction"
+      ],
+      "file": "app/actions/finance-customer-payments.ts"
+    },
+    {
+      "module": "@/app/actions/finance-customer-prices",
+      "names": [
+        "customerSalePricesAction"
+      ],
+      "file": "app/actions/finance-customer-prices.ts"
+    },
+    {
+      "module": "@/app/actions/finance-inventory-catalog",
+      "names": [
+        "saveFinanceInventoryItemAction",
+        "saveFinanceInventoryUnitAction"
+      ],
+      "file": "app/actions/finance-inventory-catalog.ts"
+    },
+    {
+      "module": "@/app/actions/finance-inventory-sales",
+      "names": [
+        "getInventorySalesCatalog"
+      ],
+      "file": "app/actions/finance-inventory-sales.ts"
+    },
+    {
+      "module": "@/app/actions/finance-invoice-custom-field-media",
+      "names": [
+        "verifyInvoiceCustomFieldFileAction"
+      ],
+      "file": "app/actions/finance-invoice-custom-field-media.ts"
+    },
+    {
+      "module": "@/app/actions/finance-invoice-custom-fields",
+      "names": [
+        "getFinanceInvoiceCustomFields",
+        "saveFinanceInvoiceCustomFields",
+        "getFinanceInvoiceCustomFieldContext",
+        "saveFinanceInvoiceCustomFieldValues",
+        "getFinanceIssuedCustomFields",
+        "copyFinanceInvoiceCustomFields",
+        "queryFinanceInvoiceCustomFields"
+      ],
+      "file": "app/actions/finance-invoice-custom-fields.ts"
+    },
+    {
+      "module": "@/app/actions/finance-invoice-drafts",
+      "names": [
+        "saveInvoiceDraftAction",
+        "listInvoiceDraftsAction",
+        "openInvoiceDraftAction"
+      ],
+      "file": "app/actions/finance-invoice-drafts.ts"
+    },
+    {
+      "module": "@/app/actions/finance-invoice-extensions",
+      "names": [
+        "getCustomerCredit",
+        "changeCustomerCredit",
+        "getInvoiceExtensions",
+        "changeInvoiceExtensions"
+      ],
+      "file": "app/actions/finance-invoice-extensions.ts"
+    },
+    {
+      "module": "@/app/actions/finance-invoice-files",
+      "names": [
+        "listInvoiceFilesAction",
+        "prepareInvoiceFileAction",
+        "finalizeInvoiceFileAction",
+        "invoiceFileDownloadAction"
+      ],
+      "file": "app/actions/finance-invoice-files.ts"
+    },
+    {
+      "module": "@/app/actions/finance-invoice-import",
+      "names": [
+        "previewInvoiceImportAction"
+      ],
+      "file": "app/actions/finance-invoice-import.ts"
+    },
+    {
+      "module": "@/app/actions/finance-invoice-line-notes",
+      "names": [
+        "getFinanceInvoiceLineNotes",
+        "getFinanceInvoiceLineNoteOptions",
+        "saveFinanceInvoiceLineNotes",
+        "getFinanceInvoiceLineNoteContext",
+        "saveFinanceInvoiceLineNoteSelection",
+        "getFinanceIssuedLineNotes",
+        "saveFinanceInvoiceCustomLineNotes",
+        "copyFinanceInvoiceLineNotes"
+      ],
+      "file": "app/actions/finance-invoice-line-notes.ts"
+    },
+    {
+      "module": "@/app/actions/finance-invoice-management",
+      "names": [
+        "readInvoiceDetailAction",
+        "updateInvoiceManagementAction"
+      ],
+      "file": "app/actions/finance-invoice-management.ts"
+    },
+    {
+      "module": "@/app/actions/finance-invoice-settings",
+      "names": [
+        "getFinanceInvoiceSettings",
+        "getFinanceInvoiceContext",
+        "saveFinanceInvoiceSettings"
+      ],
+      "file": "app/actions/finance-invoice-settings.ts"
+    },
+    {
+      "module": "@/app/actions/finance-invoice-shipping-charge",
+      "names": [
+        "getFinanceInvoiceShippingChargeContext",
+        "saveFinanceInvoiceShippingCharge",
+        "getFinanceIssuedShippingCharge",
+        "copyFinanceInvoiceShippingCharge"
+      ],
+      "file": "app/actions/finance-invoice-shipping-charge.ts"
+    },
+    {
+      "module": "@/app/actions/finance-journal-detail",
+      "names": [
+        "fetchJournalDetailAction",
+        "fetchJournalActivityAction",
+        "saveJournalDescriptionsAction"
+      ],
+      "file": "app/actions/finance-journal-detail.ts"
+    },
+    {
+      "module": "@/app/actions/finance-ledger",
+      "names": [
+        "fetchLedgerAction",
+        "executeLedgerAction",
+        "fetchLedgerEventsAction",
+        "fetchLedgerDocumentAction",
+        "fetchLedgerReportAction"
+      ],
+      "file": "app/actions/finance-ledger.ts"
+    },
+    {
+      "module": "@/app/actions/finance-message-status",
+      "names": [
+        "loadFinanceInvoiceMessageStatusesAction"
+      ],
+      "file": "app/actions/finance-message-status.ts"
+    },
+    {
+      "module": "@/app/actions/finance-order-sources",
+      "names": [
+        "getFinanceOrderSources",
+        "saveFinanceOrderSources",
+        "getFinanceOrderSourceContext",
+        "saveFinanceInvoiceOrderSource",
+        "getFinanceIssuedOrderSource"
+      ],
+      "file": "app/actions/finance-order-sources.ts"
+    },
+    {
+      "module": "@/app/actions/finance-payment-management",
+      "names": [
+        "manageInvoicePaymentAction"
+      ],
+      "file": "app/actions/finance-payment-management.ts"
+    },
+    {
+      "module": "@/app/actions/finance-pos-customer",
+      "names": [
+        "fetchFinancePosCustomerAction",
+        "fetchFinancePosPagerAction",
+        "updateFinancePosPagerAction"
+      ],
+      "file": "app/actions/finance-pos-customer.ts"
+    },
+    {
+      "module": "@/app/actions/finance-price-list-activity",
+      "names": [
+        "getFinancePriceListActivity"
+      ],
+      "file": "app/actions/finance-price-list-activity.ts"
+    },
+    {
+      "module": "@/app/actions/finance-quotes",
+      "names": [
+        "saveQuoteAction",
+        "readQuotesAction",
+        "convertQuoteAction"
+      ],
+      "file": "app/actions/finance-quotes.ts"
+    },
+    {
+      "module": "@/app/actions/finance-recurring-invoices",
+      "names": [
+        "readRecurringInvoicesAction",
+        "readRecurringInvoiceAction",
+        "saveRecurringInvoiceAction",
+        "transitionRecurringInvoiceAction"
+      ],
+      "file": "app/actions/finance-recurring-invoices.ts"
+    },
+    {
+      "module": "@/app/actions/finance-sales-returns",
+      "names": [
+        "readSalesReturnsAction",
+        "readSalesReturnAction",
+        "transitionSalesReturnStockAction"
+      ],
+      "file": "app/actions/finance-sales-returns.ts"
+    },
+    {
+      "module": "@/app/actions/finance-shift-analytics",
+      "names": [
+        "fetchFinanceShiftAnalyticsAction"
+      ],
+      "file": "app/actions/finance-shift-analytics.ts"
+    },
+    {
+      "module": "@/app/actions/finance-shift-monitor",
+      "names": [
+        "fetchFinanceShiftMonitorAction",
+        "superviseFinanceShiftAction"
+      ],
+      "file": "app/actions/finance-shift-monitor.ts"
+    },
+    {
+      "module": "@/app/actions/finance-shift-sessions",
+      "names": [
+        "readShiftSessionsAction",
+        "readShiftSessionSummaryAction",
+        "readShiftSessionRowsAction",
+        "readShiftSessionActivityAction"
+      ],
+      "file": "app/actions/finance-shift-sessions.ts"
+    },
+    {
+      "module": "@/app/actions/finance-shifts",
+      "names": [
+        "fetchFinanceShiftDetailAction"
+      ],
+      "file": "app/actions/finance-shifts.ts"
+    },
+    {
+      "module": "@/app/actions/finance-shipping",
+      "names": [
+        "getFinanceShippingSettings",
+        "saveFinanceShippingSettings",
+        "listFinanceShippingOptions",
+        "getFinanceShippingOption",
+        "saveFinanceShippingOption",
+        "deleteFinanceShippingOption",
+        "getFinanceShippingActivity"
+      ],
+      "file": "app/actions/finance-shipping.ts"
+    },
+    {
+      "module": "@/app/actions/finance-treasury",
+      "names": [
+        "fetchFinanceTreasuryAction",
+        "fetchFinanceAccountStatementAction",
+        "fetchFinanceTreasuryHistoryAction",
+        "fetchFinanceTerminalFeeHistoryAction",
+        "executeFinanceTreasuryAction",
+        "executeFinanceTreasuryCorrectionAction"
+      ],
+      "file": "app/actions/finance-treasury.ts"
+    },
+    {
+      "module": "@/app/actions/menu",
+      "names": [
+        "fetchOwnerMenuAction",
+        "saveMenuProductAction",
+        "deleteMenuProductAction",
+        "saveMenuCategoriesAction",
+        "deleteMenuCategoryAction",
+        "saveMenuCategoryAction"
+      ],
+      "file": "app/actions/menu.ts"
+    },
+    {
+      "module": "@/app/actions/menu-import",
+      "names": [
+        "createMenuImportFromUrlAction",
+        "createMenuImportFromPdfAction",
+        "reportMenuImportUrlAction",
+        "getMenuImportJobAction",
+        "updateMenuImportItemsAction",
+        "approveMenuImportAction",
+        "cancelMenuImportAction"
+      ],
+      "file": "app/actions/menu-import.ts"
+    },
+    {
+      "module": "@/app/actions/upload",
+      "names": [
+        "uploadImageAction",
+        "uploadProductVideoAction"
+      ],
+      "file": "app/actions/upload.ts"
+    }
+  ],
+  "sourceFiles": [
+    "components/cafe/product-image.tsx",
+    "components/cashier/cashier-language.tsx",
+    "components/dashboard/dashboard-navigation-link.tsx",
+    "components/dashboard/menu/branch-switcher.tsx",
+    "components/dashboard/menu/butcher-product-fields.tsx",
+    "components/dashboard/menu/category-manager.tsx",
+    "components/dashboard/menu/gift-product-fields.tsx",
+    "components/dashboard/menu/menu-import-modal.tsx",
+    "components/dashboard/menu/product-card.tsx",
+    "components/dashboard/menu/product-modal.tsx",
+    "components/dashboard/pages/menu-page.tsx",
+    "components/dashboard/ui/modal.tsx",
+    "components/erp/customers/price-list-suggestion.tsx",
+    "components/finance/company-invoice-files.tsx",
+    "components/finance/company-invoice-line-notes.tsx",
+    "components/finance/company-invoice-lines.tsx",
+    "components/finance/company-invoice-policy.ts",
+    "components/finance/company-invoice-pricing.tsx",
+    "components/finance/credit-note-document.tsx",
+    "components/finance/credit-note-editor.tsx",
+    "components/finance/customer-credit-panel.tsx",
+    "components/finance/customer-last-sale-price.tsx",
+    "components/finance/finance-cash-differences.tsx",
+    "components/finance/finance-cash-handover-form.tsx",
+    "components/finance/finance-cash-handovers.tsx",
+    "components/finance/finance-cashier-management.tsx",
+    "components/finance/finance-control-panel.tsx",
+    "components/finance/finance-credit-notes.tsx",
+    "components/finance/finance-customer-detail.tsx",
+    "components/finance/finance-customer-form.tsx",
+    "components/finance/finance-customer-payments.tsx",
+    "components/finance/finance-inventory-barcode-scanner.tsx",
+    "components/finance/finance-inventory-barcode.tsx",
+    "components/finance/finance-inventory-item-form.tsx",
+    "components/finance/finance-inventory-report.tsx",
+    "components/finance/finance-invoice-custom-fields.tsx",
+    "components/finance/finance-invoice-detail.tsx",
+    "components/finance/finance-invoice-import.tsx",
+    "components/finance/finance-invoice-line-notes.tsx",
+    "components/finance/finance-invoice-message-status.tsx",
+    "components/finance/finance-invoice-settings-management.tsx",
+    "components/finance/finance-invoice-settings.tsx",
+    "components/finance/finance-invoices.tsx",
+    "components/finance/finance-journal-activity.tsx",
+    "components/finance/finance-journal-detail.tsx",
+    "components/finance/finance-journal-editor.tsx",
+    "components/finance/finance-journal-operation.tsx",
+    "components/finance/finance-navigation.ts",
+    "components/finance/finance-operation-form.tsx",
+    "components/finance/finance-order-sources.tsx",
+    "components/finance/finance-payment-detail.tsx",
+    "components/finance/finance-payment-editor.tsx",
+    "components/finance/finance-pos-actions.tsx",
+    "components/finance/finance-pos-customer.tsx",
+    "components/finance/finance-pos-fullscreen.tsx",
+    "components/finance/finance-pos-offline-status.tsx",
+    "components/finance/finance-pos-purchase-form.tsx",
+    "components/finance/finance-pos.tsx",
+    "components/finance/finance-price-list-activity.tsx",
+    "components/finance/finance-price-lists.tsx",
+    "components/finance/finance-printer-settings.tsx",
+    "components/finance/finance-quotes.tsx",
+    "components/finance/finance-receipt-dialog.tsx",
+    "components/finance/finance-receipt-print.ts",
+    "components/finance/finance-recurring-invoices.tsx",
+    "components/finance/finance-refund-form.tsx",
+    "components/finance/finance-refund-requests.tsx",
+    "components/finance/finance-sale-form.tsx",
+    "components/finance/finance-sales-returns.tsx",
+    "components/finance/finance-sales-settings.tsx",
+    "components/finance/finance-shift-analytics.tsx",
+    "components/finance/finance-shift-attachments.tsx",
+    "components/finance/finance-shift-details.tsx",
+    "components/finance/finance-shift-forms.tsx",
+    "components/finance/finance-shift-monitor.tsx",
+    "components/finance/finance-shift-report.tsx",
+    "components/finance/finance-shift-session.tsx",
+    "components/finance/finance-shipping-activity.tsx",
+    "components/finance/finance-shipping.tsx",
+    "components/finance/finance-supplier-payout-form.tsx",
+    "components/finance/finance-terminal-fees.tsx",
+    "components/finance/finance-treasury-attachments.tsx",
+    "components/finance/finance-treasury-draft-files.tsx",
+    "components/finance/finance-treasury.tsx",
+    "components/finance/finance-trial-balance.tsx",
+    "components/finance/finance-ui.tsx",
+    "components/finance/finance-workspace.tsx",
+    "components/finance/inventory-camera-session.ts",
+    "components/finance/invoice-advanced-tools.tsx",
+    "components/finance/invoice-custom-field-values.tsx",
+    "components/finance/invoice-details-view.tsx",
+    "components/finance/invoice-installment-editor.tsx",
+    "components/finance/invoice-message-cache.ts",
+    "components/finance/invoice-order-source-summary.tsx",
+    "components/finance/invoice-payments-view.tsx",
+    "components/finance/invoice-shipping-charge-editor.tsx",
+    "components/finance/invoice-stock-installments.tsx",
+    "components/finance/payment-receipt-dialog.tsx",
+    "components/finance/recurring-invoice-document.tsx",
+    "components/finance/recurring-invoice-editor.tsx",
+    "components/finance/sales-cashier-form.tsx",
+    "components/finance/sales-return-document.tsx",
+    "components/finance/use-customer-sale-prices.ts",
+    "components/finance/use-finance-invoice-messages.ts",
+    "components/finance/use-finance-printer.ts",
+    "components/finance/use-finance.ts",
+    "components/finance/use-inventory-sales-catalog.ts",
+    "components/finance/use-invoice-custom-fields.ts",
+    "components/finance/use-invoice-line-notes.ts",
+    "components/finance/use-invoice-order-source.ts",
+    "components/finance/use-invoice-shipping-charge.ts",
+    "components/finance/use-pos-finance.ts",
+    "components/pager/pager-format.ts",
+    "components/pager/pager-order-card.tsx",
+    "components/ui/app-toast.tsx",
+    "components/ui/design-system.tsx",
+    "components/ui/local-asset-image.tsx",
+    "lib/barndaksa/env.ts",
+    "lib/cafe/image-asset-pipeline.ts",
+    "lib/cafe/local-asset-store.ts",
+    "lib/cafe/logo-transparency.ts",
+    "lib/cafe/use-local-asset-url.ts",
+    "lib/cashier/language.ts",
+    "lib/cashier/messages.ts",
+    "lib/commerce/product-details.ts",
+    "lib/erp/settings-numbering.ts",
+    "lib/export/company-invoice-preview-pdf.ts",
+    "lib/export/finance-journal-pdf.ts",
+    "lib/export/finance-price-list-pdf.ts",
+    "lib/export/payment-receipt-pdf.ts",
+    "lib/finance/brand-finance.ts",
+    "lib/finance/company-invoice-options.ts",
+    "lib/finance/company-invoice.ts",
+    "lib/finance/control-report.ts",
+    "lib/finance/credit-note.ts",
+    "lib/finance/customer-fields.ts",
+    "lib/finance/customer-payment.ts",
+    "lib/finance/inventory-catalog.ts",
+    "lib/finance/inventory-image-upload.ts",
+    "lib/finance/inventory-report.ts",
+    "lib/finance/inventory-sales.ts",
+    "lib/finance/invoice-copy.ts",
+    "lib/finance/invoice-custom-fields.ts",
+    "lib/finance/invoice-draft.ts",
+    "lib/finance/invoice-import.ts",
+    "lib/finance/invoice-line-notes.ts",
+    "lib/finance/invoice-management.ts",
+    "lib/finance/invoice-settings-cache.ts",
+    "lib/finance/invoice-settings.ts",
+    "lib/finance/invoice-shipping-amounts.ts",
+    "lib/finance/ledger.ts",
+    "lib/finance/order-sources.ts",
+    "lib/finance/payment-receipt.ts",
+    "lib/finance/permissions.ts",
+    "lib/finance/pos-customer.ts",
+    "lib/finance/pos-offline-assets.ts",
+    "lib/finance/pos-offline-storage.ts",
+    "lib/finance/pos-offline.ts",
+    "lib/finance/pos-product-selection.ts",
+    "lib/finance/price-list-csv.ts",
+    "lib/finance/printer-settings.ts",
+    "lib/finance/quotation.ts",
+    "lib/finance/receipt-preview.ts",
+    "lib/finance/recurring-invoice.ts",
+    "lib/finance/sales-cashier-password.ts",
+    "lib/finance/shift-analytics.ts",
+    "lib/finance/shift-attachments.ts",
+    "lib/finance/shift-sessions.ts",
+    "lib/finance/shipping.ts",
+    "lib/finance/treasury-attachments.ts",
+    "lib/finance/treasury-upload.ts",
+    "lib/finance/treasury-vouchers.ts",
+    "lib/format.ts",
+    "lib/menu/butcher-products.ts",
+    "lib/menu/download-product-image.ts",
+    "lib/menu/menu-change.ts",
+    "lib/menu/product-copy.ts",
+    "lib/menu/product-media.ts",
+    "lib/menu/product-position.ts",
+    "lib/mock/menu-categories.ts",
+    "lib/mock/menu.ts",
+    "lib/performance/bounded-cache.ts",
+    "lib/platform/business-copy.ts",
+    "lib/supabase/client.ts",
+    "lib/ui/page-scroll-lock.ts",
+    "offline-finance/client/products.tsx"
+  ],
+  "external": [
+    "@supabase/ssr",
+    "@zxing/browser",
+    "jsbarcode",
+    "jspdf",
+    "jspdf-autotable",
+    "lucide-react",
+    "next/dynamic",
+    "next/image",
+    "next/link",
+    "next/navigation",
+    "qrcode-generator",
+    "react",
+    "react-dom",
+    "zod"
+  ]
+}

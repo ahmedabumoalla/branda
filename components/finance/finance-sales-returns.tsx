@@ -6,7 +6,7 @@ import { readSalesReturnsAction, readSalesReturnAction, transitionSalesReturnSto
 import type { SalesReturnDetail, SalesReturnSummary, SalesReturnFilters } from "@/lib/finance/sales-return";
 import type { FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { canFinance } from "@/lib/finance/permissions";
-import type { CompanyInvoicePreview } from "@/lib/export/company-invoice-preview-pdf";
+import { SalesReturnPrintDialog } from "./sales-return-print-dialog";
 import { Modal } from "@/components/dashboard/ui/modal";
 import { SalesReturnDocument, salesReturnPreview } from "./sales-return-document";
 import { Field, Numeric, financeDate } from "./finance-ui";
@@ -46,11 +46,7 @@ export function FinanceSalesReturns({ snapshot, view, returnId, stale, pending, 
   const list = view === "returns";
   const requestKey = JSON.stringify([snapshot.cafe.id, snapshot.userId, snapshot.role, view, returnId, filters, revision]);
   const [result, setResult] = useState<{ key: string; items: SalesReturnSummary[]; detail?: SalesReturnDetail; total: number; error: string }>({ key: "", items: [], total: 0, error: "" });
-  const [preview, setPreview] = useState<CompanyInvoicePreview | null>(null);
-  const [pdf, setPdf] = useState("");
-  const [pdfError, setPdfError] = useState("");
-  const [printing, setPrinting] = useState(false);
-  const pdfAttempt = useRef(0);
+  const [printId, setPrintId] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
     const read = async () => {
@@ -65,23 +61,12 @@ export function FinanceSalesReturns({ snapshot, view, returnId, stale, pending, 
     void read().catch(() => { if (active) setResult({ key: requestKey, items: [], total: 0, error: "تعذر الاتصال أعد تحميل الفواتير المرتجعة" }); });
     return () => { active = false; };
   }, [snapshot.cafe.slug, filters, list, returnId, requestKey]);
-  useEffect(() => () => { if (pdf) URL.revokeObjectURL(pdf); }, [pdf]);
-  useEffect(() => () => { pdfAttempt.current++; }, []);
-  const showPdf = async (record: SalesReturnDetail) => {
-    const model = salesReturnPreview(record, snapshot), attempt = ++pdfAttempt.current;
-    setPreview(model); setPdf(""); setPdfError(""); setPrinting(true);
-    try {
-      const { createCompanyInvoicePreviewPdf } = await import("@/lib/export/company-invoice-preview-pdf");
-      const blob = await createCompanyInvoicePreviewPdf(model);
-      if (pdfAttempt.current === attempt) setPdf(URL.createObjectURL(blob));
-    } catch { if (pdfAttempt.current === attempt) setPdfError("تعذر إعداد نسخة الطباعة أعد المحاولة من صفحة المرتجع"); }
-    finally { if (pdfAttempt.current === attempt) setPrinting(false); }
-  };
+  const showPdf = (record: SalesReturnDetail) => setPrintId(record.id);
   const changed = () => { setRevision(v => v + 1); onChanged(); };
   const loading = result.key !== requestKey;
   const detail = !loading && !list ? result.detail : undefined;
   return <div className={css.page}>
-    <div className={css.page} inert={!!preview}>
+    <div className={css.page} inert={!!printId}>
       {list && <><div className={css.bar}><div><h2>الفواتير المرتجعة</h2><p>كل مرتجع برقم مستقل مرتبط بفاتورته الأصلية</p></div><button className={styles.secondary} disabled={loading} onClick={() => setRevision(v => v + 1)}><RefreshCw size={16} aria-hidden="true" />تحديث</button></div>
         <form className={css.panel} onSubmit={e => { e.preventDefault(); setFilters({ query: query.trim() || undefined, partyId: partyId || undefined, paymentStatus: paymentStatus === "cash" || paymentStatus === "credit" || paymentStatus === "mixed" ? paymentStatus : undefined, stockStatus: stockStatus === "pending" || stockStatus === "received" || stockStatus === "rejected" || stockStatus === "none" ? stockStatus : undefined, from: from || undefined, to: to || undefined, offset: 0, limit: 30 }); }}>
           <div className={css.panelHead}><h2>بحث</h2><button type="button" className={styles.secondary} aria-expanded={advanced} onClick={() => setAdvanced(v => !v)}>بحث متقدم</button></div>
@@ -95,7 +80,7 @@ export function FinanceSalesReturns({ snapshot, view, returnId, stale, pending, 
           {!result.items.length ? <div className={css.empty}><FileText size={32} aria-hidden="true" /><strong>{Object.values(filters).some(v => typeof v === "string" && v) ? "لا توجد مرتجعات تطابق البحث" : "لا توجد فواتير مرتجعة بعد"}</strong><p>تظهر المرتجعات هنا بعد اعتماد المالك يمكنك تقديم طلب مرتجع من تفاصيل الفاتورة الأصلية</p><a onClick={followFinanceLink} className={styles.secondary} href="/dashboard/finance?section=sales">إدارة الفواتير</a></div> : <div className={css.tableWrap} role="region" tabIndex={0} aria-label="نتائج الفواتير المرتجعة"><table className={css.table}><thead><tr>{["رقم المرتجع", "العميل", "الفاتورة الأصلية", "أنشئ بواسطة", "حالة الإذن المخزني", "تسوية المبلغ", "المبلغ", "الإجراءات"].map(h => <th scope="col" key={h}>{h}</th>)}</tr></thead><tbody>{result.items.map(r => <tr key={r.id}><td><button className={css.number} onClick={() => navigateSalesReturns(r.id)}>#{String(r.number).padStart(6, "0")}</button><small>{financeDate(r.createdAt)}</small></td><td>{r.customerName}</td><td><a onClick={followFinanceLink} className={css.number} href={`/dashboard/finance?section=sales&view=invoice&invoice=${encodeURIComponent(r.sourceId)}`}>#{r.sourceNumber}</a></td><td>{r.createdByName}</td><td><span className={css.badge} data-status={r.stockStatus}>{returnStockLabels[r.stockStatus]}</span></td><td>{returnPaymentLabels[r.paymentStatus]}</td><td><Numeric value={r.total} money /></td><td><button className={styles.secondary} onClick={() => navigateSalesReturns(r.id)}>عرض</button></td></tr>)}</tbody></table></div>}
         </section> : <p className={styles.notice}>الفاتورة المرتجعة غير موجودة أو لم تعد متاحة</p>}
     </div>
-    <Modal open={!!preview} title="طباعة الفاتورة المرتجعة" onClose={() => { pdfAttempt.current++; setPreview(null); setPdf(""); setPrinting(false); }} footer={pdf ? <a className={styles.primary} href={pdf} target="_blank" rel="noopener noreferrer">فتح ملف الطباعة أو حفظه</a> : undefined}><div className={`${css.page} ${css.previewBody}`}>{printing && <p role="status">جار إعداد ملف الطباعة</p>}{pdfError && <p className={styles.error} role="alert">{pdfError}</p>}{pdf ? <iframe title="الفاتورة المرتجعة للطباعة" src={pdf} className={css.pdf} /> : preview && <SalesReturnDocument model={preview} />}</div></Modal>
+    {printId && <SalesReturnPrintDialog key={snapshot.cafe.slug + printId} id={printId} slug={snapshot.cafe.slug} onClose={() => setPrintId(null)} />}
   </div>;
 }
 

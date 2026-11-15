@@ -1,0 +1,262 @@
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const cash = (v) => (Number(v || 0) / 100).toFixed(2);
+export function saleLineAmounts(quantity, price, taxable) {
+    const parts = /^(\d*)(?:\.(\d{0,3}))?$/.exec(quantity.trim());
+    if (!parts || !Number.isSafeInteger(price) || price < 0)
+        return { net: 0, tax: 0 };
+    const thousandths = BigInt(parts[1] || '0') * BigInt(1000) + BigInt((parts[2] || '').padEnd(3, '0'));
+    const net = (thousandths * BigInt(price) + BigInt(500)) / BigInt(1000);
+    return { net: Number(net), tax: taxable ? Number((net * BigInt(15) + BigInt(50)) / BigInt(100)) : 0 };
+}
+const day = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+const unitNames = { each: 'حبة', piece: 'قطعة', g: 'جرام', kg: 'كيلو', quarter: 'ربع ذبيحة', half: 'نصف ذبيحة', whole: 'ذبيحة كاملة' };
+const factors = { each: 1, piece: 1, g: 1, kg: 1000, quarter: 1, half: 2, whole: 4 };
+const field = (label, name, type = 'text', value = '', extra = '') => `<label class="field">${label}<input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
+const select = (label, name, options) => `<label class="field">${label}<select name="${name}">${options}</select></label>`;
+const option = (value, label) => `<option value="${esc(value)}">${esc(label)}</option>`;
+const failure = '<div class="error" role="alert" tabindex="-1"></div>';
+let bridge, catalog = { products: [], lots: [] };
+let cart = [];
+let cartRequest = '', lastPayload = '';
+const role = () => bridge.snapshot().role || 'owner';
+const quantity = (basis, value) => basis === 'weight' ? `${(value / 1000).toFixed(3)} كجم` : basis === 'carcass' ? `${Math.floor(value / 4)} كاملة و${value % 4} أرباع` : `${value} قطعة`;
+function table(heads, rows) { return `<div class="table-wrap"><table><thead><tr>${heads.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${heads.length}">لا توجد بيانات بعد</td></tr>`}</tbody></table></div>`; }
+async function bind(form, action) { form.addEventListener('submit', async (event) => { event.preventDefault(); if (form.dataset.busy)
+    return; form.dataset.busy = '1'; const button = form.querySelector('button[type=submit]'); button.disabled = true; try {
+    await action(Object.fromEntries(new FormData(form)));
+}
+catch (error) {
+    const box = form.querySelector('.error');
+    box.textContent = error instanceof Error ? error.message : String(error);
+    box.focus();
+}
+finally {
+    button.disabled = false;
+    delete form.dataset.busy;
+} }); }
+async function imageFile(input) { const file = input.files?.[0]; if (!file)
+    return ''; if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 8_000_000)
+    throw Error('اختر صورة PNG أو JPEG أو WebP أصغر من ٨ ميجابايت'); const bitmap = await createImageBitmap(file); const scale = Math.min(1, 500 / Math.max(bitmap.width, bitmap.height)); const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale)); canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close(); const data = canvas.toDataURL('image/png'); if (data.length > 330_000)
+    throw Error('الصورة كبيرة بعد التصغير اختر صورة أبسط'); return data; }
+export function configureButcher(value) { bridge = value; }
+export async function butcherView(view, page) {
+    if (!['sale', 'products', 'stock', 'butcher-purchase', 'butcher-reports'].includes(page))
+        return false;
+    if (role() === 'cashier' && page !== 'sale')
+        throw Error('هذه الصفحة متاحة للمالك فقط');
+    catalog = await bridge.api('catalog');
+    if (page === 'sale')
+        pos(view);
+    else if (page === 'products')
+        products(view);
+    else if (page === 'stock')
+        stock(view);
+    else if (page === 'butcher-purchase')
+        purchase(view);
+    else
+        await reports(view);
+    return true;
+}
+const posIcon = (name) => {
+    const paths = { bag: '<path d="M6 7h12l2 14H4L6 7Z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/>', search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>', box: '<path d="m3 7 9-4 9 4v11l-9 4-9-4V7Z"/><path d="m3 7 9 4 9-4M12 11v11M7 5l10 5"/>', plus: '<path d="M12 5v14M5 12h14"/>', minus: '<path d="M5 12h14"/>', trash: '<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/>', arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>', refresh: '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M5 8a8 8 0 0 1 14-2l1 6M4 12l1 6a8 8 0 0 0 14-2"/>', expand: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>', settings: '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/>', exit: '<path d="M9 4H4v16h5M9 12h12m-5-5 5 5-5 5"/>', receipt: '<path d="M5 3h14v18l-3-2-4 2-4-2-3 2V3Z"/><path d="M8 8h8M8 12h8"/>', check: '<path d="m5 12 4 4L19 6"/>', card: '<rect x="2" y="4" width="20" height="16" rx="3"/><path d="M2 9h20M6 15h3"/>', cash: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="3"/>', scale: '<path d="M5 9h14l2 12H3L5 9Z"/><path d="M8 9V3h8v6M12 3v3"/>' };
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.box}</svg>`;
+};
+function pos(view) {
+    let query = '', group = '', unit = '';
+    const productsList = () => catalog.products.filter((p) => p.active);
+    const image = (p) => p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy">` : `<span class="cashier-placeholder">${posIcon(['g', 'kg'].includes(p.unit) ? 'scale' : 'box')}</span>`;
+    const basis = (p) => ['g', 'kg'].includes(p.unit) ? 'weight' : ['quarter', 'half', 'whole'].includes(p.unit) ? 'carcass' : 'piece';
+    const totals = () => { let net = 0, tax = 0; for (const line of cart) {
+        const p = catalog.products.find((p) => p.id === line.product_id);
+        if (!p)
+            continue;
+        const amount = saleLineAmounts(line.quantity, p.price, !!bridge.snapshot().company.tax_number);
+        net += amount.net;
+        tax += amount.tax;
+    } return { net, tax, total: net + tax }; };
+    function cartError() {
+        const used = new Map();
+        for (const line of cart) {
+            const p = catalog.products.find((p) => p.id === line.product_id);
+            const value = Number(line.quantity);
+            if (!p?.active)
+                return 'أحد الأصناف لم يعد متاحًا احذفه أو حدّث الأصناف';
+            if (!/^(\d+)(\.\d{1,3})?$/.test(line.quantity) || !Number.isFinite(value) || value <= 0 || value > 9999 || (p.unit !== 'kg' && !Number.isInteger(value)))
+                return `راجع كمية ${p.name}`;
+            const key = JSON.stringify([p.stock_group, basis(p)]), needed = Math.round(value * factors[p.unit]);
+            used.set(key, (used.get(key) || 0) + needed);
+            if (used.get(key) > p.available_qty)
+                return `الكمية المتاحة لا تكفي لصنف ${p.name}`;
+        }
+        return '';
+    }
+    view.innerHTML = `<div class="offline-pos" dir="rtl"><main class="cashier-main" aria-label="المنتجات وأدوات الكاشير"><div class="cashier-controls"><header class="cashier-header"><div class="cashier-brand"><span>برندة المالية · ${esc(bridge.snapshot().company.company)}</span><h1>الكاشير المالي</h1><small><i></i>محلي · ${role() === 'owner' ? 'حساب المالك' : 'حساب الكاشير'}</small></div><div class="cashier-tools"><button type="button" class="cashier-green" data-nav="sale-history">${posIcon('receipt')}سجل الفواتير</button><button type="button" data-logout>${posIcon('exit')}خروج</button><details class="cashier-menu"><summary>${posIcon('settings')}إجراءات الكاشير<span>⌄</span></summary><div>${role() === 'owner' ? '<button data-nav="products">المنتجات والأسعار</button><button data-nav="stock">المخزون والجرد</button><button data-nav="butcher-purchase">شراء دفعة</button><button data-nav="butcher-reports">التقارير والتسوية</button><button data-nav="settings">الإعدادات وحساب الكاشير</button><button data-nav="home">لوحة المالك</button>' : '<button data-nav="sale-history">فواتير المبيعات</button>'}</div></details><button type="button" class="cashier-icon" id="pos-fullscreen" aria-label="ملء الشاشة">${posIcon('expand')}</button></div></header><div class="cashier-searchbar"><label class="cashier-search">${posIcon('search')}<input id="pos-search" type="search" aria-label="ابحث عن صنف" placeholder="ابحث عن صنف" autocomplete="off"></label><label class="cashier-unit-filter"><span class="cashier-sr">تصفية حسب وحدة البيع</span><select id="pos-unit"><option value="">جميع وحدات البيع</option>${Object.keys(unitNames).map(k => option(k, unitNames[k])).join('')}</select></label></div><nav class="cashier-categories" id="pos-categories" aria-label="مجموعات الأصناف"></nav></div><section class="cashier-catalog" aria-label="قائمة الأصناف"><div id="pos-products" class="cashier-products"></div></section></main><aside class="cashier-cart" aria-label="سلة المبيعات"><div class="cashier-cart-head"><h2>${posIcon('bag')}طلب جديد</h2><span id="pos-count" class="cashier-count" aria-live="polite"></span></div><div id="cart-lines" class="cashier-cart-body" role="region" aria-label="الأصناف المختارة" tabindex="0"></div><footer class="cashier-cart-footer"><div id="pos-totals"></div><p id="pos-hint" class="cashier-cart-hint" role="status"></p><button type="button" id="pos-checkout" class="cashier-checkout">الدفع وإصدار الإيصال${posIcon('arrow')}</button><div class="cashier-cart-tools"><button type="button" id="pos-clear">${posIcon('trash')}إفراغ السلة</button><div><button type="button" class="cashier-icon" id="pos-refresh" aria-label="تحديث الأصناف والمخزون">${posIcon('refresh')}</button><span class="cashier-local" title="يعمل على هذا الجهاز دون إنترنت">${posIcon('check')}<i></i></span></div></div></footer></aside></div>`;
+    function drawProducts() {
+        const all = productsList(), groups = [...new Set(all.map((p) => p.stock_group))];
+        view.querySelector('#pos-categories').innerHTML = [['', 'جميع الأصناف'], ...groups.map(g => [g, g])].map(([value, label], index) => `<button type="button" data-group="${index}" aria-pressed="${value === group}">${esc(label)}</button>`).join('');
+        view.querySelectorAll('[data-group]').forEach(b => b.onclick = () => { group = Number(b.dataset.group) === 0 ? '' : groups[Number(b.dataset.group) - 1]; drawProducts(); });
+        const filtered = all.filter((p) => (!group || p.stock_group === group) && (!unit || p.unit === unit) && `${p.name} ${p.stock_group}`.includes(query));
+        view.querySelector('#pos-products').innerHTML = filtered.map((p) => `<button type="button" class="cashier-product" data-product="${p.id}" ${p.available_qty <= 0 ? 'disabled' : ''} aria-label="${esc(p.name)} ${cash(p.price)} ريال لكل ${unitNames[p.unit]}"><span class="cashier-product-image">${image(p)}${p.available_qty <= 0 ? '<span class="cashier-soldout">نفد المخزون</span>' : ''}</span><span class="cashier-product-info"><strong>${esc(p.name)}</strong><span class="cashier-price"><bdi>${cash(p.price)}</bdi><small>ر س / ${unitNames[p.unit]}</small></span></span></button>`).join('') || `<div class="cashier-empty-catalog">${posIcon('box')}<h2>${all.length ? 'لا توجد أصناف مطابقة' : 'أضف أصنافك لبدء البيع'}</h2><p>${all.length ? 'جرّب اسمًا آخر أو اختر جميع الأصناف' : 'أضف اسم المنتج وسعره ووحدته ثم سجّل دفعة المخزون'}</p>${role() === 'owner' && !all.length ? '<div><button data-nav="products" class="primary">إضافة منتجات</button><button data-nav="butcher-purchase">شراء دفعة</button></div>' : ''}</div>`;
+        view.querySelectorAll('[data-product]').forEach(b => b.onclick = () => { const p = catalog.products.find((p) => p.id === Number(b.dataset.product)); if (['g', 'kg'].includes(p.unit))
+            openWeight(p);
+        else {
+            try {
+                add(p, '1');
+            }
+            catch (error) {
+                bridge.notice(error instanceof Error ? error.message : 'راجع الكمية المتاحة');
+            }
+        } });
+    }
+    function add(p, quantityValue) {
+        const prior = cart.map(l => ({ ...l })), existing = cart.find(l => l.product_id === p.id);
+        if (existing)
+            existing.quantity = String(Math.round((Number(existing.quantity) + Number(quantityValue)) * 1000) / 1000);
+        else
+            cart.push({ product_id: p.id, quantity: quantityValue });
+        const problem = cartError();
+        if (problem) {
+            cart = prior;
+            throw Error(problem);
+        }
+        drawCart();
+    }
+    function openWeight(p) {
+        bridge.dialog('تحديد الوزن', `<form id="pos-weight" class="cashier-weight butcher-form">${failure}<div class="cashier-weight-product">${image(p)}<div><h3>${esc(p.name)}</h3><p>${cash(p.price)} ريال / ${unitNames[p.unit]}</p><small>المتاح ${quantity('weight', p.available_qty)}</small></div></div>${field(`الكمية بالـ${unitNames[p.unit]}`, 'quantity', 'number', p.unit === 'kg' ? '1' : '100', `required min="${p.unit === 'kg' ? '0.001' : '1'}" max="9999" step="${p.unit === 'kg' ? '0.001' : '1'}" inputmode="decimal"`)}<div id="weight-total" class="cashier-weight-total" aria-live="polite"></div><button type="submit" class="primary">إضافة إلى السلة ${posIcon('plus')}</button></form>`);
+        const form = document.querySelector('#pos-weight'), input = form.elements.namedItem('quantity');
+        const update = () => { const a = saleLineAmounts(input.value, p.price, !!bridge.snapshot().company.tax_number); form.querySelector('#weight-total').textContent = `قيمة الصنف ${cash(a.net + a.tax)} ريال`; };
+        input.oninput = update;
+        update();
+        input.focus();
+        input.select();
+        void bind(form, async (d) => { add(p, String(d.quantity)); document.querySelector('#dialog').close(); });
+    }
+    function drawCart() {
+        view.querySelector('#pos-count').textContent = `${cart.length} أصناف`;
+        view.querySelector('#cart-lines').innerHTML = cart.map((line, index) => { const p = catalog.products.find((p) => p.id === line.product_id); if (!p)
+            return ''; const a = saleLineAmounts(line.quantity, p.price, !!bridge.snapshot().company.tax_number); return `<div class="cashier-cart-line"><div class="cashier-line-top"><span class="cashier-line-image">${image(p)}</span><div><strong>${esc(p.name)}</strong><small>${cash(p.price)} ريال / ${unitNames[p.unit]}</small></div><button type="button" class="cashier-icon" data-remove="${index}" aria-label="حذف ${esc(p.name)}">${posIcon('trash')}</button></div><div class="cashier-line-bottom"><div class="cashier-quantity"><button type="button" data-minus="${index}" aria-label="تقليل كمية ${esc(p.name)}">${posIcon('minus')}</button><input data-quantity="${index}" aria-label="كمية ${esc(p.name)} بالـ${unitNames[p.unit]}" type="number" min="${p.unit === 'kg' ? '0.001' : '1'}" step="${p.unit === 'kg' ? '0.001' : '1'}" max="9999" inputmode="decimal" value="${esc(line.quantity)}"><button type="button" data-plus="${index}" aria-label="زيادة كمية ${esc(p.name)}">${posIcon('plus')}</button></div><span><bdi>${cash(a.net + a.tax)}</bdi> ر س</span></div></div>`; }).join('') || `<div class="cashier-empty-cart">${posIcon('bag')}<h3>ابدأ بإضافة صنف</h3><p>اضغط على صورة الصنف لإضافته إلى السلة</p></div>`;
+        const change = (index, value) => { cart[index].quantity = value; drawCart(); };
+        view.querySelectorAll('[data-quantity]').forEach(input => input.onchange = () => change(Number(input.dataset.quantity), input.value));
+        view.querySelectorAll('[data-plus],[data-minus]').forEach(b => b.onclick = () => { const index = Number(b.dataset.plus ?? b.dataset.minus), p = catalog.products.find((p) => p.id === cart[index].product_id), step = p.unit === 'g' ? 100 : 1; const q = Math.round((Number(cart[index].quantity) + (b.dataset.plus !== undefined ? step : -step)) * 1000) / 1000; if (q <= 0)
+            cart.splice(index, 1);
+        else
+            cart[index].quantity = String(q); drawCart(); });
+        view.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => { cart.splice(Number(b.dataset.remove), 1); drawCart(); });
+        const t = totals(), problem = cartError();
+        view.querySelector('#pos-totals').innerHTML = `${cart.length ? `<div class="cashier-breakdown"><span>قبل الضريبة <bdi>${cash(t.net)}</bdi></span><span>${bridge.snapshot().company.tax_number ? 'الضريبة ١٥٪' : 'غير مسجل في الضريبة'}<bdi>${cash(t.tax)}</bdi></span></div>` : ''}<div class="cashier-total"><div><strong>الإجمالي المستحق</strong><small>${cart.length} أصناف</small></div><bdi>${cash(t.total)}</bdi><span>ر س</span></div>`;
+        view.querySelector('#pos-hint').textContent = problem || (cart.length ? 'جاهز للتحصيل اختر طريقة الدفع' : 'أضف منتجًا إلى السلة لبدء الدفع');
+        view.querySelector('#pos-checkout').disabled = !cart.length || !!problem;
+        view.querySelector('#pos-clear').disabled = !cart.length;
+    }
+    function checkout() {
+        const problem = cartError();
+        if (problem || !cart.length) {
+            bridge.notice(problem || 'أضف منتجًا أولًا');
+            return;
+        }
+        const t = totals();
+        let method = 'cash';
+        bridge.dialog('الدفع وإصدار الإيصال', `<form id="pos-payment" class="cashier-payment butcher-form">${failure}<div class="cashier-payment-total"><span>الإجمالي المستحق</span><strong><bdi>${cash(t.total)}</bdi> <small>ر س</small></strong></div><fieldset class="cashier-payment-methods"><legend>طريقة الدفع</legend><div><button type="button" data-method="cash" aria-pressed="true">${posIcon('cash')}نقد</button><button type="button" data-method="card" aria-pressed="false">${posIcon('card')}شبكة</button><button type="button" data-method="split" aria-pressed="false">${posIcon('settings')}نقد وشبكة</button></div></fieldset><div class="form-grid cashier-payment-inputs">${field('نقد بالريال', 'cash', 'number', cash(t.total), 'required min="0" step="0.01" inputmode="decimal"')}${field('شبكة بالريال', 'card', 'number', '0.00', 'required min="0" step="0.01" inputmode="decimal"')}</div><p id="payment-remaining" class="cashier-payment-remaining" role="status"></p><div class="form-grid">${field('اسم العميل اختياري', 'customer_name', 'text', '', 'maxlength="150" autocomplete="name"')}${field('رقم العميل اختياري', 'customer_phone', 'tel', '', 'maxlength="25" autocomplete="tel"')}</div><details class="cashier-tax-details"><summary>بيانات الفاتورة الضريبية للعميل</summary><div class="form-grid">${field('الرقم الضريبي للعميل إن وجد', 'customer_tax', 'text', '', 'maxlength="15" inputmode="numeric"')}${field('عنوان العميل', 'customer_address', 'text', '', 'maxlength="300"')}</div></details><button type="submit" id="payment-submit" class="primary cashier-payment-submit">${posIcon('check')}تأكيد الاستلام وإصدار إيصال</button></form>`);
+        const form = document.querySelector('#pos-payment'), dialog = document.querySelector('#dialog'), cashInput = form.elements.namedItem('cash'), cardInput = form.elements.namedItem('card'), submit = form.querySelector('#payment-submit');
+        const cents = (s) => { if (!/^\d+(\.\d{1,2})?$/.test(s))
+            return NaN; const [whole, decimal = ''] = s.split('.'); return Number(whole) * 100 + Number(decimal.padEnd(2, '0')); };
+        const update = () => { const rest = t.total - cents(cashInput.value) - cents(cardInput.value); form.querySelector('#payment-remaining').textContent = !Number.isFinite(rest) ? 'أدخل مبالغ صحيحة' : rest === 0 ? 'المبلغ مكتمل' : rest > 0 ? `المتبقي ${cash(rest)} ريال` : `المبلغ زائد ${cash(-rest)} ريال`; submit.disabled = rest !== 0 || form.dataset.busy === '1'; };
+        function choose(next) { method = next; cashInput.readOnly = method !== 'split'; cardInput.readOnly = method !== 'split'; cashInput.value = method === 'card' ? '0.00' : cash(t.total); cardInput.value = method === 'card' ? cash(t.total) : '0.00'; form.querySelectorAll('[data-method]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.method === method))); update(); }
+        form.querySelectorAll('[data-method]').forEach(b => b.onclick = () => choose(b.dataset.method));
+        cashInput.oninput = () => { if (method === 'split') {
+            const remainder = t.total - cents(cashInput.value);
+            if (Number.isFinite(remainder) && remainder >= 0)
+                cardInput.value = cash(remainder);
+        } update(); };
+        cardInput.oninput = update;
+        choose('cash');
+        const preventCancel = (event) => { if (form.dataset.busy === '1')
+            event.preventDefault(); };
+        dialog.addEventListener('cancel', preventCancel);
+        dialog.addEventListener('close', () => dialog.removeEventListener('cancel', preventCancel), { once: true });
+        void bind(form, async (data) => {
+            const problem = cartError();
+            if (problem)
+                throw Error(problem);
+            if (cents(String(data.cash)) + cents(String(data.card)) !== t.total)
+                throw Error('مجموع النقد والشبكة يجب أن يساوي قيمة الفاتورة');
+            const payload = { ...data, action: 'sale', items: cart }, fingerprint = JSON.stringify(payload);
+            if (fingerprint !== lastPayload) {
+                cartRequest = crypto.randomUUID();
+                lastPayload = fingerprint;
+            }
+            const close = dialog.querySelector('[data-close]');
+            close.disabled = true;
+            form.querySelectorAll('[data-method]').forEach(b => b.disabled = true);
+            submit.textContent = 'جار تسجيل العملية';
+            try {
+                const result = await bridge.api('butcher', { ...payload, request_id: cartRequest });
+                cart = [];
+                cartRequest = '';
+                lastPayload = '';
+                dialog.close();
+                await bridge.refresh();
+                catalog = await bridge.api('catalog');
+                pos(view);
+                await bridge.document(result.id);
+            }
+            finally {
+                close.disabled = false;
+                form.querySelectorAll('[data-method]').forEach(b => b.disabled = false);
+                submit.textContent = 'تأكيد الاستلام وإصدار إيصال';
+            }
+        });
+    }
+    view.querySelector('#pos-search').oninput = e => { query = e.target.value.trim(); drawProducts(); };
+    view.querySelector('#pos-unit').onchange = e => { unit = e.target.value; drawProducts(); };
+    view.querySelector('#pos-checkout').onclick = checkout;
+    view.querySelector('#pos-clear').onclick = () => { if (confirm('إفراغ أصناف السلة الحالية؟')) {
+        cart = [];
+        drawCart();
+    } };
+    view.querySelector('#pos-refresh').onclick = async () => { const b = view.querySelector('#pos-refresh'); b.disabled = true; try {
+        await bridge.refresh();
+        catalog = await bridge.api('catalog');
+        drawProducts();
+        drawCart();
+        bridge.notice('حُدّثت الأصناف والمخزون');
+    }
+    catch (error) {
+        bridge.notice(error instanceof Error ? error.message : 'تعذر التحديث');
+    }
+    finally {
+        b.disabled = false;
+    } };
+    view.querySelector('#pos-fullscreen').onclick = async () => { try {
+        if (document.fullscreenElement)
+            await document.exitFullscreen();
+        else
+            await document.documentElement.requestFullscreen();
+    }
+    catch {
+        bridge.notice('تعذر فتح وضع ملء الشاشة');
+    } };
+    drawProducts();
+    drawCart();
+}
+function products(view) { view.innerHTML = `<div class="header"><div><h1>المنتجات والأسعار</h1><p>الصورة اختيارية والمنتجات ذات مجموعة المخزون الواحدة تشترك في الدفعات</p></div><button class="primary" id="new-product">إضافة منتج</button></div>${table(['المنتج', 'الوحدة', 'مجموعة المخزون', 'السعر', 'الحالة', ''], catalog.products.map((p) => [esc(p.name), unitNames[p.unit], esc(p.stock_group), cash(p.price), p.active ? 'متاح' : 'مؤرشف', `<button data-edit-product="${p.id}">تعديل</button>`]))}`; view.querySelector('#new-product').onclick = () => editProduct(view); view.querySelectorAll('[data-edit-product]').forEach(button => button.onclick = () => editProduct(view, catalog.products.find((p) => p.id === Number(button.dataset.editProduct)))); }
+function editProduct(view, p = {}) { bridge.dialog(p.id ? 'تعديل المنتج' : 'منتج جديد', `<form id="product-form" class="butcher-form">${failure}<div class="form-grid">${field('اسم المنتج', 'name', 'text', p.name || '', 'required maxlength="150"')}${field('السعر قبل الضريبة بالريال', 'price', 'number', cash(p.price || 0), 'required min="0" step="0.01"')}${select('وحدة البيع', 'unit', Object.keys(unitNames).map(k => option(k, unitNames[k])).join(''))}${field('مجموعة المخزون', 'stock_group', 'text', p.stock_group || '', 'required maxlength="100"')}</div><p class="hint">استخدم نفس اسم المجموعة للمنتجات التي تخصم من المخزون نفسه والوحدات المتوافقة مثل كيلو وجرام</p><label>صورة اختيارية<input type="file" id="product-image" accept="image/png,image/jpeg,image/webp"></label>${p.image ? `<img class="logo-preview" src="${esc(p.image)}" alt="صورة المنتج"><label><input type="checkbox" name="remove_image">حذف الصورة</label>` : ''}<label><input type="checkbox" name="active" ${p.active !== 0 ? 'checked' : ''}>متاح للبيع</label><button type="submit" class="primary">حفظ المنتج</button></form>`); const form = document.querySelector('#product-form'); form.elements.namedItem('unit').value = p.unit || 'kg'; void bind(form, async (data) => { const uploaded = await imageFile(document.querySelector('#product-image')); await bridge.api('product', { ...data, id: p.id, active: data.active === 'on', image: uploaded || (data.remove_image ? '' : p.image || '') }); document.querySelector('#dialog').close(); catalog = await bridge.api('catalog'); products(view); }); }
+function purchase(view) { view.innerHTML = `<div class="header"><div><h1>شراء دفعة مخزون</h1><p>حدد أساس الدفعة مرة واحدة وتُحفظ الكمية والتكلفة مع قيد المشتريات</p></div><button data-nav="purchase-history">سجل المشتريات</button></div><form id="lot-purchase" class="card butcher-form">${failure}<div class="form-grid">${field('مرجع الدفعة أو الذبيحة', 'reference', 'text', '', 'required maxlength="100"')}${field('مجموعة المخزون', 'stock_group', 'text', '', 'required maxlength="100"')}${select('أساس المخزون', 'basis', option('carcass', 'ذبائح تباع بأرباع أو تحول للتقطيع') + option('weight', 'وزن يباع بالكيلو والجرام') + option('piece', 'حبات وقطع'))}${field('تاريخ الشراء', 'date', 'date', day(), 'required')}${field('عدد الذبائح', 'carcass_count', 'number', '0', 'min="0" step="1"')}${field('الوزن الفعلي بالكيلو', 'weight_kg', 'number', '0', 'min="0" step="0.001"')}${field('عدد القطع', 'pieces', 'number', '0', 'min="0" step="1"')}${field(bridge.snapshot().company.tax_number ? 'تكلفة الدفعة قبل الضريبة' : 'تكلفة الدفعة شاملة ضريبة المورد', 'cost', 'number', '', 'required min="0.01" step="0.01"')}${select('ضريبة فاتورة المورد', 'rate', option('0', 'صفر') + (bridge.snapshot().company.tax_number ? option('15', '١٥٪') : ''))}${field('المدفوع بالريال', 'paid', 'number', '0', 'min="0" step="0.01"')}${select('حساب السداد', 'cash_account', option('1100', 'الصندوق') + option('1110', 'البنك'))}${select('المورد للآجل أو الجزئي', 'party_id', option('', 'دون مورد') + bridge.snapshot().parties.filter((p) => p.kind === 'supplier').map((p) => option(p.id, p.name)).join(''))}</div><p class="hint">في دفعة الذبائح يكون العدد هو المخزون والوزن مرجعًا للشراء، بعد التقطيع أدخل الوزن الصافي والهالك لتحويل المخزون إلى كيلو</p>${field('ملاحظات', 'note')}<button type="submit" class="primary">حفظ الدفعة وترحيل المشتريات</button></form>`; const request = crypto.randomUUID(); void bind(view.querySelector('#lot-purchase'), async (data) => { const result = await bridge.api('butcher', { ...data, action: 'purchase', request_id: request }); await bridge.refresh(); await bridge.document(result.id); catalog = await bridge.api('catalog'); purchase(view); }); }
+function stock(view) { view.innerHTML = `<div class="header"><div><h1>المخزون والدفعات والجرد</h1><p>الأوزان والأرباع والقطع أرصدة مستقلة، والتقطيع يحافظ على أصل الدفعة وتكلفتها</p></div><button data-nav="butcher-purchase" class="primary">شراء دفعة</button></div><div class="stock-summary">${catalog.stocks.map((s) => `<section class="card"><h2>${esc(s.stock_group)}</h2><strong>${quantity(s.basis, s.quantity)}</strong><p>قيمة متبقية ${cash(s.cost)} ريال</p></section>`).join('')}</div>${table(['الدفعة', 'المجموعة', 'المتبقي', 'التكلفة المتبقية', 'عدد الذبائح / وزن الشراء', 'الأصل', ''], catalog.lots.map((lot) => [esc(lot.reference), esc(lot.stock_group), quantity(lot.basis, lot.remaining_qty), cash(lot.remaining_cost), `${lot.carcass_count} / ${(lot.weight_grams / 1000).toFixed(3)} كجم`, lot.parent_id ? `دفعة ${lot.parent_id}` : esc(lot.document_number), `<button data-adjust="${lot.id}">جرد وتسوية</button>${lot.basis === 'carcass' && lot.remaining_qty > 0 ? `<button data-cut="${lot.id}">تقطيع</button>` : ''}`]))}`; view.querySelectorAll('[data-adjust],[data-cut]').forEach(button => button.onclick = () => stockDialog(view, catalog.lots.find((l) => l.id === Number(button.dataset.cut || button.dataset.adjust)), !!button.dataset.cut)); }
+function stockDialog(view, lot, cut) { bridge.dialog(cut ? 'تقطيع دفعة ذبائح' : 'جرد وتسوية الدفعة', `<form id="stock-operation" class="butcher-form">${failure}<p>${esc(lot.reference)} · المتبقي ${quantity(lot.basis, lot.remaining_qty)}</p>${field('تاريخ العملية', 'date', 'date', day(), 'required')}${cut ? `<div class="form-grid">${field('عدد الأرباع للتقطيع', 'quarters', 'number', lot.remaining_qty, 'required min="1" step="1"')}${field('مجموعة مخزون اللحم المقطع', 'stock_group', 'text', lot.stock_group + ' مقطع', 'required')}${field('وزن اللحم الصافي بالكيلو', 'output_kg', 'number', '', 'required min="0.001" step="0.001"')}${field('وزن الهالك والعظام بالكيلو', 'waste_kg', 'number', '0', 'required min="0" step="0.001"')}</div><p class="hint">الوزن الصافي والهالك قياسان فعليان بعد التقطيع، توزع تكلفة الجزء بالتناسب بينهما ويُسجل الهالك مصروفًا</p>` : `${field(lot.basis === 'weight' ? 'الوزن المعدود بالكيلو' : lot.basis === 'carcass' ? 'عدد الأرباع المعدودة' : 'عدد القطع المعدودة', 'counted', 'number', lot.basis === 'weight' ? (lot.remaining_qty / 1000).toFixed(3) : lot.remaining_qty, `required min="0" step="${lot.basis === 'weight' ? '0.001' : '1'}"`)}${field('تكلفة الزيادة فقط إن وجد فائض', 'added_cost', 'number', '0', 'min="0" step="0.01"')}`} ${field('سبب التسوية أو ملاحظة التقطيع', 'note', 'text', '', 'required maxlength="1000"')}<button type="submit" class="primary">تأكيد وترحيل العملية</button></form>`); const request = crypto.randomUUID(); void bind(document.querySelector('#stock-operation'), async (data) => { await bridge.api('butcher', { ...data, action: cut ? 'cut' : 'adjust', lot_id: lot.id, expected: lot.remaining_qty, request_id: request }); document.querySelector('#dialog').close(); await bridge.refresh(); catalog = await bridge.api('catalog'); stock(view); }); }
+async function reports(view) { view.innerHTML = `<div class="header"><div><h1>المبيعات والتكلفة والربح</h1><p>الربح الإجمالي قبل المصروفات والهالك، والمبالغ النقدية والشبكة منفصلة</p></div><button data-nav="reports">التقارير المحاسبية والضريبة</button></div><form id="butcher-period" class="card filter">${field('من', 'from', 'date', day(), 'required')}${field('إلى', 'to', 'date', day(), 'required')}<button type="submit">عرض</button></form><div id="butcher-report"></div>`; const form = view.querySelector('#butcher-period'); async function draw() { const report = await bridge.api('butcher-report?' + new URLSearchParams(new FormData(form))); view.querySelector('#butcher-report').innerHTML = `<div class="stock-summary">${[['المبيعات قبل الضريبة', 'net'], ['تكلفة المبيعات', 'cost'], ['الربح الإجمالي', 'profit'], ['تحصيل نقد', 'cash'], ['تحصيل شبكة', 'card'], ['ضريبة المبيعات', 'tax']].map(([label, key]) => `<section class="card"><h2>${label}</h2><strong>${cash(report.summary[key])} ريال</strong></section>`).join('')}</div>${table(['الفاتورة', 'التاريخ', 'المبيعات', 'التكلفة', 'الربح', 'نقد', 'شبكة', 'الحالة'], report.rows.map((r) => [esc(r.number), esc(r.date), cash(r.net), cash(r.cost), cash(r.profit), cash(r.cash), cash(r.card), r.credit_note ? 'إشعار دائن' : r.reversal_number ? 'معكوس' : 'مرحّل']))}<section class="card"><h2>أرصدة الصندوق والشبكة الحالية</h2><p>الأرصدة التالية تراكمية حتى الآن وتشمل سندات السداد والتحويلات والتسويات</p>${table(['الحساب', 'الرصيد', ''], [['الصندوق', cash(report.balances['1100']), '<button data-reconcile="1100">تسوية الصندوق</button>'], ['الشبكة', cash(report.balances['1120']), '<button data-reconcile="1120">تسوية الشبكة</button>']])}<p>قيمة المخزون التشغيلي ${cash(report.stock_value)} ريال</p><p class="hint">رصيد المخزون المحاسبي ${cash(report.balances['1400'])} ريال قد يتضمن أرصدة محاسبية سابقة لا ترتبط بدفعات</p></section>`; view.querySelectorAll('[data-reconcile]').forEach(button => button.onclick = () => reconcile(view, button.dataset.reconcile, report.balances[button.dataset.reconcile])); } form.onsubmit = event => { event.preventDefault(); void draw().catch(error => bridge.notice(error.message)); }; await draw(); }
+function reconcile(view, account, expected) { bridge.dialog('تسوية النقد أو الشبكة', `<form id="reconcile-form" class="butcher-form">${failure}<p>الرصيد الدفتري ${cash(expected)} ريال</p>${field('الرصيد الفعلي حسب العد أو كشف الشبكة', 'actual', 'number', cash(expected), 'required min="0" step="0.01"')}${field('تاريخ التسوية', 'date', 'date', day(), 'required')}${field('سبب الفرق ومرجع الكشف', 'note', 'text', '', 'required')}<p class="hint">ترحّل الفروق إلى حساب فروق الصندوق والشبكة، ولتحويل مبالغ الشبكة إلى البنك استخدم قيد اليومية</p><button type="submit" class="primary">ترحيل فرق التسوية</button></form>`); const request = crypto.randomUUID(); void bind(document.querySelector('#reconcile-form'), async (data) => { await bridge.api('butcher', { ...data, action: 'reconcile', account, expected, request_id: request }); document.querySelector('#dialog').close(); await bridge.refresh(); await reports(view); }); }
+export function butcherSettings(view) { const section = document.createElement('section'); section.className = 'grid'; section.innerHTML = `<form id="logo-form" class="card butcher-form"><h2>شعار المنشأة</h2>${failure}${bridge.snapshot().company.logo ? `<img class="logo-preview" src="${esc(bridge.snapshot().company.logo)}" alt="شعار المنشأة الحالي">` : ''}<label>رفع صورة محلية<input type="file" id="company-logo" accept="image/png,image/jpeg,image/webp"></label><label><input type="checkbox" name="remove">حذف الشعار الحالي</label><p class="hint">يحفظ الشعار على الجهاز وتحتفظ الفاتورة بشعار المنشأة وقت الإصدار</p><button type="submit">حفظ الشعار</button></form><form id="cashier-form" class="card butcher-form"><h2>دخول الكاشير</h2>${failure}<label><input type="checkbox" name="enabled" checked>تفعيل دخول الكاشير</label>${field('كلمة مرور الكاشير الجديدة', 'password', 'password', '', 'minlength="10" maxlength="128" autocomplete="new-password"')}<p class="hint">الكاشير يبيع ويطبع فواتير المبيعات فقط ولا يرى التكلفة أو يعدل المنتجات أو الإعدادات</p><button type="submit">حفظ صلاحية الكاشير</button></form>`; view.append(section); void bind(section.querySelector('#logo-form'), async (data) => { const image = await imageFile(section.querySelector('#company-logo')); if (!image && !data.remove)
+    throw Error('اختر صورة أو حدد حذف الشعار'); await bridge.api('logo', { image: data.remove ? '' : image }); await bridge.refresh(); bridge.notice('حُفظ شعار المنشأة'); }); void bind(section.querySelector('#cashier-form'), async (data) => { await bridge.api('cashier-settings', { enabled: data.enabled === 'on', password: data.password }); bridge.notice('حُفظت صلاحية الكاشير وأُغلقت جلساته السابقة'); }); }
+export function butcherInvoice(d) { if (!d.context.butcher || (d.kind !== 'sale' && d.context.operation !== 'credit_note'))
+    return null; const c = d.context, issuer = c.issuer; let qr = ''; if (c.qr_tlv) {
+    const code = window.qrcode(0, 'M');
+    code.addData(c.qr_tlv);
+    code.make();
+    qr = code.createSvgTag({ cellSize: 3, margin: 4, scalable: true });
+} return `<article class="butcher-invoice"><header>${issuer.logo ? `<img class="invoice-company-logo" src="${esc(issuer.logo)}" alt="شعار المنشأة">` : ''}<h2>${esc(issuer.company)}</h2><p>${esc(issuer.address)}</p>${issuer.tax_number ? `<p>الرقم الضريبي ${esc(issuer.tax_number)}</p>` : ''}<h3>${esc(c.tax_title)}</h3><p>${esc(d.number)}<br><bdi>${esc(new Date(c.issued_at).toLocaleString('ar-SA', { timeZone: 'Asia/Riyadh' }))}</bdi></p>${d.reversal_number ? `<strong>معكوس بمستند ${esc(d.reversal_number)}</strong>` : ''}</header>${c.operation === 'credit_note' ? `<p>سبب الإشعار ${esc(d.note)}</p>` : ''}${c.customer_name || c.customer_phone ? `<p>العميل ${esc(c.customer_name)}<br>رقم العميل <bdi>${esc(c.customer_phone)}</bdi></p>` : ''}${c.customer_tax ? `<p>رقم العميل الضريبي ${esc(c.customer_tax)}<br>${esc(c.customer_address)}</p>` : ''}${table(['الصنف / الكمية', 'السعر', 'الضريبة', 'الإجمالي'], d.lines.map((line, index) => [`${esc(line.description)}<br>${esc(line.quantity)} ${unitNames[c.stock_lines?.[index]?.unit] || ''}${line.discount ? `<br>خصم ${cash(line.discount)}` : ''}`, esc(line.price), `${cash(line.tax)}<br><small>${esc(line.rate)}٪</small>`, cash(line.total)]))}<dl class="pos-totals"><div><dt>قبل الضريبة</dt><dd>${cash(d.net)}</dd></div><div><dt>الضريبة</dt><dd>${cash(d.tax)}</dd></div><div><dt>الإجمالي</dt><dd>${cash(d.total)} ريال</dd></div><div><dt>نقد</dt><dd>${cash(c.cash)}</dd></div><div><dt>شبكة</dt><dd>${cash(c.card)}</dd></div></dl>${qr ? `<div class="tax-qr" aria-label="رمز الفاتورة الضريبية">${qr}</div>` : ''}<footer><img src="/branda-logo.png" alt="برندة"><p>شكرًا لزيارتكم</p></footer></article><div class="actions no-print editor"><button data-thermal="80" class="primary">طباعة ٨٠ مم</button><button data-thermal="58">طباعة ٥٨ مم</button><button data-thermal="a4">طباعة عادية</button>${role() === 'owner' && !d.reversal_number && d.kind === 'sale' ? `<button data-reverse="${d.id}" class="danger">عكس الفاتورة وإرجاع المخزون</button>` : ''}</div>`; }
+document.addEventListener('click', event => { const button = event.target.closest('[data-thermal]'); if (button) {
+    document.body.dataset.paper = button.dataset.thermal;
+    window.print();
+} });
+window.addEventListener('afterprint', () => { delete document.body.dataset.paper; });

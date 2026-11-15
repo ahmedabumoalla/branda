@@ -6,7 +6,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import styles from "./finance-pos-actions.module.css";
 
-export function FinancePosActions({ children, details }: { children: ReactNode; details?: ReactNode }) {
+export function FinancePosActions({ children, details, onPrepare }: { children: ReactNode; details?: ReactNode; onPrepare?: () => void }) {
   const { t } = useFinancePosLocale();
   const disclosure = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
@@ -28,7 +28,7 @@ export function FinancePosActions({ children, details }: { children: ReactNode; 
     onBlur={(event) => {
       if (event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
     }}>
-    <summary className={styles.trigger}><SlidersHorizontal size={17} aria-hidden="true" /><span>{t("إجراءات الكاشير")}</span><ChevronDown size={15} aria-hidden="true" /></summary>
+    <summary className={styles.trigger} onPointerEnter={onPrepare} onFocus={onPrepare} onClick={onPrepare}><SlidersHorizontal size={17} aria-hidden="true" /><span>{t("إجراءات الكاشير")}</span><ChevronDown size={15} aria-hidden="true" /></summary>
     <div className={styles.panel}>
       {details && <div className={styles.meta}>{details}</div>}
       <div className={styles.controls} onClick={(event) => {

@@ -11,7 +11,7 @@ export function buildFinanceThermalReceiptHtml(receipt: FinanceCustomerReceipt, 
   if (![fonts.regular, fonts.bold].every(font => /^[a-z0-9+/=]+$/i.test(font))) throw new Error("INVALID_RECEIPT_FONT");
   if (logoDataUrl && !/^data:image\/png;base64,[a-z0-9+/=]+$/i.test(logoDataUrl)) throw new Error("INVALID_RECEIPT_LOGO");
   const document: FinanceDocument = {
-    id: "receipt", kind: "sale", number: data.number, created_at: data.createdAt,
+    id: "receipt", kind: "sale", number: data.number, created_at: data.createdAt, receipt_seller: data.receiptSeller,
     local_reference: data.localReference ?? undefined, customer_phone: data.customerPhone,
     party_id: data.customerName ? "customer" : null, account_id: data.paymentMethod || null,
     shift_id: null, warehouse_id: null, reference_id: null,

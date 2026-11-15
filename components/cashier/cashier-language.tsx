@@ -5,6 +5,7 @@ import { cashierLanguageCookie, cashierLocale, cashierText, cashierError, type C
 import s from "./cashier-language.module.css";
 
 const InitialLocale = createContext<CashierLocale>("ar");
+const FixedLocale = createContext<CashierLocale | null>(null);
 const changeEvent = "branda-cashier-language-change";
 let memoryLocale: CashierLocale | null = null;
 function readLocale() {
@@ -27,16 +28,19 @@ function selectLocale(locale: CashierLocale) {
 }
 export function useCashierLanguage() {
   const initial = useContext(InitialLocale);
-  const locale = useSyncExternalStore(subscribe, readLocale, () => initial);
+  const fixed = useContext(FixedLocale);
+  const stored = useSyncExternalStore(subscribe, readLocale, () => initial);
+  const locale = fixed ?? stored;
   return useMemo(() => ({ locale, dir: locale === "ar" ? "rtl" as const : "ltr" as const,
-    t: (message: CashierMessage) => cashierText(locale, message), errorText: (message: string) => cashierError(locale, message), selectLocale }), [locale]);
+    t: (message: CashierMessage) => cashierText(locale, message), errorText: (message: string) => cashierError(locale, message),
+    selectLocale: (next: CashierLocale) => { if (!fixed) selectLocale(next); } }), [locale, fixed]);
 }
 function LanguageFrame({ children }: { children: ReactNode }) {
   const { locale, dir } = useCashierLanguage();
   return <div lang={locale} dir={dir} className={s.frame}>{children}</div>;
 }
-export function CashierLanguageProvider({ initialLocale, children }: { initialLocale: CashierLocale; children: ReactNode }) {
-  return <InitialLocale.Provider value={initialLocale}><LanguageFrame>{children}</LanguageFrame></InitialLocale.Provider>;
+export function CashierLanguageProvider({ initialLocale, fixedLocale, children }: { initialLocale: CashierLocale; fixedLocale?: CashierLocale; children: ReactNode }) {
+  return <InitialLocale.Provider value={initialLocale}><FixedLocale.Provider value={fixedLocale ?? null}><LanguageFrame>{children}</LanguageFrame></FixedLocale.Provider></InitialLocale.Provider>;
 }
 export function CashierLanguageSwitch({ dark = false }: { dark?: boolean }) {
   const { locale, selectLocale } = useCashierLanguage();

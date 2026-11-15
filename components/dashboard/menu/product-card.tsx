@@ -1,5 +1,5 @@
 "use client";
-import { Flower2, Shirt, Scissors, Clock3, ChevronDown, Coffee, Copy, Eye, EyeOff, Flame, Gift, Pencil, Trash2 } from "lucide-react";
+import { Flower2, Shirt, Scissors, Clock3, ChevronDown, Coffee, Copy, Eye, EyeOff, Flame, Gift, Pencil, Trash2, Boxes } from "lucide-react";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { formatSar } from "@/lib/format";
 import { butcherPriceAtSale } from "@/lib/menu/butcher-products";
@@ -11,8 +11,9 @@ type Props = {
   product: MenuProduct; index?: number; busy?: boolean; categoryLabel?: string;
   freeProductLabel?: string; businessCategory?: string;
   onEdit: () => void; onDuplicate: () => void; onToggleAvailability: () => void; onDelete: () => void;
+  onInventoryIngredients?: () => void;
 };
-export function MenuProductCard({ product, busy = false, categoryLabel, freeProductLabel, onEdit, onDuplicate, onToggleAvailability, onDelete, businessCategory }: Props) {
+export function MenuProductCard({ product, busy = false, categoryLabel, freeProductLabel, onEdit, onDuplicate, onToggleAvailability, onDelete, businessCategory, onInventoryIngredients }: Props) {
   const isEvents = getBusinessCopy(businessCategory).kind === "events";
   const isSalon = businessCategory === "hair_salons";
   const isGifts = businessCategory === "gifts_flowers" || businessCategory === "clothing_stores" || businessCategory === "retail_stores";
@@ -37,7 +38,7 @@ export function MenuProductCard({ product, busy = false, categoryLabel, freeProd
     </div>
     <div className={styles.priceRow}>
       <div><span className={styles.priceLabel}>{isEvents ? "رسوم الدخول" : isGifts && product.commerceDetails?.optionGroups?.length ? "السعر الأساسي" : "السعر"}</span><div className={styles.priceValues}>
-        <strong className={styles.price}>{butcherPriceAtSale(product) ? "يحدده الكاشير عند البيع" : isGifts && product.commerceDetails?.quoteOnly ? "حسب الطلب" : formatSar(discounted ? finalPrice : product.price)}</strong>
+        <strong className={styles.price}>{product.priceMode === "cashier" ? "يحدد الكاشير السعر" : butcherPriceAtSale(product) ? "يحدده الكاشير عند البيع" : isGifts && product.commerceDetails?.quoteOnly ? "حسب الطلب" : formatSar(discounted ? finalPrice : product.price)}</strong>
         {discounted && <del className={styles.originalPrice}>{formatSar(product.price)}</del>}
       </div></div>
       {isEvents ? <span className={styles.secondaryInfo}>السعة {product.eventTicketSettings?.capacity?.toLocaleString("ar-SA") ?? "غير محددة"}<br />{product.eventTicketSettings?.checkinPolicy === "multi_use" ? "دخول متعدد" : "دخول مرة واحدة"}</span>
@@ -51,6 +52,7 @@ export function MenuProductCard({ product, busy = false, categoryLabel, freeProd
       {product.promo && <p className={styles.notice}>فترة العرض <bdi>{product.promo.startDate}</bdi> إلى <bdi>{product.promo.endDate}</bdi></p>}
       {product.promo?.kind === "منتج مجاني مع الطلب" && freeProductLabel && <p className={styles.freeNotice}>يشمل {freeProductLabel}</p>}
     </details>}
+    {onInventoryIngredients && <button type="button" className={styles.secondaryAction} disabled={busy} onClick={onInventoryIngredients} aria-label={`مكونات المخزون لصنف ${product.name}`}><Boxes size={16} aria-hidden="true" />مكونات المخزون</button>}
     <div className={styles.cardActions}>
       <button type="button" disabled={busy} onClick={onEdit} className={`${styles.cardButton} ${styles.editButton}`} aria-label={`تعديل ${product.name}`}><Pencil size={15} aria-hidden="true" />تعديل</button>
       <button type="button" disabled={busy} onClick={onToggleAvailability} className={`${styles.cardButton} ${styles.toggleButton}`} aria-label={`${isGifts ? (product.available ? "إيقاف الطلب" : "إتاحة الطلب") : product.available ? "إخفاء" : "إظهار"} ${product.name}`}>{product.available ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}{isGifts ? (product.available ? "إيقاف الطلب" : "إتاحة الطلب") : product.available ? "إخفاء" : "إظهار"}</button>

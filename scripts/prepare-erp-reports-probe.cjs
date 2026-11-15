@@ -1,0 +1,5 @@
+const fs=require('node:fs'),cp=require('node:child_process');
+cp.execFileSync(process.execPath,['scripts/generate-erp-report-catalog.cjs'],{stdio:'inherit'});
+const files=['20261113121500_erp_reports.sql','20261113121530_erp_report_sources.sql','20261113121600_erp_reports_catalog.sql'];
+const body=files.map(f=>fs.readFileSync('supabase/migrations/'+f,'utf8').replace(/^BEGIN;\s*/,'').replace(/COMMIT;\s*$/,'')).join('\n');
+fs.writeFileSync('output/erp-database/verify-reports-sources.sql','BEGIN;\nSET LOCAL statement_timeout=\'120s\';\n'+body+'\n'+fs.readFileSync('output/erp-database/reports-sources-probe-body.sql','utf8').replace('SELECT source,details,summary,error FROM report_probe_results ORDER BY source;','')+'\n'+fs.readFileSync('output/erp-database/reports-behavior-probe.sql','utf8')+'\n'+fs.readFileSync('output/erp-database/tracking-valuation-probe-body.sql','utf8')+'\n'+fs.readFileSync('output/erp-database/cheques-probe-body.sql','utf8')+'\n'+fs.readFileSync('output/erp-database/reports-domain-probe.sql','utf8')+'\nSELECT source,details,summary,error FROM report_probe_results ORDER BY source;\nROLLBACK;\n');

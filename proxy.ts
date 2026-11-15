@@ -1,10 +1,11 @@
 import { refreshCashierCookie } from "@/lib/cashier/persistent-session";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 
 import { updateSession } from "@/lib/supabase/middleware";
 import { isStorefrontEnabled, isStorefrontPath, storefrontUnavailableResponse } from "@/lib/platform/storefront-availability";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recoverExpiredCashierAction } from "@/lib/cashier/session-recovery";
+import { hospitalAccountLoginPath, hospitalAccountRouteHeader, isHospitalAccountRoute, isLegacyHospitalAccountLogin } from "@/lib/commerce/hospital-account-routing";
 
 const AUTH_REFRESH_PREFIXES = [
   "/dashboard",
@@ -22,12 +23,19 @@ const AUTH_REFRESH_PREFIXES = [
 ];
 
 function shouldRefreshSupabaseSession(pathname: string) {
-  return AUTH_REFRESH_PREFIXES.some(
+  return isHospitalAccountRoute(pathname) || AUTH_REFRESH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
 
-export async function proxy(request: NextRequest) {
+export async function proxy(incoming: NextRequest) {
+  // Only this proxy supplies the layout marker; incoming values cannot opt out
+  // of archived-storefront restrictions. Each portal reader retains its auth gate.
+  const hospitalAccount = isHospitalAccountRoute(incoming.nextUrl.pathname);
+  const requestHeaders = new Headers(incoming.headers);
+  requestHeaders.delete(hospitalAccountRouteHeader);
+  if (hospitalAccount) requestHeaders.set(hospitalAccountRouteHeader, "1");
+  const request = new NextRequest(incoming, { headers: requestHeaders });
   const recovery = await recoverExpiredCashierAction(request);
   if (recovery) return recovery;
   const { pathname } = request.nextUrl;
@@ -40,6 +48,12 @@ export async function proxy(request: NextRequest) {
   // Saved storefront links are aliases only; menu authorization stays at /menu.
   // Never replay an archived mutation or API request against the menu route.
   if (request.method === "GET" || request.method === "HEAD") {
+    if (isLegacyHospitalAccountLogin(pathname, request.nextUrl.searchParams.get("next"))) {
+      const target = request.nextUrl.clone();
+      target.pathname = hospitalAccountLoginPath;
+      target.search = "";
+      return NextResponse.redirect(target, 307);
+    }
     // Resolve salon aliases before the cafe route can stream its loading screen.
     // The destination still enforces status and package access before serving data.
     const menuSlug = pathname.match(/^\/menu\/([a-z0-9-]{1,100})\/?$/)?.[1];
@@ -54,7 +68,7 @@ export async function proxy(request: NextRequest) {
     }
     const legacy = pathname.match(/^\/(?:c|app)\/([a-z0-9][a-z0-9_-]{0,99})(?:\/|$)/i);
     const pageRequest = !pathname.startsWith("/api/") && !pathname.startsWith("/_next/") && !/\.[a-z0-9]+$/i.test(pathname);
-    const slug = pageRequest ? legacy?.[1].toLowerCase() || (brandSubdomain ? subdomain : "") : "";
+    const slug = pageRequest && !hospitalAccount ? legacy?.[1].toLowerCase() || (brandSubdomain ? subdomain : "") : "";
     if (slug) {
       const target = request.nextUrl.clone();
       if (brandSubdomain) { target.hostname = rootDomain; target.port = ""; target.protocol = "https:"; }
@@ -68,9 +82,9 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(target, 308);
     }
   }
-  if (!isStorefrontEnabled() && isStorefrontPath(pathname)) return storefrontUnavailableResponse();
+  if (!hospitalAccount && !isStorefrontEnabled() && isStorefrontPath(pathname)) return storefrontUnavailableResponse();
   if (host.endsWith(`.${rootDomain}`)) {
-    if (!isStorefrontEnabled() && subdomain && !subdomain.includes(".") && !reservedSubdomains.has(subdomain)) {
+    if (!hospitalAccount && !isStorefrontEnabled() && subdomain && !subdomain.includes(".") && !reservedSubdomains.has(subdomain)) {
       return storefrontUnavailableResponse();
     }
     if (subdomain && !subdomain.includes(".") && !reservedSubdomains.has(subdomain) && !pathname.startsWith("/c/") && !pathname.startsWith("/api/")) {

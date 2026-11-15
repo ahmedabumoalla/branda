@@ -146,7 +146,8 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
     return {
       id: product.id, name: product.name, category: product.category, categoryId: product.categoryId,
       description: product.description, price: product.price, priceOptions: product.priceOptions, butcherDetails: product.butcherDetails, calories: product.calories,
-      priceRange: hospitalMenu && !product.priceOptions?.length ? readMenuPriceRange(product.commerceSnapshot, product.price) : undefined,
+      priceMode: hospitalMenu ? product.priceMode : undefined,
+      priceRange: hospitalMenu && product.priceMode === undefined && !product.priceOptions?.length ? readMenuPriceRange(product.commerceSnapshot, product.price) : undefined,
       catalogKind: product.catalogKind,
       commerceDetails: product.commerceDetails,
       preparationTimeMinutes: product.preparationTimeMinutes, ingredients: product.ingredients,

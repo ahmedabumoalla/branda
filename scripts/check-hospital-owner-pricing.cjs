@@ -1,0 +1,31 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),ts=require('typescript'),crypto=require('node:crypto');
+let count=0;const check=(a,b)=>{assert.deepEqual(a,b);count++;};
+function load(file,mocks={}){const out={};new Function('require','exports',ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(name=>name in mocks?mocks[name]:name.startsWith('@/')?load(name.slice(2)+'.ts',mocks):require(name),out);return out;}
+const priceMode=load('lib/menu/product-price-mode.ts');
+const cafe={id:crypto.randomUUID(),slug:'mind-hospital',businessCategory:'cafes'};
+const previous={menuPriceRange:{min:9,max:14},supplierCode:'retain-me',nested:{note:'keep'}};
+const calls=[];let updated={id:crypto.randomUUID()};
+const client={from:table=>{const chain={select:()=>chain,eq:(k,v)=>{calls.push({eq:[k,v]});return chain;},is:(k,v)=>{calls.push({is:[k,v]});return chain;},update:p=>{calls.push({table,payload:p});chain.write=true;return chain;},insert:p=>{calls.push({table,payload:p,insert:true});return chain;},maybeSingle:async()=>({data:chain.write?updated:{commerce_details:previous}}),single:async()=>({data:updated})};return chain;}};
+const mocks={'next/cache':{revalidatePath(){}},'@/lib/supabase/server':{createClient:async()=>client},'@/lib/supabase/admin':{},'@/lib/data/cafes':{requireOwnerCafeContext:async()=>cafe},'@/lib/performance/server-memory-cache':{clearServerMemoryCache(){}},'@/lib/menu/standalone-menu':{},'@/lib/data/mappers':{},'@/lib/menu/product-price-mode':priceMode};
+const dal=load('lib/data/menu.ts',mocks);
+const input={id:updated.id,name:'Owner product',price:9,priceOptions:[14],loyaltyPoints:0,redeemableWithPoints:false,availableForPickup:true,ingredients:[],available:true,imageVariant:'latte',expectedCommerceDetails:previous};
+(async()=>{
+ check(priceMode.readMenuProductPriceMode({menuPriceMode:'cashier'}),'cashier');
+ check(priceMode.readMenuProductPriceMode({menuPriceMode:'other'}),undefined);
+ check(priceMode.withMenuProductPriceMode(previous,'fixed'),{supplierCode:'retain-me',nested:{note:'keep'},menuPriceMode:'fixed'});
+ check(previous.menuPriceRange,{min:9,max:14});
+ await dal.upsertMenuProduct({...input,priceMode:'cashier'});
+ let payload=calls.find(x=>x.payload).payload;
+ check([payload.price,payload.price_options,payload.promo,payload.available_for_pickup],[0,[],null,false]);
+ check(payload.commerce_details,{supplierCode:'retain-me',nested:{note:'keep'},menuPriceMode:'cashier'});
+ check(calls.some(x=>x.eq?.[0]==='cafe_id'&&x.eq[1]===cafe.id),true);
+ check(calls.some(x=>x.eq?.[0]==='commerce_details'&&x.eq[1]===JSON.stringify(previous)),true);
+ calls.length=0;await dal.upsertMenuProduct({...input,priceMode:'fixed',price:11});payload=calls.find(x=>x.payload).payload;
+ check([payload.price,payload.price_options,payload.commerce_details.menuPriceMode],[11,[],'fixed']);
+ calls.length=0;await dal.upsertMenuProduct(input);payload=calls.find(x=>x.payload).payload;
+ check('commerce_details' in payload,false);check(payload.price_options,[9,14]);
+ cafe.slug='different-brand';calls.length=0;await assert.rejects(()=>dal.upsertMenuProduct({...input,priceMode:'cashier'}));count++;check(calls.length,0);
+ cafe.slug='mind-hospital';updated=null;calls.length=0;await assert.rejects(()=>dal.upsertMenuProduct({...input,priceMode:'cashier'}));count++;check(calls.some(x=>x.insert),false);
+ const files=['lib/menu/product-price-mode.ts','lib/data/menu.ts','app/actions/menu.ts','lib/data/mappers.ts','lib/mock/menu.ts','components/dashboard/menu/product-modal.tsx','components/dashboard/pages/menu-page.tsx','scripts/check-hospital-owner-pricing.cjs','package-lock.json'];
+ const result={at:new Date().toISOString(),runtime:process.version,passed:true,checks:count,limits:['Mock DAL persistence boundary; no real product edits'],inputs:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')]))};fs.mkdirSync('output/hospital-owner-pricing-20261114',{recursive:true});fs.writeFileSync('output/hospital-owner-pricing-20261114/verification.json',JSON.stringify(result,null,2));console.log(JSON.stringify({passed:true,checks:count}));
+})().catch(e=>{console.error(e);process.exitCode=1;});

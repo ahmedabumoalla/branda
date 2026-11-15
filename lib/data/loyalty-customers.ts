@@ -5,7 +5,7 @@ import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { createClient } from "@/lib/supabase/server";
 import type { LoyaltyCustomerDetail, LoyaltyCustomerPage } from "@/lib/loyalty/customer-directory-types";
 
-const filterSchema = z.object({ page: z.number().int().min(0).max(100000).default(0), query: z.string().trim().max(100).default("") });
+const filterSchema = z.object({ page: z.number().int().min(0).max(100000).default(0), query: z.string().trim().max(100).default(""), downloadedOnly: z.boolean().default(false) });
 
 async function directoryContext() {
   const cafe = await requireOwnerCafeContext();
@@ -23,8 +23,13 @@ async function directoryContext() {
 }
 
 export async function getOwnerLoyaltyCustomers(input: unknown = {}): Promise<LoyaltyCustomerPage> {
-  const { page, query } = filterSchema.parse(input);
+  const { page, query, downloadedOnly } = filterSchema.parse(input);
   const { db, cafeId } = await directoryContext();
+  if (downloadedOnly) {
+    const { data, error } = await db.rpc("finance_loyalty_customers_read", { p_cafe: cafeId, p_page: page, p_query: query });
+    if (error || !data) throw new Error("Customer directory unavailable");
+    return data as LoyaltyCustomerPage;
+  }
   const pageSize = 20;
   const fetchPage = (index: number) => {
     let request = db.from("customer_profiles").select("id,full_name,created_at", { count: "exact" }).eq("cafe_id", cafeId);
@@ -40,9 +45,15 @@ export async function getOwnerLoyaltyCustomers(input: unknown = {}): Promise<Loy
 }
 
 /** Contact details are returned for one selected customer after fresh authorization */
-export async function getOwnerLoyaltyCustomerDetail(id: unknown): Promise<LoyaltyCustomerDetail> {
+export async function getOwnerLoyaltyCustomerDetail(id: unknown, downloadedOnly: unknown = false): Promise<LoyaltyCustomerDetail> {
   const customerId = z.string().uuid().parse(id);
+  const downloaded = z.boolean().parse(downloadedOnly);
   const { db, cafeId } = await directoryContext();
+  if (downloaded) {
+    const { data, error } = await db.rpc("finance_loyalty_customer_detail", { p_cafe: cafeId, p_customer: customerId });
+    if (error || !data) throw new Error("Customer unavailable");
+    return data as LoyaltyCustomerDetail;
+  }
   const { data, error } = await db.from("customer_profiles").select("id,full_name,phone")
     .eq("cafe_id", cafeId).eq("id", customerId).maybeSingle();
   if (error || !data) throw new Error("Customer unavailable");

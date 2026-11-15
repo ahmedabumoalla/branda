@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveUser } from "@/lib/auth/active-user";
+import { readActiveProfileRole } from "@/lib/auth/active-profile-role";
 import { decodeSession, encodeSession, maintenanceSessionCookieName, maintenanceSessionMaxAgeSeconds, type MaintenanceSession } from "./maintenance-token";
 export { maintenanceSessionCookieName, maintenanceSessionMaxAgeSeconds, type MaintenanceSession } from "./maintenance-token";
 
@@ -49,11 +50,7 @@ export async function getCurrentMaintenanceSession() {
   const user = await getActiveUser(supabase);
   if (!user || user.id !== session.adminUserId) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { data: profile } = await readActiveProfileRole(supabase, user.id);
   if (profile?.role !== "platform_admin") return null;
 
   return session;

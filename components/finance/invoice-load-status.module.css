@@ -1,0 +1,22 @@
+.panel { border: 1px solid #e8dfd1; border-radius: 12px; background: #fffaf1; overflow: hidden; }
+.progress { display: flex; align-items: center; gap: 12px; padding: 14px 18px; color: #76551f; }
+.progress > div, .failure > div { display: grid; gap: 4px; min-width: 0; }
+.panel strong { font-size: 14px; font-weight: 700; }
+.panel span { font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.spinner { flex-shrink: 0; animation: rotate 1.2s linear infinite; }
+.failure { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: #fff4f2; color: #a1322c; }
+.failure + .failure, .progress + .failure { border-top: 1px solid #eddbd5; }
+.failure > svg { flex-shrink: 0; }
+.failure > div { flex: 1; }
+.failure button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex-shrink: 0; min-height: 44px; padding: 8px 12px; border: 1px solid #e5bdb4; border-radius: 8px; background: #fff; color: #8b3029; font: inherit; font-size: 12px; cursor: pointer; }
+.failure button:hover { background: #fffaf8; }
+.failure button:focus-visible { outline: 2px solid #96702e; outline-offset: 2px; }
+.failure button:disabled { cursor: not-allowed; opacity: .55; }
+@keyframes rotate { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+@media (max-width: 600px) {
+  .progress, .failure { padding: 12px; }
+  .failure { flex-wrap: wrap; }
+  .failure > div { flex-basis: calc(100% - 32px); }
+  .failure button { margin-inline-start: 30px; }
+}

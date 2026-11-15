@@ -5,7 +5,7 @@ const publicAsset = url => url.origin === self.location.origin && (url.pathname.
 const localDevelopment = ["localhost", "127.0.0.1", "[::1]"].includes(self.location.hostname);
 const imageRequests = new Map();
 
-async function productImage(request, url) {
+async function productImage(request, url, event) {
   const session = await currentSession();
   const product = session?.snapshot.products.find(product => [product.imageUrl, product.imageFallbackUrl].some(src => src && new URL(src, self.location.origin).href === url.href));
   // An old token or an unrelated image never reads another account's cache.
@@ -16,7 +16,13 @@ async function productImage(request, url) {
   const cached = await cache.match(key);
   const clock = cached && await cache.match(clockKey);
   const recovering = product.imageFallbackUrl && url.href === key && product.imageUrl !== product.imageFallbackUrl;
-  if (cached && !recovering && clock && Date.now() - Number(await clock.text()) < 300_000) return cached;
+  // Uploaded menu images have asset-path identities, independent of signed URL expiry.
+  // A replacement upload gets a different path and therefore a different cache entry.
+  const assetUrl = new URL(key);
+  const ownedAsset = assetUrl.origin === self.location.origin
+    && assetUrl.pathname === `/api/finance/${encodeURIComponent(session.snapshot.cafe.slug)}/media`
+    && assetUrl.searchParams.get("path")?.startsWith(`${session.snapshot.cafe.id}/`);
+  if (cached && !recovering && (ownedAsset || (clock && Date.now() - Number(await clock.text()) < 300_000))) return cached;
   const requestKey = `${session.scope}:${key}`;
   let pending = imageRequests.get(requestKey);
   if (!pending) {
@@ -34,8 +40,15 @@ async function productImage(request, url) {
     })();
     imageRequests.set(requestKey, pending);
   }
-  try { return (await pending).clone(); }
-  finally { if (imageRequests.get(requestKey) === pending) imageRequests.delete(requestKey); }
+  const response = pending.finally(() => {
+    if (imageRequests.get(requestKey) === pending) imageRequests.delete(requestKey);
+  });
+  // Mutable external URLs refresh in the background without blanking a loaded card.
+  if (cached && !recovering) {
+    event.waitUntil(response.then(() => undefined).catch(() => {}));
+    return cached;
+  }
+  return (await response).clone();
 }
 async function staticAsset(request) {
   const cache = await caches.open(STATIC);
@@ -108,5 +121,5 @@ self.addEventListener("fetch", event => {
     })());
     return;
   }
-  if (request.destination === "image" || (url.origin === self.location.origin && /^\/api\/finance\/[^/]+\/media$/.test(url.pathname))) event.respondWith(productImage(request, url));
+  if (request.destination === "image" || (url.origin === self.location.origin && /^\/api\/finance\/[^/]+\/media$/.test(url.pathname))) event.respondWith(productImage(request, url, event));
 });

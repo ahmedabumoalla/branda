@@ -1,8 +1,9 @@
 import "server-only";
+import { cache } from "react";
 import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function getFinanceCashierMaintenance(cafeId: string) {
+export const getFinanceCashierMaintenance = cache(async (cafeId: string) => {
   const session = await getCurrentMaintenanceSession();
   if (!session || session.cafeId !== cafeId || session.expiresAt <= Date.now()) return null;
   const client = createAdminClient();
@@ -19,4 +20,4 @@ export async function getFinanceCashierMaintenance(cafeId: string) {
     execute: (operation: "add" | "link" | "update", payload: Record<string, unknown>) =>
       client.rpc("brand_finance_maintenance_cashier", { ...parameters, p_operation: operation, p_payload: payload }),
   };
-}
+});

@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const ts = require('typescript');
 const { z } = require('zod');
 let failure, calls = 0;
+const scheduled = []; const dispatched = [];
 const client = {
   auth: { getUser: async () => ({ data: { user: { id: 'cashier' } } }) },
   rpc: async (name) => {
@@ -13,13 +14,14 @@ const client = {
 };
 const mocks = {
   'server-only': {}, zod: { z },
-  'next/server': { after: () => {} },
-  './finance-shift-alerts': { dispatchShiftAlerts: async () => {} },
-  './finance-pos-customer-messages': { dispatchFinancePosCustomerMessages: async () => {} },
-  '@/lib/finance/pos-customer-server': { prepareFinancePosCustomerPayload: () => { throw Error('No sale in shift test'); } },
   '@/lib/supabase/server': { createClient: async () => client },
   '@/lib/data/cafes': { requireOwnerCafeContext: async () => { throw Error('Cashier must not require dashboard access'); } },
   '@/lib/menu/standalone-menu': { isOwnedMenuAsset: () => false },
+  'next/server': { after: callback => scheduled.push(callback) },
+  './finance-shifts': { getFinanceMaintenanceActor: async () => null, resetFinanceBalances: async () => { throw Error('Unexpected reset'); } },
+  './finance-shift-alerts': { dispatchShiftAlerts: async cafeId => { dispatched.push(cafeId); } },
+  '@/lib/finance/pos-customer-server': { prepareFinancePosCustomerPayload: () => { throw Error('Unexpected customer sale validation for shift'); } },
+  './finance-pos-customer-messages': { dispatchFinancePosCustomerMessages: async () => { throw Error('Unexpected customer message for shift'); } },
 };
 const exportsForTest = {};
 const compiled = ts.transpileModule(fs.readFileSync('lib/data/brand-finance.ts', 'utf8'), {
@@ -44,7 +46,10 @@ async function main() {
   failure = { code: 'P0001', message: 'رصيد بداية الوردية يجب أن يطابق رصيد الخزينة سجل الرصيد الافتتاحي أولا' };
   await assert.rejects(() => exportsForTest.executeBrandFinanceCommand(command, 'test-cafe'), /رصيد بداية الوردية/);
   failure = null;
+  assert.equal(scheduled.length, 0, 'Failed posting never dispatches alerts');
   assert.deepEqual(await exportsForTest.executeBrandFinanceCommand(command, 'test-cafe'), { id: 'saved-shift' });
+  assert.equal(scheduled.length, 1, 'Only committed shift schedules outbox delivery');
+  await scheduled[0](); assert.deepEqual(dispatched, ['tenant']);
   assert.equal(calls, 6, 'Each operation runs once; an error cannot trigger a financial retry or force-close a shift');
   console.log('PASS 6 shift result/error cases and single-attempt/no-dashboard boundary');
 }

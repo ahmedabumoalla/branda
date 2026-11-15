@@ -9,7 +9,7 @@ export function unseenHospitalMenuOrder(orders: HospitalOrder[], seen: ReadonlyS
 export function hospitalPricesConfirmed(items: HospitalOrderLine[], values: string[]) {
   return values.length === items.length && items.length > 0 && items.every((item, index) => {
     const raw = values[index]?.trim(), value = Number(raw);
-    return raw !== "" && raw !== undefined && Number.isFinite(value) && value >= item.unitPrice && value <= item.maxUnitPrice && Math.abs(value * 100 - Math.round(value * 100)) < .000001;
+    return raw !== "" && raw !== undefined && Number.isFinite(value) && (item.priceMode === "cashier" ? value > 0 && value <= 100000 : value >= item.unitPrice && value <= item.maxUnitPrice) && Math.abs(value * 100 - Math.round(value * 100)) < .000001;
   });
 }
 

@@ -18,8 +18,17 @@ export function butcherStockFactor(baseId: string, unitId: string): number | nul
   return null;
 }
 
+/** MIND product prices use the existing two-decimal monetary limit. */
+export function validHospitalCashierUnitPrice(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 100000 && Math.abs(value * 100 - Math.round(value * 100)) < .000001;
+}
+
 /** Keep selected unit and price together for both preview and durable offline receipts. */
 export function financeProductSelection(product: FinanceProduct, unitId?: string, butcher = false, cashierUnitPrice?: unknown) {
+  if (!butcher && product.priceMode === "cashier") {
+    if (unitId || !validHospitalCashierUnitPrice(cashierUnitPrice)) throw new Error("أدخل سعرًا صحيحًا للصنف قبل إضافته للطلب");
+    return { product: { ...product, price: cashierUnitPrice }, unit: undefined, stockFactor: 1 };
+  }
   if (!butcher || !product.butcherDetails?.units.length) {
     if (cashierUnitPrice !== undefined) throw new Error("هذا الصنف لا يسمح بتحديد السعر وقت البيع");
     if (unitId) throw new Error("وحدة البيع غير متاحة لهذا الصنف حدّث المنتجات");
@@ -40,9 +49,9 @@ export function financeSelectedCartLines(cart: FinanceCartLine[], products: Fina
     const product = products.find(item => item.id === line.productId);
     if (!product) return [];
     try {
-      const cashierPriced = butcher && product.butcherDetails?.units.find(unit => unit.id === line.unitId)?.priceMode === "cashier";
-      const selected = financeProductSelection(product, line.unitId, butcher, cashierPriced && line.cashierPrice ? line.unitPrice : undefined);
-      const pinnedPrice = butcher && typeof line.unitPrice === "number" ? line.unitPrice : selected.product.price;
+      const cashierPriced = butcher ? product.butcherDetails?.units.find(unit => unit.id === line.unitId)?.priceMode === "cashier" : product.priceMode === "cashier";
+      const selected = financeProductSelection(product, line.unitId, butcher, cashierPriced && (!butcher || line.cashierPrice) ? line.unitPrice : undefined);
+      const pinnedPrice = typeof line.unitPrice === "number" ? line.unitPrice : selected.product.price;
       return [{ ...line, ...selected, product: { ...selected.product, price: pinnedPrice }, currentUnitPrice: selected.product.price, priceChanged: pinnedPrice !== selected.product.price }];
     }
     catch { return []; }

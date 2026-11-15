@@ -325,6 +325,13 @@ async function signCafeLogo(path?: string | null) {
   return signPublishedAsset("cafe-logos", path);
 }
 
+async function signPublishedAssets(bucket: "cafe-logos" | "menu-products" | "offer-banners", paths: string[]) {
+  const uniquePaths = [...new Set(paths.filter(Boolean))];
+  if (!uniquePaths.length) return new Map<string, string>();
+  const { data } = await createAdminClient().storage.from(bucket).createSignedUrls(uniquePaths, 10 * 60);
+  return new Map((data ?? []).flatMap(item => item.path && item.signedUrl ? [[item.path, item.signedUrl] as const] : []));
+}
+
 async function mapPromotionRow(row: DbRow): Promise<PlatformHomePromotionItem | null> {
   const cafe = firstNestedRecord(row.cafes);
   if (!cafe) return null;
@@ -406,6 +413,17 @@ async function mapMediaItems(rows: Record<string, unknown>[]) {
     });
   }
   return items;
+}
+
+/** The marketing homepage only renders contact details, not the full media catalog. */
+export async function getPublicPlatformContactSettings(): Promise<PlatformContactSettings> {
+  const { data, error } = await createAdminClient()
+    .from("platform_contact_settings")
+    .select("email,whatsapp,instagram,facebook,tiktok,x")
+    .eq("id", "main")
+    .maybeSingle();
+  if (error) throw error;
+  return mapContactSettings(data);
 }
 
 export async function getPublicPlatformHomeData(): Promise<PublicPlatformHomeData> {
@@ -496,9 +514,8 @@ export type AdminClientBrandsData = {
   promotionsTableMissing: boolean;
 };
 
-async function mapCafeBrandItem(row: DbRow): Promise<AdminClientBrandAvailableItem> {
+function mapCafeBrandItem(row: DbRow, logoUrl?: string): AdminClientBrandAvailableItem {
   const settings = firstNestedRecord(row.cafe_settings);
-  const logoUrl = await signCafeLogo(settings?.logo_storage_path ? String(settings.logo_storage_path) : null);
   return {
     key: `brand:${String(row.id)}`,
     itemType: "brand",
@@ -516,12 +533,12 @@ async function mapCafeBrandItem(row: DbRow): Promise<AdminClientBrandAvailableIt
 }
 
 async function getCafeLookup(cafes: DbRow[]) {
-  const lookup = new Map<string, AdminClientBrandAvailableItem>();
-  for (const cafe of cafes) {
-    const item = await mapCafeBrandItem(cafe);
-    lookup.set(item.cafeId, item);
-  }
-  return lookup;
+  const logoPaths = cafes.map(cafe => String(firstNestedRecord(cafe.cafe_settings)?.logo_storage_path ?? ""));
+  const logos = await signPublishedAssets("cafe-logos", logoPaths);
+  return new Map(cafes.map((cafe, index) => {
+    const item = mapCafeBrandItem(cafe, logos.get(logoPaths[index]));
+    return [item.cafeId, item] as const;
+  }));
 }
 
 function getCafeMeta(
@@ -566,10 +583,9 @@ export async function getAdminClientBrandsData(): Promise<AdminClientBrandsData>
   if (cafesResult.error) throw cafesResult.error;
 
   const cafes = (cafesResult.data ?? []) as DbRow[];
-  const cafeLookup = await getCafeLookup(cafes);
   const cafeIds = cafes.map((row) => String(row.id));
 
-  const [productsResult, offersResult, promotionsResult] = await Promise.all([
+  const [productsResult, offersResult, promotionsResult, cafeLookup] = await Promise.all([
     cafeIds.length
       ? admin
           .from("menu_products")
@@ -593,17 +609,24 @@ export async function getAdminClientBrandsData(): Promise<AdminClientBrandsData>
           .limit(160)
       : Promise.resolve({ data: [], error: null }),
     safeSelectPromotionsForAdmin(),
+    getCafeLookup(cafes),
   ]);
 
   if (productsResult.error) throw productsResult.error;
   if (offersResult.error) throw offersResult.error;
 
   const availableItems: AdminClientBrandAvailableItem[] = Array.from(cafeLookup.values());
+  const products = (productsResult.data ?? []) as DbRow[];
+  const offers = (offersResult.data ?? []) as DbRow[];
+  const [productImages, offerImages] = await Promise.all([
+    signPublishedAssets("menu-products", products.map(row => String(row.image_storage_path ?? ""))),
+    signPublishedAssets("offer-banners", offers.map(row => String(row.banner_storage_path ?? ""))),
+  ]);
 
-  for (const row of (productsResult.data ?? []) as DbRow[]) {
+  for (const row of products) {
     const cafe = getCafeMeta(cafeLookup, row.cafe_id);
     if (!cafe) continue;
-    const productImage = String(row.image_url ?? "") || await signPublishedAsset("menu-products", row.image_storage_path ? String(row.image_storage_path) : null);
+    const productImage = productImages.get(String(row.image_storage_path ?? "")) || String(row.image_url ?? "");
     availableItems.push({
       key: `product:${String(row.id)}`,
       itemType: "product",
@@ -620,10 +643,10 @@ export async function getAdminClientBrandsData(): Promise<AdminClientBrandsData>
     });
   }
 
-  for (const row of (offersResult.data ?? []) as DbRow[]) {
+  for (const row of offers) {
     const cafe = getCafeMeta(cafeLookup, row.cafe_id);
     if (!cafe) continue;
-    const offerImage = String(row.banner_url ?? "") || await signPublishedAsset("offer-banners", row.banner_storage_path ? String(row.banner_storage_path) : null);
+    const offerImage = offerImages.get(String(row.banner_storage_path ?? "")) || String(row.banner_url ?? "");
     availableItems.push({
       key: `offer:${String(row.id)}`,
       itemType: "offer",

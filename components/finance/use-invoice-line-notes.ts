@@ -7,7 +7,7 @@ import type { InvoiceLineNoteContext } from "@/lib/finance/invoice-line-notes";
 type Loaded = { slug: string; draftId: string | null; context: InvoiceLineNoteContext };
 const toValues = (lines: InvoiceLineNoteContext["lines"]) => Object.fromEntries(lines.map(line => [line.key, line.notes])) as Record<number, string[]>;
 
-export function useInvoiceLineNotes(slug: string, initialDraftId?: string) {
+export function useInvoiceLineNotes(slug: string, initialDraftId?: string, reader?: (draftId: string | null) => ReturnType<typeof getFinanceInvoiceLineNoteContext>) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [values, setValues] = useState<Record<number, string[]>>({});
   const [loading, setLoading] = useState(true), [error, setError] = useState("");
@@ -16,7 +16,7 @@ export function useInvoiceLineNotes(slug: string, initialDraftId?: string) {
   const fetchContext = useCallback((draftId: string | null) => {
     const version = ++requests.current.version;
     activeDraft.current = draftId;
-    return getFinanceInvoiceLineNoteContext(slug, draftId).then(result => {
+    return (reader ? reader(draftId) : getFinanceInvoiceLineNoteContext(slug, draftId)).then(result => {
       if (version !== requests.current.version) return false;
       if (!result.ok) { setError(result.message); return false; }
       const next = { slug, draftId, context: result.data };
@@ -25,7 +25,7 @@ export function useInvoiceLineNotes(slug: string, initialDraftId?: string) {
       return true;
     }).catch(() => { if (version === requests.current.version) setError("تعذر تحميل ملاحظات البنود أعد المحاولة"); return false; })
       .finally(() => { if (version === requests.current.version) setLoading(false); });
-  }, [slug]);
+  }, [slug, reader]);
   const loadDraft = useCallback((draftId: string | null) => { setLoading(true); setError(""); return fetchContext(draftId); }, [fetchContext]);
   useEffect(() => {
     const pending = requests.current;

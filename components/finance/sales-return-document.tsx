@@ -1,21 +1,9 @@
-import type { FinanceSnapshot } from "@/lib/finance/brand-finance";
-import type { SalesReturnDetail } from "@/lib/finance/sales-return";
 import type { CompanyInvoicePreview } from "@/lib/export/company-invoice-preview-pdf";
 import { CreditNoteTotals } from "./credit-note-document";
-import { Numeric, financeDate } from "./finance-ui";
+import { Numeric } from "./finance-ui";
 import css from "./finance-credit-notes.module.css";
 
-/** Use posted amounts, never today's product prices or tax settings. */
-export function salesReturnPreview(record: SalesReturnDetail, snapshot: FinanceSnapshot): CompanyInvoicePreview {
-  return {
-    brand: snapshot.cafe.name, customer: record.customerName, taxNumber: "", thermal: false,
-    note: record.note, subtotal: record.subtotal, discount: record.discount, tax: record.tax, total: record.total,
-    lines: record.lines.map(line => ({ name: line.name, description: line.description, quantity: line.quantity,
-      price: line.price, discount: line.discount, tax: line.tax, total: line.total })),
-    salesReturn: { number: record.number, date: financeDate(record.createdAt), sourceNumber: String(record.sourceNumber),
-      warehouse: record.warehouseName || "بدون حركة مخزنية", paid: record.paid, debtReduced: record.debtReduced, taxInclusive: record.taxInclusive },
-  };
-}
+export { salesReturnPreview } from "@/lib/finance/sales-return-print";
 
 export function SalesReturnDocument({ model }: { model: CompanyInvoicePreview }) {
   const returned = model.salesReturn;

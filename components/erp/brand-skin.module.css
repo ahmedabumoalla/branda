@@ -1,0 +1,147 @@
+/* Shared Branda identity for ERP module pages (accounting, reports, roles, employee assets, branches, settings).
+   One wrapper class on the module root. Each module keeps its own stylesheet and layout: this layer only sets
+   colors, borders, radii and type weight, matching the modules' common local class names
+   (heading/header/topbar, tabs/nav, panel/card, toolbar, table, field, button/primary/danger, badge, empty). */
+.brand {
+  --b-espresso: var(--barndaksa-espresso-dark, #311912);
+  --b-coffee: var(--barndaksa-coffee-brown, #4a281d);
+  --b-brown: var(--barndaksa-brand-brown, #6b3a25);
+  --b-gold: var(--barndaksa-gold-accent, #d9a33f);
+  --b-soft-gold: var(--barndaksa-soft-gold, #f0c568);
+  --b-cream: var(--barndaksa-cream-base, #fcf8f3);
+  --b-sand: var(--barndaksa-warm-sand, #f2e7d9);
+  --b-line: var(--barndaksa-border-sand, #e7d7c6);
+  --b-muted: var(--barndaksa-muted-text, #806a5e);
+  --b-good: #2f6b4f;
+  --b-bad: #a1382a;
+  color: var(--b-espresso);
+}
+
+/* Page heading: kept light on purpose. Modules build their headings differently (breadcrumbs, button bars,
+   white inner boxes), so a dark band made text unreadable on some of them. */
+.brand.brand > :is(header, [class*="heading"], [class*="topbar"], [class*="header"]) {
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--b-line);
+}
+.brand.brand > :is(header, [class*="heading"], [class*="topbar"], [class*="header"]) :is(h1, h2) {
+  color: var(--b-espresso);
+  font-weight: 800;
+}
+.brand.brand > :is(header, [class*="heading"], [class*="topbar"], [class*="header"]) h1 {
+  padding-inline-start: 14px;
+  border-inline-start: 6px solid var(--b-gold);
+  border-radius: 3px;
+}
+
+/* Section tabs */
+.brand.brand > :is(nav, [class*="tabs"], [class*="nav"]) {
+  gap: 4px;
+  padding: 6px;
+  overflow-x: auto;
+  border: 1px solid var(--b-line);
+  border-radius: 14px;
+  background: var(--b-sand);
+}
+.brand.brand > :is(nav, [class*="tabs"], [class*="nav"]) :is(a, button) {
+  flex: none;
+  min-height: 42px;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--b-coffee);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.brand.brand > :is(nav, [class*="tabs"], [class*="nav"]) :is(a, button):hover { background: rgba(255, 255, 255, 0.6); }
+.brand.brand > :is(nav, [class*="tabs"], [class*="nav"]) :is(a[aria-current="page"], button[aria-pressed="true"], button[aria-selected="true"], [class*="active"]) {
+  background: #fff;
+  color: var(--b-espresso);
+  font-weight: 800;
+  box-shadow: 0 6px 14px -10px rgba(49, 25, 18, 0.8), inset 0 -3px 0 var(--b-gold);
+}
+
+/* Panels and cards */
+.brand.brand :is(section[class*="panel"], [class*="card"], [class*="sectionCard"]) {
+  border: 1px solid var(--b-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 16px 34px -30px rgba(49, 25, 18, 0.55);
+}
+.brand.brand :is(section[class*="panel"], [class*="card"]) :is(h2, h3) { color: var(--b-espresso); font-weight: 800; }
+.brand.brand [class*="toolbar"] { border-color: var(--b-line); }
+.brand.brand [class*="muted"] { color: var(--b-muted); }
+
+/* Buttons */
+.brand.brand :is([class*="button"], [class*="primary"], [class*="danger"], [class*="secondary"]) {
+  border-radius: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.15s, border-color 0.15s, filter 0.15s;
+}
+.brand.brand :is([class*="button"], [class*="secondary"]) { border: 1px solid var(--b-line); background: #fff; color: var(--b-coffee); }
+.brand.brand :is([class*="button"], [class*="secondary"]):hover:not(:disabled) { border-color: var(--b-gold); background: var(--b-cream); }
+.brand.brand [class*="primary"] {
+  border: 1px solid var(--b-espresso);
+  background: linear-gradient(180deg, var(--b-coffee), var(--b-espresso));
+  color: var(--b-soft-gold);
+  font-weight: 800;
+}
+.brand.brand [class*="primary"]:hover:not(:disabled) { filter: brightness(1.15); }
+.brand.brand [class*="danger"] { border: 1px solid #eccbc2; background: #fff; color: var(--b-bad); }
+.brand.brand [class*="danger"]:hover:not(:disabled) { background: #fbece8; }
+.brand.brand :is(a, button):focus-visible { outline: 2px solid var(--b-gold); outline-offset: 2px; }
+
+/* Fields */
+.brand.brand :is(input, select, textarea) {
+  border: 1px solid var(--b-line);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--b-espresso);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.brand.brand :is(input[type="checkbox"], input[type="radio"]) { accent-color: var(--b-brown); }
+.brand.brand :is(input, select, textarea):focus-visible { outline: none; border-color: var(--b-gold); box-shadow: 0 0 0 4px rgba(217, 163, 63, 0.22); }
+.brand.brand :is(input, select, textarea):disabled { background: var(--b-sand); color: var(--b-muted); }
+.brand.brand [class*="field"] > span { color: var(--b-coffee); font-weight: 700; }
+
+/* Tables */
+.brand.brand :is([class*="tableScroll"], [class*="tableWrap"]) { border-color: var(--b-line); border-radius: 14px; }
+.brand.brand table th {
+  border-bottom: 1px solid var(--b-line);
+  background: var(--b-sand);
+  color: var(--b-coffee);
+  font-weight: 800;
+}
+.brand.brand table td { border-bottom-color: #f4ebe0; color: var(--b-espresso); font-variant-numeric: tabular-nums; }
+.brand.brand table tbody tr:hover td { background: #fdf9f3; }
+.brand.brand table a { color: var(--b-brown); font-weight: 800; }
+.brand.brand table tfoot td { background: var(--b-cream); font-weight: 800; }
+
+/* Messages and states */
+.brand.brand [class*="error"] { border: 1px solid #eccbc2; border-radius: 12px; background: #fbece8; color: var(--b-bad); font-weight: 700; }
+.brand.brand :is([class*="success"], [class*="notice"]) { border: 1px solid #cfe5d7; border-radius: 12px; background: #e7f1ea; color: var(--b-good); font-weight: 700; }
+.brand.brand [class*="empty"] { color: var(--b-muted); font-weight: 700; }
+.brand.brand :is([class*="badge"], [class*="status"]) {
+  border-radius: 999px;
+  background: var(--b-sand);
+  color: var(--b-coffee);
+  font-weight: 800;
+}
+
+/* Native dialogs. The global reset removes the browser's own centering margin, which pinned these
+   dialogs to the top corner, so the centering is restored here. */
+.brand.brand dialog {
+  margin: auto;
+  border: 1px solid var(--b-line);
+  border-radius: 20px;
+  background: #fff;
+  color: var(--b-espresso);
+  box-shadow: 0 30px 70px -28px rgba(49, 25, 18, 0.7);
+}
+.brand.brand dialog::backdrop {
+  background: rgba(49, 25, 18, 0.55);
+  backdrop-filter: blur(3px);
+}
+.brand.brand dialog :is(h2, h3) { color: var(--b-espresso); font-weight: 800; }

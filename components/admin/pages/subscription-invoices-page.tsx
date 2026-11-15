@@ -5,12 +5,19 @@ import { BrandDialog } from "@/components/admin/brand-details-dialog";
 import { fetchSubscriptionInvoicesAction, issueSubscriptionInvoiceAction, previewSubscriptionInvoiceAction } from "@/app/actions/subscription-invoices";
 import { INVOICE_MONTHS, INVOICE_SELLER, invoiceDuration, invoiceLineAmounts, invoiceLocalDate, invoiceMoney, parseInvoiceMoney, subscriptionInvoiceSchema, type InvoiceCustomer, type InvoiceList, type InvoicePlan, type SubscriptionInvoice, type SubscriptionInvoiceDraft } from "@/lib/platform/subscription-invoices";
 import s from "./subscription-invoices-page.module.css";
+import q from "./subscription-quotes-panel.module.css";
+import { SubscriptionQuotesPanel } from "./subscription-quotes-panel";
 
 const blankCustomer=():InvoiceCustomer=>({name:'',cr:'',vatNumber:'',nationalAddress:'',buildingNumber:'',additionalNumber:'',district:'',city:'',postalCode:'',country:'المملكة العربية السعودية'});
 const optionalFields:[keyof InvoiceCustomer,string,number][]=[['cr','السجل التجاري',10],['vatNumber','الرقم الضريبي',15],['nationalAddress','العنوان الوطني المختصر',120],['buildingNumber','رقم المبنى',4],['additionalNumber','الرقم الفرعي',4],['district','الحي',100],['city','المدينة',100],['postalCode','الرمز البريدي',5],['country','الدولة',100]];
 type Line={key:number;planId:string;months:number;amount:string};
 const date=(value:string)=>new Intl.DateTimeFormat('ar-SA',{dateStyle:'medium',calendar:'gregory',timeZone:'Asia/Riyadh'}).format(new Date(value));
-export function SubscriptionInvoicesPage({plans,initialInvoices,configError}:{plans:InvoicePlan[];initialInvoices:InvoiceList;configError?:string}){
+type PageProps={plans:InvoicePlan[];initialInvoices:InvoiceList;configError?:string};
+export function SubscriptionInvoicesPage(props:PageProps){
+ const [mode,setMode]=useState<'invoices'|'quotes'>('invoices'),[invoiceRefresh,setInvoiceRefresh]=useState(0);
+ return <><nav className={q.switcher} aria-label="الفواتير وعروض الأسعار"><button type="button" aria-pressed={mode==='invoices'} onClick={()=>setMode('invoices')}><Receipt size={17} aria-hidden="true"/>فواتير الاشتراكات</button><button type="button" aria-pressed={mode==='quotes'} onClick={()=>setMode('quotes')}><FileText size={17} aria-hidden="true"/>عروض الأسعار</button></nav><div hidden={mode!=='invoices'}><SubscriptionInvoiceEditor {...props} active={mode==='invoices'} refresh={invoiceRefresh}/></div><div hidden={mode!=='quotes'}><SubscriptionQuotesPanel active={mode==='quotes'} onInvoiceCreated={()=>setInvoiceRefresh(value=>value+1)}/></div></>;
+}
+function SubscriptionInvoiceEditor({plans,initialInvoices,configError,active,refresh}:PageProps&{active:boolean;refresh:number}){
  const [customer,setCustomer]=useState(blankCustomer),[dueDate,setDueDate]=useState(invoiceLocalDate),[inclusive,setInclusive]=useState(true);
  const [lines,setLines]=useState<Line[]>([{key:0,planId:plans[0]?.id??'',months:1,amount:''}]);
  const [invoices,setInvoices]=useState(initialInvoices),[search,setSearch]=useState(''),[listing,setListing]=useState(false);
@@ -19,6 +26,7 @@ export function SubscriptionInvoicesPage({plans,initialInvoices,configError}:{pl
  const form=useRef<HTMLFormElement>(null),noticeRef=useRef<HTMLDivElement>(null),counter=useRef(1),requestId=useRef<string|null>(null),attempt=useRef<SubscriptionInvoiceDraft|null>(null),requestLock=useRef(false),listRequest=useRef(0);
  useEffect(()=>()=>{if(preview?.url.startsWith('blob:'))URL.revokeObjectURL(preview.url);},[preview]);
  useEffect(()=>{if(notice?.error)noticeRef.current?.focus();},[notice]);
+ useEffect(()=>{if(!active||!refresh)return;let present=true;fetchSubscriptionInvoicesAction({page:0,search:''}).then(result=>{if(present&&result.ok){setInvoices(result.data);setSearch('');}}).catch(()=>{});return()=>{present=false;};},[active,refresh]);
  const totals=lines.reduce((a,line)=>{const v=invoiceLineAmounts(parseInvoiceMoney(line.amount)??0,inclusive);return {netCents:a.netCents+v.netCents,taxCents:a.taxCents+v.taxCents,totalCents:a.totalCents+v.totalCents};},{netCents:0,taxCents:0,totalCents:0});
  const disabled=Boolean(busy||locked||saved||configError);
  function patchLine(key:number,patch:Partial<Line>){setLines(current=>current.map(line=>line.key===key?{...line,...patch}:line));}

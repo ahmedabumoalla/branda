@@ -3,11 +3,13 @@
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
-import { submitHospitalOrder, readHospitalOrders, createHospitalCounterOrder, readHospitalCatalog, manageHospitalOrder, readHospitalDebts, collectHospitalDebt, hospitalErrorCode } from "@/lib/data/hospital-orders";
+import { submitHospitalOrder, readHospitalOrders, createHospitalCounterOrder, readHospitalCatalog, manageHospitalOrder, readHospitalDebts, collectHospitalDebt, readHospitalReceipt, hospitalErrorCode } from "@/lib/data/hospital-orders";
 
 function errorResult(error: unknown, en = false) {
   const code = hospitalErrorCode(error);
   const text: Record<string, [string, string]> = {
+    HOSPITAL_LOCAL_DATABASE_REQUIRED: ["المعاينة المحلية لا تحفظ في بيانات التشغيل جهّز قاعدة البيانات المحلية لإكمال العملية", "Local preview cannot change live data Configure the local database to continue"],
+    HOSPITAL_IDENTITY_CONFLICT: ["يوجد أكثر من حساب لهذا الجوال راجع العميل قبل إصدار الفاتورة", "Multiple customer records use this phone Review the customer before invoicing"],
     HOSPITAL_INVALID_INPUT: ["راجع الاسم والجوال والدور والعيادة وبيانات الطلب", "Check your name, phone, floor, clinic and order details"],
     HOSPITAL_RATE_LIMIT: ["انتظر قليلًا قبل إرسال طلب جديد", "Please wait before placing another order"],
     HOSPITAL_UNAVAILABLE: ["الطلبات غير متاحة حاليًا", "Ordering is currently unavailable"],
@@ -43,3 +45,4 @@ export async function createHospitalCounterOrderAction(slug: string, input: unkn
 export async function manageHospitalOrderAction(slug: string, input: unknown) { try { return { ok: true as const, order: await manageHospitalOrder(slug, input) }; } catch (e) { return errorResult(e); } }
 export async function readHospitalDebtsAction(slug: string) { try { return { ok: true as const, customers: await readHospitalDebts(slug) }; } catch (e) { return errorResult(e); } }
 export async function collectHospitalDebtAction(slug: string, input: unknown) { try { return { ok: true as const, collection: await collectHospitalDebt(slug, input) }; } catch (e) { return errorResult(e); } }
+export async function readHospitalReceiptAction(slug: string, orderId: string) { try { return { ok: true as const, document: await readHospitalReceipt(slug, orderId) }; } catch (e) { return errorResult(e); } }

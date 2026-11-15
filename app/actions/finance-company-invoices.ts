@@ -9,14 +9,20 @@ import { selectCompanyDocumentSender, sendCompanyDocument } from "@/lib/whatsapp
 import { createAdminClient } from "@/lib/supabase/admin";
 import { actionResult } from "@/lib/platform/action-result";
 import { EmailProviderError, isBarndaksaEmailConfigured, sendBarndaksaEmail } from "@/lib/email/resend";
+import { systemInvoiceAddress } from "@/lib/erp/invoice-identity";
 
 export async function companyInvoiceIssuerAction(slug: string) {
   return actionResult(async () => {
     const { cafe } = await getBrandFinanceContext(slug);
     if (!canFinance(cafe.role, "accounting_write")) throw new Error("لا تملك صلاحية إصدار الفواتير");
-    const { data, error } = await createAdminClient().from("cafe_settings").select("cafe_name,tax_number").eq("cafe_id", cafe.id).maybeSingle();
-    if (error) throw new Error("تعذر تحميل بيانات البائع");
-    return { name: data?.cafe_name || cafe.name, vatNumber: data?.tax_number || "", address: "" };
+    const admin = createAdminClient();
+    const [settings, general] = await Promise.all([
+      admin.from("cafe_settings").select("cafe_name,tax_number").eq("cafe_id", cafe.id).maybeSingle(),
+      admin.from("erp_system_settings").select("payload").eq("cafe_id", cafe.id).eq("kind", "general").maybeSingle(),
+    ]);
+    if (settings.error || general.error) throw new Error("تعذر تحميل بيانات البائع");
+    const fromAccountSettings = Boolean(general.data);
+    return { name: fromAccountSettings ? cafe.name : settings.data?.cafe_name || cafe.name, vatNumber: settings.data?.tax_number?.trim() || "", address: systemInvoiceAddress(general.data?.payload), fromAccountSettings };
   }, "تعذر تحميل بيانات البائع");
 }
 

@@ -1,0 +1,95 @@
+.page, .dashboard { --loyalty-wine: #3b1420; --loyalty-red: #970e29; --loyalty-cream: #f8f2e8; --loyalty-blush: #efe2dc; --loyalty-muted: #775960; --loyalty-line: #3b142025; color: var(--loyalty-wine); background: var(--loyalty-cream); }
+.page { min-height: 100svh; padding: 32px 24px 56px; }
+.container { max-width: 1080px; margin-inline: auto; }
+.masthead { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 24px; border-bottom: 1px solid var(--loyalty-line); }
+.masthead img { width: 64px; height: 64px; object-fit: contain; }
+.masthead a { color: var(--loyalty-wine); text-decoration: none; font-size: 13px; padding: 12px 0; }
+.eyebrow { color: var(--loyalty-red); margin: 0 0 14px; font-size: 12px; }
+.intro { padding-block: 48px 32px; }
+.intro h1, .joinIntro h1 { margin: 0 0 16px; font-size: clamp(34px, 4.5vw, 56px); line-height: 1.4; font-weight: 500; }
+.intro p, .joinIntro p { line-height: 1.9; max-width: 520px; }
+.join { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); align-items: center; gap: 80px; min-height: 70svh; padding-block: 48px; }
+.joinIntro { max-width: 560px; }
+.joinSignature { margin-top: 40px; font-size: 12px; letter-spacing: 3px; color: var(--loyalty-muted); }
+.form { display: flex; flex-direction: column; gap: 20px; }
+.form h2 { font-size: 24px; font-weight: 500; margin: 0; }
+.form p { margin: 0; font-size: 13px; line-height: 1.9; }
+.field { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.field input, .field textarea { width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid var(--loyalty-line); background: transparent; color: var(--loyalty-wine); border-radius: 6px; font: inherit; }
+.field textarea { resize: vertical; min-height: 96px; }
+.field input:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--loyalty-red); outline-offset: 2px; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 12px 20px; background: var(--loyalty-wine); color: var(--loyalty-cream); border: 0; border-radius: 6px; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+.button:disabled { opacity: .5; cursor: default; }
+.button:focus-visible, .textButton:focus-visible, .masthead a:focus-visible { outline: 2px solid var(--loyalty-red); outline-offset: 4px; }
+.textButton { border: 0; background: transparent; color: var(--loyalty-red); font: inherit; font-size: 13px; padding: 12px 4px; min-height: 44px; cursor: pointer; }
+.textButton:disabled { opacity: .5; cursor: default; }
+.formFooter { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.error { color: var(--loyalty-red); font-size: 13px; line-height: 1.8; }
+.status { padding: 14px 18px; background: var(--loyalty-blush); border-inline-start: 3px solid var(--loyalty-red); font-size: 13px; line-height: 1.9; }
+.wallets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+.wallet { min-width: 0; }
+.wallet > h2 { margin: 0 0 18px; font-size: 14px; font-weight: 500; }
+.wallet > .button { margin-top: 20px; width: 100%; }
+.walletNote { color: var(--loyalty-muted); font-size: 12px; line-height: 1.8; margin-top: 12px; }
+.card { padding: clamp(24px, 3vw, 36px); color: var(--loyalty-cream); background: var(--loyalty-wine); border-radius: 16px; overflow: hidden; }
+.cardTop { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.cardEyebrow { font-size: 11px; color: var(--loyalty-blush); }
+.card h2 { margin: 8px 0 0; font-size: 23px; line-height: 1.5; font-weight: 500; overflow-wrap: anywhere; }
+.logo { width: 70px; height: 70px; flex-shrink: 0; object-fit: contain; }
+.wordmark { font-size: 22px; }
+.stamps { display: grid; grid-template-columns: repeat(auto-fit, minmax(38px, 1fr)); gap: 10px; margin-block: 30px; }
+.stamps > span { display: grid; place-items: center; aspect-ratio: 1; border-radius: 50%; max-width: 52px; border: 1px solid #f8f2e85c; }
+.stamps svg { width: 21px; height: 21px; }
+.emptyStamp { color: var(--loyalty-blush); }
+.stamped { color: var(--loyalty-wine); background: var(--loyalty-cream); }
+.cardBottom { display: flex; justify-content: space-between; align-items: end; gap: 16px; }
+.progress { font-size: 30px; line-height: 1.3; margin: 0 0 12px; font-variant-numeric: tabular-nums; }
+.progress > span { font-size: 12px; color: var(--loyalty-blush); }
+.rewardName { font-size: 14px; line-height: 1.8; margin: 0; overflow-wrap: anywhere; }
+.cardHint { font-size: 10px; line-height: 1.8; color: var(--loyalty-blush); margin: 8px 0 0; }
+.cardQr { width: 94px; height: 94px; flex-shrink: 0; border-radius: 6px; background: white; padding: 3px; }
+.cardQr bdi { display: none; }
+.rewards { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--loyalty-line); }
+.rewards h2 { margin: 0 0 20px; font-size: 24px; font-weight: 500; }
+.reward { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-block: 20px; border-bottom: 1px solid var(--loyalty-line); }
+.reward h3 { font-weight: 500; margin: 0 0 8px; }
+.reward p { font-size: 12px; line-height: 1.8; }
+.dashboard { padding: 32px; border-radius: 12px; }
+.dashboardHeader { display: flex; align-items: start; justify-content: space-between; gap: 24px; margin-bottom: 36px; }
+.dashboardHeader h1 { font-size: clamp(28px, 3vw, 40px); font-weight: 500; margin: 0 0 12px; }
+.dashboardHeader p { font-size: 13px; line-height: 1.9; margin: 0; }
+.dashboardHeader .logo { width: 80px; height: 80px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); border-block: 1px solid var(--loyalty-line); padding-block: 24px; margin-bottom: 36px; gap: 24px; }
+.stats b { display: block; font-size: 30px; font-weight: 500; }
+.stats span { color: var(--loyalty-muted); font-size: 12px; }
+.editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; }
+.preview { min-width: 0; }
+.sectionTitle { font-weight: 500; font-size: 22px; margin: 0 0 24px; }
+.settingsGroup { margin-bottom: 36px; }
+.twoFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; }
+.check input { accent-color: var(--loyalty-red); width: 18px; height: 18px; }
+.enrollment { display: flex; gap: 24px; align-items: center; margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--loyalty-line); }
+.enrollment h3 { font-size: 18px; font-weight: 500; margin: 0 0 8px; }
+.enrollment p { font-size: 12px; line-height: 1.9; margin: 0; }
+.enrollment svg { width: 112px; height: 112px; flex-shrink: 0; }
+.activity { margin-top: 40px; overflow-x: auto; }
+.activity table { border-collapse: collapse; min-width: 550px; width: 100%; font-size: 12px; }
+.activity th, .activity td { padding: 16px 12px; border-bottom: 1px solid var(--loyalty-line); text-align: start; }
+.activity th { color: var(--loyalty-muted); font-weight: 500; }
+.scanner { max-width: 580px; margin-inline: auto; padding-block: 48px; }
+.scanner h1 { font-size: 34px; font-weight: 500; }
+.scannerActions { display: grid; gap: 24px; margin-top: 32px; }
+.scannerActions > section { padding-bottom: 24px; border-bottom: 1px solid var(--loyalty-line); }
+.scannerActions h2 { font-size: 20px; font-weight: 500; }
+@media (max-width: 760px) {
+  .page { padding-inline: 20px; }
+  .join { grid-template-columns: minmax(0, 1fr); gap: 36px; min-height: auto; }
+  .joinSignature { margin-top: 20px; }
+  .wallets, .editor { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  .dashboard { padding: 24px 18px; }
+  .stats { gap: 12px; }
+  .stats b { font-size: 25px; }
+  .enrollment { align-items: start; gap: 16px; flex-wrap: wrap; }
+  .card { padding: 24px; }
+}

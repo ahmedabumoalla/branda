@@ -3,7 +3,8 @@
 import { DashboardNavigationLink as Link } from "./dashboard-navigation-link";
 import { FinanceSidebarMenu } from "./finance-sidebar-menu";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingBag, MapPin, CalendarDays, Scissors, BellRing, ChevronsLeft, ChevronsRight, ClipboardList, LockKeyhole, LogOut, Gift, Layers, Megaphone, Package, Settings, Smartphone, Star, WalletCards } from "lucide-react";
+import { useEffect } from "react";
+import { ShoppingBag, MapPin, CalendarDays, Scissors, BellRing, ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Megaphone, Package, Settings, Smartphone, Star, WalletCards } from "lucide-react";
 import { SubscriptionCountdown } from "@/components/dashboard/subscription-countdown";
 import type { SubscriptionSummary } from "@/lib/platform/subscription-clock";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
@@ -13,6 +14,7 @@ import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { logoutBarndaksaAuth } from "@/lib/platform/auth";
 import { getSidebarFeaturesForBrand, type BrandFeatureOverride } from "@/lib/platform/feature-access";
 import type { DashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
+import { retainOwnerNotificationBrand } from "@/lib/performance/notifications-client";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import type { AppNotification } from "@/lib/mock/notifications";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
@@ -51,8 +53,9 @@ const initialNavigation: NavigationState = {
 export function DashboardSidebar({ snapshot, serverNow, servicesAvailable = false, collapsed = false, onCollapsedChange, onNavigate, onEndMaintenance, isEndingMaintenance = false }: SidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
-  const navigation = snapshot ?? initialNavigation;
-  const { settings, notifications } = navigation;
+  const navigation: NavigationState = snapshot ?? initialNavigation;
+  const { settings } = navigation;
+  useEffect(() => { retainOwnerNotificationBrand(settings.cafeSlug); }, [settings.cafeSlug]);
   const cafeLogoUrl = useResolvedCafeLogoUrl(settings);
   const cafeName = settings.cafeName || "العلامة";
   const isSalon = settings.businessCategory === "hair_salons";
@@ -60,11 +63,14 @@ export function DashboardSidebar({ snapshot, serverNow, servicesAvailable = fals
   const isGifts = settings.businessCategory === "gifts_flowers" || settings.businessCategory === "retail_stores" || isFashion;
   const ToggleIcon = collapsed ? ChevronsLeft : ChevronsRight;
   const toggleLabel = collapsed ? "توسيع القائمة الجانبية" : "طي القائمة الجانبية";
-  const integrated = (pathname === "/dashboard/finance" || pathname.startsWith("/dashboard/system/")) && !collapsed;
 
   // The shared package catalog also defines desktop, collapsed and mobile navigation.
   // Wait for account context; never flash guessed package permissions.
   const links = settings.cafeSlug && servicesAvailable ? getSidebarFeaturesForBrand({ planId: navigation.planId, plans: navigation.plans, overrides: navigation.featureOverrides, isTrial: navigation.subscription?.status === "trialing" }) : [];
+  const financeActive = links.some(({ feature, access }) => feature.id === "finance" && access?.effectiveEnabled);
+  const loyaltyActive = links.some(({ feature, access }) => feature.id === "loyalty" && access?.effectiveEnabled);
+  const menuIntegrated = financeActive;
+  const integrated = !collapsed;
 
   async function handleLogout() {
     if (onEndMaintenance) {
@@ -105,12 +111,13 @@ export function DashboardSidebar({ snapshot, serverNow, servicesAvailable = fals
         </div>
       </div>
       {navigation.subscription && <div className={shell.subscription}><SubscriptionCountdown subscription={navigation.subscription} serverNow={serverNow} /></div>}
-      {servicesAvailable && <div className={`${shell.notifications} mt-2.5 flex gap-1.5`}><NotificationsPanel live={isSalon} initialNotifications={notifications} className="[&>button]:h-8 [&>button]:w-8 [&>button]:rounded-lg [&>button]:border-white/10 [&>button]:bg-white/[0.06]" /></div>}
+      {servicesAvailable && <div className={`${shell.notifications} mt-2.5 flex gap-1.5`}><NotificationsPanel key={settings.cafeSlug} cafeSlug={settings.cafeSlug} live={isSalon} className="[&>button]:h-8 [&>button]:w-8 [&>button]:rounded-lg [&>button]:border-white/10 [&>button]:bg-white/[0.06]" /></div>}
     </div>}
 
     <nav aria-label="قائمة العلامة" className={`${shell.navigation} flex-1 space-y-1 ${collapsed ? "px-2 py-3" : "px-2.5 py-3"}`}>
       {links.filter(({ feature, access }) => feature.id === "finance" && access?.effectiveEnabled).map(({ feature }) => <FinanceSidebarMenu key={feature.id} collapsed={collapsed} onExpand={() => onCollapsedChange?.(false)} onNavigate={onNavigate} cafeSlug={settings.cafeSlug} isSalon={isSalon} isGifts={isGifts} enabledFeatures={links.filter(link => link.access?.effectiveEnabled).map(link => link.feature.id)} />)}
-      {links.filter(({ feature }) => feature.id !== "finance" && mindTopNavigationVisible(settings.cafeSlug, feature.id)).map(({ feature, access }) => {
+      {links.filter(({ feature }) => feature.id !== "finance" && mindTopNavigationVisible(settings.cafeSlug, feature.id) && (!loyaltyActive || feature.id !== "cashier") && (!financeActive || !["loyalty", "cashier", "settings"].includes(feature.id)) && (!menuIntegrated || feature.id !== "menu")).map(({ feature, access }) => {
+        if (feature.id === "loyalty" && access?.effectiveEnabled) return <FinanceSidebarMenu key={feature.id} loyaltyOnly collapsed={collapsed} onExpand={() => onCollapsedChange?.(false)} onNavigate={onNavigate} cafeSlug={settings.cafeSlug} enabledFeatures={links.filter(link => link.access?.effectiveEnabled).map(link => link.feature.id)} />;
         const Icon = feature.id === "menu" ? (isSalon ? Scissors : Package) : feature.id === "loyalty" ? Star : feature.id === "offers" ? Gift : feature.id === "pager" ? BellRing : feature.id === "marketing_campaigns" ? Megaphone : feature.id === "finance" ? WalletCards : Settings;
         const title = isFashion && feature.id === "menu" ? "المتجر والمنتجات" : isGifts && feature.id === "menu" ? "المنتجات والخدمات" : isGifts && feature.id === "settings" ? "إعدادات المتجر" : isSalon && feature.id === "menu" ? "الخدمات والمنتجات" : isSalon && feature.id === "settings" ? "إعدادات الصالون" : feature.sidebarLabel ?? feature.titleAr;
         const locked = !access?.effectiveEnabled;
@@ -132,12 +139,11 @@ export function DashboardSidebar({ snapshot, serverNow, servicesAvailable = fals
         </Link>;
       })}
       {links.some(({ feature, access }) => feature.id === "pager" && access?.effectiveEnabled) && <Link href="/dashboard/pager/reviews" onClick={() => onNavigate?.()} aria-label="تقييمات البيجر" title={collapsed ? "تقييمات البيجر" : undefined} aria-current={pathname.startsWith("/dashboard/pager/reviews") ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname.startsWith("/dashboard/pager/reviews") ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><Star className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>تقييمات البيجر</span>}</Link>}
-      {links.some(({ feature, access }) => feature.id === "loyalty" && access?.effectiveEnabled) && <Link href="/dashboard/read-operations" onClick={() => onNavigate?.()} aria-label="سجل عمليات القراءة" title={collapsed ? "سجل عمليات القراءة" : undefined} aria-current={pathname === "/dashboard/read-operations" ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname === "/dashboard/read-operations" ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><ClipboardList className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>سجل عمليات القراءة</span>}</Link>}
       {isGifts && links.some(({ feature, access }) => feature.id === "menu" && access?.effectiveEnabled) && <Link href="/dashboard/orders" onClick={() => onNavigate?.()} aria-label="الطلبات" title={collapsed ? "الطلبات" : undefined} aria-current={pathname.startsWith("/dashboard/orders") ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname.startsWith("/dashboard/orders") ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><ShoppingBag className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>الطلبات</span>}</Link>}
-      {mindTopNavigationVisible(settings.cafeSlug, "branches") && links.some(({ feature, access }) => feature.id === "menu" && access?.effectiveEnabled) && <Link href="/dashboard/branches" onClick={() => onNavigate?.()} aria-label="الفروع" title={collapsed ? "الفروع" : undefined} aria-current={pathname === "/dashboard/branches" ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname === "/dashboard/branches" ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>الفروع</span>}</Link>}
+      {!financeActive && mindTopNavigationVisible(settings.cafeSlug, "branches") && links.some(({ feature, access }) => feature.id === "menu" && access?.effectiveEnabled) && <Link href="/dashboard/branches" onClick={() => onNavigate?.()} aria-label="الفروع" title={collapsed ? "الفروع" : undefined} aria-current={pathname === "/dashboard/branches" ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname === "/dashboard/branches" ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>الفروع</span>}</Link>}
       {isSalon && links.some(({ feature, access }) => feature.id === "menu" && access?.effectiveEnabled) && <Link href="/dashboard/bookings" onClick={() => onNavigate?.()} aria-label="متابعة الحجوزات" title={collapsed ? "متابعة الحجوزات" : undefined} aria-current={pathname.startsWith("/dashboard/bookings") ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname.startsWith("/dashboard/bookings") ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><CalendarDays className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>متابعة الحجوزات</span>}</Link>}
       {settings.cafeSlug === LOCO_BRAND_SLUG && servicesAvailable && <Link href="/dashboard/brand-phone" onClick={() => onNavigate?.()} aria-label="ربط رقم العلامة التجارية" title={collapsed ? "ربط رقم العلامة التجارية" : undefined} aria-current={pathname === "/dashboard/brand-phone" ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname === "/dashboard/brand-phone" ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><Smartphone className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>ربط رقم العلامة التجارية</span>}</Link>}
-      {settings.cafeSlug && <Link href="/dashboard/subscription" onClick={() => onNavigate?.()}
+      {settings.cafeSlug && !financeActive && <Link href="/dashboard/subscription" onClick={() => onNavigate?.()}
         aria-label="الباقات والاشتراكات" title={collapsed ? "الباقات والاشتراكات" : undefined}
         aria-current={pathname.startsWith("/dashboard/subscription") ? "page" : undefined}
         className={`flex min-h-11 items-center rounded-lg text-[13px] font-medium transition hover:bg-white/[0.065] hover:text-white ${collapsed ? "justify-center" : "gap-2 px-3"} ${pathname.startsWith("/dashboard/subscription") ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}>
