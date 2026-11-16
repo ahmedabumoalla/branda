@@ -34,9 +34,9 @@ export function hospitalCustomerMessage(context: CustomerContext) {
   return ["يا هلا فيك في مايند", "بطاقة الولاء جاهزة لك", "افتح بطاقتك وأضفها إلى محفظة جوالك", `https://barndaksa.com/loyalty/${row.brand.slug}/access?token=${encodeURIComponent(token)}`].join("\n\n");
 }
 
-/** Delivery starts only on the explicitly activated release, never from local testing. */
+/** Customer delivery is enabled on production; explicit false is an emergency stop. Local and preview never dispatch. */
 export async function runHospitalCustomerMessages(cafeId?: string) {
-  if (process.env.NODE_ENV !== "production" || process.env.VERCEL !== "1" || process.env.VERCEL_ENV !== "production" || process.env.HOSPITAL_NOTIFICATIONS_ENABLED !== "true") return { disabled: true, claimed: 0, queued: 0 };
+  if (process.env.NODE_ENV !== "production" || process.env.VERCEL !== "1" || process.env.VERCEL_ENV !== "production" || process.env.HOSPITAL_NOTIFICATIONS_ENABLED === "false") return { disabled: true, claimed: 0, queued: 0 };
   if (cafeId) z.uuid().parse(cafeId);
   const client = createAdminClient();
   const claimed = await client.rpc("hospital_customer_messages_claim", { p_limit: 1, p_cafe: cafeId ?? null });
