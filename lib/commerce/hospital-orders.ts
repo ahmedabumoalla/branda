@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 const phone = z.string().trim().max(30).transform(v => v.replace(/[٠-٩۰-۹]/g, d => String(d.charCodeAt(0) - (d >= "۰" ? 1776 : 1632))).replace(/[\s+()-]/g, "").replace(/^05/, "9665").replace(/^00966/, "966"));
-export const hospitalItemsSchema = z.array(z.object({ productId: z.uuid(), quantity: z.number().int().min(1).max(50), priceOptionIndex: z.number().int().min(0).max(99).optional() }).strict()).min(1).max(30);
+// Imported menu IDs are PostgreSQL UUIDs, including deterministic IDs without
+// RFC version/variant bits. The database still validates tenant and availability.
+export const hospitalItemsSchema = z.array(z.object({ productId: z.guid(), quantity: z.number().int().min(1).max(50), priceOptionIndex: z.number().int().min(0).max(99).optional() }).strict()).min(1).max(30);
 const common = { requestId: z.uuid(), language: z.enum(["ar", "en"]).default("ar"), notes: z.string().trim().max(500).default(""), doctor: z.string().trim().max(120).default(""), items: hospitalItemsSchema };
 export const hospitalOrderInputSchema = z.object({ ...common, slug: z.string().regex(/^[a-z0-9-]{1,120}$/), customerName: z.string().trim().min(2).max(120), phone: phone.pipe(z.string().regex(/^9665\d{8}$/)), floor: z.string().trim().min(1).max(60), clinic: z.string().trim().min(1).max(120) }).strict();
 export const hospitalCounterInputSchema = z.object({ ...common, customerName: z.string().trim().max(120).default(""), phone: phone.pipe(z.string().regex(/^(9665\d{8})?$/)).default(""), floor: z.string().trim().max(60).default(""), clinic: z.string().trim().max(120).default("") }).strict();

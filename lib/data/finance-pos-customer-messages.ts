@@ -2,7 +2,7 @@ import "server-only";
 import { brandSlugAllowsNewWork } from '@/lib/data/account-cancellation';
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isGreenApiFinanceReceiptConfigured, sendGreenApiFinanceReceipt } from "@/lib/whatsapp/green-api";
+import { isGreenApiFinanceReceiptConfigured, selectGreenApiPlatformSender, sendGreenApiCustomerMessage, sendGreenApiFinanceReceipt } from "@/lib/whatsapp/green-api";
 import { syncWalletCardByCode } from "@/lib/wallet";
 import { financeCustomerReceiptSchema } from "@/lib/finance/customer-receipt";
 import { createFinanceCustomerReceiptPdf } from "./finance-customer-receipt";
@@ -11,7 +11,9 @@ const jobSchema = z.object({
   id: z.uuid(), leaseToken: z.uuid(), phone: z.string().regex(/^9665\d{8}$/),
   brandName: z.string().min(1).max(300), slug: z.string().regex(/^[a-z0-9-]{1,120}$/),
   invoiceNumber: z.union([z.number().int().positive(), z.string().min(1).max(120)]),
-  loyaltyStatus: z.enum(["stamped", "pending_enrollment"]),
+  loyaltyStatus: z.enum(["stamped", "pending_enrollment", "unavailable"]),
+  includeCardLink: z.boolean().optional(),
+  invoiceEnabled: z.boolean().optional(),
   cardCode: z.string().regex(/^[A-Z0-9_-]{4,100}$/).nullish(),
   receipt: financeCustomerReceiptSchema,
 }).refine(row=>String(row.receipt.number)===String(row.invoiceNumber)&&row.receipt.brandName===row.brandName,"Invoice identity mismatch");
@@ -21,11 +23,9 @@ export function financePosCustomerMessage(job: CustomerMessageJob) {
   const row = jobSchema.parse(job);
   return [
     `شكرًا لزيارتك ${row.brandName.slice(0,100)}`,
-    `فاتورتك رقم ${row.invoiceNumber}`,
-    "نسخة فاتورتك مرفقة مع الرسالة",
-    row.loyaltyStatus === "stamped" ? "تم تسجيل ختم مشترياتك على بطاقة الولاء" : "ختم مشترياتك محفوظ ويُضاف إلى بطاقتك بعد تسجيل اسمك ورقم جوالك",
-    "افتح بطاقة الولاء وأضفها إلى محفظة جوالك",
-    `https://barndaksa.com/loyalty/${encodeURIComponent(row.slug)}`,
+    ...(row.invoiceEnabled !== false ? [`فاتورتك رقم ${row.invoiceNumber}`, "نسخة فاتورتك مرفقة مع الرسالة"] : []),
+    ...(row.loyaltyStatus === "stamped" ? ["تم تسجيل ختم مشترياتك على بطاقة الولاء"] : row.loyaltyStatus === "pending_enrollment" ? ["ختم مشترياتك محفوظ ويُضاف إلى بطاقتك بعد تسجيل اسمك ورقم جوالك"] : []),
+    ...(row.loyaltyStatus !== "unavailable" && row.includeCardLink !== false ? ["افتح بطاقة الولاء وأضفها إلى محفظة جوالك", `https://barndaksa.com/loyalty/${encodeURIComponent(row.slug)}`] : []),
     `أُرسلت عبر برندة نيابة عن ${row.brandName.slice(0,100)}`,
   ].join("\n");
 }
@@ -52,7 +52,7 @@ export async function dispatchFinancePosCustomerMessages(cafeId?: string) {
       let pdf: Uint8Array | undefined;
       const renderStarted = Date.now();
       try {
-        pdf = await createFinanceCustomerReceiptPdf(parsed.data.receipt);
+        if (parsed.data.invoiceEnabled !== false) pdf = await createFinanceCustomerReceiptPdf(parsed.data.receipt);
       } catch {
         // Only quick pre-send renderer failures can safely retry within this lease.
         if (Date.now() - renderStarted < 5000) {
@@ -60,14 +60,16 @@ export async function dispatchFinancePosCustomerMessages(cafeId?: string) {
         }
       }
       errorCode = "customer_receipt_render_failed";
-      if (pdf) {
+      if (pdf || parsed.data.invoiceEnabled === false && parsed.data.includeCardLink !== false) {
         if (!await brandSlugAllowsNewWork(parsed.data.slug)) {
           errorCode = 'brand_archived_before_dispatch';
           if(parsed.data.cardCode)walletCodes.delete(parsed.data.cardCode);
         } else try {
-          const result = await sendGreenApiFinanceReceipt({ phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data), pdf, invoiceNumber: parsed.data.receipt.number });
+          const result = parsed.data.invoiceEnabled === false
+            ? await sendGreenApiCustomerMessage(await selectGreenApiPlatformSender(), { phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data) })
+            : await sendGreenApiFinanceReceipt({ phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data), pdf: pdf!, invoiceNumber: parsed.data.receipt.number });
           status = result.status; messageId = result.providerMessageId;
-          errorCode = result.errorCode ?? `customer_message_${status}`;
+          errorCode = ("errorCode" in result && typeof result.errorCode === "string" ? result.errorCode : undefined) ?? `customer_message_${status}`;
         } catch { status = "unknown"; errorCode = "customer_media_exception"; }
       }
     }

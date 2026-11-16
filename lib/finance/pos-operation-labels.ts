@@ -1,5 +1,9 @@
 /** Display copy only; accounting payloads and customer-authored input are unchanged. */
 export const financePosOperationEnglish: Record<string, string> = {
+  "يُسجل المرتجع وتُسوّى قيمته مباشرة عند الحفظ": "The refund and settlement are posted immediately when saved",
+  "يخصم المبلغ من الصندوق المحدد عند حفظ المرتجع": "The amount is deducted from the selected drawer when the refund is saved",
+  "تُسوّى القيمة عند الحفظ وتبقى البضاعة بانتظار تأكيد الاستلام": "The amount is settled on save and stock awaits receipt confirmation",
+  "تُسوّى القيمة وتعود الكميات إلى المخزون عند الحفظ": "The amount is settled and quantities return to stock on save",
   "الفاتورة غير متاحة للإرجاع": "Invoice unavailable for refund", "راجع الكمية المرتجعة لكل صنف": "Check each item's return quantity", "حدد كمية صنف واحد على الأقل للإرجاع": "Select a return quantity for at least one item", "أدخل سبب المرتجع": "Enter a refund reason", "اختر حساب تسوية المبلغ المرتجع": "Select the refund settlement account", "اختر وردية مفتوحة مرتبطة بالصندوق المحدد": "Select an open shift for the selected cash drawer", "اختر عهدة الوردية المفتوحة لهذا الصندوق": "Select this drawer's open shift", "استخدم ثلاث منازل عشرية كحد أقصى": "Use at most three decimal places", "أدخل باركود صالحًا حتى 64 خانة": "Enter a valid barcode up to 64 characters", "لا تكرر المنتج في الربط": "Do not link the same product twice", "بانتظار اعتماد المالك": "Awaiting owner approval", "معتمد ومُرحّل": "Approved and posted", "الدفعة": "Payment",
   "الفاتورة غير متاحة للإرجاع حدّث السجل ثم أعد المحاولة": "Invoice unavailable for refund Refresh history and try again",
   "راجع بيانات المرتجع": "Review the refund details",

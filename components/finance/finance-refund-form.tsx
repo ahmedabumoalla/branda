@@ -33,11 +33,13 @@ export function refundPayload(document: FinanceDocument, quantities: Record<stri
   return { documentId: document.id, lines, expectedTotal: preview.total, expectedPaid: preview.paid, ...(document.kind === "sale" && deferStock ? { deferStock: true } : {}), ...(preview.paid > 0 ? { accountId, paymentMethod: account!.kind, ...(shiftId ? { shiftId } : {}) } : {}), note: note.trim() };
 }
 
-export function FinanceRefundForm({ document, snapshot, pending, error, onCancel, onSubmit }: {
+export function FinanceRefundForm({ directPosRefund = false, document, snapshot, pending, error, onCancel, onSubmit }: {
+  directPosRefund?: boolean;
   document?: FinanceDocument; snapshot: FinanceSnapshot; pending: boolean; error: string; onCancel: () => void;
   onSubmit: (operation: "refund", payload: Record<string, unknown>) => Promise<boolean>;
 }) {
   const { t } = useFinancePosLocale();
+  const directRefund = directPosRefund && snapshot.cafe.slug === "mind-hospital";
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [accountId, setAccountId] = useState(document?.account_id ?? "");
   const [shiftId, setShiftId] = useState(snapshot.shifts.find(shift => shift.account_id === document?.account_id && shift.status === "open")?.id ?? "");
@@ -56,10 +58,10 @@ export function FinanceRefundForm({ document, snapshot, pending, error, onCancel
     try { payload = refundPayload(document, quantities, accountId, note, snapshot, shiftId, deferStock); }
     catch (cause) { setLocalError(cause instanceof Error ? cause.message : t("راجع بيانات المرتجع")); return; }
     busy.current = true;
-    try { await onSubmit("refund", payload); } finally { busy.current = false; }
+    try { await onSubmit("refund", { ...payload, ...(directRefund ? { directPosRefund: true } : {}) }); } finally { busy.current = false; }
   }}>
     <p className={styles.muted}>{t("أدخل الكمية المراد إرجاعها فقط واترك بقية الأصناف على صفر")}</p>
-    {document.kind === "sale" && <p className={styles.notice}>{t("سيبقى الطلب معلقًا دون صرف أو تغيير الأرصدة والمخزون حتى يعتمد مالك العلامة المرتجع")}</p>}
+    {document.kind === "sale" && <p className={styles.notice}>{directRefund ? t("يُسجل المرتجع وتُسوّى قيمته مباشرة عند الحفظ") : t("سيبقى الطلب معلقًا دون صرف أو تغيير الأرصدة والمخزون حتى يعتمد مالك العلامة المرتجع")}</p>}
     {(localError || error) && <p className={styles.error} role="alert">{t(localError || error)}</p>}
     <fieldset disabled={pending} className={styles.invoiceLayout}>
       <section className={`${styles.invoiceSection} ${styles.invoiceItems}`} aria-label={t("الأصناف المرتجعة")}>
@@ -74,13 +76,13 @@ export function FinanceRefundForm({ document, snapshot, pending, error, onCancel
       <section className={`${styles.invoiceSection} ${styles.invoiceSummary}`} aria-label={t("تسوية المرتجع")}>
         <div className={styles.invoicePaymentFields}>
           {preview.paid > 0 && <Field label={document.kind === "sale" ? t("طريقة إعادة المبلغ وحساب الدفع") : t("حساب استلام المبلغ من المورد")}><select required value={accountId} onChange={event => { setAccountId(event.target.value); setShiftId(snapshot.shifts.find(shift => shift.account_id === event.target.value && shift.status === "open")?.id ?? ""); }}><option value="">{t("اختر الحساب")}</option>{accounts.map(account => <option value={account.id} key={account.id}>{account.kind === "cash" ? t("نقدًا") : account.kind === "bank" ? t("تحويل بنكي") : t("نقاط البيع")} — {t(account.name)}</option>)}</select></Field>}
-          {preview.paid > 0 && account?.kind === "cash" && document.kind === "sale" && <Field label={t("مصدر النقدية")} hint={t("يخصم من الصندوق المحدد بعد اعتماد المالك")}><select value={shiftId} onChange={event => setShiftId(event.target.value)}><option value="" disabled={snapshot.shifts.some(shift => shift.account_id === accountId && shift.status === "open")}>{t("رصيد خزينة الصندوق")}</option>{snapshot.shifts.filter(shift => shift.account_id === accountId && shift.status === "open").map(shift => <option key={shift.id} value={shift.id}>{t("عهدة وردية ")}{snapshot.staff.find(staff => staff.user_id === shift.user_id)?.name ?? t("الموظف الحالي")}</option>)}</select></Field>}
+          {preview.paid > 0 && account?.kind === "cash" && document.kind === "sale" && <Field label={t("مصدر النقدية")} hint={directRefund ? t("يخصم المبلغ من الصندوق المحدد عند حفظ المرتجع") : t("يخصم من الصندوق المحدد بعد اعتماد المالك")}><select value={shiftId} onChange={event => setShiftId(event.target.value)}><option value="" disabled={snapshot.shifts.some(shift => shift.account_id === accountId && shift.status === "open")}>{t("رصيد خزينة الصندوق")}</option>{snapshot.shifts.filter(shift => shift.account_id === accountId && shift.status === "open").map(shift => <option key={shift.id} value={shift.id}>{t("عهدة وردية ")}{snapshot.staff.find(staff => staff.user_id === shift.user_id)?.name ?? t("الموظف الحالي")}</option>)}</select></Field>}
           <Field label={t("سبب المرتجع")}><textarea required maxLength={500} value={note} onChange={event => setNote(event.target.value)} placeholder={t("اكتب سبب إرجاع الأصناف")} /></Field>
-          {document.kind === "sale" && <div><label className={styles.check}><input type="checkbox" checked={deferStock} onChange={event => setDeferStock(event.target.checked)} />{t("تأكيد استلام البضاعة لاحقًا")}</label><p className={styles.muted}>{deferStock ? t("بعد اعتماد المالك يُرحّل المبلغ وتبقى البضاعة بانتظار تأكيد الاستلام من الفواتير المرتجعة") : t("اعتماد المالك يعيد المبلغ والكميات إلى المخزون معًا")}</p></div>}
+          {document.kind === "sale" && <div><label className={styles.check}><input type="checkbox" checked={deferStock} onChange={event => setDeferStock(event.target.checked)} />{t("تأكيد استلام البضاعة لاحقًا")}</label><p className={styles.muted}>{directRefund ? (deferStock ? t("تُسوّى القيمة عند الحفظ وتبقى البضاعة بانتظار تأكيد الاستلام") : t("تُسوّى القيمة وتعود الكميات إلى المخزون عند الحفظ")) : deferStock ? t("بعد اعتماد المالك يُرحّل المبلغ وتبقى البضاعة بانتظار تأكيد الاستلام من الفواتير المرتجعة") : t("اعتماد المالك يعيد المبلغ والكميات إلى المخزون معًا")}</p></div>}
         </div>
         <div className={styles.invoicePaymentFields}>
           <div><div className={styles.balanceLine}><span>{t("ضريبة الأصناف المرتجعة")}</span><Numeric value={preview.tax} money /></div><div className={styles.balanceLine}><span>{t("تخفيض المبلغ الآجل")}</span><Numeric value={preview.debt} money /></div><div className={styles.balanceLine}><span>{document.kind === "sale" ? t("المبلغ المعاد للعميل") : t("المبلغ المسترد من المورد")}</span><Numeric value={preview.paid} money /></div><div className={styles.balanceLine}><strong>{t("إجمالي المرتجع")}</strong><strong><Numeric value={preview.total} money /></strong></div></div>
-          <div className={styles.invoiceFooter}><button type="submit" className={styles.primary} disabled={!preview.lines.some(row => row.quantity > 0)}>{pending ? t("جار حفظ الطلب") : document.kind === "sale" ? t("إرسال لاعتماد المالك") : t("حفظ فاتورة المرتجع")}</button><button type="button" className={styles.secondary} onClick={onCancel}>{t("إلغاء")}</button></div>
+          <div className={styles.invoiceFooter}><button type="submit" className={styles.primary} disabled={!preview.lines.some(row => row.quantity > 0)}>{pending ? t("جار حفظ الطلب") : document.kind === "sale" && !directRefund ? t("إرسال لاعتماد المالك") : t("حفظ فاتورة المرتجع")}</button><button type="button" className={styles.secondary} onClick={onCancel}>{t("إلغاء")}</button></div>
         </div>
       </section>
     </fieldset>

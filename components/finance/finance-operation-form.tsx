@@ -20,9 +20,9 @@ import { FinancePosPurchaseForm } from "./finance-pos-purchase-form";
 
 export type FinanceFormOperation = FinanceOperation | "staff_create" | "sales_cashier_create";
 export type FinanceForm = { operation: FinanceFormOperation; title: string; values?: Record<string, unknown> };
-type Props = { form: FinanceForm; snapshot: FinanceSnapshot; pending: boolean; error: string; onCancel: () => void; onInventorySaved?: InventorySaved; onInventoryUnitsChanged?: (units: NonNullable<FinanceSnapshot["units"]>) => void; onInventoryBusyChange?: (busy: boolean) => void; onSubmit: (operation: FinanceFormOperation, payload: Record<string, unknown>) => Promise<boolean> };
+type Props = { directPosRefund?: boolean; form: FinanceForm; snapshot: FinanceSnapshot; pending: boolean; error: string; onCancel: () => void; onInventorySaved?: InventorySaved; onInventoryUnitsChanged?: (units: NonNullable<FinanceSnapshot["units"]>) => void; onInventoryBusyChange?: (busy: boolean) => void; onSubmit: (operation: FinanceFormOperation, payload: Record<string, unknown>) => Promise<boolean> };
 
-export function FinanceOperationForm({ form, snapshot, pending, error, onCancel, onSubmit, onInventorySaved, onInventoryBusyChange, onInventoryUnitsChanged }: Props) {
+export function FinanceOperationForm({ directPosRefund = false, form, snapshot, pending, error, onCancel, onSubmit, onInventorySaved, onInventoryBusyChange, onInventoryUnitsChanged }: Props) {
   const { operation, values = {} } = form;
   const [lines, setLines] = useState([{ key: 1, itemId: "", quantity: 1, unitPrice: 0 }]);
   const [catalog, setCatalog] = useState({ items: snapshot.items, units: snapshot.units ?? [] });
@@ -53,7 +53,7 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
   if (operation === "supplier_payout") return <FinanceSupplierPayoutForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
   if (operation === "shift_open" || operation === "shift_close") return <FinanceCashHandoverForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
   if (operation === "sales_cashier_create") return (snapshot.canAdminister || snapshot.canManageCashiers) ? <SalesCashierForm snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} /> : <p className={styles.notice}>إضافة الكاشيرات متاحة لمالك العلامة</p>;
-  if (operation === "refund") return <FinanceRefundForm document={snapshot.documents.find(document => document.id === values.documentId)} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
+  if (operation === "refund") return <FinanceRefundForm directPosRefund={directPosRefund} document={snapshot.documents.find(document => document.id === values.documentId)} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
   if (operation === "shift_purchase") return <FinancePosPurchaseForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} onBusyChange={onInventoryBusyChange} onInventorySaved={onInventorySaved} onInventoryUnitsChanged={onInventoryUnitsChanged} />;
   if (["shift_open", "shift_close", "shift_accept", "shift_handover", "supplier_payout"].includes(operation)) return <FinanceShiftForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
   if (operation === "opening_balances" || operation === "finance_reset") return <FinanceOpeningBalancesForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
