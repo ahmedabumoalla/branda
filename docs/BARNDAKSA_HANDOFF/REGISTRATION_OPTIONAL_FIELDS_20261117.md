@@ -14,5 +14,12 @@ Checks: node scripts/check-owner-onboarding.mjs
 SQL checks: node scripts/check-owner-onboarding-db.mjs
 Live read-only audit: audit.json
 Input identities: inputs.json
-Publication: pending
+TypeScript: full root/release passed
+Text integrity: original checker on affected files passed
+Application: 256430306eefaded47c35835ebba51956993fbae
+Vercel: dpl_A91enBXpuXnYJJEduxSdun7zihw2 READY
+Verified: 2026-11-17T20:40:16.842Z
+Both domains/register: HTTP200 and exact deployment, optional email, no map
+Evidence: production-http.json
+Follow-up commit: documentation only
 ```
