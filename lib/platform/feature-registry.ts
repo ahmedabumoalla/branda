@@ -290,7 +290,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
   {
     id: "settings",
     brandNavigation: true,
-    sidebarLabel: "إعدادات كوفي",
+    sidebarLabel: "إعدادات البراند",
     titleAr: "الإعدادات",
     titleEn: "Settings",
     descriptionAr: "إعدادات العلامة الأساسية وبيانات التواصل",

@@ -217,7 +217,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
   return (
     <div dir="rtl">
       <DashboardPageShell
-        title={`إعدادات ${copy.casualNoun}`}
+        title="إعدادات البراند"
         subtitle="الشعار، بيانات الحساب والوثائق الحكومية الاختيارية"
         action={
           <div className="flex flex-wrap gap-3">

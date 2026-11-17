@@ -16,4 +16,4 @@ export function mindTopNavigationVisible(slug: string, feature: string) {
   return !isHospitalStore(slug) || !movedOrHiddenTopItems.has(feature);
 }
 
-export const mindCafeSettingsLink = { label: "إعدادات الكوفي", href: "/dashboard/settings", feature: "settings" };
+export const mindCafeSettingsLink = { label: "إعدادات البراند", href: "/dashboard/settings", feature: "settings" };

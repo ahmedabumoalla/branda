@@ -152,7 +152,7 @@ for (const slug of ["rast", "other", "shahi-w-hail"]) for (const collapsed of [f
   assert(!html.includes("ترقية"));
   assert(!html.includes('href="/dashboard/loyalty"'), "disabled service is hidden");
   assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ["/dashboard/menu", "/dashboard/offers", "/dashboard/settings", "/dashboard/branches", "/dashboard/subscription"]);
-  for (const label of ["المنيو والمنتجات", "العروض", "إعدادات كوفي", "تسجيل الخروج"]) assert(html.includes(label));
+  for (const label of ["المنيو والمنتجات", "العروض", "إعدادات البراند", "تسجيل الخروج"]) assert(html.includes(label));
   assert(html.includes('aria-current="page"'));
   assert(!html.includes("غير مفعلة في الباقة"));
 });

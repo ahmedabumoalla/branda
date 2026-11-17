@@ -52,7 +52,7 @@ export default async function SettingsPage() {
 
   const features = await getOwnerFeatureCodes().catch(() => []);
   if (!featureCodesAllow(features, "settings")) {
-    return <DashboardFeatureBlockedState title="إعدادات كوفي" />;
+    return <DashboardFeatureBlockedState title="إعدادات البراند" />;
   }
   const settings = await getOwnerCafeSettings().catch(() => null);
   if (settings) return <SettingsPageClient initialSettings={settings} />;

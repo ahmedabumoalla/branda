@@ -76,7 +76,7 @@ const mindHiddenGroups = new Set([
 ]);
 
 export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] {
-  const groups = integratedSystemGroups.map(group => group.id === "settings" ? { ...group, items: [...group.items, { label: "إعدادات كوفي", href: "/dashboard/settings", feature: "settings" }, { label: "الباقات والاشتراكات", href: "/dashboard/subscription" }] } : group);
+  const groups = integratedSystemGroups.map(group => group.id === "settings" ? { ...group, items: [...group.items, { label: "إعدادات البراند", href: "/dashboard/settings", feature: "settings" }, { label: "الباقات والاشتراكات", href: "/dashboard/subscription" }] } : group);
   if (cafeSlug === NAQWA_SLUG) return [
     { id: "overview", label: "نظرة مالية", icon: WalletCards, items: [{ label: "نظرة مالية", section: "overview" }] },
     ...financeMenuGroups.map(group => ({ id: group.id, label: group.label, icon: group.icon, items: group.entries.map(entry => ({ id: entry.id, section: entry.section, view: entry.view, label: entry.section === "cashiers" ? "إدارة المستخدمين والصلاحيات" : entry.label, href: financeMenuHref(entry) ?? undefined })) })),
