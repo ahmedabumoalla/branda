@@ -1,3 +1,9 @@
+# Loco staff dashboard permissions (Claude) - PUBLISHED - 2026-11-17
+
+- Loco only: new owner section إدارة صلاحيات الموظفين. Non-cashier employees and existing cashiers get dashboard login by phone and owner-set password, plus menu, loyalty messages and rewards permissions. Cashier login and permissions unchanged
+- GitHub main db7394625709a840eb5650f679896b279c077a02, GitHub deployment record Production success. Migration 20261117051000 applied and recorded, do not reapply. TypeScript and text integrity pass. No browser test, real accounts or messages
+- Details: docs/BARNDAKSA_HANDOFF/LOCO_STAFF_PERMISSIONS_20261117.md
+
 # MIND customer navigation and performance - PUBLISHED AND VERIFIED - 2026-11-15T18:40:26.009Z
 
 - PUBLISHED GitHub main f2e15911fa710409225b27cd67974fdea186adbb; Vercel branda-2 dpl_J8yK1dTfG3rGtVf2VxBh7UG7WMk3 success18:48:02Z. Both domains200 with matchingdeployment verified2026-11-15T18:49:11.969Z. Private evidence .codex-tmp/mind-speed-production.json
