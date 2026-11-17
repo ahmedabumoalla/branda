@@ -19,6 +19,8 @@ import { dispatchShiftAlerts } from "./finance-shift-alerts";
 import { prepareFinancePosCustomerPayload } from "@/lib/finance/pos-customer-server";
 import { posPurchaseSchema, posSupplierPayoutSchema } from "@/lib/finance/pos-purchases";
 import { dispatchFinancePosCustomerMessages } from "./finance-pos-customer-messages";
+import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
+import { notifyLocoRewardRedeemed } from "@/lib/loyalty/loco-redemption-alert";
 
 const commandSchema = z.object({
   operation: z.enum(["opening_balances", "supplier_payout", "shift_purchase", "shift_variance_settle", "finance_reset", "sale", "purchase", "refund", "refund_approve", "refund_reject", "party", "account", "item", "warehouse", "stock_adjust", "stock_transfer", "treasury", "settlement", "shift_open", "shift_close", "shift_handover", "shift_accept", "settings", "staff", "journal"]),
@@ -159,6 +161,13 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
   }
   if (command.operation === "sale" && !butcherSale && command.payload.customerPhone) {
     after(async () => { try { await dispatchFinancePosCustomerMessages(cafe.id); } catch { /* Committed customer outbox is retried by the scheduled worker */ } });
+  }
+  const redeemedRewardId = command.operation === "sale" && typeof command.payload.redeemRewardId === "string" ? command.payload.redeemRewardId : null;
+  if (redeemedRewardId && cafe.id === LOCO_CAFE_ID) {
+    // Loco only: the brand number hears about a reward spent at the point of sale
+    const actor = await getActiveUser(client).catch(() => null);
+    const redeemedBy = String(actor?.user_metadata?.full_name ?? "").trim() || "موظف نقطة البيع";
+    try { after(() => notifyLocoRewardRedeemed({ cafeId: cafe.id, rewardInstanceId: redeemedRewardId, redeemedBy })); } catch { /* optional notice */ }
   }
   return data as FinanceCommandResult;
 }

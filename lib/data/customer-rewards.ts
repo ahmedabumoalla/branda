@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { after } from "next/server";
+import { notifyLocoRewardRedeemed } from "@/lib/loyalty/loco-redemption-alert";
 import { randomUUID } from "node:crypto";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -349,6 +351,7 @@ export async function redeemCashierCustomerReward(rawRewardCode: string) {
     });
     if (error || data?.ok !== true) throw new Error("تعذر صرف المكافأة ربما صُرفت أو انتهت صلاحيتها");
     const result = data as Record<string, unknown>;
+    try { after(() => notifyLocoRewardRedeemed({ cafeId, rewardInstanceId: reward.id, redeemedBy: cashierName })); } catch { /* optional notice */ }
     return {
       ok: true, rewardInstanceId: reward.id, customerName: reward.customerName,
       rewardName: reward.rewardTitle, rewardType: "مكافأة ولاء", rewardCode: code,
@@ -440,6 +443,7 @@ export async function redeemCashierCustomerReward(rawRewardCode: string) {
       loyaltyCardId: reward.loyaltyCardId,
     },
   });
+  try { after(() => notifyLocoRewardRedeemed({ cafeId, rewardInstanceId: reward.id, redeemedBy: cashierName })); } catch { /* optional notice */ }
 
   return {
     ok: true,

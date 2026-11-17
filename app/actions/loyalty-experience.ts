@@ -18,6 +18,7 @@ import type { LoyaltyExperienceSettings } from "@/lib/loyalty/experience-types";
 import { GoogleMapsLocationError } from "@/lib/maps/resolve-branch-location";
 import { lookupRastCashierReward } from "@/lib/data/customer-rewards";
 import { localizeCashierCatalog } from "@/lib/cashier/catalog-translation";
+import { notifyLocoRewardRedeemed } from "@/lib/loyalty/loco-redemption-alert";
 
 export async function enrollLoyaltyAction(slug: string, phone: string, name: string, birthDate?: string) {
   try {
@@ -104,6 +105,10 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
         try { await syncWalletCardByCode(cardCode); } catch { console.warn("[loyalty-wallet-sync] deferred"); }
       });
     } catch { console.warn("[loyalty-wallet-sync] deferred"); }
+  }
+  if (parsed.kind === "redeem" && String(result?.status) === "redeemed") {
+    // Loco only: notify the brand number after the committed redemption
+    try { after(() => notifyLocoRewardRedeemed({ cafeId: session.cafeId, rewardCode: value, redeemedBy: session.cashierName })); } catch { /* optional notice */ }
   }
   return result;
 }
