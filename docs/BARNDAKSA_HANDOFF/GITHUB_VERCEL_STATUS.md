@@ -1,3 +1,18 @@
+# Latest verified application release — branches, Aldeem and Wahed
+
+```text
+application commit: a975ec9c03b7ade01b50e80283d4a2a73de99c79
+Vercel: dpl_BtFPj5DSBuzCkcGBNvFoUd51FPZb
+verified UTC: 2026-11-17T11:10:50.998Z
+production domains: barndaksa.com / www.barndaksa.com
+```
+
+[التسليم الكامل](BRANCHES_ALDEEM_RELEASE_20261117.md) · [قيت هوب](https://github.com/ahmedabumoalla/branda/commit/a975ec9c03b7ade01b50e80283d4a2a73de99c79) · [فيرسال](https://vercel.com/ahmedabumoallas-projects/branda-2/BtFPj5DSBuzCkcGBNvFoUd51FPZb)
+
+TypeScript, text integrity, affected mock tests and Vercel build passed. Both domains match the exact application deployment; Wahed menu and logo HTTP200. Subsequent handoff-only commit does not change application source
+
+---
+
 # Latest verified application release - MIND customers and performance
 
 - GitHub main application commit: f2e15911fa710409225b27cd67974fdea186adbb
