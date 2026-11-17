@@ -12,7 +12,12 @@
 Evidence: output/home-polish-20261117
 Existing logo: public/menu-art/tea-bakery/logo-v1.png
 Read-only subscription audit: brand-audit.json
-Release verification: pending publication
+Application: 01c46821ca59dc96483e7bf2cb4ea2a95ed0632f
+Vercel: dpl_wuzXqLhki6RWhfaZGYFw26GWEhJV READY
+Production verification: 2026-11-17T20:07:01.849Z
+Both domains: HTTP200, exact deployment, new hero and6logo assets
+Local HTTP: initial60s timeout, retry passed20:05:54Z
+Follow-up commit: documentation only
 ```
 
 
