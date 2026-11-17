@@ -18,4 +18,13 @@ output/erp-database/aldeem-mind-menu-price-audit.sql.result.json
 output/mind-menu-price-fix-20261117/
 ```
 
-حالة النشر ستوثق بعد تأكيد إصدار الإنتاج
+تم نشر الإصلاح على جيت هوب وفيرسال، والتحقق من ربط الدومينين ومنيو مايند بالإصدار نفسه واستجابتها بنجاح عند الساعة ١٦:٠٣:٤٩ بالتوقيت العالمي
+
+```text
+GitHub application: 9e8232abd57c87db1969e97224c2dcab84e6861c
+Vercel production: dpl_39R1TYQPiCZbkyRiYYTUpv22bsqv
+Status: READY
+Evidence: output/mind-menu-price-fix-20261117/production.json
+```
+
+تم اختبار الحفظ باستخدام مسار البيانات الفعلي مع قاعدة بيانات محاكاة، ولم تُعدّل أسعار عميل حقيقي بغرض الاختبار
