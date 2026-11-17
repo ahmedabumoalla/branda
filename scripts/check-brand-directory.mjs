@@ -46,10 +46,13 @@ const byLabel = (h, label) => nodes(h.render()).find(node => node.props?.["aria-
 const withClass = (h, name) => nodes(h.render()).filter(node => node.props?.className === name);
 const html = h => renderToStaticMarkup(h.render());
 const cafes = Array.from({ length: 25 }, (_, index) => ({ id: `brand-${index}`, name: `علامة ${index}`, slug: `brand-${index}`, maintenanceAccountNumber: `BR-TEST-${index}`, ownerName: "مالك العلامة", ownerEmail: `owner${index}@example.invalid`, ownerPhone: `05000000${index}`, status: index % 2 ? "موقوف" : "نشط", planId: "menu", planName: "باقة المنيو", hasActivePlan: index % 3 === 0, totalRevenue: index * 10, productsCount: index, offersCount: 2, experienceSubmissionsCount: 3, experienceRewardsCount: 4, supportTicketsCount: 5, planExpiresAt: "2026-11-01T00:00:00Z" }));
+cafes[0].loyaltyCardsCount=123; cafes[0].loyaltyStampsCount=4567;
 const props = { cafes, plans: [], onManage() {} };
 const rows = h => nodes(withClass(h, "desktopTable")[0]).filter(node => node.type === "tbody")[0]?.props.children ?? [];
 let checks = 1;
 async function test(run) { await run(); checks++; }
+
+await test(() => {const output=html(harness('BrandDirectory',props));assert(output.includes('بطاقات الولاء'));assert(output.includes('الأختام المسجلة'));assert(output.includes('4,567'));assert(output.includes('123'));});
 
 await test(() => {
   const h = harness("BrandDirectory", props);

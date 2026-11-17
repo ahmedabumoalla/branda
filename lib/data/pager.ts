@@ -33,7 +33,7 @@ function mapOrder(row: Record<string, unknown>): PagerOrder {
 }
 async function assertPager(cafeId: string) {
   const [features, live] = await Promise.all([getCafeFeatureCodes(cafeId), createAdminClient().from("cafes").select("status,deleted_at").eq("id",cafeId).maybeSingle()]);
-  if (live.error || !live.data || live.data.status !== "active" || live.data.deleted_at || !features.includes("pager")) {
+    if (live.error || !live.data || live.data.status !== "active" || live.data.deleted_at || !features.includes("pager") || !features.includes("finance")) {
     throw new Error("نظام البيجر غير متاح في الاشتراك الحالي");
   }
 }

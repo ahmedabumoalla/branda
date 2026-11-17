@@ -14,6 +14,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 export default function RegisterPage() {
   const [step, setStep] = useState(0);
+  const [planChoice, setPlanChoice] = useState<"loyalty" | "menu_loyalty">("menu_loyalty");
   const [draft, setDraft] = useState({ brandNameAr: "", brandNameEn: "", ownerName: "", email: "", phone: "", couponCode: "" });
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +26,7 @@ export default function RegisterPage() {
   const [resendAt, setResendAt] = useState(0);
   const update = (field: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [field]: value }));
   async function sendCode() {
-    const result = await requestOwnerRegistrationOtpAction(draft);
+    const result = await requestOwnerRegistrationOtpAction({ ...draft, planChoice });
     setMessage(result.message);
     if (result.retryAfterSeconds) setResendAt(Date.now() + result.retryAfterSeconds * 1000);
     if (result.ok) { setCode(""); setStep(1); }
@@ -61,8 +62,8 @@ export default function RegisterPage() {
         <BarndaksaLogo variant="dark" width={168} height={72} />
         <div className={styles.storyBody}>
           <span className={styles.kicker}>لأن التفاصيل تصنع علامتك</span>
-          <h1>منيو يحمل اسمك<br /><em>وتجربة تشبهك</em></h1>
-          <p>اجمع منتجاتك وصورها وأسعارها في منيو مستقل وشارك رابطًا واحدًا مع كل عملائك</p>
+          <h1>ولاء يحمل اسمك<br /><em>وتجربة تشبهك</em></h1>
+          <p>قرّب عملاءك من علامتك ببطاقات الولاء واختر إضافة المنيو لعرض منتجاتك وأسعارها</p>
           <div className={styles.menuPreview} aria-label="معاينة توضيحية لمنيو علامتك">
             <div className={styles.previewTop}><Store size={22} aria-hidden="true" /><span>مساحة علامتك</span><span className={styles.previewTag}>منيو مستقل</span></div>
             <div className={styles.previewTitle}>كل التفاصيل بطابعك</div>
@@ -77,11 +78,15 @@ export default function RegisterPage() {
         <div className={styles.topline}><Link href="/" aria-label="برندة الرئيسية"><BarndaksaLogo variant="brown" width={100} height={42} /></Link><span>لديك حساب؟ <Link href="/login">تسجيل الدخول <ArrowLeft size={15} aria-hidden="true" /></Link></span></div>
         <div className={styles.formCard}>
         <ol className={styles.steps} aria-label="خطوات التسجيل">{steps.map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={step >= index ? styles.current : ""}><span>{step > index ? <Check size={16} aria-hidden="true" /> : index + 1}</span><b>{label}</b></li>)}</ol>
-        <header className={styles.heading}><span className={styles.kicker}>خطوتك الأولى مع برندة</span><h2>{step === 0 ? "أهلًا بعلامتك" : step === 1 ? "رسالة واحدة ونكمل" : "باقي خطوة وتبدأ"}</h2><p>{step === 0 ? "عرّفنا بعلامتك وجهّز أول منيو لك من مكان واحد" : step === 1 ? `أرسلنا رمز التحقق إلى واتساب ${draft.phone} أدخله لإكمال التسجيل` : "احمِ حسابك بكلمة مرور ثم انتقل إلى لوحة تحكم علامتك"}</p></header>
-        <div className={styles.trial}><span className={styles.trialIcon}><Sparkles size={21} aria-hidden="true" /></span><div><b>جرّب الباقة الأساسية لعلامتك</b><span>تبدأ بعد إنشاء الحساب بدون بطاقة دفع</span></div><span className={styles.free}>مجانية</span></div>
+        <header className={styles.heading}><span className={styles.kicker}>خطوتك الأولى مع برندة</span><h2>{step === 0 ? "أهلًا بعلامتك" : step === 1 ? "رسالة واحدة ونكمل" : "باقي خطوة وتبدأ"}</h2><p>{step === 0 ? "اختر خدماتك وعرّفنا بعلامتك لتبدأ تجربتك" : step === 1 ? `أرسلنا رمز التحقق إلى واتساب ${draft.phone} أدخله لإكمال التسجيل` : "احمِ حسابك بكلمة مرور ثم انتقل إلى لوحة تحكم علامتك"}</p></header>
+        <div className={styles.trial}><span className={styles.trialIcon}><Sparkles size={21} aria-hidden="true" /></span><div><b>{planChoice === "loyalty" ? "باقة الولاء" : "باقة الولاء والمنيو التجريبية"}</b><span>شهر مجاني يبدأ بعد إنشاء الحساب بدون بطاقة دفع</span></div><span className={styles.free}>٣٠ يومًا</span></div>
         {message ? <p className={styles.message} role="status" aria-live="polite">{message}</p> : null}
         <form onSubmit={submit} aria-busy={pending}><fieldset disabled={pending} className={styles.fields}>
           {step === 0 ? <>
+            <fieldset className={styles.planChoices}><legend>اختر خدمات علامتك</legend><div className={styles.planOptions}>
+              <label className={styles.planOption}><input type="radio" name="planChoice" value="loyalty" checked={planChoice === "loyalty"} onChange={() => setPlanChoice("loyalty")} /><span><b>الولاء</b><small>بطاقات الولاء والأختام والمكافآت</small></span></label>
+              <label className={styles.planOption}><input type="radio" name="planChoice" value="menu_loyalty" checked={planChoice === "menu_loyalty"} onChange={() => setPlanChoice("menu_loyalty")} /><span><b>الولاء والمنيو</b><small>الباقة التجريبية الحالية بخدماتها</small></span></label>
+            </div></fieldset>
             <div className={styles.fieldGroup}><h3><Store size={18} aria-hidden="true" /> هوية العلامة</h3>
             <div className={styles.columns}>
               <Field label="اسم العلامة بالعربية"><input placeholder="كما سيظهر لعملائك" value={draft.brandNameAr} onChange={event => update("brandNameAr", event.target.value)} required minLength={2} maxLength={120} autoComplete="organization" /></Field>

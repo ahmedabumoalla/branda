@@ -20,6 +20,7 @@ const mapsUrl = z.string().trim().max(1000).url().refine((value) => {
   );
 }, "أدخل رابطًا صحيحًا من خرائط Google");
 export const ownerOnboardingSchema = z.object({
+  planChoice: z.enum(["loyalty", "menu_loyalty"]).default("menu_loyalty"),
   brandNameAr: z.string().trim().min(2).max(120).regex(/[\u0600-\u06ff]/),
   brandNameEn: z.string().trim().min(2).max(120).regex(/^[A-Za-z0-9 &'().-]+$/).regex(/[A-Za-z]/),
   ownerName: z.string().trim().min(2).max(120),
@@ -123,7 +124,7 @@ export async function completeOwnerOnboarding(input: { password: string; confirm
     if (created.error || !created.data.user) return { ok: false, message: "تعذر إنشاء الحساب قد يكون البريد أو الجوال مسجلًا مسبقًا؛ جرّب تسجيل الدخول" };
     (await cookies()).delete(COOKIE);
     const signedIn = await (await createClient()).auth.signInWithPassword({ phone: `+${phone}`, password: password.data });
-    if (signedIn.error || !signedIn.data.session) return { ok: true, message: "تم إنشاء حسابك وتفعيل تجربة الباقة الأساسية سجّل الدخول للمتابعة", redirectTo: "/login" };
-    return { ok: true, message: "حسابك جاهز بدأت تجربة الباقة الأساسية المجانية", redirectTo: "/dashboard" };
+    if (signedIn.error || !signedIn.data.session) return { ok: true, message: "تم إنشاء حسابك وتفعيل تجربتك المجانية سجّل الدخول للمتابعة", redirectTo: "/login" };
+    return { ok: true, message: "حسابك جاهز وبدأت تجربتك المجانية", redirectTo: "/dashboard" };
   } catch { return unavailable(); }
 }

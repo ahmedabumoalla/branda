@@ -38,14 +38,14 @@ function categoryLabel(category: unknown) {
 type BrandDirectoryMetrics = {
   cafe_id: string; products_count: number; offers_count: number; branches_count: number;
   customers_count: number; orders_count: number; experience_submissions_count: number;
-  experience_rewards_count: number; loyalty_cards_count: number; support_tickets_count: number; total_revenue: number;
+  experience_rewards_count: number; loyalty_cards_count: number; loyalty_stamps_count: number; support_tickets_count: number; total_revenue: number;
 };
 
 async function getBrandDirectoryMetrics(supabase: Awaited<ReturnType<typeof createClient>>, cafeIds: string[]) {
   const metrics = new Map<string, BrandDirectoryMetrics>();
   // Bounded batches avoid a request storm as the directory grows.
   for (let offset = 0; offset < cafeIds.length; offset += 100) {
-    const { data, error } = await supabase.rpc("admin_brand_directory_metrics", { p_cafe_ids: cafeIds.slice(offset, offset + 100) });
+    const { data, error } = await supabase.rpc("admin_brand_directory_metrics_v2", { p_cafe_ids: cafeIds.slice(offset, offset + 100) });
     if (error) throw error;
     for (const row of (data ?? []) as BrandDirectoryMetrics[]) metrics.set(String(row.cafe_id), row);
   }
@@ -646,6 +646,7 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
         experienceSubmissionsCount,
         experienceRewardsCount,
         loyaltyCardsCount,
+        loyaltyStampsCount: Number(metrics.loyalty_stamps_count),
         supportTicketsCount,
         createdAt: String(row.created_at).slice(0, 10),
         publicUrl: `/c/${slug}`,

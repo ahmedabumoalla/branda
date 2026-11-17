@@ -103,6 +103,7 @@ export function getEffectiveBrandFeatureAccess(
   const normalizedPlanFeatures = normalizeFeatureCodes(planFeatures);
   const planHasAll = normalizedPlanFeatures.includes("all");
   const overrideMap = new Map(brandOverrides.map((override) => [override.featureId, override.enabled]));
+  const financeEnabled = normalizedPlanFeatures.includes("finance") && overrideMap.get("finance") !== false;
 
   return getPackageAssignableFeatures().map((feature) => {
     const planIncluded =
@@ -115,7 +116,7 @@ export function getEffectiveBrandFeatureAccess(
     const comingSoon = feature.status === "coming_soon";
     const effectiveEnabled =
       !hidden &&
-      planIncluded && overrideValue !== false && !comingSoon;
+      planIncluded && overrideValue !== false && !comingSoon && (feature.id !== "pager" || financeEnabled);
     const result = hidden
       ? "coming_soon"
       : overrideValue === false
@@ -155,5 +156,5 @@ export function getSidebarFeaturesForBrand(context: {
     .map((feature) => ({
       feature,
       access: accessMap.get(feature.id),
-    })).filter(row => row.access?.effectiveEnabled);
+    })).filter(row => row.access?.effectiveEnabled && (row.feature.id !== "pager" || accessMap.get("finance")?.effectiveEnabled));
 }

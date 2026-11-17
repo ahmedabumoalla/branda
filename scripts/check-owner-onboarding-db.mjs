@@ -153,5 +153,19 @@ try {
   check(await v('SELECT NOT EXISTS(SELECT 1 FROM auth.users WHERE id=$1)',[id(171)]),'unverified deferred owner fully rolled back');
   await q("INSERT INTO auth.users(id,phone,raw_user_meta_data,raw_app_meta_data) VALUES($1,'966599888775','{}','{}')",[id(172)]);
   check(await v("SELECT role='customer' FROM profiles WHERE id=$1",[id(172)]),'ordinary customer path preserved');
+  await db.exec(await readFile('supabase/migrations/20261118000500_owner_signup_plan_choice.sql','utf8'));
+  for (const [i,choice,expected] of [[0,'loyalty','pro'],[1,'menu_loyalty','-']]) {
+    const challenge=80+i, phone='96659988777'+i;
+    check((await begin(challenge,phone,{...draft,email:null,slug:'chosen-'+i,planChoice:choice},String(i+3).repeat(64))).ok,'plan choice accepted');
+    await q('SELECT public.mark_owner_onboarding_sent($1,$2,true)',[id(challenge),proof]);await verify(challenge);
+    await db.exec('BEGIN');
+    await q("INSERT INTO auth.users(id,phone,raw_user_meta_data,raw_app_meta_data) VALUES($1,$2,'{\"account_type\":\"cafe_owner\"}','{}')",[id(challenge+100),phone]);
+    await q('UPDATE auth.users SET raw_app_meta_data=$2::jsonb WHERE id=$1',[id(challenge+100),JSON.stringify({owner_onboarding_id:id(challenge),owner_onboarding_proof:proof})]);
+    await db.exec('COMMIT');
+    check(await v("SELECT s.plan_id=$2 AND s.expires_at-s.started_at=interval '30 days' FROM subscriptions s JOIN cafes c ON c.id=s.cafe_id WHERE c.owner_user_id=$1",[id(challenge+100),expected]),'chosen plan and real thirty-day trial');
+  }
+  check((await begin(83,'966599887773',{...draft,email:null,slug:'invalid-choice',planChoice:'finance'},'6'.repeat(64))).ok,'service fixture staged');
+  await q('SELECT public.mark_owner_onboarding_sent($1,$2,true)',[id(83),proof]);await verify(83);
+  await assert.rejects(()=>create(183,83,null,'966599887773'),/Invalid signup plan choice/);checks++;
   console.log(`PASS owner onboarding SQL: ${checks} real PostgreSQL checks; no provider or production mutation.`);
 } finally { await db.close(); }

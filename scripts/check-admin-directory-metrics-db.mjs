@@ -20,7 +20,7 @@ try {
     CREATE TABLE customer_profiles(cafe_id uuid);
     CREATE TABLE orders(cafe_id uuid,total numeric);
     CREATE TABLE experience_reward_submissions(cafe_id uuid,status text);
-    CREATE TABLE loyalty_cards(cafe_id uuid);
+    CREATE TABLE loyalty_cards(cafe_id uuid,total_purchases integer DEFAULT 7);
     CREATE TABLE brand_support_tickets(cafe_id uuid);
     GRANT USAGE ON SCHEMA public,auth TO authenticated;
     GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated;
@@ -35,9 +35,10 @@ try {
     INSERT INTO experience_reward_submissions VALUES('${id(11)}','pending'),('${id(11)}','approved'),('${id(11)}','redeemed'),('${id(11)}','rejected');
     INSERT INTO loyalty_cards VALUES('${id(11)}'); INSERT INTO brand_support_tickets VALUES('${id(11)}');`);
   await db.exec(await fs.readFile('supabase/migrations/20261111162104_admin_brand_directory_metrics.sql', 'utf8'));
-  const call = ids => db.query('SELECT * FROM public.admin_brand_directory_metrics($1)', [ids]);
+  await db.exec(await fs.readFile('supabase/migrations/20261118000501_admin_brand_loyalty_metrics.sql', 'utf8'));
+  const call = ids => db.query('SELECT * FROM public.admin_brand_directory_metrics_v2($1)', [ids]);
   for (const role of ['anon', 'service_role']) {
-    check(!(await db.query("SELECT has_function_privilege($1,'public.admin_brand_directory_metrics(uuid[])','EXECUTE') AS allowed", [role])).rows[0].allowed, `${role} denied`);
+    check(!(await db.query("SELECT has_function_privilege($1,'public.admin_brand_directory_metrics_v2(uuid[])','EXECUTE') AS allowed", [role])).rows[0].allowed, `${role} denied`);
   }
   check((await db.query("SELECT NOT prosecdef AS invoker FROM pg_proc WHERE oid='public.admin_brand_directory_metrics(uuid[])'::regprocedure")).rows[0].invoker, 'retains RLS invoker');
   await assert.rejects(() => call([id(11)]), /brand_directory_forbidden/); checks++;
@@ -50,9 +51,11 @@ try {
   const rows = (await call([id(11),id(11),id(13),id(99)])).rows;
   check(rows.length === 1 && rows[0].cafe_id === id(11), 'only requested nondeleted brand, deduplicated');
   const row=rows[0];
+  check(Number(row.loyalty_stamps_count)===7,'lifetime stamps from authoritative card ledger');
   for (const [key, value] of Object.entries({products_count:1,offers_count:1,branches_count:1,customers_count:2,orders_count:1500,experience_submissions_count:4,experience_rewards_count:2,loyalty_cards_count:1,support_tickets_count:1,total_revenue:3750})) check(Number(row[key])===value,key);
   check((await call([])).rows.length===0,'empty batch');
   check(Number((await call([id(12)])).rows[0].total_revenue)===900,'second tenant isolated');
+  check(Number((await call([id(12)])).rows[0].loyalty_stamps_count)===0,'empty brand has actual zero stamps');
   for(const ids of [null,[null],Array(101).fill(id(11))]) { await assert.rejects(()=>call(ids),/brand_directory_invalid_batch/); checks++; }
   await db.exec('RESET ROLE; ALTER TABLE orders ENABLE ROW LEVEL SECURITY');
   await db.exec(`CREATE POLICY restricted_test ON orders TO authenticated USING(cafe_id='${id(12)}')`);

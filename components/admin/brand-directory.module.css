@@ -1,3 +1,7 @@
+.brandCounts { display:grid;grid-template-columns:repeat(3,minmax(62px,1fr));gap:12px;margin:12px 0;min-width:210px; }
+.brandCounts > div { display:flex;flex-direction:column-reverse;gap:6px;text-align:center; }
+.brandCounts dt { font-size:11px;line-height:1.6;color:var(--muted); }
+.brandCounts dd { margin:0;font-size:23px;font-weight:600;line-height:1.3;font-variant-numeric:tabular-nums; }
 @font-face { font-family: "Branda Directory"; src: url('/fonts/bistro-sans-regular-ar.woff2') format('woff2'); font-weight: 400; font-display: swap; unicode-range: U+0600-06FF,U+0750-077F,U+08A0-08FF,U+200C-200F,U+FB50-FDFF,U+FE70-FEFF; }
 @font-face { font-family: "Branda Directory"; src: url('/fonts/bistro-sans-semibold-ar.woff2') format('woff2'); font-weight: 600 800; font-display: swap; unicode-range: U+0600-06FF,U+0750-077F,U+08A0-08FF,U+200C-200F,U+FB50-FDFF,U+FE70-FEFF; }
 @font-face { font-family: "Branda Directory"; src: url('/fonts/bistro-sans-regular-latin.woff2') format('woff2'); font-weight: 400; font-display: swap; unicode-range: U+0000-00FF,U+2000-206F; }

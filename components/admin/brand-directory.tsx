@@ -38,6 +38,12 @@ function BrandWhatsAppStatus({ cafe }: { cafe: PlatformCafe }) {
   </div>;
 }
 
+function BrandCounts({ cafe }: { cafe: PlatformCafe }) {
+  return <dl className={s.brandCounts}>{[
+    ["بطاقات الولاء", cafe.loyaltyCardsCount], ["الأختام المسجلة", cafe.loyaltyStampsCount], ["المنتجات", cafe.productsCount],
+  ].map(([label, value]) => <div key={String(label)}><dt>{label}</dt><dd>{typeof value === "number" && Number.isFinite(value) ? number.format(value) : "—"}</dd></div>)}</dl>;
+}
+
 function exportFilename(disposition: string | null) {
   const fallback = "branda-brands.xlsx";
   const extended = disposition?.match(/(?:^|;)\s*filename\*\s*=\s*UTF-8'[^']*'([^;]+)/i)?.[1];
@@ -172,10 +178,10 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
         </div>
         <div className={s.filterRow}><div className={s.statusFilters} role="group" aria-label="حالة العلامة">{[["all", "كل العلامات", cafes.length], ["نشط", "النشطة", active], ["موقوف", "الموقوفة", cafes.length - active - cancelled], ["ملغى بطلب المستخدم", "الملغاة والمؤرشفة", cancelled]].map(([value, label, count]) => <button key={value} type="button" aria-pressed={status === value} onClick={() => { setStatus(String(value)); setPage(1); }}>{label}<span>{number.format(Number(count))}</span></button>)}</div>{hasFilters && <button type="button" className={s.reset} onClick={reset}>مسح التصفية</button>}</div>
         {visible.length > 0 ? <>
-          <div className={s.desktopTable} role="region" aria-label="جدول العلامات التجارية" tabIndex={0}><table><caption className={s.srOnly}>العلامات التجارية وباقاتها ومؤشرات نشاطها</caption><thead><tr>{["العلامة ورقم الصيانة", "الباقة والاشتراك", "المنتجات", "النشاط والخدمات", "حالة العلامة", "الإدارة"].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visible.map(cafe => <tr key={cafe.id}>
-            <td><BrandIdentity cafe={cafe} onManage={onManage} /></td><td><BrandPlanSummary cafe={cafe} plans={plans} /></td><td><span className={s.productCount}>{number.format(cafe.productsCount ?? 0)}</span><span className={s.productLabel}>منتج</span></td><td><BrandActivity cafe={cafe} /></td><td><BrandStatus cafe={cafe} /></td><td><ManageButton cafe={cafe} onManage={onManage} /></td>
+          <div className={s.desktopTable} role="region" aria-label="جدول العلامات التجارية" tabIndex={0}><table><caption className={s.srOnly}>العلامات التجارية وباقاتها ومؤشرات نشاطها</caption><thead><tr>{["العلامة ورقم الصيانة", "الباقة والاشتراك", "البطاقات والأختام والمنتجات", "النشاط والخدمات", "حالة العلامة", "الإدارة"].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visible.map(cafe => <tr key={cafe.id}>
+            <td><BrandIdentity cafe={cafe} onManage={onManage} /></td><td><BrandPlanSummary cafe={cafe} plans={plans} /></td><td><BrandCounts cafe={cafe} /></td><td><BrandActivity cafe={cafe} /></td><td><BrandStatus cafe={cafe} /></td><td><ManageButton cafe={cafe} onManage={onManage} /></td>
           </tr>)}</tbody></table></div>
-          <div className={s.mobileCards}>{visible.map(cafe => <article key={cafe.id} className={s.mobileCard}><BrandIdentity cafe={cafe} onManage={onManage} /><div className={s.mobilePlan}><BrandPlanSummary cafe={cafe} plans={plans} /><div className={s.mobileProducts}><strong>{number.format(cafe.productsCount ?? 0)}</strong><span>منتج</span></div></div><BrandActivity cafe={cafe} /><footer><span>حالة العلامة <BrandStatus cafe={cafe} /></span><ManageButton cafe={cafe} onManage={onManage} /></footer></article>)}</div>
+          <div className={s.mobileCards}>{visible.map(cafe => <article key={cafe.id} className={s.mobileCard}><BrandIdentity cafe={cafe} onManage={onManage} /><div className={s.mobilePlan}><BrandPlanSummary cafe={cafe} plans={plans} /></div><BrandCounts cafe={cafe} /><BrandActivity cafe={cafe} /><footer><span>حالة العلامة <BrandStatus cafe={cafe} /></span><ManageButton cafe={cafe} onManage={onManage} /></footer></article>)}</div>
         </> : <div className={s.empty}><Search aria-hidden="true" /><h3>{cafes.length ? "لا توجد علامات مطابقة" : "لم تُضف علامات تجارية بعد"}</h3><p>{cafes.length ? "جرّب اسمًا آخر أو غيّر خيارات التصفية" : "ستظهر العلامات هنا عند تسجيلها على المنصة"}</p>{hasFilters && <button type="button" className={s.manage} onClick={reset}>عرض كل العلامات<ArrowLeft aria-hidden="true" /></button>}</div>}
         <footer className={s.pagination}><p role="status">{filtered.length ? `عرض ${number.format((currentPage - 1) * pageSize + 1)} إلى ${number.format(Math.min(currentPage * pageSize, filtered.length))} من ${number.format(filtered.length)} علامة` : "لا توجد نتائج"}</p><nav aria-label="صفحات العلامات"><button type="button" aria-label="الصفحة السابقة" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronRight aria-hidden="true" /></button><span>صفحة <bdi>{currentPage}</bdi> من <bdi>{pages}</bdi></span><button type="button" aria-label="الصفحة التالية" disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}><ChevronLeft aria-hidden="true" /></button></nav></footer>
       </section>

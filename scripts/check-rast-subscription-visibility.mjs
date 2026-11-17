@@ -49,7 +49,7 @@ for (const planId of planCases) await test(`Navigation fails closed for missing 
 });
 for (const features of [[], ["menu"], ["menu", "offers"], ["loyalty"], ["settings"], ["all"], ["finance"], ["all", "finance"]]) await test(`Only actual enabled package services are visible: ${features.join(",") || "empty"}`, () => {
   const rows = access.getSidebarFeaturesForBrand({ planId: "starter", plans: [{ id: "starter", features }] });
-  const expected = access.getBrandNavigationFeatures().filter(f => (features.includes("all") && !f.explicitPackageOnly) || features.includes(f.id)).map(f => f.id);
+  const expected = access.getBrandNavigationFeatures().filter(f => ((features.includes("all") && !f.explicitPackageOnly) || features.includes(f.id)) && (f.id !== "pager" || features.includes("finance"))).map(f => f.id);
   assert.deepEqual(rows.map(row => row.feature.id), expected);
   assert(rows.every(row => row.access.effectiveEnabled));
 });
@@ -70,6 +70,14 @@ await test("Trial navigation respects explicit administrator disables", () => {
 });
 
 if (process.argv.includes('--features-only')) {
+  const gates = load('lib/platform/feature-gates.ts');
+  for (const features of [[], ['pager'], ['pager','loyalty'], ['finance'], ['pager','finance']]) {
+    const expected=features.includes('pager')&&features.includes('finance');
+    assert.equal(gates.featureCodesAllow(features,'pager'),expected);
+    const rows=access.getSidebarFeaturesForBrand({planId:'test',plans:[{id:'test',features}]});
+    assert.equal(rows.some(row=>row.feature.id==='pager'),expected);checks++;
+  }
+  assert(!access.getSidebarFeaturesForBrand({planId:'test',plans:[{id:'test',features:['finance','pager']}],overrides:[{featureId:'finance',enabled:false}]}).some(row=>row.feature.id==='pager'));checks++;
   console.log(`PASS sidebar feature visibility: ${checks} checks`);
   process.exit(0);
 }

@@ -87,6 +87,7 @@ export type PlatformCafe = {
   experienceSubmissionsCount?: number;
   experienceRewardsCount?: number;
   loyaltyCardsCount?: number;
+  loyaltyStampsCount?: number;
   supportTicketsCount?: number;
   subscriptionsCount?: number;
   renewalsCount?: number;
