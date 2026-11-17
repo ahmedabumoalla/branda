@@ -101,13 +101,13 @@ export async function sendBrandOwnerWelcome(cafeId: string, retryUncertain = fal
   if (!isGreenApiConfigured()) throw new Error("خدمة الواتساب غير مهيأة لم تُرسل بيانات الدخول");
   const admin = createAdminClient();
   const attemptId = randomUUID();
-  const claim = await admin.rpc("admin_claim_brand_welcome", { p_actor: actor.id, p_cafe: cafeId, p_attempt: attemptId, p_retry_uncertain: retryUncertain === true });
+  const claim = await admin.rpc("admin_claim_brand_welcome_v2", { p_actor: actor.id, p_cafe: cafeId, p_attempt: attemptId, p_retry_uncertain: retryUncertain === true });
   if (claim.error) accountError(claim.error.message);
   if (claim.data?.sent) return;
   let messageId: string;
   try {
     const password = openWelcomePassword(String(claim.data.ciphertext), String(claim.data.requestId));
-    const sent = await sendGreenApiOwnerWelcome({ phone: String(claim.data.phone), brandName: String(claim.data.brandName), password, startsTrial: claim.data.startsTrial === true });
+    const sent = await sendGreenApiOwnerWelcome({ phone: String(claim.data.phone), brandName: String(claim.data.brandName), password, startsTrial: claim.data.startsTrial === true, trialTerms: claim.data.trialTerms });
     messageId = sent.providerMessageId;
   } catch (error) {
     const rejected = error instanceof Error && error.message === "OWNER_WELCOME_REJECTED";

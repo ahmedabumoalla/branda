@@ -7,8 +7,20 @@ type GreenApiSendResponse = {
 };
 
 /** Provider acknowledgement does not claim delivery/read receipt; billing mode comes from the locked handoff claim. */
-export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName: string; password: string; startsTrial: boolean }) {
+export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName: string; password: string; startsTrial: boolean; trialTerms?: unknown }) {
   if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_OWNER_RECIPIENT");
+  let trialMessage = "بيانات الدخول تخص باقتك الحالية دون تغيير مدة الاشتراك";
+  if (input.startsTrial) {
+    const terms = input.trialTerms;
+    if (!Array.isArray(terms) || !terms.length || terms.some(term => !term || typeof term.planId !== "string" || typeof term.planName !== "string" || !term.planName.trim() || term.days !== (["-", "starter", "pro", "plan-b523d348"].includes(term.planId) ? 30 : 7))) {
+      throw new Error("OWNER_WELCOME_REJECTED");
+    }
+    const month = terms.filter(term => term.days === 30);
+    const week = terms.filter(term => term.days === 7);
+    trialMessage = month.length && week.length
+      ? `تجربة مجانية لمدة شهر (٣٠ يومًا) من اليوم لباقات: ${month.map(term => term.planName).join("، ")}\nتجربة مجانية لمدة ٧ أيام من اليوم لباقات: ${week.map(term => term.planName).join("، ")}`
+      : month.length ? "تجربتك المجانية شهر كامل (٣٠ يومًا) من اليوم" : "تجربتك المجانية ٧ أيام من اليوم";
+  }
   const primary = await requireDeliveryConfig("owner");
   const backup = backupOtpSender(primary);
   let sender = primary;
@@ -27,7 +39,7 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
       "الدخول: https://barndaksa.com/login",
       `الجوال: ${input.phone}`,
       `كلمة المرور: ${input.password}`,
-      input.startsTrial ? "تجربتك المجانية ٧ أيام من اليوم" : "بيانات الدخول تخص باقتك الحالية دون تغيير مدة الاشتراك",
+      trialMessage,
     ].join("\n") }),
   });
   let response: Response;

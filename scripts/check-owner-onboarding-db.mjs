@@ -13,7 +13,7 @@ const check = (value,message) => { assert.ok(value,message); checks++; };
 const denied = async (sql,args=[]) => { await assert.rejects(()=>q(sql,args)); checks++; };
 const proof="a".repeat(64), code="b".repeat(64), ip="c".repeat(64);
 const draft = {brandNameAr:"علامة الاختبار",brandNameEn:"Test Brand",ownerName:"Test Owner",email:"owner@example.invalid",slug:"test-brand",mapsUrl:"https://google.com/maps?q=24,46",couponCode:""};
-const begin = (n,phone="966511111111",data=draft) => v("SELECT public.begin_owner_onboarding($1,$2,$3,$4,$5,$6::jsonb)",[id(n),phone,ip,proof,code,JSON.stringify(data)]);
+const begin = (n,phone="966511111111",data=draft,ipHash=ip) => v("SELECT public.begin_owner_onboarding($1,$2,$3,$4,$5,$6::jsonb)",[id(n),phone,ipHash,proof,code,JSON.stringify(data)]);
 const verify = (n,hash=code) => v("SELECT public.verify_owner_onboarding($1,$2,$3)",[id(n),proof,hash]);
 const create = (n, challenge=1, email=null, phone="966511111111", appProof=proof) => q("INSERT INTO auth.users(id,email,phone,raw_user_meta_data,raw_app_meta_data) VALUES($1,$2,$3,$4::jsonb,$5::jsonb)",[id(n),email,phone,JSON.stringify({account_type:"cafe_owner"}),JSON.stringify({owner_onboarding_id:id(challenge),owner_onboarding_proof:appProof})]);
 try {
@@ -121,6 +121,21 @@ try {
     await create(challenge+20,challenge,null,phone);
     check(await v('SELECT email IS NULL FROM profiles WHERE id=$1',[id(challenge+20)]),'missing email stored as NULL, not a shared empty alias');
     check(await v('SELECT owner_email IS NULL AND google_maps_url IS NULL AND google_maps_latitude IS NULL AND google_maps_longitude IS NULL FROM cafe_settings WHERE cafe_id=(SELECT id FROM cafes WHERE owner_user_id=$1)',[id(challenge+20)]),'settings accept absent email and location');
+  }
+  // Apply the catalog-only migration, prove historical subscriptions unchanged,
+  // then exercise the real verified Auth trigger for every eligible default
+  await db.exec("INSERT INTO platform_plans(id,name,price_sar,active,duration_unit,duration_count,trial_days,features) VALUES('-','Trial',0,true,'day',7,7,'[]'),('starter','Menu',92,true,'month',1,0,'[]'),('pro','Loyalty',92,true,'month',1,0,'[]'),('plan-b523d348','Combined',184,true,'month',1,0,'[]')");
+  const beforeMonth=(await q('SELECT * FROM subscriptions ORDER BY cafe_id NULLS FIRST')).rows;
+  await db.exec(await readFile('supabase/migrations/20261118000101_selected_plan_month_trials.sql','utf8'));
+  assert.deepEqual((await q('SELECT * FROM subscriptions ORDER BY cafe_id NULLS FIRST')).rows,beforeMonth);checks++;
+  check(await v("SELECT count(*)=4 FROM platform_plans WHERE id IN('-','starter','pro','plan-b523d348') AND trial_days=30"),'only requested plans configured for thirty days');
+  check(await v("SELECT price_sar=99 AND trial_days=0 FROM platform_plans WHERE id='paid'"),'other paid plan unchanged');
+  for(const [i,plan] of ['-','starter','pro','plan-b523d348'].entries()){
+    const challenge=40+i,phone='96659000000'+i;
+    await q("UPDATE category_default_plans SET default_plan_id=$1 WHERE category_id='cafes_coffee'",[plan]);
+    const result=await begin(challenge,phone,{...draft,email:null,mapsUrl:null,slug:'month-brand-'+i},String(i+1).repeat(64));check(result.ok,'new month account challenge '+JSON.stringify(result));
+    await q('SELECT public.mark_owner_onboarding_sent($1,$2,true)',[id(challenge),proof]);await verify(challenge);await create(challenge+100,challenge,null,phone);
+    check(await v("SELECT s.status='trialing' AND s.amount_sar=0 AND s.expires_at-s.started_at=interval '30 days' FROM subscriptions s JOIN cafes c ON c.id=s.cafe_id WHERE c.owner_user_id=$1",[id(challenge+100)]),'new account receives actual free thirty days');
   }
   console.log(`PASS owner onboarding SQL: ${checks} real PostgreSQL checks; no provider or production mutation.`);
 } finally { await db.close(); }

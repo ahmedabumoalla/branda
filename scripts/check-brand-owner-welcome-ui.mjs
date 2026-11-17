@@ -15,7 +15,7 @@ function render(extra={},props={}){return exports.BrandOwnerWelcome({cafe:{...ca
 const send=t=>nodes(t).find(n=>n.type==='button'&&text(n)==='إرسال تفاصيل الدخول للمالك');
 let checks=0;const check=fn=>{fn();checks++};
 check(()=>{const t=render();assert.equal(send(t).props.disabled,false);assert(text(t).includes('الحفاظ على الباقة الحالية'));assert(!text(t).includes('تم تغيير باقة'))});
-check(()=>{const t=render({hasActivePlan:false,trialAwaitingDelivery:true});assert.equal(send(t).props.disabled,false);assert(text(t).includes('الباقات المحددة تبدأ لمدة ٧ أيام'));assert(!text(t).includes('باقة تجريبية'))});
+check(()=>{const t=render({hasActivePlan:false,trialAwaitingDelivery:true});assert.equal(send(t).props.disabled,false);assert(text(t).includes('شهر مجاني لباقات المنيو والولاء'));assert(text(t).includes('و٧ أيام للباقات الأخرى'))});
 check(()=>{const t=render({hasActivePlan:false,trialAwaitingDelivery:false});assert(text(t).includes('اختر باقة للعلامة'));assert(!text(t).includes('باقة سارية'))});
 for(const extra of [{hasActivePlan:false},{status:'موقوف'},{ownerDelivery:{state:'ready',detailsReady:false}},{ownerDelivery:{state:'sending',detailsReady:true}},{ownerDelivery:{state:'editing',detailsReady:true}},{ownerDelivery:{state:'uncertain',detailsReady:true}}])check(()=>assert.equal(send(render(extra)).props.disabled,true));
 check(()=>assert.equal(send(render({},{disabled:true})).props.disabled,true));

@@ -1,3 +1,5 @@
+- [One-month trial policy and publication](MONTH_TRIAL_20261118.md)
+
 [تحديث الفروع والديم وواحد معصوب — ١٧ نوفمبر ٢٠٢٦](BRANCHES_ALDEEM_RELEASE_20261117.md)
 
 # Branda current handoff

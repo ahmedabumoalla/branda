@@ -32,7 +32,7 @@ export function BrandOwnerWelcome({ cafe, disabled, onBusyChange, onUpdated }: {
   if (delivery.state === "sent") return <section className={s.welcome} role="status"><h3><Check size={19} aria-hidden="true" />تم قبول إرسال بيانات المالك</h3><p>قبول الرسالة لدى مزود واتساب لا يؤكد وصولها إلى جوال المالك</p>{delivery.sentAt && <time dateTime={delivery.sentAt}>{new Date(delivery.sentAt).toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh" })}</time>}</section>;
   return <section className={s.welcome} aria-busy={pending}>
     <h3>تسليم الحساب للمالك</h3>
-    <p>{cafe.trialAwaitingDelivery ? "الباقات المحددة تبدأ لمدة ٧ أيام من قبول إرسال بيانات الدخول للمالك" : "أرسل بيانات الدخول للمالك مع الحفاظ على الباقة الحالية ومدة اشتراكها"}</p>
+    <p>{cafe.trialAwaitingDelivery ? "تبدأ التجربة بعد قبول إرسال بيانات الدخول للمالك شهر مجاني لباقات المنيو والولاء والمنيو مع الولاء والتجريبية و٧ أيام للباقات الأخرى" : "أرسل بيانات الدخول للمالك مع الحفاظ على الباقة الحالية ومدة اشتراكها"}</p>
     <div className={s.recipient}><span>{cafe.ownerPhone ? "ستصل بيانات الدخول إلى واتساب" : "رقم جوال المالك لم يُضف بعد"}</span>{cafe.ownerPhone && <bdi>{cafe.ownerPhone}</bdi>}</div>
     <p className={s.preview}>رسالة مختصرة تتضمن رابط برندة ورابط الدخول ورقم الجوال وكلمة المرور التي حددتها</p>
     {delivery.state === "uncertain" && <label className={s.retry}><input type="checkbox" checked={retryConfirmed} onChange={event => setRetryConfirmed(event.target.checked)} disabled={pending} /><span>قد تكون الرسالة السابقة وصلت أوافق على إعادة إرسال بيانات الدخول</span></label>}
