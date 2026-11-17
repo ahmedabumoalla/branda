@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { InventoryCatalogTabs } from "@/components/erp/inventory/catalog-tabs";
 import catalogSkin from "@/components/erp/inventory/catalog-skin.module.css";
 import { prewarmMenuIngredients } from "@/components/erp/inventory/menu-ingredients-cache";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/erp/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type SyntheticEvent } from "react";
 import {
   fetchOwnerMenuAction,

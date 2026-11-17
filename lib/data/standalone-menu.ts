@@ -1,8 +1,9 @@
-import "server-only";
 import { isHospitalStore } from "@/lib/commerce/hospital-profile";
+import "server-only";
 import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 import { signatureBrand } from "@/lib/menu/signature-brands";
 import { usesDefaultSignatureMenu } from "@/lib/menu/default-signature";
+import { resolveBranchMenuSource } from "@/lib/menu/branch-source";
 
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
@@ -67,13 +68,18 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
   const defaultPresentation = usesDefaultSignatureMenu(cafe.business_category, cafe.created_at) && !signatureBrand(slug);
 
   if (branchSlug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(branchSlug)) return null;
-  const { data: branchRows, error: branchError } = await admin.from("branches").select("id,name,menu_slug,is_primary")
-    .eq("cafe_id", cafe.id).eq("active", true).not("menu_slug", "is", null).is("deleted_at", null).order("sort_order").order("id");
+  const { data: branchRows, error: branchError } = await admin.from("branches").select("id,name,menu_slug,is_primary,active,uses_brand_menu,is_brand_menu_root,deleted_at")
+    .eq("cafe_id", cafe.id).order("sort_order").order("id");
   if (branchError) throw branchError;
-  const chosenBranch = branchSlug ? branchRows?.find(row => row.menu_slug === branchSlug) : branchRows?.find(row => row.is_primary) ?? branchRows?.[0];
-  if (branchSlug && !chosenBranch) return null;
-  const branchId = chosenBranch?.id ?? null;
-  const hospitalMenu = isHospitalStore(slug) || (slug === "brand-8ad185ee82e3" && chosenBranch?.menu_slug === "hospital");
+  const publicBranches = (branchRows ?? []).filter(row => row.active && !row.deleted_at && row.menu_slug);
+  const requestedBranch = branchSlug ? publicBranches.find(row => row.menu_slug === branchSlug) : null;
+  if (branchSlug && !requestedBranch) return null;
+  const source = resolveBranchMenuSource(branchRows ?? [], requestedBranch?.id ?? null, true);
+  if (!source) return null;
+  const chosenBranch = source.branch;
+  const branchId = source.sourceBranchId;
+  const sourceBranch = branchRows?.find(row => row.id === branchId);
+  const hospitalMenu = isHospitalStore(slug) || (slug === "brand-8ad185ee82e3" && sourceBranch?.menu_slug === "hospital");
   const branchDto = (row: NonNullable<typeof branchRows>[number]) => ({ id: String(row.id), name: String(row.name), slug: String(row.menu_slug) });
   const categoryQuery = admin.from("menu_categories").select("id,name,description").eq("cafe_id", cafe.id)
     .eq("visible", true).is("deleted_at", null).order("sort_order").order("id");
@@ -167,6 +173,6 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
   });
   const rawPalette = identity?.palette;
   const palette = rawPalette && typeof rawPalette === "object" && !Array.isArray(rawPalette) ? Object.fromEntries(Object.entries(rawPalette).filter((entry): entry is [string, string] => typeof entry[1] === "string" && /^#[a-f\d]{6}$/i.test(entry[1]))) : {};
-  return { ...(defaultPresentation ? { presentation: "signature" as const, appearance: { palette, heroUrl } } : {}), branch: chosenBranch ? branchDto(chosenBranch) : null, branches: (branchRows ?? []).map(branchDto), businessCategory: cafe.business_category, cafeId: cafe.id, name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights, loyaltyEnabled: featureCodesAllow(features, "loyalty"),
+  return { ...(defaultPresentation ? { presentation: "signature" as const, appearance: { palette, heroUrl } } : {}), branch: chosenBranch ? branchDto(chosenBranch) : null, branches: publicBranches.map(branchDto), businessCategory: cafe.business_category, cafeId: cafe.id, name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights, loyaltyEnabled: featureCodesAllow(features, "loyalty"),
     contacts: { ...menuContacts(cafe.id, settings?.instagram), feedbackEnabled: Boolean(normalizeSaudiPhone(settings?.whatsapp ?? "") && isGreenApiConfigured()) } };
 });

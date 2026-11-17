@@ -7,6 +7,7 @@ import ts from 'typescript';
 
 const require = createRequire(import.meta.url);
 const LOCO = '321fd305-1883-48df-ab69-829cf7d1bc48';
+const WAHED = '8dbf85ba-df8f-4218-bc6f-9d2b39e937ef';
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const env = { MARKETING_ENCRYPTION_KEY: Buffer.alloc(32,9).toString('base64'), MARKETING_PUBLIC_URL:'https://barndaksa.com', GREEN_API_PARTNER_TOKEN:'test-only' };
 const inputs = new Set();
@@ -26,14 +27,15 @@ function loader(overrides={}, variables=env) {
 }
 const secrets=loader()('lib/marketing/crypto.ts');
 const creds={idInstance:'7103999999',apiTokenInstance:'private-test-token',apiUrl:'https://api.greenapi.com'};
-function linked(overrides={}) { return {cafe_id:LOCO,requested_phone:'966500000001',verified_phone:'966500000001',status:'connected',generation:id(10),instance_id:creds.idInstance,encrypted_credentials:secrets.encryptMarketingSecret(creds,`${LOCO}:${creds.idInstance}`),lease_until:null,transactional_requested_at:null,...overrides}; }
+function linked(overrides={}) { return {cafe_id:LOCO,requested_phone:'966500000001',verified_phone:'966500000001',status:'connected',generation:id(10),instance_id:creds.idInstance,encrypted_credentials:secrets.encryptMarketingSecret(creds,`${overrides.cafe_id??LOCO}:${creds.idInstance}`),lease_until:null,transactional_requested_at:null,...overrides}; }
 class ProviderError extends Error { constructor(code='GREEN_API_MARKETING_REQUEST_FAILED',uncertain=true){super('private-token-in-provider-message');this.code=code;this.uncertain=uncertain;} }
 function harness(options={}) {
+  const cafeId=options.contextCafe??options.maintenance?.cafeId??LOCO;
   let row=options.connection??null, adminReads=0, provisions=0, stateReads=0, qrReads=0, deletes=0, accountReads=0, generation=20;
   const calls=[];
   const db={from(table){const filters=[];let patch;const q={select(){return q;},eq(k,v){filters.push([k,v]);return q;},is(k,v){filters.push([k,v]);return q;},not(){return q;},update(p){patch=p;return q;},maybeSingle(){return q;},then(resolve,reject){
     calls.push({table,filters,patch});let result;
-    if(table==='cafes') result={data:options.cafeMissing?null:{id:LOCO,name:'LOCO',owner_user_id:options.owner??id(1),status:options.cafeStatus??'active'}};
+    if(table==='cafes') result={data:options.cafeMissing?null:{id:cafeId,name:cafeId===WAHED?'Wahed Masoub':'LOCO',owner_user_id:options.owner??id(1),status:options.cafeStatus??'active'}};
     else if(table==='cafe_members')result={data:{role:options.member??'staff'}};
     else if(table==='brand_marketing_connections'){
       if(options.connectionError)result={error:{message:'private database failure'}};
@@ -43,7 +45,7 @@ function harness(options={}) {
   }};return q;},async rpc(name,args){calls.push({rpc:name,args});
     if(name==='loco_claim_whatsapp_connection'){
       if(row?.status==='connected'||row?.lease_until&&Date.parse(row.lease_until)>Date.now())return {error:{message:'busy'}};
-      row={...row,cafe_id:LOCO,requested_phone:args.p_phone,status:'provisioning',generation:id(generation++),lease_token:id(7),lease_until:new Date(Date.now()+120000).toISOString(),allow_create:!row?.provision_attempted_at,provision_attempted_at:new Date().toISOString(),transactional_requested_at:new Date().toISOString()};return {data:row};
+      row={...row,cafe_id:args.p_cafe,requested_phone:args.p_phone,status:'provisioning',generation:id(generation++),lease_token:id(7),lease_until:new Date(Date.now()+120000).toISOString(),allow_create:!row?.provision_attempted_at,provision_attempted_at:new Date().toISOString(),transactional_requested_at:new Date().toISOString()};return {data:row};
     }
     if(name==='loco_activate_whatsapp_connection'){
       if(row.status!=='connected'||row.verified_phone!==args.p_phone||row.generation!==args.p_generation)return {error:{message:'changed'}};
@@ -75,9 +77,24 @@ try {
   await test('Read-only owner dashboard exposes no credentials, campaigns, audience or provider request',async()=>{
     const h=harness({connection:linked({last_error:'secret-provider-value'})}),d=await h.getBrandWhatsAppDashboard();
     assert.equal(d.brandName,'LOCO');assert.equal(d.transactionalEnabled,false);assert.equal(d.configured,true);
-    assert.deepEqual(Object.keys(d).sort(),['brandName','configured','connection','transactionalEnabled']);
+    assert.deepEqual(Object.keys(d).sort(),['brandName','configured','connection','platformFallback','transactionalEnabled']);
     for(const secret of ['7103999999','private-test-token','encrypted_credentials','secret-provider-value','webhook_token_hash'])assert(!JSON.stringify(d).includes(secret));
     assert.equal(h.counts().stateReads,0);assert.equal(h.counts().provisions,0);assert(!h.calls.some(x=>x.rpc));
+  });
+  await test('Wahed connection is optional, scoped and never provisioned on read',async()=>{
+    const h=harness({contextCafe:WAHED});
+    const d=await h.getBrandWhatsAppDashboard();assert.equal(d.platformFallback,true);assert.equal(d.connection,null);assert.equal(h.counts().provisions,0);
+    const result=await h.runBrandWhatsAppAction({action:'connect',phone:'0500000001'});
+    assert.equal(result.dashboard.transactionalEnabled,true);assert.equal(h.row().cafe_id,WAHED);assert.equal(h.counts().provisions,1);
+    assert.equal(h.calls.find(x=>x.rpc==='loco_claim_whatsapp_connection').args.p_cafe,WAHED);
+    assert(h.calls.filter(x=>x.table==='cafes').every(x=>x.filters.some(([key,value])=>key==='id'&&value===WAHED)));
+    const privateLink=harness({contextCafe:WAHED,connection:linked({cafe_id:WAHED,transactional_requested_at:'now'})});
+    assert.equal((await privateLink.getBrandCustomerWhatsAppCredentials(WAHED)).expectedPhone,'966500000001');
+    assert.equal(await privateLink.getLocoCustomerWhatsAppCredentials(WAHED),null);
+    const campaign=harness({contextCafe:WAHED,connection:linked({cafe_id:WAHED})});
+    assert.equal(await campaign.getBrandCustomerWhatsAppCredentials(WAHED),null);
+    await campaign.runBrandWhatsAppAction({action:'connect',phone:'0500000001'});assert.equal(campaign.counts().provisions,0);
+    for(const options of [{owner:id(2),member:'staff'},{cafeStatus:'suspended'},{profile:{role:'cafe_owner',status:'suspended'}}]) await assert.rejects(()=>harness({contextCafe:WAHED,...options}).getBrandWhatsAppDashboard());
   });
   await test('Session, profile, immutable brand and actual owner all gate connection reads',async()=>{
     for(const config of [{user:null},{profile:{role:'cafe_owner',status:'suspended'}},{contextCafe:id(2)},{contextMissing:true},{owner:id(2),member:'manager'},{owner:id(2),member:'staff'},{cafeStatus:'suspended'},{cafeMissing:true}]){

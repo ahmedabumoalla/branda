@@ -11,6 +11,7 @@ function load(file, mocks = {}) {
   new Function("require", "exports", "process", "Buffer", output)(name => {
     if (name === "server-only") return {};
     if (name in mocks) return mocks[name];
+    if (name === "@/lib/data/account-cancellation") return { brandAllowsNewWork: async () => true, brandSlugAllowsNewWork: async () => true };
     if (name.startsWith("@/")) return load(`${name.slice(2)}.ts`, mocks);
     return require(name);
   }, exports, process, Buffer);
@@ -158,7 +159,7 @@ await check("WhatsApp unavailable defers claim and ambiguous send is recorded se
     ...tokenMocks,
     "@/lib/wallet/google": {},
     "@/lib/whatsapp/brand-connection-types": { LOCO_CAFE_ID: profileId },
-    "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => null },
+    "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => null, selectBrandLoyaltySender: async () => null },
     "@/lib/whatsapp/green-api": { isGreenApiLoyaltyWelcomeReady: async () => ready, sendGreenApiLoyaltyWelcome: async () => { sends++; throw Error("response lost"); } },
     "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, args) => {
       recorded.push({ name, args });
@@ -180,7 +181,7 @@ await check("card invitation checks actual Google save state and defers unknown 
       ...tokenMocks,
       "@/lib/wallet/google": { getGoogleWalletSaveState: async identity => { assert.deepEqual(identity, { cafeId, cardId: requestId }); if (state === "unavailable") throw Error("provider unavailable"); return state; } },
       "@/lib/whatsapp/brand-connection-types": { LOCO_CAFE_ID: profileId },
-      "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => null },
+      "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => null, selectBrandLoyaltySender: async () => null },
       "@/lib/whatsapp/green-api": { isGreenApiLoyaltyWelcomeReady: async () => true, sendGreenApiLoyaltyWelcome: async () => { sent++; return { status: "queued", providerMessageId: "test-message" }; } },
       "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, args) => {
         if (name === "finish_stamp_card_link_v2") { finished.push(args.p_status); return { data: true }; }
@@ -200,7 +201,7 @@ await check("LOCO invitations stay pending offline and resume only on the verifi
     ...tokenMocks,
     "@/lib/wallet/google": {},
     "@/lib/whatsapp/brand-connection-types": { LOCO_CAFE_ID: cafeId },
-    "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => brandSender },
+    "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => brandSender, selectBrandLoyaltySender: async () => null },
     "@/lib/whatsapp/green-api": {
       isGreenApiLoyaltyWelcomeReady: async () => true,
       sendGreenApiLoyaltyWelcome: async () => { throw Error("Must never use platform for LOCO"); },
@@ -221,5 +222,38 @@ await check("LOCO invitations stay pending offline and resume only on the verifi
   assert.equal((await dispatcher.dispatchStampCardLinks()).queued, 1);
   assert.deepEqual(sent, [brandSender]);
   assert.equal((await dispatcher.dispatchStampCardLinks()).processed, 0);
+});
+await check("Wahed card links prefer verified private sender with primary fallback only before submit", async () => {
+  const wahed = "8dbf85ba-df8f-4218-bc6f-9d2b39e937ef";
+  for (const [primary, privateReady, tenant, status, expectedSender] of [
+    [true, false, wahed, "queued", "primary"], [true, true, wahed, "queued", "private"],
+    [false, true, wahed, "queued", "private"], [true, true, wahed, "unknown", "private"],
+    [true, true, wahed, "rejected", "private"], [false, true, "other", "rejected", null],
+  ]) {
+    let claimed = false;
+    const sent = [], flags = [], finished = [];
+    const dispatcher = load("lib/loyalty/read-card-links.ts", {
+      ...tokenMocks, "@/lib/wallet/google": {},
+      "@/lib/whatsapp/brand-connection-types": { LOCO_CAFE_ID: "loco", WAHED_MASOUB_CAFE_ID: wahed },
+      "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => null, selectBrandLoyaltySender: async id => { assert.equal(id, wahed); return privateReady ? { idInstance: "wahed" } : null; } },
+      "@/lib/whatsapp/green-api": {
+        isGreenApiLoyaltyWelcomeReady: async () => primary,
+        sendGreenApiLoyaltyWelcome: async () => { sent.push("primary"); return { status }; },
+        sendGreenApiCustomerMessage: async sender => { assert.equal(sender.idInstance, "wahed"); sent.push("private"); return { status }; },
+      },
+      "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, args) => {
+        if (name === "finish_stamp_card_link_v2") { finished.push(args.p_status); return { data: true }; }
+        flags.push(args); if (claimed) return { data: null }; claimed = true;
+        return { data: { id: requestId, claimToken: profileId, cafeId: tenant, profileId, cardId: requestId, brandName: "Wahed", brandSlug: "test-brand", phone: "966501234567", cardCreated: true, googleIssued: false } };
+      } }) },
+    });
+    await dispatcher.dispatchStampCardLinks(1);
+    assert.equal(flags[0].p_wahed_ready, privateReady);
+    assert.equal(flags[0].p_primary_ready, primary);
+    assert.deepEqual(sent, expectedSender ? [expectedSender] : []);
+    assert.deepEqual(finished, [status]);
+    await dispatcher.dispatchStampCardLinks(1);
+    assert.deepEqual(sent, expectedSender ? [expectedSender] : [], "no second sender after ambiguous or rejected POST");
+  }
 });
 console.log(`Loyalty read server: ${checks} checks passed`);

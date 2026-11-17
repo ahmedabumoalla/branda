@@ -9,6 +9,7 @@ import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { getOwnerMenu } from "@/lib/data/menu";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getOwnerMenuBranches } from "@/lib/data/menu-branches";
+import { BranchInheritedMenu } from "@/components/dashboard/pages/branch-inherited-menu";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { redirect } from "next/navigation";
 
@@ -21,7 +22,6 @@ type MenuLoadResult =
 async function loadDashboardMenu(branchId?: string): Promise<MenuLoadResult> {
   try {
     const [features, cafe] = await Promise.all([getOwnerFeatureCodes(), requireOwnerCafeContext("menu")]);
-    // Loco employees edit the menu directly; the integrated inventory belongs to the owner
     if (!cafe.staff && featureCodesAllow(features, "finance") && featureCodesAllow(features, "menu")) {
       return { status: "integrated" };
     }
@@ -31,15 +31,14 @@ async function loadDashboardMenu(branchId?: string): Promise<MenuLoadResult> {
 
     // An explicit branch is independently tenant-validated by getOwnerMenu
     // Fetch its catalogue alongside the selector instead of waiting another round trip
-    if (branchId) {
+    if (branchId && branchId !== "main") {
       const [{ branches }, menu] = await Promise.all([getOwnerMenuBranches(), getOwnerMenu(branchId)]);
       const branch = branches.find(item => item.id === branchId);
       return branch ? { status: "ready", menu, branches, branch } : { status: "error" };
     }
-    const { branches } = await getOwnerMenuBranches();
-    const branch = branchId ? branches.find(item => item.id === branchId) : branches.find(item => item.primary) ?? branches[0];
-    if (branchId && !branch) return { status: "error" };
-    return { status: "ready", menu: await getOwnerMenu(branch?.id ?? null), branches, branch: branch ?? null };
+    const [{ branches }, menu] = await Promise.all([getOwnerMenuBranches(), getOwnerMenu("main")]);
+    const branch = branches.find(item => item.brandMenuRoot) ?? null;
+    return { status: "ready", menu, branches, branch };
   } catch {
     return { status: "error" };
   }
@@ -61,7 +60,7 @@ export default async function DashboardMenuPage({ searchParams }: { searchParams
 
   if (result.status === "integrated") {
     const query = new URLSearchParams({ view: "products" });
-    if (branchId) query.set("branch", branchId);
+    if (branchId && branchId !== "main") query.set("branch", branchId);
     redirect(`/dashboard/system/inventory/items?${query}`);
   }
 
@@ -79,6 +78,13 @@ export default async function DashboardMenuPage({ searchParams }: { searchParams
     );
   }
 
+  if (result.branch?.usesBrandMenu) {
+    return <BranchInheritedMenu branch={result.branch} products={result.menu.products} categories={result.menu.categories} mainMenuHref="/dashboard/menu?branch=main" />;
+  }
+
+  const selectorBranches = result.branches.some(branch => branch.brandMenuRoot)
+    ? result.branches.map(branch => branch.brandMenuRoot ? { ...branch, name: "المنيو الأساسي للعلامة" } : branch)
+    : [{ id: "main", name: "المنيو الأساسي للعلامة", slug: "" }, ...result.branches];
   const menuDataKey = [
     result.branch?.id ?? "unbranched",
     ...result.menu.products.map((product) => product.id).sort(),
@@ -96,7 +102,7 @@ export default async function DashboardMenuPage({ searchParams }: { searchParams
       branchId={result.branch?.id ?? null}
       branchName={result.branch?.name}
       branchSlug={result.branch?.slug}
-      branches={result.branches}
+      branches={selectorBranches}
     />
   );
 }

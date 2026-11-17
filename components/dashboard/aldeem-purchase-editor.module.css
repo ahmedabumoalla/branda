@@ -1,0 +1,24 @@
+.body { display: grid; gap: 20px; min-width: 0; }
+.body fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.body fieldset:disabled { opacity: .82; }
+.lineTable { min-width: 1050px !important; }
+.lineTable td { padding: 10px !important; vertical-align: top; }
+.lineTable th:first-child { width: 250px; }
+.lineTable input[type=number] { min-width: 90px; }
+.lineTable select { min-width: 95px; }
+.body .remove { color: #ad244d; border-color: #edbed0; background: #fff4f7; }
+.itemName { display: block; font-size: 13px; font-weight: 650; margin-block-end: 8px; }
+.rowControls { display: flex; gap: 4px; margin-top: 8px; }
+.rowControls button { min-width: 36px; padding: 6px !important; }
+.body .searchRow { display: flex; gap: 8px; align-items: end; }
+.searchRow input { flex: 1; }
+.searchResults { display: grid; gap: 8px; margin-top: 16px; }
+.searchResults button { justify-content: space-between; text-align: start; width: 100%; }
+.searchResults small { color: #7f7080; }
+.document { display: grid; gap: 20px; padding: 22px; border: 1px solid #ecdfeb; border-top: 4px solid #a437a6; background: white; }
+.document h3 { margin: 0; color: #87318c; }
+.tracking { display: grid; gap: 8px; margin-top: 12px; }
+.trackingRow { display: flex; flex-wrap: wrap; gap: 8px; }
+.trackingRow label { flex: 1 1 120px; }
+.money { font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media(max-width:560px) { .document { padding: 12px; } .searchRow { flex-wrap: wrap; } }

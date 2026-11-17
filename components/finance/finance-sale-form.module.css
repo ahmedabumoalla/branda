@@ -99,6 +99,9 @@
   .detailOptions button { padding: 10px 12px; flex: 1 0 auto; }
   .template > label { width: 100%; }
 }
+.taxQr { display: grid; justify-items: center; gap: 8px; margin: 16px 0; break-inside: avoid; }
+.taxQr svg { display: block; width: 36mm; height: 36mm; max-width: 100%; background: white; }
+.taxQr figcaption { max-width: 300px; text-align: center; font-size: 11px; line-height: 1.7; color: var(--finance-muted); }
 @media (max-width: 420px) {
   .extraField { grid-template-columns: minmax(0, 1fr) 44px; }
   .extraField > label:first-child { grid-column: 1 / -1; }

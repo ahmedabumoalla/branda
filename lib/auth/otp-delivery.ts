@@ -4,7 +4,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
 import { greenApiProviderInstanceKey, sendGreenApiCustomerMessage, sendGreenApiSupabaseOtp } from "@/lib/whatsapp/green-api";
-import { isLocoCustomerOtp, selectLocoCustomerSender } from "@/lib/whatsapp/customer-routing";
+import { isBrandCustomerOtp, selectBrandCustomerSender } from "@/lib/whatsapp/customer-routing";
 
 const payloadSchema = z.object({
   phoneNormalized: z.string().regex(/^9665\d{8}$/),
@@ -66,8 +66,8 @@ export async function deliverQueuedOtp(id?: string) {
     if (payload.providerInstance !== providerInstance) throw new Error("OTP_PROVIDER_MISMATCH");
     // The Auth response has already been acknowledged after durable enqueue.
     // A slow provider can now finish without invalidating the user's Auth OTP.
-    if (isLocoCustomerOtp(job.cafe_id, job.purpose)) {
-      const sender = await selectLocoCustomerSender(job.cafe_id!);
+    if (isBrandCustomerOtp(job.cafe_id, job.purpose)) {
+      const sender = await selectBrandCustomerSender(job.cafe_id!);
       if (!sender) throw new Error("OTP_SENDERS_UNAVAILABLE");
       status = "unknown";
       const outcome = await sendGreenApiCustomerMessage(sender, {

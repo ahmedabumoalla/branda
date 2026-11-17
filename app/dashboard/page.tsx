@@ -2,15 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { getBrandNavigationFeatures } from "@/lib/platform/feature-access";
-import { requireOwnerCafeContext } from "@/lib/data/cafes";
-import { isAldeemCafe } from "@/lib/platform/aldeem";
+import { getOwnerCafeContext } from "@/lib/data/cafes";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  if ((await getOwnerCafeContext())?.slug === "khayal-aldeem") return null;
   const features = await getOwnerFeatureCodes();
-  // User request 2026-11-15: the Aldeem account opens on its overview page
-  if (features.includes("finance") && isAldeemCafe(await requireOwnerCafeContext())) redirect("/dashboard/system/overview");
   const firstService = getBrandNavigationFeatures().find((feature) => features.includes(feature.id));
   if (firstService) redirect(firstService.route);
 

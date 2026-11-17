@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { ChevronDown, GripVertical, Package, Plus, StickyNote, Trash2 } from "lucide-react";
 import { Modal } from "@/components/dashboard/ui/modal";
@@ -12,8 +12,11 @@ import { invoicePolicyLine } from "./company-invoice-policy";
 import { CompanyInvoiceLineNotes, type InvoiceLineNoteControls } from "./company-invoice-line-notes";
 import styles from "./finance.module.css";
 import css from "./company-invoice-lines.module.css";
+import { InvoiceProductDropdown } from "./invoice-product-dropdown";
+import { useInvoiceLineDrag } from "./use-invoice-line-drag";
 
 type Props = {
+  onSearchProducts?: (query: string) => Promise<string[]>;
   lines: CompanyLine[]; products: InvoiceCatalogProduct[]; vatRate: number; disabled: boolean;
   amounts: { price: number; discount: number; tax: number; total: number }[];
   onChange: (lines: CompanyLine[]) => void;
@@ -33,12 +36,11 @@ function ProductThumbnail({ src }: { src: string | null }) {
   return <span className={css.productThumbnail} aria-hidden="true">{src && !failed ? <Image src={src} alt="" width={44} height={44} unoptimized loading="lazy" onError={() => setFailed(true)} /> : <Package size={22} strokeWidth={1.5} />}</span>;
 }
 
-export function CompanyInvoiceLines({ lines, products, vatRate, disabled, amounts, onChange, summary, productHint, allowLineEditing = true, allowLineDiscount = true, decimalDisplay = "always", currency = "SAR", allowFreeItems = false, advanced, lineNotes }: Props) {
+export function CompanyInvoiceLines({ onSearchProducts, lines, products, vatRate, disabled, amounts, onChange, summary, productHint, allowLineEditing = true, allowLineDiscount = true, decimalDisplay = "always", currency = "SAR", allowFreeItems = false, advanced, lineNotes }: Props) {
+  const reorderHelpId = useId();
   const [allNotesOpen, setAllNotesOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState<Record<number, boolean>>({});
   const showNotes = !!lineNotes && (lineNotes.enabled || lines.some(line => lineNotes.values[line.key]?.length));
-  const draggedKey = useRef<number | null>(null);
-  const [dropKey, setDropKey] = useState<number | null>(null);
   const [reorderKey, setReorderKey] = useState<number | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [productPickerKey, setProductPickerKey] = useState<number | null>(null);
@@ -51,10 +53,22 @@ export function CompanyInvoiceLines({ lines, products, vatRate, disabled, amount
   const [table, setTable] = useState("");
   const [replace, setReplace] = useState(false);
   const [error, setError] = useState("");
-  const matchingProducts = products.filter(product => product.available && (!productSearch.trim() || product.name.toLocaleLowerCase("ar").includes(productSearch.trim().toLocaleLowerCase("ar")) || product.id === productSearch.trim() || product.sku === productSearch.trim() || product.barcode === productSearch.trim()));
+  const [searchIds, setSearchIds] = useState<string[]>([]);
+  const [searchBusy, setSearchBusy] = useState(false);
+  useEffect(() => {
+    if (!onSearchProducts || productPickerKey === null || pickerMode !== "catalog") return;
+    let active = true;
+    setSearchIds([]); setError(""); setProductChoice("");
+    if (!productSearch.trim()) { setSearchBusy(false); return; }
+    setSearchBusy(true);
+    const timer = setTimeout(() => { void onSearchProducts(productSearch.trim()).then(ids => { if (active) setSearchIds(ids); }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "تعذر البحث عن الأصناف"); }).finally(() => { if (active) setSearchBusy(false); }); }, 250);
+    return () => { active = false; clearTimeout(timer); };
+  }, [onSearchProducts, productSearch, productPickerKey, pickerMode]);
+  const matchingProducts = products.filter(product => product.available && (onSearchProducts ? searchIds.includes(product.id) : (!productSearch.trim() || product.name.toLocaleLowerCase("ar").includes(productSearch.trim().toLocaleLowerCase("ar")) || product.id === productSearch.trim() || product.sku === productSearch.trim() || product.barcode === productSearch.trim())));
   const freeKindAllowed = allowFreeItems && (advanced?.activityKind === undefined || advanced.activityKind === "both" || (pickerMode === "product" ? advanced.activityKind === "products" : advanced.activityKind === "services"));
   const nextKey = () => Math.max(0, ...lines.map(line => line.key)) + 1;
   const patch = (key: number, values: Partial<CompanyLine>) => { if (!disabled) onChange(lines.map(line => line.key === key ? { ...line, ...values } : line)); };
+  const selectProduct = (key: number, product: InvoiceCatalogProduct) => { const policy = advanced?.productPolicies.find(item => item.productId === product.id); patch(key, { productId: product.id, name: undefined, kind: policy?.kind ?? "product", price: product.price, description: "", ...(policy ? { vatRate: policy.vatRate, taxCategory: policy.taxCategory, exemptionReason: policy.exemptionReason } : {}), ...inventorySaleSelection(product) }); };
   const move = (key: number, destination: number) => {
     const index = lines.findIndex(line => line.key === key);
     if (disabled || index < 0 || destination < 0 || destination >= lines.length || index === destination) return;
@@ -64,6 +78,7 @@ export function CompanyInvoiceLines({ lines, products, vatRate, disabled, amount
     onChange(result);
     setAnnouncement(`تم نقل البند إلى الصف ${destination + 1}`);
   };
+  const reorder = useInvoiceLineDrag(disabled, lines.length, move);
   return <>
     <div className={`${styles.invoiceTableWrap} ${css.tableWrap}`} role="region" aria-label="جدول بنود الفاتورة" tabIndex={0}>
       <table className={`${styles.invoiceTable} ${css.table}`} dir="rtl">
@@ -74,9 +89,10 @@ export function CompanyInvoiceLines({ lines, products, vatRate, disabled, amount
           const row = amounts[index];
           const effective = advanced ? invoicePolicyLine(line, advanced) : line;
           const taxEditable = !advanced || (advanced.taxMode === "product" && !line.productId);
-          return <Fragment key={line.key}><tr className={dropKey === line.key ? css.dropTarget : undefined} onDragOver={event => { if (!disabled && draggedKey.current !== null) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDropKey(line.key); } }} onDrop={event => { event.preventDefault(); if (draggedKey.current !== null) move(draggedKey.current, index); draggedKey.current = null; setDropKey(null); }}>
-            <td><button type="button" className={css.handle} disabled={disabled || lines.length < 2} draggable={!disabled && lines.length > 1} aria-label={`ترتيب البند ${index + 1}`} title="اسحب لترتيب البند أو اضغط لاختيار موضعه" onClick={() => setReorderKey(line.key)} onDragStart={event => { if (disabled) { event.preventDefault(); return; } draggedKey.current = line.key; event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", String(line.key)); }} onDragEnd={() => { draggedKey.current = null; setDropKey(null); }} onKeyDown={event => { if (event.key === "ArrowUp" || event.key === "ArrowDown") { event.preventDefault(); move(line.key, index + (event.key === "ArrowUp" ? -1 : 1)); } }}><GripVertical size={16} aria-hidden="true" /></button></td>
-            <td><button type="button" className={css.productPicker} disabled={disabled} aria-label={`اختيار المنتج للبند ${index + 1}`} aria-haspopup="dialog" title={chosen?.stockTracked ? `المخزون ${chosen.quantity}` : undefined} onClick={() => { setProductPickerKey(line.key); setProductSearch(""); setProductChoice(line.productId); setPickerMode(!line.productId && line.name ? line.kind ?? "product" : "catalog"); setFreeName(line.name ?? ""); setFreePrice(line.price ?? 0); setError(""); }}><span>{chosen?.name || line.name || "البند"}</span><ChevronDown size={14} aria-hidden="true" /></button>{productHint?.(line.productId, line)}{!line.productId && line.name && <span className={css.lastSalePrice}>{line.kind === "service" ? "خدمة حرة" : "منتج حر غير مرتبط بالمخزون"}</span>}</td>
+          const dragging = reorder.drag?.key === line.key;
+          return <Fragment key={line.key}><tr data-invoice-line-key={line.key} data-dragging={dragging || undefined} data-drop-edge={reorder.drag?.target === line.key ? (reorder.drag.after ? "after" : "before") : undefined} style={dragging ? { transform: `translateY(${reorder.drag!.offset}px)` } : undefined}>
+            <td><button type="button" data-invoice-reorder className={`${css.handle} ${css.reorderHandle}`} disabled={disabled || lines.length < 2} aria-label={`ترتيب البند ${index + 1}`} aria-describedby={reorderHelpId} title="اسحب السطر لأعلى أو لأسفل أو اضغط لاختيار موضعه" onClick={() => { if (!reorder.consumeClick() && !disabled) setReorderKey(line.key); }} onPointerDown={event => reorder.pointerDown(event, line.key)} onPointerMove={reorder.pointerMove} onPointerUp={reorder.pointerUp} onPointerCancel={reorder.cancel} onLostPointerCapture={reorder.cancel} onDragStart={event => event.preventDefault()} onKeyDown={event => { if (event.key === "Escape") { reorder.cancel(); reorder.consumeClick(); return; } if (event.key === "ArrowUp" || event.key === "ArrowDown") { event.preventDefault(); reorder.cancel(); reorder.consumeClick(); move(line.key, index + (event.key === "ArrowUp" ? -1 : 1)); } }}><GripVertical size={22} aria-hidden="true" /></button></td>
+            <td>{onSearchProducts ? <InvoiceProductDropdown label={String(index + 1)} value={chosen} fallback={line.name} products={products} disabled={disabled} search={onSearchProducts} price={value => invoiceSettingsMoney(value, decimalDisplay, currency)} onSelect={product => selectProduct(line.key, product)} onFreeItem={allowFreeItems ? () => { setProductPickerKey(line.key); setPickerMode(!line.productId && line.name ? line.kind ?? "product" : advanced?.activityKind === "services" ? "service" : "product"); setFreeName(line.name ?? ""); setFreePrice(line.price ?? 0); setError(""); } : undefined} /> : <button type="button" className={css.productPicker} disabled={disabled} aria-label={`اختيار المنتج للبند ${index + 1}`} aria-haspopup="dialog" title={!onSearchProducts && chosen?.stockTracked ? `المخزون ${chosen.quantity}` : undefined} onClick={() => { setProductPickerKey(line.key); setProductSearch(""); setProductChoice(line.productId); setPickerMode(!line.productId && line.name ? line.kind ?? "product" : "catalog"); setFreeName(line.name ?? ""); setFreePrice(line.price ?? 0); setError(""); }}><span>{chosen?.name || line.name || "البند"}</span><ChevronDown size={14} aria-hidden="true" /></button>}{productHint?.(line.productId, line)}{!line.productId && line.name && <span className={css.lastSalePrice}>{line.kind === "service" ? "خدمة حرة" : "منتج حر غير مرتبط بالمخزون"}</span>}</td>
             <td><Field label={`الوصف ${index + 1}`}><input placeholder="الوصف" maxLength={500} value={line.description ?? ""} disabled={disabled || !allowLineEditing} onChange={e => { if (allowLineEditing) patch(line.key, { description: e.target.value }); }} /></Field>{chosen && !chosen.available && <span className={css.lastSalePrice}>الصنف المحفوظ غير متاح للبيع وفق الإعدادات الحالية</span>}</td>
             <td><Field label={`سعر الوحدة ${index + 1}`}><input type="number" min="0" max="10000000" step="0.01" required value={line.price ?? chosen?.price ?? 0} disabled={disabled || !allowLineEditing} onChange={e => { if (allowLineEditing) patch(line.key, { price: Number(e.target.value) }); }} /></Field></td>
             <td><Field label={`الكمية ${index + 1}`}><input type="number" min="0.001" max="9999" step="0.001" required value={line.quantity} disabled={disabled} onChange={e => patch(line.key, { quantity: Number(e.target.value) })} /></Field>{chosen?.catalogSource === "inventory" && <Field label={`وحدة البند ${index + 1}`}><select disabled={disabled} value={line.unitName ?? chosen.unitName} onChange={event => { const unit = chosen.units?.find(value => value.name === event.target.value); if (unit) patch(line.key, { unitName: unit.name, unitFactor: unit.factor, price: inventoryUnitPrice(chosen, unit.name) }); }}>{chosen.units?.map(unit => <option key={unit.name} value={unit.name}>{unit.name}</option>)}</select></Field>}</td>
@@ -87,16 +103,17 @@ export function CompanyInvoiceLines({ lines, products, vatRate, disabled, amount
             </>}</td>
             <td><output className={css.rowTotal} aria-label={`إجمالي البند ${index + 1}`}><span className={styles.numeric}>{invoiceSettingsMoney(row.total, decimalDisplay, currency)}</span></output></td>
             {showNotes && <td><button type="button" className={css.handle} aria-label={`ملاحظات البند ${index + 1}`} aria-expanded={notesOpen[line.key] ?? allNotesOpen} onClick={() => setNotesOpen(value => ({ ...value, [line.key]: !(value[line.key] ?? allNotesOpen) }))}><StickyNote size={17} aria-hidden="true" />{lineNotes?.values[line.key]?.length || ""}</button></td>}
-            <td><button type="button" className={css.remove} aria-label={`حذف البند ${index + 1}`} disabled={disabled || lines.length === 1} onClick={() => onChange(lines.filter(row => row.key !== line.key))}><Trash2 size={14} aria-hidden="true" /></button></td>
-          </tr>{showNotes && lineNotes && (notesOpen[line.key] ?? allNotesOpen) && <tr><td colSpan={10} style={{ padding: 0 }}><CompanyInvoiceLineNotes rowKey={line.key} index={index} controls={lineNotes} disabled={disabled} /></td></tr>}</Fragment>;
+            <td><button type="button" data-invoice-remove className={css.remove} title="حذف الصنف" aria-label={`حذف البند ${index + 1}`} disabled={disabled || lines.length === 1} onClick={() => onChange(lines.filter(row => row.key !== line.key))}><Trash2 size={18} aria-hidden="true" /></button></td>
+          </tr>{showNotes && lineNotes && (notesOpen[line.key] ?? allNotesOpen) && <tr data-dragging={dragging || undefined} style={dragging ? { transform: `translateY(${reorder.drag!.offset}px)` } : undefined}><td colSpan={10} style={{ padding: 0 }}><CompanyInvoiceLineNotes rowKey={line.key} index={index} controls={lineNotes} disabled={disabled} /></td></tr>}</Fragment>;
         })}</tbody>
       </table>
     </div>
     <div className={css.footer} dir="rtl"><div className={css.additions}><div className={css.addControl}><button type="button" className={css.addButton} disabled={disabled || lines.length >= 100} onClick={() => onChange([...lines, { key: nextKey(), productId: "", quantity: 1 }])}><Plus size={16} aria-hidden="true" />إضافة</button><details className={css.addMenu} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) event.currentTarget.open = false; }} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}><summary aria-label="خيارات إضافة البنود" aria-disabled={disabled} onClick={event => { if (disabled) event.preventDefault(); }}><ChevronDown size={14} aria-hidden="true" /></summary><button type="button" disabled={disabled} onClick={event => { const menu = event.currentTarget.closest("details"); if (menu) menu.open = false; setError(""); setImportOpen(true); }}>نسخ من جدول البيانات</button></details></div></div>{summary}</div>
+    <span id={reorderHelpId} className={styles.srOnly}>اسحب لتحريك السطر كاملًا أو استخدم سهم أعلى وأسفل واضغط لاختيار موضعه</span>
     <span className={styles.srOnly} role="status">{announcement}</span>
     <Modal open={productPickerKey !== null} title="اختيار البند" onClose={() => setProductPickerKey(null)} panelClassName="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
       <div className={styles.form}>
-        {(allowFreeItems || pickerMode !== "catalog") && <Field label="نوع البند"><select value={pickerMode} disabled={disabled} onChange={event => { setPickerMode(event.target.value as typeof pickerMode); setError(""); }}><option value="catalog">صنف مسجل</option>{(advanced?.activityKind !== "services" || pickerMode === "product") && <option value="product" disabled={!allowFreeItems || advanced?.activityKind === "services"}>منتج حر</option>}{(advanced?.activityKind !== "products" || pickerMode === "service") && <option value="service" disabled={!allowFreeItems || advanced?.activityKind === "products"}>خدمة حرة</option>}</select></Field>}
+        {(allowFreeItems || pickerMode !== "catalog") && <Field label="نوع البند"><select value={pickerMode} disabled={disabled} onChange={event => { setPickerMode(event.target.value as typeof pickerMode); setError(""); }}>{!onSearchProducts && <option value="catalog">صنف مسجل</option>}{(advanced?.activityKind !== "services" || pickerMode === "product") && <option value="product" disabled={!allowFreeItems || advanced?.activityKind === "services"}>منتج حر</option>}{(advanced?.activityKind !== "products" || pickerMode === "service") && <option value="service" disabled={!allowFreeItems || advanced?.activityKind === "products"}>خدمة حرة</option>}</select></Field>}
         {pickerMode !== "catalog" ? <div className={styles.fields}><Field label="اسم البند الحر"><input value={freeName} maxLength={160} required disabled={disabled || !freeKindAllowed} onChange={event => setFreeName(event.target.value)} /></Field><Field label="سعر البند الحر"><input type="number" min="0" max="10000000" step="0.01" value={freePrice} required disabled={disabled || !freeKindAllowed} onChange={event => setFreePrice(Number(event.target.value))} /></Field><p className={styles.muted}>يُحفظ البند في الفاتورة دون إنشاء صنف في الكتالوج أو حركة مخزون وهمية</p></div> : <>
         <Field label="البحث عن المنتجات"><input type="search" value={productSearch} onChange={event => { setProductSearch(event.target.value); setProductChoice(""); }} /></Field>
         <div className={css.productResults} role="region" aria-label="الأصناف وأسعارها" tabIndex={0}>
@@ -108,7 +125,8 @@ export function CompanyInvoiceLines({ lines, products, vatRate, disabled, amount
               <td className={css.productPrice}><span className={styles.numeric}>{invoiceSettingsMoney(product.price, decimalDisplay, currency)}</span></td>
             </tr>)}</tbody>
           </table>
-          {!matchingProducts.length && <p className={css.noProducts} role="status">{productSearch.trim() ? "لا توجد أصناف مطابقة للبحث" : "لا توجد أصناف متاحة"}</p>}
+          {searchBusy && <p role="status">جار البحث عن الأصناف</p>}
+          {!searchBusy && !error && !matchingProducts.length && <p className={css.noProducts} role="status">{productSearch.trim() ? "لا توجد أصناف مطابقة للبحث" : onSearchProducts ? "اكتب اسم الصنف لعرض النتائج" : "لا توجد أصناف متاحة"}</p>}
         </div>
         </>}
         {error && <p role="alert" className={styles.error}>{error}</p>}
@@ -119,7 +137,7 @@ export function CompanyInvoiceLines({ lines, products, vatRate, disabled, amount
             patch(productPickerKey, { productId: "", catalogSource: undefined, unitName: undefined, unitFactor: undefined, name: freeName.trim(), kind: pickerMode, price: freePrice }); setProductPickerKey(null); return;
           }
           const product = products.find(item => item.id === productChoice && item.available);
-          if (product) { const policy = advanced?.productPolicies.find(item => item.productId === product.id); patch(productPickerKey, { productId: product.id, name: undefined, kind: policy?.kind ?? "product", price: product.price, description: "", ...(policy ? { vatRate: policy.vatRate, taxCategory: policy.taxCategory, exemptionReason: policy.exemptionReason } : {}), ...inventorySaleSelection(product) }); setProductPickerKey(null); }
+          if (product) { selectProduct(productPickerKey, product); setProductPickerKey(null); }
         }}>اختيار البند</button><button type="button" className={styles.secondary} onClick={() => setProductPickerKey(null)}>إلغاء</button></div>
       </div>
     </Modal>

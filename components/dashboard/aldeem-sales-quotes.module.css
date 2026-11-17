@@ -1,0 +1,83 @@
+.page, .dialog, .previewDialog {
+  --finance-ink: #514552;
+  --finance-muted: #7f7080;
+  --finance-paper: #fff;
+  --finance-cream: #faf5f9;
+  --finance-line: #ecdfeb;
+  --finance-accent: #a437a6;
+  min-width: 0;
+  color: var(--finance-ink);
+  font-family: inherit;
+}
+.page > div:not([hidden]), .formBody, .editor, .preview { display: grid; gap: 20px; min-width: 0; }
+.page { display: grid; gap: 20px; }
+.page [hidden] { display: none; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.toolbar h2 { margin: 0; font-size: 20px; font-weight: 650; }
+.toolbar p, .hint { margin: 6px 0 0; color: var(--finance-muted); font-size: 12px; line-height: 1.8; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.page button, .dialog button, .previewDialog button, .actions a {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px;
+  padding: 10px 14px; border: 1px solid var(--finance-line); border-radius: 9px; background: #fff;
+  color: var(--finance-ink); font: inherit; font-size: 12px; cursor: pointer; text-decoration: none;
+}
+.page button:hover:not(:disabled), .dialog button:hover:not(:disabled), .previewDialog button:hover:not(:disabled), .actions a:hover { background: var(--finance-cream); border-color: #d6b7d5; }
+.page .primary, .dialog .primary, .previewDialog .primary { background: var(--finance-accent); border-color: var(--finance-accent); color: #fff; font-weight: 650; }
+.page .primary:hover:not(:disabled), .dialog .primary:hover:not(:disabled), .previewDialog .primary:hover:not(:disabled) { background: #87318c; border-color: #87318c; }
+.page button:disabled, .dialog button:disabled, .previewDialog button:disabled { opacity: .5; cursor: not-allowed; }
+.page :is(button,a,input,select,textarea):focus-visible, .dialog :is(button,a,input,select,textarea):focus-visible, .previewDialog :is(button,a):focus-visible { outline: 2px solid var(--finance-accent); outline-offset: 2px; }
+.page label { display: grid; gap: 8px; min-width: 0; color: var(--finance-muted); font-size: 12px; }
+.page label > span { display: flex; align-items: center; gap: 7px; }
+.page :is(input:not([type=checkbox]),select,textarea) { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--finance-line); border-radius: 9px; background: #fff; padding: 10px 12px; color: var(--finance-ink); font: inherit; font-size: 13px; }
+.page input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--finance-accent); }
+.filters { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; padding: 20px; border: 1px solid var(--finance-line); border-radius: 14px; background: #fcf9fc; }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.tabs button { background: #fff; color: var(--finance-muted); }
+.tabs button[aria-pressed=true] { background: #f8edf6; color: #87318c; border-color: #d8b6d7; }
+.tabs span { min-width: 20px; padding: 2px 5px; border-radius: 5px; background: #faf5f9; font-variant-numeric: tabular-nums; }
+.register { border: 1px solid var(--finance-line); border-radius: 14px; overflow: hidden; background: #fff; }
+.tableScroll { overflow-x: auto; max-width: 100%; min-width: 0; scrollbar-color: #d9b7d8 #faf5f9; }
+.tableScroll table { width: 100%; min-width: 680px; border-collapse: collapse; text-align: start; font-size: 12px; }
+.tableScroll th { padding: 14px 16px; text-align: start; background: #faf5f9; color: #79637b; font-weight: 600; }
+.tableScroll td { padding: 16px; border-block-end: 1px solid var(--finance-line); font-variant-numeric: tabular-nums; }
+.register tbody tr { cursor: pointer; }
+.register tbody tr:hover { background: #fdf8fc; }
+.page .recordLink { min-height: 44px; border: 0; background: transparent; padding: 4px; color: #87318c; font-weight: 650; }
+.badge { display: inline-flex; padding: 6px 10px; border-radius: 7px; background: #f8edf6; color: #87318c; white-space: nowrap; }
+.empty { display: grid; justify-items: center; gap: 12px; padding: 45px 20px; text-align: center; background: #fdf9fc; color: #87318c; }
+.empty h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.empty p { margin: 0; font-size: 12px; color: var(--finance-muted); line-height: 1.8; }
+.footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 18px; color: var(--finance-muted); font-size: 12px; }
+.error { color: #a32d4a; background: #fff1f4; border: 1px solid #edc5d1; padding: 12px 16px; border-radius: 10px; line-height: 1.8; font-size: 13px; }
+.notice { color: #87318c; background: #f8edf6; border: 1px solid #e5cde3; padding: 12px 16px; border-radius: 10px; line-height: 1.8; font-size: 13px; }
+.editor { margin: 0; }
+.editor > .toolbar { background: #fff; }
+.formBody { border: 0; margin: 0; padding: 0; }
+.template { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 16px 20px; border: 1px solid var(--finance-line); }
+.template > span { display: flex; gap: 9px; align-items: center; color: #87318c; font-weight: 650; }
+.template label { min-width: min(100%, 260px); }
+.metadata { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.card { display: grid; gap: 14px; align-content: start; padding: 20px; min-width: 0; border: 1px solid var(--finance-line); }
+.card h3, .lines h3 { font-size: 14px; font-weight: 650; margin: 0; }
+.fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-items: center; }
+.page .check { display: flex; gap: 10px; align-items: center; color: var(--finance-ink); min-height: 44px; }
+.lines { border: 1px solid var(--finance-line); min-width: 0; overflow: visible; }
+.lines > h3 { padding: 18px 20px; border-block-end: 1px solid var(--finance-line); }
+.totals { margin: 16px; margin-inline-start: auto; width: min(360px,calc(100% - 32px)); border: 1px solid var(--finance-line); border-radius: 12px; overflow: hidden; background: #fff; }
+.totals > div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; font-size: 12px; border-block-end: 1px solid var(--finance-line); }
+.totals > div:last-child { background: #f8edf6; color: #87318c; border: 0; font-size: 15px; }
+.dialog, .previewDialog { display: flex; flex-direction: column; width: min(100%,780px); max-height: 92dvh; background: #fff; border: 1px solid #d8b6d7; border-radius: 18px; overflow: hidden; box-shadow: 0 20px 70px #51455230; }
+.previewDialog { width: min(100%,1120px); }
+.dialog > :first-child, .previewDialog > :first-child { border-color: var(--finance-line); }
+.dialog > :first-child h2, .previewDialog > :first-child h2 { color: var(--finance-ink); font-size: 18px; font-weight: 650; }
+.dialog > :first-child button, .previewDialog > :first-child button { color: #87318c; background: #faf5f9; }
+.page [role=dialog] > :first-child { border-color: var(--finance-line); }
+.page [role=dialog] > :first-child h2 { color: var(--finance-ink); }
+.page [role=dialog] > :first-child button { color: #87318c; background: #faf5f9; }
+.previewHeader { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; border-block-start: 3px solid var(--finance-accent); padding-top: 18px; }
+.previewHeader h2, .previewHeader h3 { font-size: 18px; font-weight: 650; margin: 0 0 10px; }
+.previewHeader p { font-size: 13px; margin: 7px 0; color: var(--finance-muted); }
+.pdf { width: 100%; height: 66dvh; border: 1px solid var(--finance-line); border-radius: 10px; }
+.note { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+@media(max-width:900px) { .metadata { grid-template-columns: minmax(0,1fr); } .filters { grid-template-columns: repeat(2,minmax(0,1fr)); } .filters > :first-child { grid-column: 1/-1; } }
+@media(max-width:560px) { .filters, .fields { grid-template-columns: minmax(0,1fr); } .filters > :first-child { grid-column: auto; } .toolbar { align-items: stretch; } .toolbar > .actions { width: 100%; } .toolbar > .actions > button { flex: 1 1 auto; } .card { padding: 16px; } .dialog > :nth-child(2), .previewDialog > :nth-child(2) { padding: 16px; } }

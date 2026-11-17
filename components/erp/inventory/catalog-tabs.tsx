@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/erp/navigation";
 import { Coffee, Package } from "lucide-react";
 import styles from "./catalog-tabs.module.css";
 

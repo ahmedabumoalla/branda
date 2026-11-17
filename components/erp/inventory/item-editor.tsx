@@ -14,6 +14,7 @@ import {ErpFieldValues} from '@/components/erp/fields/field-values';
 import type {ErpCustomField} from '@/lib/erp/custom-fields';
 import {Select, type SaveInventory} from './ui';
 import s from './item-editor.module.css';
+import {isAldeemStockCatalog} from '@/lib/aldeem/catalog';
 
 function Field({label, children, wide = false, hint}: {label: string; children: ReactNode; wide?: boolean; hint?: string}) {
   return <label className={`${s.field} ${wide ? s.wide : ''}`}><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
@@ -23,9 +24,11 @@ function SectionTitle({icon, title, note}: {icon: ReactNode; title: string; note
 }
 
 export function ItemEditor({snapshot, item, save, busy}: {snapshot: InventorySnapshot; item?: InventoryItem; save: SaveInventory; busy: boolean}) {
+  const retail = isAldeemStockCatalog(snapshot.slug);
   const [d, setD] = useState(() => {
     const value = inventoryItemInput(item);
-    return !item && snapshot.productDefaults ? {...value, kind: snapshot.productDefaults.soldItemType, payload: {...value.payload, tax1: snapshot.productDefaults.tax1, tax2: snapshot.productDefaults.tax2}} : value;
+    const defaults = !item && snapshot.productDefaults ? {...value, kind: snapshot.productDefaults.soldItemType, payload: {...value.payload, tax1: snapshot.productDefaults.tax1, tax2: snapshot.productDefaults.tax2}} : value;
+    return !item && retail ? {...defaults, kind: 'product' as const} : defaults;
   });
   const [error, setError] = useState('');
   const [addedCatalogs, setAddedCatalogs] = useState<InventoryCatalog[]>([]);
@@ -118,7 +121,7 @@ export function ItemEditor({snapshot, item, save, busy}: {snapshot: InventorySna
       return recalculate ? applyMargin(next, template) : next;
     });
   }
-  const showTrackingMode = Boolean(snapshot.settings.payload.trackingEnabled || item?.meta.tracking_mode && item.meta.tracking_mode !== 'quantity');
+  const showTrackingMode = retail || Boolean(snapshot.settings.payload.trackingEnabled || item?.meta.tracking_mode && item.meta.tracking_mode !== 'quantity');
   const showBundle = d.kind === 'product' && Boolean(snapshot.settings.payload.bundlesEnabled || Array.isArray(d.payload.bundleComponents) && d.payload.bundleComponents.length > 0);
   const priceInput = (key: string, label: string, suffix?: string) => <Field label={label}><span className={s.amountInput}><input type="number" aria-label={label} min={0} max={key.startsWith('tax') ? 100 : 1e9} step="0.01" value={Number(d.payload[key] ?? 0)} onChange={event => detail(key, Number(event.target.value))}/>{suffix && <span aria-hidden="true">{suffix}</span>}</span></Field>;
 
@@ -138,14 +141,14 @@ export function ItemEditor({snapshot, item, save, busy}: {snapshot: InventorySna
           <SectionTitle icon={<Package size={20}/>} title="تفاصيل الصنف" note="الاسم والتصنيف ووحدات التعامل"/>
           <div className={s.cardBody}>
             <div className={s.identityRow}>
-              <Field label="اسم الصنف *"><input required maxLength={150} placeholder="مثل حبوب قهوة أو أكواب ورقية" autoComplete="off" value={d.name} onChange={event => set('name', event.target.value)}/></Field>
+              <Field label="اسم الصنف *"><input required maxLength={150} placeholder={retail ? 'مثل كليجا القصيم أو معمول التمر أو بوكس حلويات' : 'مثل حبوب قهوة أو أكواب ورقية'} autoComplete="off" value={d.name} onChange={event => set('name', event.target.value)}/></Field>
               <Field label="رمز الصنف SKU"><input dir="ltr" maxLength={60} placeholder="اختياري" value={d.sku} onChange={event => set('sku', event.target.value)}/></Field>
             </div>
             <Field label="الوصف (اختياري)"><textarea rows={3} placeholder="تفاصيل تساعدك على تمييز الصنف" value={String(d.payload.description ?? '')} onChange={event => detail('description', event.target.value)}/></Field>
             <div className={s.grid}>
               <CreatableSelect label="التصنيف" value={d.categoryId} onChange={value => set('categoryId', value)} options={catalog('category')} onCreate={name => createLookup('category', name)} canCreate={snapshot.canCreate} disabled={disabled} maxLength={150} onPendingChange={markLookupPending}/>
               <CreatableSelect label="الماركة" value={d.brandId} onChange={value => set('brandId', value)} options={catalog('brand')} onCreate={name => createLookup('brand', name)} canCreate={snapshot.canCreate} disabled={disabled} maxLength={150} onPendingChange={markLookupPending}/>
-              <Field label="نوع الصنف"><select value={d.kind} onChange={event => set('kind', event.target.value)}><option value="product">صنف مخزني</option><option value="service">خدمة</option><option value="work">بند عمل</option></select></Field>
+              {(!retail || item && item.meta.kind !== 'product') && <Field label="نوع الصنف"><select value={d.kind} onChange={event => set('kind', event.target.value)}><option value="product">صنف مخزني</option><option value="service">خدمة</option><option value="work">بند عمل</option></select></Field>}
               <div><CreatableSelect label="الوحدة الأساسية" value={d.unitId} onChange={value => set('unitId', value)} options={units} onCreate={name => createLookup('unit', name)} canCreate={snapshot.canCreate} disabled={disabled || !!selectedTemplate} maxLength={30} onPendingChange={markLookupPending}/>{selectedTemplate && <p className={s.unitHint}>الوحدة الأساسية مرتبطة بالقالب المختار</p>}</div>
               <div className={s.field}><label htmlFor={templateFieldId}>قالب الوحدات</label><select id={templateFieldId} value={d.unitTemplateId} onChange={event => applyTemplate(catalog('unit_template').find(row => row.id === event.target.value))}><option value="">بدون قالب وحدات</option>{catalog('unit_template').map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>{snapshot.canCreate && <button type="button" className={s.addTemplate} onClick={() => setTemplateOpen(true)}><Plus size={15} aria-hidden="true"/>إضافة قالب وحدات</button>}</div>
               <Field label="الباركود"><span className={s.barcodeInput}><Barcode size={20} aria-hidden="true"/><input dir="ltr" maxLength={64} placeholder="اكتب الباركود أو استخدم القارئ" value={d.barcode} onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }} onChange={event => set('barcode', event.target.value)}/></span></Field>

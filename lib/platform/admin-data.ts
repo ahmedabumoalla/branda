@@ -56,6 +56,7 @@ export type PlatformCafe = {
   description?: string;
   instagram?: string;
   whatsapp?: string;
+  whatsappSender?: import("@/lib/whatsapp/admin-sender-summary").AdminWhatsAppSummary;
   taxNumber?: string;
   commercialRegister?: string;
   maroofCertificate?: string;

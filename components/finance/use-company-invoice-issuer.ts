@@ -14,17 +14,23 @@ export function invoiceIssuerFields(value: Issuer): Issuer {
 export function useCompanyInvoiceIssuer(slug: string, name: string, reader?: () => ReturnType<typeof companyInvoiceIssuerAction>) {
   const [lookup, setLookup] = useState<{ slug: string; issuer: Issuer; fromAccountSettings: boolean } | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Issuer | undefined>>({});
+  const [attempt, setAttempt] = useState(0);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     let active = true;
+    setLoading(true); setError("");
     void (reader ? reader() : companyInvoiceIssuerAction(slug)).then(result => {
-      if (active && result.ok) setLookup({ slug, issuer: invoiceIssuerFields(result.data), fromAccountSettings: result.data.fromAccountSettings });
-    }).catch(() => { /* A failed lookup must not erase an existing draft identity. */ });
+      if (!active) return;
+      if (result.ok) setLookup({ slug, issuer: invoiceIssuerFields(result.data), fromAccountSettings: result.data.fromAccountSettings });
+      else setError(result.message);
+    }).catch(() => { if (active) setError("تعذر تحميل بيانات المنشأة أعد المحاولة"); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [slug, reader]);
+  }, [slug, reader, attempt]);
   const restoreIssuer = useCallback((value: Issuer | undefined) => {
     setDrafts(current => ({ ...current, [slug]: value ? invoiceIssuerFields(value) : undefined }));
   }, [slug]);
   const current = lookup?.slug === slug ? lookup : null;
   const issuer = current?.fromAccountSettings ? current.issuer : drafts[slug] ?? current?.issuer ?? { name, vatNumber: "", address: "" };
-  return { issuer, restoreIssuer };
+  return { issuer, restoreIssuer, loading, error, retry: () => setAttempt(value => value + 1) };
 }

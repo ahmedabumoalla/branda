@@ -1,0 +1,69 @@
+.form.form.form{
+ --finance-ink:#514552;--finance-muted:#7f7080;--finance-paper:#fff;--finance-cream:#faf5f9;--finance-line:#ecdfeb;--finance-accent:#a437a6;
+ max-width:none;gap:16px;color:var(--finance-ink);background:#fdfbfd;padding:20px;border-radius:16px;font-size:13px;
+}
+.form.form.form section{border-radius:13px;background:#fff}
+.form.form.form :is(input,select,textarea,button,summary){font-family:inherit;border-radius:9px}
+.form.form.form :is(input:not([type=checkbox]),select,textarea){border-color:var(--finance-line);background:#fff;font-size:13px;min-height:44px;padding:10px 12px;color:var(--finance-ink)}
+.form.form.form input:read-only{background:#faf7fa;color:#7f7080}
+.form.form.form :is(input,select,textarea,button,summary):focus-visible{outline:2px solid #a437a6;outline-offset:2px}
+.form.form.form input[type=checkbox]{accent-color:#a437a6}
+.form.form.form button{font-size:12px;font-weight:500;border-color:var(--finance-line);min-height:42px}
+.form.form.form button[type=submit]{background:#a437a6;border-color:#a437a6;color:#fff;font-weight:600;box-shadow:0 3px 10px #a437a61a}
+.form.form.form button[type=submit]:hover:not(:disabled){background:#87318c}
+.form.form.form button:disabled{opacity:.45}
+.form.form.form table td:has([data-invoice-remove]){width:60px;min-width:60px;padding:8px;text-align:center}
+.form.form.form button[data-invoice-remove]{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:44px;min-width:44px;height:44px;min-height:44px;padding:0;border:1px solid #c55c72;border-radius:8px;background:#fff0f3;color:#a51d3c}
+.form.form.form button[data-invoice-remove] svg{display:block;width:24px;height:24px;min-width:24px;flex-shrink:0;stroke:currentColor;stroke-width:2.5}
+.form.form.form button[data-invoice-remove]:disabled{opacity:1;color:#755962;background:#f4eef0;border-color:#c6afb6;cursor:not-allowed}
+.form.form.form button[data-invoice-remove]:hover:not(:disabled){background:#ffe0e7;border-color:#a51d3c}
+.form.form.form table td:has([data-invoice-reorder]){width:60px;min-width:60px;padding:8px;text-align:center}
+.form.form.form button[data-invoice-reorder]{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:44px;min-width:44px;height:44px;min-height:44px;padding:0;border:1px solid #d8aed5;border-radius:8px;background:#f8edf6;color:#87318c;touch-action:none;cursor:grab}
+.form.form.form button[data-invoice-reorder] svg{display:block;width:22px;height:22px;min-width:22px;flex-shrink:0;stroke-width:2.5}
+.form.form.form button[data-invoice-reorder]:disabled{opacity:1;color:#877888;border-color:#e4dae4;background:#f8f5f8;cursor:not-allowed}
+.form.form.form button[data-invoice-reorder]:active:not(:disabled){cursor:grabbing}
+.form.form.form [data-invoice-toolbar]{padding:14px 16px;border:1px solid var(--finance-line);background:white;border-radius:12px;gap:12px}
+.heading{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;margin:0 0 18px;color:#514552}
+.heading span{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:#f8edf6;color:#a437a6;font-size:11px;font-variant-numeric:tabular-nums}
+.form.form.form [aria-label="قالب الفاتورة"]{padding:12px 18px;background:#fff;border:1px solid var(--finance-line);justify-content:flex-start}
+.form.form.form [aria-label="قالب الفاتورة"]>label{display:grid;grid-template-columns:auto minmax(160px,260px);align-items:center;gap:18px;min-width:0}
+.form.form.form [data-invoice-metadata]{gap:16px;align-items:stretch}
+.form.form.form [data-invoice-metadata]>section{padding:20px;border:1px solid var(--finance-line);align-content:start}
+.form.form.form [aria-label="العميل والمستودع"]>div{gap:14px}
+.form.form.form .customerRow{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:8px;width:100%;min-width:0;align-items:center}
+.form.form.form .customerRow>button{box-sizing:border-box;min-width:0;width:100%;height:44px;min-height:44px;margin:0;padding:8px 12px;max-width:100%;white-space:nowrap}
+.form.form.form .customerRow>button:first-child{justify-content:space-between;overflow:hidden;text-align:start}
+.form.form.form .customerRow>button:last-child{display:flex;align-items:center;justify-content:center;gap:6px;background:#faf1fa;color:#963b99;border:1px solid #e9d7e9}
+.credit{display:grid;gap:12px;padding:16px;border:1px solid #e5cfe6;border-radius:12px;background:#fcf7fc;color:#514552}
+.credit h3{font-size:14px;font-weight:600;margin:0}
+.credit p{margin:0;font-size:12px;line-height:1.8}
+.creditStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.creditStats span{display:grid;gap:6px;font-size:11px;color:#7f7080;padding:10px;background:white;border:1px solid #ecdfeb;border-radius:8px}
+.creditStats strong{font-size:14px;color:#87318c}
+.credit button{justify-self:start;background:#a437a6;color:white;padding:10px 14px}
+@media(max-width:540px){.creditStats{grid-template-columns:1fr}.form.form.form .customerRow{grid-template-columns:minmax(0,1fr) 76px}}
+.form.form.form [aria-label="العميل والمستودع"]>div>div{align-items:end}
+.form.form.form [aria-label="العميل والمستودع"]>div>div>label{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.form.form.form [aria-label="العميل والمستودع"]>div>div>label>small{grid-column:1}
+.form.form.form [aria-label="بيانات الفاتورة"]>div:first-of-type{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.form.form.form [aria-label="بيانات الفاتورة"]>div:first-of-type>label{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-content:start}
+.form.form.form [aria-label="بيانات الفاتورة"]>div:first-of-type>label>small{grid-column:1}
+.form.form.form [aria-label="أصناف الفاتورة"]{margin-top:0;padding:0;border:1px solid var(--finance-line);overflow:visible}
+.form.form.form [aria-label="أصناف الفاتورة"]>div:first-child{padding:18px 20px;margin:0;border-bottom:1px solid var(--finance-line)}
+.form.form.form [aria-label="أصناف الفاتورة"] h3{font-size:14px;font-weight:600;color:#514552}
+.form.form.form table{border-color:var(--finance-line)}
+.form.form.form table thead th{background:#f8f1f7;color:#79637b;border-color:var(--finance-line);font-size:11px;font-weight:600;padding:13px 10px}
+.form.form.form table tbody td{background:white;border-color:var(--finance-line);padding:8px 5px}
+.form.form.form table tbody :is(input,select,button){background:#fcf9fc;border-color:#ecdfeb;border-radius:7px;font-size:12px}
+.form.form.form table tbody button[aria-haspopup=dialog]{background:#f7edf6;color:#87398b;min-height:44px}
+.form.form.form [aria-label="ملخص الفاتورة"]{border:1px solid var(--finance-line);border-radius:12px;overflow:hidden;width:min(100%,360px);margin:16px;background:#fff}
+.form.form.form [aria-label="ملخص الفاتورة"]>div{min-height:40px;border-bottom:1px solid #f3eaf1}
+.form.form.form [aria-label="ملخص الفاتورة"]>div>*{padding:10px 14px;border:0;font-size:12px}
+.form.form.form [aria-label="ملخص الفاتورة"]>div:last-child{background:#f8edf6;color:#87398b}
+.form.form.form [aria-label="ملخص الفاتورة"]>div:last-child>*{font-size:16px;font-weight:600}
+.form.form.form [aria-label="أقسام خيارات الفاتورة"]{background:#fbf8fb;padding:8px;gap:6px;border-bottom:1px solid var(--finance-line);border-radius:12px 12px 0 0}
+.form.form.form [aria-label="أقسام خيارات الفاتورة"] button{background:transparent;border:1px solid transparent;min-height:40px;padding:10px 14px;color:#7f7080}
+.form.form.form [aria-label="أقسام خيارات الفاتورة"] button[aria-pressed=true]{background:white;border-color:#dbbada;color:#87398b}
+.form.form.form [aria-label="ملاحظات الفاتورة"],.form.form.form [aria-label="حالة سداد الفاتورة"]{border:1px solid var(--finance-line);padding:20px}
+@media(max-width:1000px){.form.form.form [data-invoice-metadata]{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.form.form.form{padding:10px;gap:12px}.form.form.form [data-invoice-metadata]>section{padding:16px}.form.form.form [aria-label="بيانات الفاتورة"]>div:first-of-type{grid-template-columns:minmax(0,1fr)}.form.form.form [aria-label="قالب الفاتورة"]>label{grid-template-columns:1fr;width:100%;gap:8px}.form.form.form [aria-label="ملخص الفاتورة"]{margin:12px;width:calc(100% - 24px)}}

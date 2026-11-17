@@ -96,13 +96,13 @@ export async function readBrandFinanceSnapshot({ client, cafe }: Awaited<ReturnT
 export async function executeBrandFinanceCommand(input: unknown, slug?: string): Promise<FinanceCommandResult> {
   const command = commandSchema.parse(input);
   if (JSON.stringify(command.payload).length > 100_000) throw new Error("بيانات العملية أكبر من الحد المسموح");
+  const { client, cafe } = await getBrandFinanceContext(slug);
   if (command.operation === "party" && command.payload.kind === "customer") {
     const phone = typeof command.payload.phone === "string" ? command.payload.phone.trim() : "";
-    if (!phone) throw new Error("أدخل رقم جوال العميل");
+    if (!phone && cafe.slug !== "khayal-aldeem") throw new Error("أدخل رقم جوال العميل");
     if (phone.length > 30) throw new Error("رقم الجوال يجب ألا يتجاوز ٣٠ حرفًا");
     command.payload.phone = phone;
   }
-  const { client, cafe } = await getBrandFinanceContext(slug);
   if (command.operation === "staff" && cafe.role !== "owner") {
     const maintenance = await getFinanceCashierMaintenance(cafe.id);
     if (!maintenance) throw new Error("إدارة الكاشير تتطلب صلاحية المالك أو جلسة صيانة سارية");
@@ -138,7 +138,7 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
   if (redeemPoints !== undefined && (butcherSale || typeof redeemPoints !== "number" || !Number.isInteger(redeemPoints) || redeemPoints <= 0 || redeemPoints > 1000000 || !command.payload.customerPhone)) throw new Error("راجع رقم جوال العميل وعدد النقاط المطلوب استبدالها");
   const customerDetails = command.operation === "party" && command.payload.kind === "customer" && Object.hasOwn(command.payload, "details");
   const { data, error } = customerDetails
-    ? await client.rpc("brand_finance_save_customer", { p_cafe_id: cafe.id, p_payload: command.payload, p_request_id: command.requestId })
+    ? await client.rpc(cafe.slug === "khayal-aldeem" ? "aldeem_save_customer" : "brand_finance_save_customer", { p_cafe_id: cafe.id, p_payload: command.payload, p_request_id: command.requestId })
     : redeemPoints !== undefined
     ? await client.rpc("erp_points_sale", { p_cafe: cafe.id, p_payload: command.payload, p_request: command.requestId, p_points: redeemPoints })
     : await client.rpc("brand_finance_execute", { p_cafe_id: cafe.id, p_operation: command.operation, p_payload: command.payload, p_request_id: command.requestId });

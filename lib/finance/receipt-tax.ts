@@ -1,8 +1,11 @@
 import qrcode from "qrcode-generator";
 import type { FinanceDocument, FinanceReceiptSeller } from "./brand-finance";
 
+type ReceiptTaxDocument = Pick<FinanceDocument, "kind" | "receipt_seller" | "total" | "tax" | "created_at" | "local_created_at">;
+type ReceiptQrDocument = ReceiptTaxDocument & Partial<Pick<FinanceDocument, "id" | "number" | "local_reference" | "display_number">>;
+
 /** ZATCA phase-one TLV tags 1–5, UTF-8 byte lengths, then Base64. */
-export function getFinanceReceiptTaxStatus(document: FinanceDocument): "ready" | "missing_identity" | "invalid_document" | "not_applicable" {
+export function getFinanceReceiptTaxStatus(document: ReceiptTaxDocument): "ready" | "missing_identity" | "invalid_document" | "not_applicable" {
   if (!["sale", "refund"].includes(document.kind)) return "not_applicable";
   const seller = document.receipt_seller;
   if (!seller?.name.trim() || !/^3[0-9]{13}3$/.test(seller.vatNumber) || new TextEncoder().encode(seller.name).length > 255) return "missing_identity";
@@ -10,7 +13,7 @@ export function getFinanceReceiptTaxStatus(document: FinanceDocument): "ready" |
   return "ready";
 }
 
-export function financeReceiptQr(document: FinanceDocument, ordinaryFallback = false): { payload: string; path: string; size: number; seller: FinanceReceiptSeller | null; kind: "tax" | "reference" } | null {
+export function financeReceiptQr(document: ReceiptQrDocument, ordinaryFallback = false): { payload: string; path: string; size: number; seller: FinanceReceiptSeller | null; kind: "tax" | "reference" } | null {
   const status = getFinanceReceiptTaxStatus(document);
   if (status !== "ready" && (!ordinaryFallback || status === "not_applicable" || !document.id)) return null;
   const seller = status === "ready" ? document.receipt_seller! : null;

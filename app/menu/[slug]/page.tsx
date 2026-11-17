@@ -23,6 +23,8 @@ import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 import { AldeemStore } from "@/components/store/aldeem-store";
 import { isAldeemStore } from "@/lib/commerce/aldeem-profile";
 import { isHospitalStore, MIND_HOSPITAL_SLUG } from "@/lib/commerce/hospital-profile";
+import { WahedMasoubMenu } from "@/components/menu/wahed-masoub-menu";
+import { WAHED_MASOUB_SLUG, WAHED_MASOUB_COLOR } from "@/lib/menu/wahed-masoub";
 import { HospitalMenu } from "@/components/menu/hospital-menu";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +35,7 @@ type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<Record<
 
 export async function generateViewport({ params }: Props): Promise<Viewport> {
   const { slug } = await params;
-  return { themeColor: isAldeemStore(slug) ? "#6b347e" : isFawaselStore(slug) ? "#ff8500" : slug === JAMILA_SLUG ? "#5c5c5c" : "#102019", width: "device-width", initialScale: 1 };
+  return { themeColor: slug === WAHED_MASOUB_SLUG ? WAHED_MASOUB_COLOR : isAldeemStore(slug) ? "#6b347e" : isFawaselStore(slug) ? "#ff8500" : slug === JAMILA_SLUG ? "#5c5c5c" : "#102019", width: "device-width", initialScale: 1 };
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
@@ -84,7 +86,7 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   const teaBakery = menu.slug === "brand-9010051467ed";
   const jamila = menu.slug === JAMILA_SLUG && menu.products.length === 0;
   const signature = signatureBrand(menu.slug, menu.branch?.slug) || defaultSignatureBrand(menu);
-  const program = (jamila || teaBakery || giftStore || signature || menu.slug === "brand-10620d3a586c" || isLocoMenu(menu.slug)) && menu.loyaltyEnabled
+  const program = (menu.slug === WAHED_MASOUB_SLUG || jamila || teaBakery || giftStore || signature || menu.slug === "brand-10620d3a586c" || isLocoMenu(menu.slug)) && menu.loyaltyEnabled
     ? await getPublicLoyaltyProgramBySlug(menu.slug).catch(() => null) : null;
   const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;
   // Gallery frames are genuine public menus, without visitor/customer tracking or interactions.
@@ -99,7 +101,7 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
     if (showcase) return <div inert>{storefront}</div>;
     return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{storefront}</>;
   }
-  const presentation = jamila ? <JamilaMenu menu={menu} loyalty={loyalty} /> : teaBakery ? <TeaBakeryMenu key={`${menu.slug}:${menu.branch?.id ?? "primary"}`} menu={menu} loyalty={loyalty} /> : signature ? <SignatureMenu key={`${menu.slug}:${menu.branch?.id ?? "primary"}`} menu={menu} brand={signature} loyalty={loyalty} /> : giftStore && menu.slug === "brand-871ec6e243c0" ? <TogetherStore menu={menu} loyalty={loyalty} settings={storeSettings} /> : isLocoMenu(menu.slug) ? <LocoMenu menu={menu} loyalty={loyalty} /> : menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} loyalty={loyalty} /> : <BistroMenu menu={menu} />;
+  const presentation = menu.slug === WAHED_MASOUB_SLUG ? <WahedMasoubMenu key={`${menu.slug}:${menu.branch?.id ?? "primary"}`} menu={menu} loyalty={loyalty} /> : jamila ? <JamilaMenu menu={menu} loyalty={loyalty} /> : teaBakery ? <TeaBakeryMenu key={`${menu.slug}:${menu.branch?.id ?? "primary"}`} menu={menu} loyalty={loyalty} /> : signature ? <SignatureMenu key={`${menu.slug}:${menu.branch?.id ?? "primary"}`} menu={menu} brand={signature} loyalty={loyalty} /> : giftStore && menu.slug === "brand-871ec6e243c0" ? <TogetherStore menu={menu} loyalty={loyalty} settings={storeSettings} /> : isLocoMenu(menu.slug) ? <LocoMenu menu={menu} loyalty={loyalty} /> : menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} loyalty={loyalty} /> : <BistroMenu menu={menu} />;
   if (showcase) return <div inert>{presentation}</div>;
   return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{presentation}</>;
 }

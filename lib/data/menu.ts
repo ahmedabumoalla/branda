@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOwnerCafeContext, getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
 import { clearServerMemoryCache } from "@/lib/performance/server-memory-cache";
 import { isOwnedMenuAsset } from "@/lib/menu/standalone-menu";
+import { resolveBranchMenuSource } from "@/lib/menu/branch-source";
 import {
   mapDbCategoryToRecord,
   mapDbProductToMenuProduct,
@@ -144,11 +145,13 @@ function publicPromoSummary(value: unknown): PublicPromoSummary | null {
 }
 
 async function publicPrimaryBranchFilter(supabase: ReturnType<typeof createAdminClient>, cafeId: string) {
-  const { data, error } = await supabase.from("branches").select("id,is_primary").eq("cafe_id", cafeId)
-    .eq("active", true).not("menu_slug", "is", null).is("deleted_at", null).order("sort_order").order("id");
+  const { data, error } = await supabase.from("branches").select("id,active,menu_slug,uses_brand_menu,is_brand_menu_root,deleted_at").eq("cafe_id", cafeId)
+    .eq("is_brand_menu_root", true);
   if (error) throw error;
-  const branch = data?.find(row => row.is_primary) ?? data?.[0];
-  return branch ? `branch_id.eq.${branch.id}` : "branch_id.is.null";
+  const source = resolveBranchMenuSource(data ?? [], null, true);
+  // An inactive/deleted root must not expose a hidden unbranched catalogue.
+  if (!source) return "id.is.null";
+  return source.sourceBranchId ? `branch_id.eq.${source.sourceBranchId}` : "branch_id.is.null";
 }
 
 export async function getPublicProductCatalogSummaryBySlug(slug: string) {
@@ -258,9 +261,12 @@ export async function getOwnerMenu(branchId?: string | null) {
   const supabase = await createClient();
 
   if (branchId) {
-    z.string().uuid().parse(branchId);
-    const { data, error } = await supabase.from("branches").select("id").eq("id", branchId).eq("cafe_id", cafe.id).is("deleted_at", null).maybeSingle();
-    if (error || !data) throw new Error("الفرع غير متاح");
+    if (branchId !== "main") z.string().uuid().parse(branchId);
+    const { data, error } = await supabase.from("branches").select("id,active,menu_slug,uses_brand_menu,is_brand_menu_root,deleted_at").eq("cafe_id", cafe.id);
+    if (error) throw error;
+    const source = resolveBranchMenuSource(data ?? [], branchId === "main" ? null : branchId);
+    if (!source) throw new Error("الفرع أو المنيو الأساسي غير متاح");
+    branchId = source.sourceBranchId;
   }
   const categoryQuery = supabase.from("menu_categories").select("*").eq("cafe_id", cafe.id).is("deleted_at", null).order("sort_order");
   const productQuery = supabase.from("menu_products").select("*").eq("cafe_id", cafe.id).is("deleted_at", null).order("sort_order");
@@ -524,6 +530,21 @@ async function upsertEventTicketSettings(
   if (error) throw error;
 }
 
+async function assertMenuWriteSource(supabase: Awaited<ReturnType<typeof createClient>>, cafeId: string, table: "menu_products" | "menu_categories", recordId?: string, targetBranchId?: string | null) {
+  const branchIds = new Set<string>();
+  if (targetBranchId) branchIds.add(targetBranchId);
+  if (recordId) {
+    const { data, error } = await supabase.from(table).select("branch_id").eq("cafe_id", cafeId).eq("id", recordId).maybeSingle();
+    if (error) throw error;
+    if (data?.branch_id) branchIds.add(String(data.branch_id));
+  }
+  if (!branchIds.size) return;
+  const { data, error } = await supabase.from("branches").select("id,uses_brand_menu").eq("cafe_id", cafeId).in("id", [...branchIds]).is("deleted_at", null);
+  if (error) throw error;
+  if ((data ?? []).length !== branchIds.size) throw new Error("الفرع غير متاح لهذا الحساب");
+  if (data?.some(branch => branch.uses_brand_menu)) throw new Error("هذا الفرع يعتمد المنيو الأساسي عدل المنيو الأساسي أو فعّل منيو مستقل للفرع");
+}
+
 export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
   const parsed = productSchema.parse(input);
   const cafe = await requireOwnerCafeContext("menu");
@@ -534,6 +555,7 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
     throw new Error("مواصفات اللحوم متاحة لحساب الملحمة فقط");
   }
   const supabase = await createClient();
+  await assertMenuWriteSource(supabase, cafe.id, "menu_products", parsed.id, parsed.branchId);
   let hospitalPreviousDetails: Record<string, unknown> | null | undefined;
   if (parsed.priceMode !== undefined && parsed.id) {
     const { data: existingPrice, error: priceError } = await supabase.from("menu_products")
@@ -673,6 +695,7 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
 export async function softDeleteMenuProduct(productId: string) {
   const cafe = await requireOwnerCafeContext("menu");
   const supabase = await createClient();
+  await assertMenuWriteSource(supabase, cafe.id, "menu_products", productId);
   const { error } = await supabase
     .from("menu_products")
     .update({ deleted_at: new Date().toISOString(), available: false })
@@ -712,6 +735,7 @@ export async function upsertMenuCategory(input: z.infer<typeof categorySchema>) 
   const parsed = categorySchema.parse(input);
   const cafe = await requireOwnerCafeContext("menu");
   const supabase = await createClient();
+  await assertMenuWriteSource(supabase, cafe.id, "menu_categories", parsed.id, parsed.branchId);
 
   const payload: MenuCategoryPayload = {
     ...(parsed.branchId !== undefined ? { branch_id: parsed.branchId } : {}),
@@ -847,6 +871,7 @@ export async function softDeleteMenuCategory(
   const parsedCategoryId = z.string().uuid().parse(categoryId);
   const cafe = await requireOwnerCafeContext("menu");
   const supabase = await createClient();
+  await assertMenuWriteSource(supabase, cafe.id, "menu_categories", parsedCategoryId);
 
   const { count, error: productsError } = await supabase
     .from("menu_products")

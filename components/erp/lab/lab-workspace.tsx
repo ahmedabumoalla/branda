@@ -37,7 +37,7 @@ function ProductImage({ src, name }: { src: string | null; name: string }) {
   return src && !failed ? <Image src={src} alt={name} width={140} height={140} unoptimized onError={() => setFailed(true)} /> : <span className={s.imageFallback} aria-label="صورة المنتج غير متاحة"><ImageIcon size={28} aria-hidden="true" /></span>;
 }
 
-export function LabWorkspace({ initialSnapshot, standalone = false }: { initialSnapshot: LabSnapshot; standalone?: boolean }) {
+export function LabWorkspace({ initialSnapshot, standalone = false, mode = "requests" }: { initialSnapshot: LabSnapshot; standalone?: boolean; mode?: "requests" | "deliveries" }) {
   const [data, setData] = useState(initialSnapshot);
   const [now, setNow] = useState(Date.parse(initialSnapshot.generatedAt));
   const [query, setQuery] = useState("");
@@ -54,9 +54,10 @@ export function LabWorkspace({ initialSnapshot, standalone = false }: { initialS
   const refreshSequence = useRef(0);
   const activeOrder = data.orders.find(order => order.id === selected);
   const financeBase = standalone ? `/finance/${data.slug}` : "/dashboard/finance";
-  const active = data.orders.filter(order => !["delivered", "cancelled", "recalled"].includes(order.status));
+  const scopedOrders = mode === "deliveries" ? data.orders.filter(order => ["prepared", "out_for_delivery", "delivered", "on_hold", "recalled"].includes(order.status)) : data.orders;
+  const active = scopedOrders.filter(order => !["delivered", "cancelled", "recalled"].includes(order.status));
   const overdue = active.filter(order => new Date(order.requiredAt).getTime() < now).length;
-  const visible = data.orders.filter(order => (archive ? ["delivered", "cancelled"].includes(order.status) : !["delivered", "cancelled"].includes(order.status)) && (!branch || order.branchId === branch) && labOrderMatches(order, query));
+  const visible = scopedOrders.filter(order => (archive ? ["delivered", "cancelled"].includes(order.status) : !["delivered", "cancelled"].includes(order.status)) && (!branch || order.branchId === branch) && labOrderMatches(order, query));
 
   async function reload(silent = false) {
     const sequence = ++refreshSequence.current;

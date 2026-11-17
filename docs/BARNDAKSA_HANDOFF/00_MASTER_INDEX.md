@@ -1,3 +1,5 @@
+[تحديث الفروع والديم وواحد معصوب — ١٧ نوفمبر ٢٠٢٦](BRANCHES_ALDEEM_RELEASE_20261117.md)
+
 # Branda current handoff
 
 Current follow-up: [MIND customers and performance](MIND_CUSTOMERS_SPEED_20261115.md) - PUBLISHED AND VERIFIED

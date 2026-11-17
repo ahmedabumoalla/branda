@@ -89,6 +89,7 @@ async function run() {
   assert.equal(zeroStock.products.length,3,'Both owner-disabled and stock-exhausted listings remain visible');
   assert.deepEqual(zeroStock.products.map(p=>[p.id,p.available]),[['product',false],['manually-unavailable',false],['in-stock',true]],'Stock and owner availability jointly determine orderability');
   const branches=[{id:'main',cafe_id:cafeId,name:'Main',menu_slug:'murooj',active:true,is_primary:true,deleted_at:null},{id:'drive',cafe_id:cafeId,name:'Drive',menu_slug:'drive-thru',active:true,deleted_at:null},{id:'hidden-branch',cafe_id:cafeId,name:'Hidden branch',menu_slug:'hidden',active:false,deleted_at:null},{id:'foreign-branch',cafe_id:'foreign',name:'Foreign branch',menu_slug:'foreign',active:true,deleted_at:null}];
+  branches.forEach(branch => { branch.uses_brand_menu = false; branch.is_brand_menu_root = branch.id === 'main'; });
   const categories=['main','drive','hidden-branch'].map(branch_id=>({id:branch_id+'-category',cafe_id:cafeId,branch_id,name:'Coffee',visible:true,deleted_at:null}));
   const branchProducts=categories.map((c,i)=>({...fixtureProduct,id:c.branch_id+'-product',category_id:c.id,branch_id:c.branch_id,price:13-i,price_options:i===1?[12,13]:[],image_storage_path:`${cafeId}/${c.branch_id}/photo.webp`,media:[]}));
   const branched=fakeClient({branches,categories,products:branchProducts});
@@ -97,6 +98,24 @@ async function run() {
   const driveMenu=await branchLoad('double-b-bistro',false,'drive-thru');assert.deepEqual(driveMenu.products.map(p=>p.id),['drive-product']);assert.deepEqual(driveMenu.products[0].priceOptions,[12,13]);
   for(const branch of ['hidden','foreign','missing',"bad' OR true"])assert.equal(await branchLoad('double-b-bistro',false,branch),null);
   assert(!branched.signedPaths.some(p=>p.includes('hidden-branch')),'Hidden branch media never signed');
+  const inheritedBranches=branches.map(branch=>({...branch,uses_brand_menu:branch.id==='drive'}));
+  const inherited=await loader(fakeClient({branches:inheritedBranches,categories,products:branchProducts}).client)('double-b-bistro',false,'drive-thru');
+  assert.equal(inherited.branch.id,'drive','The public address retains the selected branch identity');
+  assert.deepEqual(inherited.products.map(p=>p.id),['main-product'],'An inherited branch reads original main product IDs without copying or merging');
+  assert.deepEqual(inherited.categories.map(c=>c.id),['main-category']);
+  assert.deepEqual((await branchLoad('double-b-bistro',false,'drive-thru')).products.map(p=>p.id),['drive-product'],'Restoring an independent menu reveals its original catalogue');
+  for(const rootChange of [{active:false},{deleted_at:'deleted'},{menu_slug:null}]) {
+    const blocked=fakeClient({branches:inheritedBranches.map(branch=>branch.id==='main'?{...branch,...rootChange}:branch),categories,products:branchProducts});
+    assert.equal(await loader(blocked.client)('double-b-bistro'),null,'Unavailable root cannot fall back to an unrelated base catalogue');
+    assert.equal(await loader(blocked.client)('double-b-bistro',false,'drive-thru'),null,'Inherited branches cannot expose an unavailable root');
+  }
+  const newBranch={id:'new',cafe_id:cafeId,name:'New',menu_slug:'new',active:true,is_primary:true,uses_brand_menu:true,is_brand_menu_root:false,deleted_at:null};
+  const base=fakeClient({branches:[newBranch]});
+  const baseMenu=await loader(base.client)('double-b-bistro');
+  assert.equal(baseMenu.branch,null,'Adding the first branch never replaces the original unbranched brand menu');
+  assert.deepEqual(baseMenu.products.map(p=>p.id),['product']);
+  const baseInherited=await loader(base.client)('double-b-bistro',false,'new');
+  assert.equal(baseInherited.branch.id,'new');assert.deepEqual(baseInherited.products.map(p=>p.id),['product']);
   const availableDeliProduct = { ...fixtureProduct, id: "latte", available: true };
   const deli = fakeClient({slug:'delicake',products:[availableDeliProduct]});
   assert.equal(await loader(deli.client,[])('delicake'),null);

@@ -11,15 +11,15 @@ export type InvoiceLoadResource = {
 };
 
 /** Keep every failed read actionable without stacking a banner for every pending read. */
-export function InvoiceLoadStatus({ resources }: { resources: InvoiceLoadResource[] }) {
+export function InvoiceLoadStatus({ resources, appearance = "default" }: { resources: InvoiceLoadResource[]; appearance?: "default" | "aldeem" }) {
   const pending = resources.filter(resource => resource.loading);
   const failed = resources.filter(resource => !resource.loading && resource.error);
   if (!pending.length && !failed.length) return null;
 
-  return <div className={styles.panel}>
+  return <div className={`${styles.panel} ${appearance === "aldeem" ? styles.aldeem : ""}`}>
     {!!pending.length && <div className={styles.progress} role="status" aria-live="polite">
       <LoaderCircle className={styles.spinner} size={20} aria-hidden="true" />
-      <div><strong>جار تجهيز الفاتورة</strong><span>{pending.map(resource => resource.label).join(" · ")}</span></div>
+      <div><strong>{appearance === "aldeem" ? "نجهز بيانات فاتورتك" : "جار تجهيز الفاتورة"}</strong><span>{pending.map(resource => resource.label).join(" · ")}</span></div>
     </div>}
     {failed.map(resource => <div className={styles.failure} key={resource.key}>
       <AlertCircle size={18} aria-hidden="true" />

@@ -7,7 +7,7 @@ import { readMaintenanceSessionCookie } from "@/lib/platform/maintenance";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { marketingConfigured } from "@/lib/marketing/crypto";
 import { MarketingError as BrandWhatsAppError, readMarketingConnection, marketingConnectionCredentials, refreshMarketingConnection, runMarketingConnectionAction } from "@/lib/data/marketing";
-import { LOCO_CAFE_ID, type BrandWhatsAppDashboard, type BrandWhatsAppResult } from "@/lib/whatsapp/brand-connection-types";
+import { LOCO_CAFE_ID, supportsPrivateWhatsApp, type BrandWhatsAppDashboard, type BrandWhatsAppResult } from "@/lib/whatsapp/brand-connection-types";
 import type { GreenApiMarketingCredentials } from "@/lib/whatsapp/green-api-marketing";
 
 export { BrandWhatsAppError };
@@ -37,15 +37,15 @@ async function requireBrandWhatsAppContext() {
     try { cafeId = (await requireOwnerCafeContext()).id; }
     catch { throw new BrandWhatsAppError("هذا الحساب غير مخول لربط رقم العلامة", 403); }
   }
-  if (cafeId !== LOCO_CAFE_ID) throw new BrandWhatsAppError("ربط رقم العلامة غير متاح لهذا الحساب", 403);
+  if (!supportsPrivateWhatsApp(cafeId)) throw new BrandWhatsAppError("ربط رقم العلامة غير متاح لهذا الحساب", 403);
   const db = createAdminClient();
-  const { data: cafe, error: cafeError } = await db.from("cafes").select("id,name,owner_user_id,status").eq("id", LOCO_CAFE_ID).is("deleted_at", null).maybeSingle();
+  const { data: cafe, error: cafeError } = await db.from("cafes").select("id,name,owner_user_id,status").eq("id", cafeId).is("deleted_at", null).maybeSingle();
   if (cafeError || !cafe || !["active", "published"].includes(cafe.status)) throw new BrandWhatsAppError("العلامة غير متاحة", 403);
   if (profile.role !== "platform_admin" && cafe.owner_user_id !== user.id) {
-    const { data: member, error } = await db.from("cafe_members").select("role").eq("cafe_id", LOCO_CAFE_ID).eq("user_id", user.id).maybeSingle();
+    const { data: member, error } = await db.from("cafe_members").select("role").eq("cafe_id", cafeId).eq("user_id", user.id).maybeSingle();
     if (error || member?.role !== "owner") throw new BrandWhatsAppError("ربط الرقم متاح لمالك العلامة فقط", 403);
   }
-  return { db, cafeId: LOCO_CAFE_ID, userId: user.id, brandName: String(cafe.name) };
+  return { db, cafeId, userId: user.id, brandName: String(cafe.name) };
 }
 
 type Context = Awaited<ReturnType<typeof requireBrandWhatsAppContext>>;
@@ -54,6 +54,7 @@ async function dashboard(context: Context): Promise<BrandWhatsAppDashboard> {
   return {
     brandName: context.brandName,
     configured: marketingConfigured(),
+    platformFallback: context.cafeId !== LOCO_CAFE_ID,
     transactionalEnabled: Boolean(row?.transactional_requested_at) && !["disconnected", "disconnecting"].includes(row!.status),
     connection: row ? {
       status: row.status, phone: row.requested_phone, verifiedPhone: row.verified_phone,
@@ -89,15 +90,19 @@ export async function runBrandWhatsAppAction(raw: unknown): Promise<BrandWhatsAp
 }
 
 /** Internal routing only: the caller supplies a cafe ID derived from a persisted customer operation. */
-export async function getLocoCustomerWhatsAppCredentials(cafeId: string | null | undefined): Promise<(GreenApiMarketingCredentials & { expectedPhone: string; generation: string }) | null> {
-  if (cafeId !== LOCO_CAFE_ID) return null;
+export async function getBrandCustomerWhatsAppCredentials(cafeId: string | null | undefined): Promise<(GreenApiMarketingCredentials & { expectedPhone: string; generation: string }) | null> {
+  if (!cafeId || !supportsPrivateWhatsApp(cafeId)) return null;
   try {
     const db = createAdminClient();
-    const { data: cafe, error } = await db.from("cafes").select("id,status").eq("id", LOCO_CAFE_ID).is("deleted_at", null).maybeSingle();
+    const { data: cafe, error } = await db.from("cafes").select("id,status").eq("id", cafeId).is("deleted_at", null).maybeSingle();
     if (error || !cafe || !["active", "published"].includes(cafe.status)) return null;
-    const row = await readMarketingConnection({ db, cafeId: LOCO_CAFE_ID });
+    const row = await readMarketingConnection({ db, cafeId });
     if (!row?.transactional_requested_at || row.status !== "connected" || !/^9665\d{8}$/.test(row.requested_phone)
       || row.requested_phone !== row.verified_phone || !row.instance_id || !row.encrypted_credentials) return null;
     return { ...marketingConnectionCredentials(row), expectedPhone: row.requested_phone, generation: row.generation };
   } catch { return null; }
+}
+
+export async function getLocoCustomerWhatsAppCredentials(cafeId: string | null | undefined) {
+  return cafeId === LOCO_CAFE_ID ? getBrandCustomerWhatsAppCredentials(cafeId) : null;
 }

@@ -1,0 +1,5 @@
+.navigation{display:flex;flex-wrap:wrap;gap:8px;margin-block:8px 18px}
+.navigation a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 15px;border:1px solid #e8d1ec;border-radius:10px;background:#fff;color:#714173;text-decoration:none;font-size:13px}
+.navigation a:hover{background:#fcf7fc;border-color:#a437a6}
+.navigation a:focus-visible{outline:3px solid #a437a6;outline-offset:3px}
+.navigation[aria-disabled=true] a{opacity:.6;cursor:wait}

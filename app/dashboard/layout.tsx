@@ -1,3 +1,4 @@
+import { AldeemCleanDashboard } from "@/components/dashboard/aldeem-clean-dashboard";
 import { DashboardAppLayout } from "@/components/dashboard/dashboard-app-layout";
 import { recordCurrentBrandDashboardEntry } from "@/lib/data/operation-events";
 import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
@@ -29,6 +30,10 @@ export default async function DashboardLayout({
   if (cafe.staff) {
     const pathname = (await headers()).get("x-branda-pathname") ?? "";
     if (!brandStaffPathAllowed(cafe.staff, pathname)) redirect(brandStaffLandingPath(cafe.staff));
+  }
+  if (!cafe.staff && cafe.slug === "khayal-aldeem") {
+    const maintenance = await getCurrentMaintenanceSession();
+    return <div className={dashboardFont.className}><AldeemCleanDashboard maintenance={!!maintenance} /></div>;
   }
   const [maintenanceSession, entryClient, initialSnapshot] = await Promise.all([
     getCurrentMaintenanceSession(),

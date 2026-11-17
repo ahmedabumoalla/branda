@@ -28,6 +28,14 @@
 @media (max-width: 560px) { .directory { padding: 20px 14px 28px; }.header { margin-bottom: 22px; }.header h1 { font-size: 29px; }.subtitle { font-size: 13px; }.stats { gap: 10px; margin-bottom: 18px; }.stats article { padding: 15px; }.stats article > div { gap: 7px; font-size: 12px; }.stats article > div svg { width: 16px; height: 16px; }.stats strong { font-size: 29px; margin-top: 13px; }.stats p { font-size: 11px; }.panelHeading { padding: 20px 18px 18px; }.panelHeading h2 { font-size: 20px; }.panelHeading p { max-width: 190px; }.toolbar { padding-inline: 18px; gap: 11px; }.select select { min-width: 0; font-size: 11px; padding-inline: 8px; }.search { padding-inline: 10px; }.search input { font-size: 12px; }.filterRow { padding-inline: 18px; }.statusFilters { gap: 3px; width: 100%; }.statusFilters button { flex: 1; padding-inline: 7px; font-size: 11px; gap: 5px; }.mobileCard { padding: 15px; }.pagination { padding: 16px 18px; justify-content: center; text-align: center; }.pagination p { width: 100%; }.pagination button { width: 44px; height: 44px; }.footnote { font-size: 11px; } }
 @media (prefers-reduced-motion: reduce) { .directory *, .directory *::before, .directory *::after { animation: none !important; transition: none !important; } }
 .headerActions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; min-width: 0; }
+.whatsappSender { display: grid; gap: 3px; max-width: 260px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.whatsappSender strong { font-size: 11px; font-weight: 600; }
+.whatsappPrivate { color: var(--green); }.whatsappPlatform { color: var(--ink); }.whatsappWarning { color: var(--red); }
+.whatsappPhone { color: var(--ink); width: fit-content; font-variant-numeric: tabular-nums; }
+.whatsappDetails { min-width: 0; }.whatsappDetails summary { cursor: pointer; min-height: 32px; padding-block: 5px; color: var(--gold); width: fit-content; }
+.whatsappDetails summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+.whatsappDetails > span { display: block; padding-bottom: 3px; }.whatsappDetails bdi { color: var(--ink); user-select: text; }
+@media (max-width: 760px) { .whatsappSender { max-width: none; }.whatsappDetails summary { min-height: 44px; padding-block: 11px; } }
 .exportButton { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; padding: 10px 16px; border: 1px solid var(--gold); border-radius: 11px; background: transparent; color: var(--gold); white-space: nowrap; }
 .exportButton:hover:not(:disabled) { background: #e8bf7712; }
 .exportButton[aria-busy="true"] { opacity: .8; }

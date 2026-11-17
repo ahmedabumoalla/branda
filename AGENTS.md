@@ -10,6 +10,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Continuity and execution
 
+- RELEASE AUTHORIZATION2026-11-17: User explicitly requested publication of completed Aldeem, Wahed and all eligible menu-brand branch updates to GitHub and Vercel, with handoff updated. Preserve newer production changes in the isolated release worktree. No real test messages or retained test financial records
+
+
 - ALDEEM ENTERPRISE 2026-11-15 (Claude): owner mandate to rebuild the khayal-aldeem account only. Seven migrations and demo data are already applied to production; never reapply them. Read docs/BARNDAKSA_HANDOFF/ALDEEM_ENTERPRISE_20261115.md before touching families, points, tracking, food safety, the Aldeem sidebar or platform_plans.erp_modules
 
 - USER RELEASE AUTHORIZATION 2026-11-15: After the requested platform performance/interface audit, publish the completed combined source to GitHub and Vercel. Preserve concurrent Claude work and fixes already in production through the isolated release worktree; this supersedes prior frontend-local-only restrictions for this release. Browser inspection is explicitly requested. Do not send real test messages or retain test financial records

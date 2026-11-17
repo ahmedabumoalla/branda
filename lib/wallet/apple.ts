@@ -5,13 +5,14 @@ import { PKPass, PassType } from "passkit-generator";
 import { createBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { appleConfig } from "./config";
 import { WALLET_ART_VERSION, walletStampArtwork } from "./art";
-import { walletColors, walletLocations } from "./payload";
+import { walletColors, walletAppleLocations } from "./payload";
 import type { WalletMember } from "./types";
 import { walletBrandLogo } from "./logo";
 import { createWalletArtifactCache, walletArtifactKey } from "./artifact-cache";
 import { isMqas77Wallet, MQAS77_WALLET_VERSION, MQAS77_WALLET_NAME } from "./mqas77-design";
 import { mqas77Emblem } from "./mqas77-assets";
 import { APPLE_ICON_SIZE, APPLE_ICON_VERSION, appleIconBackground } from "./apple-icon";
+import { WAHED_MASOUB_SLUG } from "@/lib/menu/wahed-masoub";
 export { walletBrandLogo } from "./logo";
 
 export { walletStampArtwork } from "./art";
@@ -44,6 +45,7 @@ export async function issueApplePass(member: WalletMember) {
   const config = appleConfig();
   const colors = walletColors(member);
   const mqas77 = isMqas77Wallet(member.cafeSlug);
+  const preserveLogoColors = mqas77 || member.cafeSlug === WAHED_MASOUB_SLUG;
   const asset = mqas77 ? await mqas77Emblem() : await walletBrandLogo(member);
   const iconBackground = mqas77 ? colors.background : await appleIconBackground(asset, colors.background, colors.foreground);
   const assetKey = walletArtifactKey(asset);
@@ -53,9 +55,10 @@ export async function issueApplePass(member: WalletMember) {
     const suffix = scale === 1 ? "" : `@${scale}x`;
     const [icon, logo, strip] = await Promise.all([
       cachedBrandImage(`${assetKey}:${iconBackground}:${scale}:${APPLE_ICON_VERSION}`, () => image.clone().trim().resize(APPLE_ICON_SIZE * scale, APPLE_ICON_SIZE * scale, { fit: "contain", background: iconBackground }).flatten({ background: iconBackground }).png().toBuffer()),
-      // Preserve the mark's alpha silhouette with light ink on the dark pass.
-      cachedBrandImage(`${assetKey}:${colors.foreground}:${scale}:logo`, async () => {
+      // Keep colored brand tiles intact; tint only silhouette-based marks.
+      cachedBrandImage(`${assetKey}:${colors.foreground}:${scale}:logo:${preserveLogoColors}`, async () => {
         if (mqas77) return image.clone().resize(40 * scale, 40 * scale, { fit: "contain", background: "#00000000" }).png().toBuffer();
+        if (preserveLogoColors) return image.clone().trim().resize(40 * scale, 40 * scale, { fit: "contain", background: "#00000000" }).png().toBuffer();
         const logoMask = await image.clone().trim().resize(136 * scale, 40 * scale, { fit: "inside" }).ensureAlpha().png().toBuffer({ resolveWithObject: true });
         return sharp({ create: { width: logoMask.info.width, height: logoMask.info.height, channels: 4, background: colors.foreground } })
           .composite([{ input: logoMask.data, blend: "dest-in" }]).png().toBuffer();
@@ -84,7 +87,8 @@ export async function issueApplePass(member: WalletMember) {
   style.backFields.push({ key: "reward", label: "مكافأتك", value: member.program.rewardName }, { key: "terms", label: "الشروط", value: member.program.terms }, { key: "validity", label: "صلاحية المكافأة", value: `${member.experience.rewardValidityDays} يوماً من إصدار المكافأة` });
   style.backFields.push({ key: "offer", label: member.cafeName, value: [member.experience.offerTitle, member.experience.offerBody].filter(Boolean).join("\n"), changeMessage: "%@" });
   pass.setBarcodes({ format: "PKBarcodeFormatQR", message: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), messageEncoding: "iso-8859-1", altText: member.card.displayNumber || member.card.cardCode });
-  for (const location of walletLocations(member)) pass.setLocations({ ...location, relevantText: member.experience.nearbyMessage || member.cafeName });
+  // setLocations replaces the array; pass all branch locations in one call
+  pass.setLocations(...walletAppleLocations(member));
   return pass.getAsBuffer();
 }
 

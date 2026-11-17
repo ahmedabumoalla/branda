@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { ArrowLeft, Building2, Check, ChevronLeft, ChevronRight, CircleDollarSign, Download, Layers3, LoaderCircle, Search, Settings2, ShieldCheck, Plus } from "lucide-react";
 import type { PlatformCafe, PlatformPlan } from "@/lib/platform/admin-data";
+import type { MarketingConnectionStatus } from "@/lib/marketing/types";
 import s from "./brand-directory.module.css";
 
 type Props = { cafes: PlatformCafe[]; plans: PlatformPlan[]; onManage: (cafe: PlatformCafe) => void; onCreate?: () => void; configError?: string };
@@ -10,6 +11,32 @@ const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 const date = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Riyadh" });
 const pageSize = 12;
 const excelMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const connectionLabels: Record<MarketingConnectionStatus, string> = {
+  disconnected: "غير متصل", provisioning: "جارٍ تجهيز الربط", pairing: "بانتظار مسح الرمز", connected: "متصل",
+  mismatch: "الرقم غير مطابق", uncertain: "يحتاج التحقق", error: "تعذر الاتصال", disconnecting: "جارٍ فصل الاتصال",
+};
+
+function BrandWhatsAppStatus({ cafe }: { cafe: PlatformCafe }) {
+  const sender = cafe.whatsappSender;
+  if (!sender || sender.source === "unavailable") return <div className={s.whatsappSender}><strong className={s.whatsappWarning}>واتساب: تعذر قراءة حالة الربط</strong></div>;
+  const connection = sender.connection;
+  const validDate = connection?.updatedAt && Number.isFinite(Date.parse(connection.updatedAt));
+  return <div className={s.whatsappSender}>
+    <strong className={sender.source === "private" ? s.whatsappPrivate : s.whatsappPlatform}>واتساب العملاء: {sender.source === "private" ? "رقمهم الخاص" : "رقم برندة"}</strong>
+    {sender.sendingPaused && <span className={s.whatsappWarning}>إرسال العلامة متوقف</span>}
+    {connection ? <>
+      <span>{connection.purpose === "campaigns" ? "رقم خاص للحملات" : "الرقم الخاص"}: {connectionLabels[connection.status] ?? "حالة غير معروفة"}</span>
+      {connection.status === "connected" && connection.verifiedPhone && <bdi className={s.whatsappPhone} dir="ltr">+{connection.verifiedPhone}</bdi>}
+      {sender.platformFallback && <span>برندة بديل عند تعذر الاتصال</span>}
+      <details className={s.whatsappDetails}><summary>تفاصيل الربط</summary>
+        <span>الرقم المطلوب <bdi dir="ltr">+{connection.requestedPhone}</bdi></span>
+        {connection.verifiedPhone && <span>آخر رقم موثق <bdi dir="ltr">+{connection.verifiedPhone}</bdi></span>}
+        <span>نسخة <bdi>Green API</bdi> <bdi dir="ltr">{connection.instanceId || "لم تُنشأ نسخة بعد"}</bdi></span>
+        {validDate && <span>آخر تحديث مسجل <time dateTime={connection.updatedAt}>{date.format(new Date(connection.updatedAt))}</time></span>}
+      </details>
+    </> : <span>{sender.source === "private" ? "بانتظار ربط رقم العلامة" : "لا توجد نسخة خاصة مسجلة"}</span>}
+  </div>;
+}
 
 function exportFilename(disposition: string | null) {
   const fallback = "branda-brands.xlsx";
@@ -32,6 +59,7 @@ function BrandIdentity({ cafe, onManage }: { cafe: PlatformCafe; onManage: Props
       : <Building2 aria-hidden="true" />}</span>
     <div className={s.identityText}><button type="button" className={s.name} onClick={() => onManage(cafe)} aria-haspopup="dialog" aria-label={`فتح ملف ${cafe.name}`}><bdi>{cafe.name}</bdi></button>
       <bdi className={s.slug}>/{cafe.slug}</bdi><span className={s.account}><span>رقم الصيانة</span><bdi>{cafe.maintenanceAccountNumber || "غير مضاف"}</bdi></span>
+      <BrandWhatsAppStatus cafe={cafe} />
     </div>
   </div>;
 }
@@ -152,6 +180,7 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
         <footer className={s.pagination}><p role="status">{filtered.length ? `عرض ${number.format((currentPage - 1) * pageSize + 1)} إلى ${number.format(Math.min(currentPage * pageSize, filtered.length))} من ${number.format(filtered.length)} علامة` : "لا توجد نتائج"}</p><nav aria-label="صفحات العلامات"><button type="button" aria-label="الصفحة السابقة" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronRight aria-hidden="true" /></button><span>صفحة <bdi>{currentPage}</bdi> من <bdi>{pages}</bdi></span><button type="button" aria-label="الصفحة التالية" disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}><ChevronLeft aria-hidden="true" /></button></nav></footer>
       </section>
       <p className={s.footnote}><ShieldCheck aria-hidden="true" />حالة العلامة مستقلة عن صلاحية اشتراكها ويمكنك إدارة الاثنين من ملف العلامة</p>
+      <p className={s.footnote}>حالة ربط واتساب حسب آخر تحديث محفوظ وقد تتغير عند التحقق من مزود الخدمة</p>
     </>}
   </div>;
 }

@@ -22,6 +22,7 @@ import { getAdminBrandSubscriptionStates, getAdminBrandSubscriptionSummary } fro
 import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
 import type { SubscriptionPaymentRequest, SubscriptionRequestPage } from "@/lib/platform/subscription";
 import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
+import { mapAdminWhatsAppSummary, type AdminWhatsAppConnectionRow } from "@/lib/whatsapp/admin-sender-summary";
 import { normalizeErpModules } from "@/lib/platform/erp-modules";
 
 
@@ -49,6 +50,27 @@ async function getBrandDirectoryMetrics(supabase: Awaited<ReturnType<typeof crea
     for (const row of (data ?? []) as BrandDirectoryMetrics[]) metrics.set(String(row.cafe_id), row);
   }
   return metrics;
+}
+
+/** Only called after requirePlatformAdmin; provider status is read from saved metadata */
+async function getBrandDirectoryWhatsApp(cafeIds: string[]) {
+  const connections = new Map<string, AdminWhatsAppConnectionRow | null>();
+  if (!cafeIds.length) return connections;
+  try {
+    const admin = createAdminClient();
+    for (let offset = 0; offset < cafeIds.length; offset += 100) {
+      const ids = cafeIds.slice(offset, offset + 100);
+      const { data, error } = await admin.from("brand_marketing_connections")
+        .select("cafe_id,status,requested_phone,verified_phone,instance_id,transactional_requested_at,updated_at")
+        .in("cafe_id", ids);
+      if (error) continue;
+      for (const id of ids) connections.set(id, null);
+      for (const row of (data ?? []) as AdminWhatsAppConnectionRow[]) {
+        if (ids.includes(row.cafe_id)) connections.set(row.cafe_id, row);
+      }
+    }
+  } catch { /* An unavailable read must never be presented as a confirmed Branda sender */ }
+  return connections;
 }
 
 const featureOverrideSchema = z.object({
@@ -552,11 +574,12 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
 
   const rows = (cafes ?? []) as Record<string, unknown>[];
   const cafeIds = rows.map((row) => String(row.id)).filter(Boolean);
-  const [featureOverridesByCafeId, subscriptionStates, metricsByCafeId, cancellations] = await Promise.all([
+  const [featureOverridesByCafeId, subscriptionStates, metricsByCafeId, cancellations, whatsAppByCafeId] = await Promise.all([
     getCafeFeatureOverridesByCafeIds(cafeIds),
     getAdminBrandSubscriptionStates(cafeIds),
     getBrandDirectoryMetrics(supabase, cafeIds),
     supabase.from("brand_account_cancellations").select("cafe_id,actor_id,actor_name,cancelled_at,origin,reason").in("cafe_id", cafeIds),
+    getBrandDirectoryWhatsApp(cafeIds),
   ]);
   if (cancellations.error) throw cancellations.error;
   const cancellationByCafe = new Map((cancellations.data ?? []).map(row => [row.cafe_id, { actorId: row.actor_id, actorName: row.actor_name, cancelledAt: row.cancelled_at, origin: "user" as const, reason: row.reason }]));
@@ -607,6 +630,7 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
         description: settings?.description ? String(settings.description) : undefined,
         instagram: settings?.instagram ? String(settings.instagram) : undefined,
         whatsapp: settings?.whatsapp ? String(settings.whatsapp) : undefined,
+        whatsappSender: mapAdminWhatsAppSummary(cafeId, whatsAppByCafeId.get(cafeId), cancellationByCafe.has(cafeId) || !["active", "published"].includes(String(row.status))),
         taxNumber: settings?.tax_number ? String(settings.tax_number) : undefined,
         commercialRegister: settings?.commercial_register ? String(settings.commercial_register) : undefined,
         maroofCertificate: settings?.maroof_certificate ? String(settings.maroof_certificate) : undefined,

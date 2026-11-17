@@ -4,6 +4,7 @@ import { autoTable } from "jspdf-autotable";
 import qrcode from "qrcode-generator";
 
 export type CompanyInvoicePreview = {
+  appearance?: "default" | "aldeem";
   brand: string; customer: string; taxNumber: string; thermal: boolean; note: string;
   lines: { name: string; unitName?: string; description?: string; notes?: string[]; quantity: number; price: number; discount: number; tax: number; total: number; vatRate?: number; exemptionReason?: string }[];
   subtotal: number; discount: number; tax: number; total: number;
@@ -16,6 +17,7 @@ export type CompanyInvoicePreview = {
   shippingCharge?: { name: string; amount: number; taxRate: number | null; tax: number; total: number } | null;
   codServiceLineIndices?: number[];
   savedDraft?: boolean;
+  taxPreview?: { sellerName: string; sellerVat: string; issuedAt: string };
   quote?: { number?: number; displayNumber?: string; date: string; validUntil: string; warehouse: string; draft: boolean };
   creditNote?: { number?: number; displayNumber?: string; date: string; issueDate: string; warehouse: string; draft: boolean; reason: string };
   salesReturn?: { number: number; date: string; sourceNumber: string; warehouse: string; paid: number; debtReduced: number; taxInclusive: boolean;
@@ -25,7 +27,7 @@ export type CompanyInvoicePreview = {
 };
 
 export function companyInvoiceQr(data: CompanyInvoicePreview) {
-  const identity = data.salesReturn?.fiscal ?? data.issued;
+  const identity = data.salesReturn?.fiscal ?? data.issued ?? data.taxPreview;
   if (!identity) throw new Error("Issued fiscal identity required");
   const values = [identity.sellerName, identity.sellerVat, new Date(identity.issuedAt).toISOString(), (data.sar?.total ?? data.total).toFixed(2), (data.sar?.tax ?? data.tax).toFixed(2)];
   const bytes = values.flatMap((value, index) => {
@@ -63,12 +65,15 @@ export function buildCompanyInvoicePreviewPdf(data: CompanyInvoicePreview, fonts
   const draftLabel = data.recurring ? "معاينة فاتورة دورية غير صادرة" : data.salesReturn ? `${data.salesReturn.fiscal ? data.salesReturn.fiscal.invoiceType === "simplified" ? "إشعار دائن ضريبي مبسط" : "إشعار دائن ضريبي" : "مستند مرتجع مبيعات"} رقم ${data.salesReturn.number}` : data.creditNote ? `${data.creditNote.draft ? "مسودة إشعار دائن" : "إشعار دائن"}${data.creditNote.number ? ` رقم ${displayRecordNumber(data.creditNote)}` : " غير محفوظ"}` : data.documentType === "advance" ? "فاتورة دفعة مقدمة" : data.documentType === "debit" ? "إشعار مدين" : data.quote ? `${data.quote.draft ? "مسودة عرض سعر" : "عرض سعر"}${data.quote.number ? ` رقم ${displayRecordNumber(data.quote)}` : " غير محفوظ"}` : data.issued ? data.issued.invoiceType === "simplified" ? "فاتورة ضريبية مبسطة" : "فاتورة ضريبية" : data.savedDraft ? "مسودة فاتورة غير معتمدة" : "معاينة غير محفوظة";
   doc.setProperties({ title: draftLabel, creator: "Barnda" });
   const width = doc.internal.pageSize.getWidth(), margin = data.thermal ? 5 : 14;
+  const ink: [number, number, number] = data.appearance === "aldeem" ? [81, 69, 82] : [41, 37, 30];
+  const accent: [number, number, number] = data.appearance === "aldeem" ? [164, 55, 166] : [41, 37, 30];
+  const soft: [number, number, number] = data.appearance === "aldeem" ? [250, 245, 249] : [245, 242, 235];
   const table = (body: string[][], head?: string[][], headerPanel = false) => autoTable(doc, {
     startY: (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ? (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5 : 14,
     margin: { left: headerPanel ? margin + 44 : margin, right: margin, top: 14, bottom: 15 }, body, head,
-    styles: { font: "Tajawal", fontSize: data.thermal ? 8 : 9.5, halign: "right", cellPadding: data.thermal ? 1.5 : 2.4, overflow: "linebreak", textColor: [41, 37, 30] },
-    headStyles: { fillColor: [41, 37, 30], textColor: [255, 254, 250], fontStyle: "bold" },
-    alternateRowStyles: { fillColor: [245, 242, 235] }, theme: "striped", rowPageBreak: "avoid",
+    styles: { font: "Tajawal", fontSize: data.thermal ? 8 : 9.5, halign: "right", cellPadding: data.thermal ? 1.5 : 2.4, overflow: "linebreak", textColor: ink },
+    headStyles: { fillColor: accent, textColor: data.appearance === "aldeem" ? [255, 255, 255] : [255, 254, 250], fontStyle: "bold" },
+    alternateRowStyles: { fillColor: soft }, theme: "striped", rowPageBreak: "avoid",
     columnStyles: !data.thermal && head?.[0]?.length === 7 ? { 0: { cellWidth: 22 }, 1: { cellWidth: 22 }, 2: { cellWidth: 30 }, 3: { cellWidth: 22 }, 4: { cellWidth: 24 }, 5: { cellWidth: 20 }, 6: { cellWidth: 42 } } : undefined,
   });
   const drawQr = (x: number, y: number) => {
@@ -77,7 +82,7 @@ export function buildCompanyInvoicePreviewPdf(data: CompanyInvoicePreview, fonts
     doc.setFillColor(255, 255, 255).rect(x, y, size, size, "F").setFillColor(0, 0, 0);
     for (let row = 0; row < count; row++) for (let col = 0; col < count; col++) if (qr.isDark(row, col)) doc.rect(x + (col + 4) * cell, y + (row + 4) * cell, cell + .01, cell + .01, "F");
   };
-  table([[data.brand], [draftLabel], [data.customer], ...(data.taxNumber ? [[`الرقم الضريبي: ${data.taxNumber}`]] : [])], undefined, !!(data.issued || data.salesReturn?.fiscal) && !data.thermal);
+  table([[data.brand], [draftLabel], [data.customer], ...(data.taxNumber ? [[`الرقم الضريبي: ${data.taxNumber}`]] : [])], undefined, !!(data.issued || data.salesReturn?.fiscal || data.taxPreview) && !data.thermal);
   if (data.salesReturn?.fiscal && !data.thermal) {
     const header = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable;
     header.finalY = Math.max(header.finalY, 50);
@@ -86,7 +91,7 @@ export function buildCompanyInvoicePreviewPdf(data: CompanyInvoicePreview, fonts
   if (data.quote) table([[data.quote.date, "تاريخ العرض"], [data.quote.validUntil || "غير محدد", "صالح حتى"], [data.quote.warehouse, "المستودع"], ["عرض سعر وليس فاتورة ضريبية"]]);
   if (data.creditNote) table([[data.creditNote.date, "تاريخ الإشعار"], [data.creditNote.issueDate, "تاريخ الإصدار"], [data.creditNote.warehouse, "المستودع"], [data.creditNote.reason, "سبب الإشعار"]]);
   if (data.salesReturn) table([[String(data.salesReturn.number), "رقم الفاتورة المرتجعة"], [data.salesReturn.sourceNumber, "رقم الفاتورة الأصلية"], [data.salesReturn.date, "تاريخ المرتجع"], [data.salesReturn.warehouse, "المستودع"], [data.salesReturn.taxInclusive ? "شاملة الضريبة" : "غير شاملة الضريبة", "أسعار الوحدات"]]);
-  if ((data.issued || data.salesReturn?.fiscal) && !data.thermal) {
+  if ((data.issued || data.salesReturn?.fiscal || data.taxPreview) && !data.thermal) {
     drawQr(margin, 14);
     const previous = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable;
     previous.finalY = Math.max(previous.finalY, 50);
@@ -106,6 +111,7 @@ export function buildCompanyInvoicePreviewPdf(data: CompanyInvoicePreview, fonts
     [data.customer, "اسم المشتري"], ...(data.taxNumber ? [[data.taxNumber, "الرقم الضريبي للمشتري"]] : []), ...(data.issued.customerAddress ? [[data.issued.customerAddress, "عنوان المشتري"]] : []),
     [data.issued.taxInclusive ? "أسعار الوحدات شاملة الضريبة" : "أسعار الوحدات غير شاملة الضريبة", "الأسعار"], [data.currency && data.lines.some(line => line.vatRate !== undefined) ? [...new Set(data.lines.map(line => `${line.vatRate ?? 15}%`))].join(" / ") : "١٥٪", "نسبة ضريبة القيمة المضافة"],
   ]);
+  if (data.taxPreview && !data.issued) table([[data.taxPreview.sellerName, "اسم البائع"], [data.taxPreview.sellerVat, "الرقم الضريبي للبائع"], ["رمز ضريبي للمعاينة يُعتمد الرمز النهائي عند إصدار الفاتورة"]]);
   if (currency !== "SAR") table([[currency, "عملة الفاتورة"], [String(data.exchangeRate ?? 1), "ريال لكل وحدة عملة"], ...(data.sar ? [[money(data.sar.tax), "الضريبة بالريال السعودي"], [money(data.sar.total), "الإجمالي بالريال السعودي"]] : [])]);
   if (data.thermal) {
     table(visibleLines.map(line => [money(line.total), `${[line.name, line.description, ...(line.notes?.length ? ["ملاحظات البند", ...line.notes] : [])].filter(Boolean).join("\n")}\nالكمية: ${line.quantity}${line.unitName ? ` ${line.unitName}` : ""}\nسعر الوحدة: ${money(line.price)}\nالخصم: ${money(line.discount)}\nالمبلغ الخاضع للضريبة: ${money(line.total - line.tax)}\nالضريبة: ${money(line.tax)}`]), [["الإجمالي", "البند"]]);
@@ -121,7 +127,7 @@ export function buildCompanyInvoicePreviewPdf(data: CompanyInvoicePreview, fonts
   if (data.issued) table([[money(data.total - data.tax), "إجمالي المبلغ الخاضع للضريبة"], [money(data.paid ?? 0), "المبلغ المدفوع عند الإصدار"], [money(data.total - (data.paid ?? 0)), "المتبقي عند الإصدار"]]);
   else if (data.paid !== undefined) table([[money(data.paid), "مدفوع"], [money(data.total - data.paid), "المبلغ المستحق"]]);
   if (data.note) table([[data.note]], [[data.salesReturn ? "سبب المرتجع" : "الملاحظات والشروط"]]);
-  if ((data.issued || data.salesReturn?.fiscal) && data.thermal) {
+  if ((data.issued || data.salesReturn?.fiscal || data.taxPreview) && data.thermal) {
     const size = 36;
     let y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
     if (y + size > doc.internal.pageSize.getHeight() - 18) { doc.addPage(); y = 14; }

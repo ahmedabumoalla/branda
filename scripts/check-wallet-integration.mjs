@@ -109,6 +109,20 @@ try {
   assert.equal(pass.serialNumber, member.card.cardCode);
   assert.equal(pass.storeCard.headerFields[0].value, "3 / 7");
   assert.equal(pass.locations[0].relevantText, "Welcome to Rast");
+  const branchMember = { ...member, branchLocations: [
+    { latitude: 24.7, longitude: 46.6, branchName: "North", nearbyMessage: "Welcome North" },
+    { latitude: 21.5, longitude: 39.2, branchName: "West" },
+  ] };
+  const branchPass = JSON.parse(unpackStoredZip(await apple.issueApplePass(branchMember))["pass.json"]);
+  assert.deepEqual(branchPass.locations, [
+    { latitude: 24.7, longitude: 46.6, relevantText: "Welcome North" },
+    { latitude: 21.5, longitude: 39.2, relevantText: "Rast — West" },
+  ], "Apple setter must retain all branches in a single call");
+  assert.deepEqual(payload.buildGoogleClass(branchMember, "123456789", "https://example.test").merchantLocations,
+    [{ latitude: 24.7, longitude: 46.6 }, { latitude: 21.5, longitude: 39.2 }]);
+  assert.deepEqual(payload.buildGoogleObject(branchMember, "123456789").merchantLocations,
+    [{ latitude: 24.7, longitude: 46.6 }, { latitude: 21.5, longitude: 39.2 }]);
+  assert.deepEqual(payload.walletLocations({ ...member, branchLocations: [] }), [], "Closed branches must not resurrect the legacy location");
   assert.equal(pass.storeCard.backFields.find(field => field.key === "offer").value, "New offer\nCoffee invitation");
   assert(entries["strip@2x.png"] && entries["logo.png"]);
   const manifest = JSON.parse(entries["manifest.json"]);
@@ -131,7 +145,7 @@ try {
     const body = options.body ? JSON.parse(options.body) : null;
     if (options.method === "POST" && uri.endsWith("/addMessage")) { const base = uri.replace(/\/addMessage$/, ""); stored.get(base).messages.push(body.message); return Response.json({}); }
     if (options.method === "POST") { stored.set(`${uri}/${body.id}`, { ...body, messages: [] }); return Response.json(body); }
-    if (options.method === "PATCH") { Object.assign(stored.get(uri), body); return Response.json(body); }
+    if (options.method === "PATCH") { if (!stored.has(uri)) return new Response(null, { status: 404 }); Object.assign(stored.get(uri), body); return Response.json(body); }
     return stored.has(uri) ? Response.json(stored.get(uri)) : new Response(null, { status: 404 });
   };
   const google = load("lib/wallet/google.ts");
@@ -148,12 +162,12 @@ try {
   await google.updateGooglePass({ ...member, card: { ...member.card, stampsInCycle: 4 } });
   const patches = calls.filter(([, request]) => request.method === "PATCH");
   assert(patches.length >= 2);
-  assert(patches.every(([, request]) => !JSON.parse(request.body).reviewStatus));
+  assert(patches.every(([url, request]) => url.includes("/loyaltyClass/") ? JSON.parse(request.body).reviewStatus === "UNDER_REVIEW" : !JSON.parse(request.body).reviewStatus));
   await google.notifyGoogleBrand(member.card.cafeId, "Offer", "Coffee", "job-one");
   await google.notifyGoogleBrand(member.card.cafeId, "Offer", "Coffee", "job-one");
   assert.equal(calls.filter(([url]) => url.endsWith("/addMessage")).length, 1, "Retry reads existing ID to avoid repeat notifications");
   globalThis.fetch = async () => new Response(null, { status: 403 });
-  await assert.rejects(google.issueGoogleSaveUrl(member), /google_wallet_read_403/);
+  await assert.rejects(google.issueGoogleSaveUrl(member), /google_wallet_update_403/);
   let snapshotReads = 0;
   const databaseFilters = [];
   let registered = false;
@@ -161,7 +175,7 @@ try {
     const query = {
       select() { return query; }, eq(key, value) { databaseFilters.push([table, key, value]); return query; },
       in(key, value) { databaseFilters.push([table, key, value]); return query; }, gt(key, value) { databaseFilters.push([table, key, value]); return query; },
-      order() { return query; }, limit() { return query; },
+      order() { return query; }, limit() { return query; }, insert() { return query; },
       upsert() { if (table === "wallet_apple_registrations") registered = true; return query; }, delete() { return query; },
       maybeSingle() { return Promise.resolve({ data: table === "wallet_apple_registrations" && registered ? { card_id: member.card.id } : null, error: null }); },
       then(resolve, reject) {
@@ -185,15 +199,21 @@ try {
   assert(databaseFilters.some(([table, key, value]) => table === "wallet_apple_registrations" && key === "card_id" && value === member.card.id));
   const cursor = "2026-10-03T00:00:00.123455+00:00";
   const updateList = await service.listAppleUpdates(new Request(`https://example.test?passesUpdatedSince=${encodeURIComponent(cursor)}`), deviceId, "pass.com.test.rast");
-  assert.deepEqual(await updateList.json(), { serialNumbers: [member.card.cardCode], lastUpdated: "2026-10-03T00:00:00.123456+00:00" });
-  assert(databaseFilters.some(([table, key, value]) => table === "wallet_passes" && key === "updated_at" && value === cursor), "Microsecond update cursor must survive without Date truncation");
+  assert.deepEqual(await updateList.json(), { serialNumbers: [member.card.cardCode], lastUpdated: "1790985600123456" });
+  assert(databaseFilters.some(([table, key, value]) => table === "wallet_passes" && key === "updated_at" && value === "2026-10-03T00:00:00.123455Z"), "Microsecond update cursor must survive without Date truncation");
   assert.equal((await service.downloadUpdatedApplePass(new Request("https://example.test"), "pass.com.test.rast", member.card.cardCode)).status, 401);
-  const cron = load("app/api/wallet/jobs/route.ts", { "@/lib/wallet": { retryWalletNotificationJobs: async () => ({ processed: 3 }) } });
+  const cron = load("app/api/wallet/jobs/route.ts", {
+    "@/lib/wallet": { retryWalletNotificationJobs: async () => ({ processed: 3 }) },
+    "@/lib/wallet/welcome": { dispatchWalletWelcomes: async () => ({ processed: 0 }) },
+  });
   delete process.env.CRON_SECRET;
   assert.equal((await cron.GET(new Request("https://example.test"))).status, 401);
   process.env.CRON_SECRET = "cron-secret-32-characters-or-more-test";
   assert.equal((await cron.GET(new Request("https://example.test", { headers: { authorization: "Bearer wrong" } }))).status, 401);
-  assert.deepEqual(await (await cron.GET(new Request("https://example.test", { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } }))).json(), { processed: 3 });
+  const cronResult = await (await cron.GET(new Request("https://example.test", { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } }))).json();
+  assert.equal(cronResult.processed, 3);
+  assert.deepEqual(cronResult.welcomes, { processed: 0 });
+  assert.equal(cronResult.birthdays.deferred, true);
   console.log("Wallet integration passed: native signatures, branding/stamps, isolation, disabled/invalid credentials, Google upsert/retry, cron authorization; no live provider calls.");
 } finally {
   globalThis.fetch = originalFetch;

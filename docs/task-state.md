@@ -1,3 +1,5 @@
+- BRANCHES/COMBINED RELEASE2026-11-17: generic entitled-menu branch CRUD/location and inherited main-menu source completed; independent catalogues preserved. Multi-location Wallet filtering/max10/clearing and Apple array setter corrected. Migration20261117103426 applied and source/grants/RLS verified; all23release migrations match applied history. Full integrated TypeScript and focused branch/UI/wallet tests passed. Publication authorized, production verification pending. See docs/BARNDAKSA_HANDOFF/BRANCHES_ALDEEM_RELEASE_20261117.md and output/branches-release-20261117
+
 # Loco reward redemption WhatsApp notice (Claude) - PUBLISHED - 2026-11-17
 
 - Loco only: after a committed reward redemption (cashier reader, reward page or POS sale), one WhatsApp message from the Branda platform number to the brand settings number or the owner phone, with customer name, customer phone, reward and the redeeming employee

@@ -19,7 +19,11 @@ process.env.GREEN_API_OTP_BACKUP_ID_INSTANCE = '9876543210';
 const green = load('lib/whatsapp/green-api.ts', {});
 let calls = [];
 function respond(status, body) {
-  globalThis.fetch = async (url, opts) => { calls.push({ url, opts }); return new Response(JSON.stringify(body), { status }); };
+  globalThis.fetch = async (url, opts) => {
+    calls.push({ url, opts });
+    if (String(url).includes('/getStateInstance/') && !Object.hasOwn(body, 'stateInstance')) return Response.json({ stateInstance: 'authorized' });
+    return new Response(JSON.stringify(body), { status });
+  };
 }
 respond(200, { stateInstance: 'authorized' });
 assert.equal(await green.isGreenApiLoyaltyWelcomeReady(), true);
@@ -28,23 +32,24 @@ assert.equal(await green.isGreenApiLoyaltyWelcomeReady(), false);
 for (const [http, body, expected] of [[200, { idMessage: 'ack' }, 'queued'], [200, {}, 'unknown'], [200, { idMessage: 'a'.repeat(201) }, 'unknown'], [400, {}, 'rejected'], [429, {}, 'rejected'], [500, {}, 'unknown']]) {
   respond(http, body); const before = calls.length;
   assert.equal((await green.sendGreenApiLoyaltyWelcome({ phone: '966500000000', message: 'Test only' })).status, expected);
-  assert.equal(calls.length, before + 1, 'never retry a POST');
+  assert.equal(calls.slice(before).filter(call => call.opts.method === 'POST').length, 1, 'never retry a POST');
   assert.ok(calls.at(-1).url.includes('waInstance1234567890/'), 'primary only');
   assert.equal(calls.at(-1).opts.redirect, 'error');
 }
-globalThis.fetch = async () => { throw Error('timeout'); };
+globalThis.fetch = async (url, opts) => { if (opts.method === 'POST') throw Error('timeout'); return Response.json({ stateInstance: 'authorized' }); };
 assert.equal((await green.sendGreenApiLoyaltyWelcome({ phone: '966500000000', message: 'Test' })).status, 'unknown');
 await assert.rejects(() => green.sendGreenApiLoyaltyWelcome({ phone: 'bad', message: 'Test' }));
 let ready = false, rpcCalls = [], sends = [], jobs = [], saved = true, outcome = { status: 'queued', providerMessageId: 'ack' };
 const loco = '321fd305-1883-48df-ab69-829cf7d1bc48';
-let locoSender = null, locoSends = [];
+const wahed = '8dbf85ba-df8f-4218-bc6f-9d2b39e937ef';
+let locoSender = null, wahedSender = null, locoSends = [];
 const worker = load('lib/wallet/welcome.ts', {
   '@/lib/supabase/admin': { createAdminClient: () => ({ rpc: async (name, args) => {
     rpcCalls.push({ name, args }); return { data: name === 'claim_routed_wallet_welcome' ? jobs.shift() ?? null : saved, error: null };
   } }) },
   '@/lib/whatsapp/green-api': { isGreenApiLoyaltyWelcomeReady: async () => ready, sendGreenApiLoyaltyWelcome: async input => { sends.push(input); return outcome; }, sendGreenApiCustomerMessage: async (sender,input) => { locoSends.push({sender,input}); return outcome; } },
-  '@/lib/whatsapp/customer-routing': { selectLocoLoyaltySender: async cafeId => { assert.equal(cafeId,loco); return locoSender; } },
-  '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: loco },
+  '@/lib/whatsapp/customer-routing': { selectLocoLoyaltySender: async cafeId => { assert.equal(cafeId,loco); return locoSender; }, selectBrandLoyaltySender: async cafeId => { assert.equal(cafeId,wahed); return wahedSender; } },
+  '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: loco, WAHED_MASOUB_CAFE_ID: wahed },
 });
 assert.equal((await worker.dispatchWalletWelcomes()).deferred, true);
 assert.equal(rpcCalls.length, 0, 'disconnected sender cannot consume a claim');
@@ -90,6 +95,31 @@ assert.equal(rpcCalls.at(-2).args.p_loco_ready, false);
 assert.equal(rpcCalls.at(-2).args.p_primary_ready, true);
 assert.equal(sends.length, priorPlatformSends);
 assert.equal(locoSends.length, priorBrandSends);
+// Optional Wahed identity falls back only before a submission and never uses LOCO.
+for (const [primary, privateSender, expected] of [[true, null, 'primary'], [true, { idInstance: 'wahed' }, 'private'], [false, { idInstance: 'wahed' }, 'private']]) {
+  ready = primary; wahedSender = privateSender; locoSender = null;
+  const before = [sends.length, locoSends.length];
+  jobs = [{ ...job, cafeId: wahed }]; outcome = { status: 'queued' };
+  assert.equal((await worker.dispatchWalletWelcomes()).queued, 1);
+  assert.equal(rpcCalls.at(-2).args.p_wahed_ready, Boolean(privateSender));
+  assert.equal(rpcCalls.at(-2).args.p_primary_ready, primary);
+  assert.equal(sends.length - before[0], expected === 'primary' ? 1 : 0);
+  assert.equal(locoSends.length - before[1], expected === 'private' ? 1 : 0);
+  if (expected === 'private') assert.equal(locoSends.at(-1).sender.idInstance, 'wahed');
+}
+for (const status of ['unknown', 'rejected']) {
+  ready = true; wahedSender = { idInstance: 'wahed' }; jobs = [{ ...job, cafeId: wahed }]; outcome = { status };
+  const before = [sends.length, locoSends.length];
+  assert.equal((await worker.dispatchWalletWelcomes())[status], 1);
+  assert.equal(sends.length, before[0], 'never fall back to primary after private POST');
+  assert.equal(locoSends.length, before[1] + 1);
+  assert.equal((await worker.dispatchWalletWelcomes()).processed, 0);
+  assert.equal(locoSends.length, before[1] + 1, 'claimed private send never repeated');
+}
+ready = false; wahedSender = { idInstance: 'wahed' }; locoSender = null; jobs = [job];
+const beforeForeign = [sends.length, locoSends.length];
+assert.equal((await worker.dispatchWalletWelcomes()).rejected, 1);
+assert.deepEqual([sends.length, locoSends.length], beforeForeign, 'another tenant cannot borrow Wahed sender');
 // Execute the real handlers against isolated dependencies: no customer pass or send.
 for (const provider of ['apple', 'google']) {
   let authorized = true, issueFails = false, scheduled = [], welcomed = [];

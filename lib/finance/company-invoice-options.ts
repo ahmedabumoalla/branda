@@ -11,8 +11,8 @@ export function invoiceDepositAmount(total: number, deposit: InvoiceDeposit) {
 
 export function invoiceShippingAddress(details: Record<string, string> | undefined, mode: ShippingMode) {
   if (mode === "none") return "";
-  if (mode === "auto") mode = ["shippingStreet", "shippingCity", "shippingCountry"].every(key => details?.[key]?.trim()) ? "secondary" : "main";
-  return ["buildingNumber", "street", "district", "city", "postalCode", "country"].map(key => details?.[mode === "secondary" ? "shipping" + key[0].toUpperCase() + key.slice(1) : key]).filter(Boolean).join(" ");
+  if (mode === "auto") mode = (details?.shippingEnabled === "true" && ["shippingAddress", "shippingStreet", "shippingCity"].some(key => details?.[key]?.trim())) || (details?.shippingEnabled === undefined && ["shippingStreet", "shippingCity", "shippingCountry"].every(key => details?.[key]?.trim())) ? "secondary" : "main";
+  return ["address", "buildingNumber", "unitNumber", "street", "district", "city", "postalCode", "country", "landmark"].map(key => details?.[mode === "secondary" ? "shipping" + key[0].toUpperCase() + key.slice(1) : key]).filter(Boolean).join(" ");
 }
 
 export function invoiceOptionsNote(shipping?: { address: string }, delivery?: InvoiceDelivery, attachments?: InvoiceFile[]) {

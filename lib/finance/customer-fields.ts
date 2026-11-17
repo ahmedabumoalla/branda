@@ -17,14 +17,15 @@ export const customerDetailKeys = [
   "legalName", "taxRegistration", "country", "region", "city", "district", "street", "buildingNumber", "additionalNumber", "postalCode", "unitNumber", "shortAddress", "addressNotes", "governmentIdType", "governmentId", "commercialRegistration", "unifiedNumber", "contactName", "notes",
   "customerType", "firstName", "lastName", "telephone", "governmentEntity", "shippingEnabled", "shippingName", "shippingBuildingNumber", "shippingStreet", "shippingAdditionalNumber", "shippingDistrict", "shippingCity", "shippingPostalCode", "shippingShortAddress", "shippingCountry",
   "invoiceMethod", "currency", "classification", "language",
+  "address", "landmark", "shippingAddress", "shippingUnitNumber", "shippingLandmark", "creditEnabled", "creditLimit", "creditDays",
 ] as const;
 
-export function buildCustomerPayload(form: FormData, id: string, active = true) {
+export function buildCustomerPayload(form: FormData, id: string, active = true, options: { phoneOptional?: boolean } = {}) {
   const text = (key: string) => String(form.get(key) ?? "").trim();
   const name = text("name"), phone = text("phone");
   if (!name) throw new Error("أدخل اسم العميل");
   if (name.length > 150) throw new Error("اسم العميل يجب ألا يتجاوز ١٥٠ حرفًا");
-  if (!phone) throw new Error("أدخل رقم جوال العميل");
+  if (!phone && !options.phoneOptional) throw new Error("أدخل رقم جوال العميل");
   if (phone.length > 30) throw new Error("رقم الجوال يجب ألا يتجاوز ٣٠ حرفًا");
   const details: Record<string, string> = {};
   for (const key of customerDetailKeys) {
@@ -37,6 +38,20 @@ export function buildCustomerPayload(form: FormData, id: string, active = true) 
   const contacts = form.getAll("contact_firstName").map((_, index) => Object.fromEntries(contactKeys.map(key => [key, String(form.getAll(`contact_${key}`)[index] ?? "").trim()]))).filter(row => Object.values(row).some(Boolean));
   if (contacts.length > 10 || contacts.some(row => Object.values(row).some(value => value.length > 250))) throw new Error("راجع بيانات جهات الاتصال");
   details.contacts = JSON.stringify(contacts);
+  if (form.has("creditEnabled")) {
+    const enabled = text("creditEnabled") === "true";
+    details.creditEnabled = String(enabled);
+    if (enabled) {
+      const limit = Number(text("creditLimit")), days = Number(text("creditDays"));
+      if (!text("creditLimit") || !Number.isFinite(limit) || limit < 0 || limit > 1e12) throw new Error("أدخل حدًا ائتمانيًا صالحًا من صفر إلى تريليون ريال");
+      if (!text("creditDays") || !Number.isInteger(days) || days < 0 || days > 3650) throw new Error("أدخل مدة سداد من صفر إلى ٣٦٥٠ يومًا");
+      details.creditLimit = String(limit);
+      details.creditDays = String(days);
+    } else {
+      delete details.creditLimit;
+      delete details.creditDays;
+    }
+  }
   if (new TextEncoder().encode(JSON.stringify(details)).length > 16000) throw new Error("بيانات العميل أكبر من الحد المسموح");
   return { id, kind: "customer", name, phone, email: text("email"), taxNumber: text("taxNumber"), active, details };
 }

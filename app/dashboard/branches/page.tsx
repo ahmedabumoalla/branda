@@ -2,21 +2,19 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-import { BranchesPageClient } from "@/components/dashboard/pages/branches-page";
 import { BranchMenusPage } from "@/components/dashboard/pages/branch-menus-page";
 import { getOwnerMenuBranches } from "@/lib/data/menu-branches";
-import { isStorefrontEnabled } from "@/lib/platform/storefront-availability";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { getOwnerBranches } from "@/lib/data/branches";
+import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blocked-state";
 
 export default async function BranchesPage() {
-  if (!isStorefrontEnabled()) {
-    const { cafe, branches } = await getOwnerMenuBranches();
-    return <BranchMenusPage branches={branches} slug={cafe.slug} />;
-  }
   if (!isSupabaseConfigured()) {
-    return <BranchesPageClient initialBranches={[]} configError="قم بإعداد Supabase في .env.local" />;
+    return <BranchMenusPage branches={[]} slug="" configError="خدمة الفروع غير جاهزة حاليًا" />;
   }
-  const branches = await getOwnerBranches().catch(() => null);
-  return <BranchesPageClient initialBranches={branches ?? []} configError={branches ? undefined : "تعذر تحميل الفروع"} />;
+  const features = await getOwnerFeatureCodes();
+  if (!featureCodesAllow(features, "menu") || featureCodesAllow(features, "finance")) return <DashboardFeatureBlockedState title="الفروع" />;
+  const result = await getOwnerMenuBranches().catch(() => null);
+  return <BranchMenusPage branches={result?.branches ?? []} slug={result?.cafe.slug ?? ""} configError={result ? undefined : "تعذر تحميل الفروع أعد تحميل الصفحة"} />;
 }

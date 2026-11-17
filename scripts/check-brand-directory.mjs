@@ -22,6 +22,14 @@ function harness(component, props, input = source, overrides = {}) {
       useMemo: compute => compute(), useTransition: () => [false, run => run()],
     },
     "./brand-directory.module.css": { __esModule: true, default: new Proxy({}, { get: (_, name) => name }) },
+    "next/dynamic": loader => {
+      const source = String(loader);
+      if (source.includes("module.BrandDetailsDialog")) return "brand-dialog";
+      if (source.includes("module.BrandFeatureControls")) return "feature-controls";
+      if (source.includes("module.BrandAccountCreate")) return "brand-create";
+      if (source.includes("module.BrandActivityPanel")) return "brand-activity";
+      throw Error("Unexpected lazy component in directory fixture");
+    },
     ...overrides,
   };
   const output = ts.transpileModule(input, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;

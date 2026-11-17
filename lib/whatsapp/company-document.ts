@@ -1,11 +1,11 @@
 import "server-only";
-import { selectLocoCustomerSender } from "./customer-routing";
-import { LOCO_CAFE_ID } from "./brand-connection-types";
+import { selectBrandCustomerSender } from "./customer-routing";
+import { supportsPrivateWhatsApp } from "./brand-connection-types";
 import { isGreenApiBackupOnly, getGreenApiCustomerPlatformSenders, isGreenApiCustomerSenderReady, type GreenApiCustomerSender } from "./green-api";
 
 export async function selectCompanyDocumentSender(cafeId: string) {
   if (isGreenApiBackupOnly()) return null;
-  if (cafeId === LOCO_CAFE_ID) return selectLocoCustomerSender(cafeId);
+  if (supportsPrivateWhatsApp(cafeId)) return selectBrandCustomerSender(cafeId);
   const { primary, backup } = getGreenApiCustomerPlatformSenders();
   if (primary && await isGreenApiCustomerSenderReady(primary)) return primary;
   if (backup && await isGreenApiCustomerSenderReady(backup)) return backup;

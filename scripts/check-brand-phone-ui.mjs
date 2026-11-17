@@ -43,7 +43,7 @@ function button(tree, label) { const found = nodes(tree, node => node.type === "
 function field(tree) { const found = nodes(tree, node => node.props?.id === "brand-whatsapp-phone")[0]; assert(found); return found; }
 function form(tree) { const found = nodes(tree, node => node.type === "form")[0]; assert(found); return found; }
 const flush = () => new Promise(resolve => setImmediate(resolve));
-const base = { brandName: "لوكو", configured: true, transactionalEnabled: false, connection: null };
+const base = { brandName: "لوكو", configured: true, transactionalEnabled: false, platformFallback: false, connection: null };
 const pairing = { ...base, connection: { status: "pairing", phone: "966511111111", verifiedPhone: null, lastError: null } };
 const connected = { ...pairing, transactionalEnabled: true, connection: { ...pairing.connection, status: "connected", verifiedPhone: "966511111111" } };
 const png = "data:image/png;base64,aGVsbG8=";
@@ -96,7 +96,7 @@ try {
     const h = harness(); let tree = h.render(); field(tree).props.onChange({ target: { value: "0511111111" } }); tree = h.render();
     const submit = form(tree).props.onSubmit; void submit({ preventDefault() {} }); void submit({ preventDefault() {} });
     assert.equal(requests.length, before + 1); assert.equal(button(h.render(), "جارٍ تجهيز الاتصال").props.disabled, true);
-    finish(response(connected)); await flush(); assert.match(text(h.render()), /رقم لوكو متصل وجاهز/); h.unmount();
+    finish(response(connected)); await flush(); assert.match(text(h.render()), /رقم العلامة متصل وجاهز/); h.unmount();
   });
   await check("provisioning progresses to QR through bounded polling", async () => {
     handleRequest = async req => response(req.action.action === "connect" ? { ...pairing, connection: { ...pairing.connection, status: "provisioning" } } : pairing, req.action.action === "qr" ? { qr: png } : {});
@@ -152,7 +152,7 @@ try {
   await check("existing verified campaign connection is activated without another QR", async () => {
     handleRequest = async () => response(connected); const before = requests.length;
     const h = harness({ ...connected, transactionalEnabled: false }); let tree = h.render(); assert.match(text(tree), /متصل ويحتاج تفعيل الخدمة/); button(tree, "تفعيل الرقم لرسائل العملاء").props.onClick(); await flush(); tree = h.render();
-    assert.deepEqual(requests.slice(before).map(req => req.action), [{ action: "connect", phone: "966511111111" }]); assert.match(text(tree), /رقم لوكو متصل وجاهز/); h.unmount();
+    assert.deepEqual(requests.slice(before).map(req => req.action), [{ action: "connect", phone: "966511111111" }]); assert.match(text(tree), /رقم العلامة متصل وجاهز/); h.unmount();
   });
   await check("disconnect requires explicit review and describes scheduled-message impact", async () => {
     const before = requests.length; handleRequest = async () => response(base); const h = harness(connected); let tree = h.render();
@@ -181,7 +181,7 @@ try {
     const h = harness(pairing); h.render(); await tick(); assert.equal(completions.length, 1);
     button(h.render(), "تحديث الحالة").props.onClick(); assert.equal(completions.length, 2); assert.equal(completions[0].req.signal.aborted, true);
     completions[1].resolve(response({ ...pairing, connection: { ...pairing.connection, status: "mismatch" } })); await flush(); assert.match(text(h.render()), /الرقم المرتبط مختلف/);
-    completions[0].resolve(response(connected)); await flush(); const tree = h.render(); assert.match(text(tree), /الرقم المرتبط مختلف/); assert.doesNotMatch(text(tree), /رقم لوكو متصل وجاهز/); h.unmount();
+    completions[0].resolve(response(connected)); await flush(); const tree = h.render(); assert.match(text(tree), /الرقم المرتبط مختلف/); assert.doesNotMatch(text(tree), /رقم العلامة متصل وجاهز/); h.unmount();
   });
   await check("background and offline tabs do not poll and unmount aborts stale work", async () => {
     handleRequest = async () => response(pairing); const h = harness(pairing); h.render(); const before = requests.length;
@@ -190,10 +190,10 @@ try {
   });
   await check("configuration and unverified status never claim readiness", () => {
     const h = harness({ ...base, configured: false }); let tree = h.render(); assert.equal(button(tree, "ربط الرقم").props.disabled, true); assert.match(text(tree), /غير جاهزة/); assert.equal(intervals.size, 0); h.unmount();
-    const other = harness({ ...connected, connection: { ...connected.connection, verifiedPhone: null } }); tree = other.render(); assert.match(text(tree), /جارٍ التحقق من الرقم/); assert.doesNotMatch(text(tree), /رقم لوكو متصل وجاهز/); other.unmount();
+    const other = harness({ ...connected, connection: { ...connected.connection, verifiedPhone: null } }); tree = other.render(); assert.match(text(tree), /جارٍ التحقق من الرقم/); assert.doesNotMatch(text(tree), /رقم العلامة متصل وجاهز/); other.unmount();
   });
   await check("all connection states have honest labels and mismatch recovery", () => {
-    for (const [status, phrase] of [["disconnected", "غير متصل"], ["provisioning", "جارٍ تجهيز الاتصال"], ["pairing", "جاهز لطلب رمز الربط"], ["mismatch", "الرقم المرتبط مختلف"], ["uncertain", "جارٍ التحقق من الاتصال"], ["error", "تعذر الاتصال"], ["disconnecting", "جارٍ فصل الرقم"]]) { const h = harness({ ...pairing, connection: { ...pairing.connection, status } }); const tree = h.render(); assert(text(tree).includes(phrase)); if (status === "mismatch") assert.match(text(tree), /افصل الاتصال ثم اربط رقم لوكو الصحيح/); h.unmount(); }
+    for (const [status, phrase] of [["disconnected", "غير متصل"], ["provisioning", "جارٍ تجهيز الاتصال"], ["pairing", "جاهز لطلب رمز الربط"], ["mismatch", "الرقم المرتبط مختلف"], ["uncertain", "جارٍ التحقق من الاتصال"], ["error", "تعذر الاتصال"], ["disconnecting", "جارٍ فصل الرقم"]]) { const h = harness({ ...pairing, connection: { ...pairing.connection, status } }); const tree = h.render(); assert(text(tree).includes(phrase)); if (status === "mismatch") assert.match(text(tree), /افصل الاتصال ثم اربط رقم العلامة الصحيح/); h.unmount(); }
   });
   await check("server route rejects other stable brand IDs before reading connection data", async () => {
     let cafe = null, reads = 0, fail403 = false;
@@ -202,14 +202,24 @@ try {
     await assert.rejects(Route(), /NOT_FOUND/); cafe = { id: "other", slug: "brand-9a8c97305195" }; await assert.rejects(Route(), /NOT_FOUND/); assert.equal(reads, 0);
     cafe = { id: "321fd305-1883-48df-ab69-829cf7d1bc48" }; const result = await Route(); assert.equal(result.props.initialDashboard, base); fail403 = true; await assert.rejects(Route(), /NOT_FOUND/);
   });
-  await check("sidebar exposes the route only for LOCO and preserves collapsed/mobile behavior", () => {
+  await check("sidebar exposes the route for supported brands and preserves collapsed/mobile behavior", () => {
     let pathname = "/dashboard/brand-phone", navigations = 0;
     const blank = () => null;
-    const { DashboardSidebar } = load("components/dashboard/DashboardSidebar.tsx", { "./dashboard-navigation-link": { DashboardNavigationLink: "a" }, "./finance-sidebar-menu": { FinanceSidebarMenu: blank }, "next/navigation": { usePathname: () => pathname, useRouter: () => ({ push() {} }) }, "@/components/dashboard/subscription-countdown": { SubscriptionCountdown: blank }, "@/components/cafe/cafe-logo": { CafeLogo: blank }, "@/components/dashboard/notifications-panel": { NotificationsPanel: blank }, "@/components/ui/barndaksa-logo": { BarndaksaLogo: blank }, "@/lib/cafe/use-resolved-cafe-logo": { useResolvedCafeLogoUrl: () => null }, "@/lib/platform/auth": { logoutBarndaksaAuth: async () => {} }, "@/lib/platform/feature-access": { getSidebarFeaturesForBrand: () => [] } });
+    const { DashboardSidebar } = load("components/dashboard/DashboardSidebar.tsx", { react: { ...React, useEffect() {} }, "@/lib/performance/notifications-client": { retainOwnerNotificationBrand: () => () => {} }, "./dashboard-navigation-link": { DashboardNavigationLink: "a" }, "./finance-sidebar-menu": { FinanceSidebarMenu: blank }, "next/navigation": { usePathname: () => pathname, useRouter: () => ({ push() {} }) }, "@/components/dashboard/subscription-countdown": { SubscriptionCountdown: blank }, "@/components/cafe/cafe-logo": { CafeLogo: blank }, "@/components/dashboard/notifications-panel": { NotificationsPanel: blank }, "@/components/ui/barndaksa-logo": { BarndaksaLogo: blank }, "@/lib/cafe/use-resolved-cafe-logo": { useResolvedCafeLogoUrl: () => null }, "@/lib/platform/auth": { logoutBarndaksaAuth: async () => {} }, "@/lib/platform/feature-access": { getSidebarFeaturesForBrand: () => [] } });
     const snapshot = { settings: { cafeSlug: "brand-9a8c97305195", cafeName: "لوكو", businessCategory: "restaurants" }, notifications: [], plans: [], featureOverrides: [], planId: "loyalty" };
     for (const props of [{}, { snapshot: { ...snapshot, settings: { ...snapshot.settings, cafeSlug: "another-brand" } }, servicesAvailable: true }, { snapshot, servicesAvailable: false }]) assert.equal(nodes(DashboardSidebar(props), node => node.props?.href === "/dashboard/brand-phone").length, 0);
     for (const collapsed of [false, true]) { const link = nodes(DashboardSidebar({ snapshot, servicesAvailable: true, collapsed, onNavigate: () => navigations++ }), node => node.props?.href === "/dashboard/brand-phone")[0]; assert(link); assert.equal(link.props["aria-current"], "page"); assert.equal(link.props["aria-label"], "ربط رقم العلامة التجارية"); assert.match(link.props.className, /min-h-11/); if (collapsed) assert.equal(link.props.title, "ربط رقم العلامة التجارية"); link.props.onClick(); }
     assert.equal(navigations, 2); pathname = "/dashboard"; assert.equal(nodes(DashboardSidebar({ snapshot, servicesAvailable: true }), node => node.props?.href === "/dashboard/brand-phone")[0].props["aria-current"], undefined);
+    const wahedSnapshot = { ...snapshot, settings: { ...snapshot.settings, cafeSlug: "brand-3c0437f1733a", cafeName: "واحد معصوب" } };
+    assert.equal(nodes(DashboardSidebar({ snapshot: wahedSnapshot, servicesAvailable: true }), node => node.props?.href === "/dashboard/brand-phone").length, 1);
+  });
+  await check("Wahed uses platform by default and never provisions without explicit action", () => {
+    const before = requests.length;
+    const h = harness({ ...base, brandName: "واحد معصوب", platformFallback: true });
+    const tree = h.render(); assert.ok(text(tree).includes("الإرسال الحالي من رقم برندة")); assert.ok(text(tree).includes("رقم برندة جاهز والرقم الخاص اختياري"));
+    assert.equal(requests.length, before, "merely opening the optional link page cannot buy an instance"); h.unmount();
+    const linked = harness({ ...connected, brandName: "واحد معصوب", platformFallback: true });
+    assert.ok(text(linked.render()).includes("الإرسال من رقمكم الخاص عند توفر الاتصال")); linked.unmount();
   });
   await check("styles resolve and preserve readable mobile QR keyboard focus and touch targets", () => {
     for (const [, name] of fs.readFileSync(path.join(root, file), "utf8").matchAll(/styles\.(\w+)/g)) assert(css.exports[name], `Missing CSS ${name}`);

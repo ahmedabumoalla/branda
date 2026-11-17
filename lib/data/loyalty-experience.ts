@@ -21,6 +21,7 @@ import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
 import { loadPublicLoyaltyBrandSnapshot } from "@/lib/data/loyalty-brand-snapshot";
 import { resolvePublishedStoragePathToUrl, storageBucketForLogo } from "@/lib/storage/resolve-storage-url";
 import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits } from "@/lib/loyalty/read-identifier";
+import { loadWalletBranchLocations } from "@/lib/data/wallet-branch-locations";
 
 export async function getLoyaltyExperience(cafeId: string) {
   const [{ data, error }, { data: category }] = await Promise.all([
@@ -88,16 +89,17 @@ export async function loadWalletMemberByCode(cardCode: string): Promise<WalletMe
 // Internal only: callers must obtain a fresh view and complete their access guard first.
 async function loadWalletMemberFromView(view: CustomerLoyaltyCardView): Promise<WalletMember | null> {
   if (!view || !view.program.enabled) return null;
-  const [brand, experience, { count, error }] = await Promise.all([
+  const [brand, experience, branchLocations, { count, error }] = await Promise.all([
     getLoyaltyBrand(view.cafeSlug),
     getLoyaltyExperience(view.card.cafeId),
+    loadWalletBranchLocations(view.card.cafeId),
     createAdminClient().from("customer_reward_instances").select("id", { count: "exact", head: true })
       .eq("cafe_id", view.card.cafeId).eq("loyalty_card_id", view.card.id).eq("status", "available")
       .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
   ]);
   if (!brand) return null;
   if (error) throw new Error("تعذر تحديث مكافآت البطاقة");
-  return { ...view, card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: brand.identity.logoUrl, experience };
+  return { ...view, card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: brand.identity.logoUrl, experience, branchLocations };
 }
 
 export async function getAuthorizedWalletMember(cardCode: string) {

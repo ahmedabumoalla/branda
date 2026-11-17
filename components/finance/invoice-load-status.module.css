@@ -1,4 +1,10 @@
 .panel { border: 1px solid #e8dfd1; border-radius: 12px; background: #fffaf1; overflow: hidden; }
+.aldeem.panel{border:1px solid #eddfeb;background:#fbf7fb;border-radius:12px}
+.aldeem .progress{color:#87398b;padding:12px 18px;min-height:64px}
+.aldeem .progress strong{font-size:13px;font-weight:600}
+.aldeem .progress span{color:#78667a;font-size:11px}
+.aldeem .failure{background:#fff5f8;border-color:#eed5df}
+.aldeem .failure button:focus-visible{outline-color:#a437a6}
 .progress { display: flex; align-items: center; gap: 12px; padding: 14px 18px; color: #76551f; }
 .progress > div, .failure > div { display: grid; gap: 4px; min-width: 0; }
 .panel strong { font-size: 14px; font-weight: 700; }

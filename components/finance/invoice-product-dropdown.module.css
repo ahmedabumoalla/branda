@@ -1,0 +1,41 @@
+.trigger { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 52px; padding: 10px 12px; border: 0; background: #fcf5fc; color: #463c4a; font: inherit; text-align: start; cursor: pointer; }
+.trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trigger svg { flex-shrink: 0; color: #9f459f; }
+.trigger:focus-visible { outline: 2px solid #ad45ac; outline-offset: -2px; }
+.trigger:disabled { cursor: not-allowed; opacity: .55; }
+.customerTrigger { min-width: 0; min-height: 42px; border: 1px solid #e9d7e9; border-radius: 8px; background: #fff; }
+.searchButton { display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 7px 10px; border: 0; border-radius: 6px; background: #963b99; color: #fff; font: inherit; cursor: pointer; }
+.searchButton:disabled { opacity: .55; cursor: wait; }
+.searchButton:focus-visible { outline: 2px solid #963b99; outline-offset: 2px; }
+.panel { position: fixed; z-index: 10000; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; background: #fff; color: #463c4a; border: 1px solid #e9d7e9; border-radius: 12px; box-shadow: 0 10px 32px #44244821; font-family: inherit; font-size: 13px; text-align: start; }
+.search { flex-shrink: 0; display: flex; align-items: center; gap: 9px; margin: 10px; padding: 0 11px; border: 1px solid #ddc8df; border-radius: 7px; color: #a34ba6; }
+.search:focus-within { border-color: #ad45ac; box-shadow: 0 0 0 2px #ad45ac12; }
+.search input { width: 100%; min-width: 0; height: 42px; padding: 0; border: 0; outline: 0; background: transparent; color: #463c4a; font: inherit; }
+.search input::placeholder { color: #8e8291; }
+.results { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d7bbd9 transparent; }
+.option { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 62px; padding: 10px 14px; border: 0; border-top: 1px solid #f1e9f2; background: #fff; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.option[data-active="true"], .option:hover { background: #fbf1fb; box-shadow: inset -3px 0 #ad45ac; }
+.identity { min-width: 0; display: grid; gap: 4px; }
+.identity strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.identity small { color: #938197; font-size: 11px; text-align: right; }
+.price { flex-shrink: 0; display: grid; gap: 4px; font-size: 12px; font-variant-numeric: tabular-nums; text-align: end; }
+.price small { color: #938197; font-size: 10px; }
+.status { margin: 0; padding: 14px; color: #8e8291; line-height: 1.8; }
+.status button { margin-inline-start: 10px; color: #963b99; border: 0; background: none; font: inherit; text-decoration: underline; cursor: pointer; }
+.footer { flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; min-height: 42px; border: 0; border-top: 1px solid #e9d7e9; background: #fbf6fc; color: #963b99; font: inherit; cursor: pointer; }
+.footer:focus-visible, .option:focus-visible { outline: 2px solid #ad45ac; outline-offset: -3px; }
+
+.itemInput { box-sizing: border-box; width: 100%; min-width: 0; height: 44px; padding: 10px 12px; border: 1px solid #e9d7e9; border-radius: 8px; background: #fff; color: #463c4a; font: inherit; text-align: start; }
+.itemInput:focus-visible { outline: 2px solid #ad45ac; outline-offset: 2px; }
+.itemInput:disabled { opacity: .55; cursor: not-allowed; }
+.productDialog { position: fixed; inset: 0; margin: auto; box-sizing: border-box; width: min(620px, calc(100vw - 32px)); max-height: min(680px, calc(100dvh - 48px)); padding: 0; overflow: hidden; border: 1px solid #e9d7e9; border-radius: 18px; background: #fff; color: #463c4a; box-shadow: 0 24px 80px #44244830; font-family: inherit; font-size: 14px; text-align: start; }
+.productDialog[open] { display: flex; flex-direction: column; }
+.productDialog::backdrop { background: #261b2b66; }
+.dialogHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; border-bottom: 1px solid #f1e9f2; }
+.dialogHeader h2 { margin: 0; font-size: 18px; font-weight: 700; }
+.dialogHeader button { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid #e9d7e9; border-radius: 10px; background: #fbf6fc; color: #963b99; cursor: pointer; }
+.dialogHeader button:focus-visible { outline: 2px solid #ad45ac; outline-offset: 2px; }
+.productDialog .search { margin: 16px 20px; }
+.productDialog .search input { height: 46px; }
+.productDialog .results { padding: 0 8px; }
+.productDialog .option { border-radius: 8px; }

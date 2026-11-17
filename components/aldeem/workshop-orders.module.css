@@ -1,0 +1,28 @@
+.root{min-width:0}
+.root :is(summary,[tabindex]):focus-visible{outline:3px solid #8d3494;outline-offset:3px}
+.root .fieldset{display:contents;border:0;margin:0;padding:0;min-width:0}
+.root button svg{color:inherit;flex-shrink:0}
+.root .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.root .toolbar p{margin-inline-end:auto}
+.root .table{max-width:100%;overflow:auto}
+.root .table th,.root .table td{text-align:start;white-space:nowrap}
+.root .table td:first-child{white-space:normal;min-width:160px}
+.root .table td small{max-width:340px;overflow-wrap:anywhere}
+.root .pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px}
+.root .pagination>div{display:flex;align-items:center;gap:8px}
+.root .loading{padding:30px;border:1px solid var(--line);border-radius:12px;background:var(--soft);line-height:1.9}
+.root .muted{font-size:12px;line-height:1.9;color:var(--muted)}
+.root .warning{border:1px solid #e6c894;color:#79501a;background:#fff9ed;border-radius:10px;padding:12px 15px;font-size:12px;line-height:1.9}
+.root .recovery{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.root .recovery>span{flex:1;min-width:180px}
+.root .details{padding:18px 20px;display:grid;gap:12px}
+.root .audit{display:grid;gap:9px;list-style:none;padding:0;margin:0}
+.root .audit li{border-inline-start:3px solid var(--line);padding:7px 12px;display:grid;gap:5px;font-size:12px}
+.root .audit small{color:var(--muted);line-height:1.8}
+.root .steps{grid-template-columns:repeat(5,minmax(0,1fr))}
+.root .count{font-variant-numeric:tabular-nums}
+.root .actionFields{width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}
+.root .productMeta{overflow-wrap:anywhere;min-width:0}
+.root .productMeta bdi{overflow-wrap:anywhere}
+.root .disabledNotice{padding:16px;line-height:1.9;font-size:12px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
+@media(max-width:480px){.root .pagination>div{flex-wrap:wrap}.root .details{padding:15px}.root .toolbar>button{width:100%}.root .steps{gap:3px}.root .steps li{font-size:9px}.root .steps li>span{width:25px;height:25px}}

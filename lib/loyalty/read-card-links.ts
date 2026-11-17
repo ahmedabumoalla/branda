@@ -3,8 +3,8 @@ import { brandAllowsNewWork } from '@/lib/data/account-cancellation';
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createLoyaltySessionToken, loyaltyIdentityHash } from "@/lib/auth/loyalty-session-token";
 import { isGreenApiLoyaltyWelcomeReady, sendGreenApiCustomerMessage, sendGreenApiLoyaltyWelcome } from "@/lib/whatsapp/green-api";
-import { selectLocoLoyaltySender } from "@/lib/whatsapp/customer-routing";
-import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
+import { selectLocoLoyaltySender, selectBrandLoyaltySender } from "@/lib/whatsapp/customer-routing";
+import { LOCO_CAFE_ID, WAHED_MASOUB_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
 import { getGoogleWalletSaveState } from "@/lib/wallet/google";
 
 type CardLinkJob = { id: string; claimToken: string; cafeId: string; profileId: string; cardId: string; brandSlug: string; brandName: string; phone: string; cardCreated: boolean; googleIssued: boolean };
@@ -17,11 +17,11 @@ export function stampCardLinkMessage(job: CardLinkJob) {
 }
 export async function dispatchStampCardLinks(limit = 2) {
   const result = { processed: 0, queued: 0, rejected: 0, unknown: 0, skipped: 0, deferred: 0 };
-  const [primaryReady, locoSender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID)]);
-  if (!primaryReady && !locoSender) return result;
+  const [primaryReady, locoSender, wahedSender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID), selectBrandLoyaltySender(WAHED_MASOUB_CAFE_ID)]);
+  if (!primaryReady && !locoSender && !wahedSender) return result;
   const admin = createAdminClient();
   for (let index = 0; index < Math.min(5, Math.max(1, limit)); index++) {
-    const { data, error } = await admin.rpc("claim_stamp_card_link_v2", { p_primary_ready: primaryReady, p_loco_ready: Boolean(locoSender) });
+    const { data, error } = await admin.rpc("claim_stamp_card_link_v2", { p_primary_ready: primaryReady, p_loco_ready: Boolean(locoSender), p_wahed_ready: Boolean(wahedSender) });
     if (error) throw new Error("stamp_card_link_claim_unavailable");
     if (!data) break;
     const job = data as CardLinkJob;
@@ -43,6 +43,7 @@ export async function dispatchStampCardLinks(limit = 2) {
       if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
       outcome = job.cafeId === LOCO_CAFE_ID
         ? locoSender ? await sendGreenApiCustomerMessage(locoSender, input) : { status: "rejected" }
+        : job.cafeId === WAHED_MASOUB_CAFE_ID && wahedSender ? await sendGreenApiCustomerMessage(wahedSender, input)
         : primaryReady ? await sendGreenApiLoyaltyWelcome(input) : { status: "rejected" };
     } catch { outcome = { status: "unknown" }; }
     await finish(outcome.status, outcome.providerMessageId);

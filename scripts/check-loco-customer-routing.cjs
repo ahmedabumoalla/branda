@@ -2,6 +2,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const ts = require('typescript');
 const loco = '321fd305-1883-48df-ab69-829cf7d1bc48';
+const wahed = '8dbf85ba-df8f-4218-bc6f-9d2b39e937ef';
+const supportsPrivateWhatsApp = id => id === loco || id === wahed;
 function load(file, mocks = {}, env = process.env, fetcher = globalThis.fetch) {
   const exports = {};
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -13,7 +15,7 @@ const env = { GREEN_API_API_URL: config('111').apiUrl, GREEN_API_ID_INSTANCE: '1
   GREEN_API_OTP_BACKUP_API_URL: config('222').apiUrl, GREEN_API_OTP_BACKUP_ID_INSTANCE: '222', GREEN_API_OTP_BACKUP_API_TOKEN_INSTANCE: config('222').apiTokenInstance,
   GREEN_API_ACCESS_SENDER: 'backup' };
 let checks = 0;
-async function scenario({ states = {}, linked = { ...config('333'), expectedPhone: '966511111111' }, accountPhone = '966511111111', fault, tenant = loco, getterError = false, configuration = env, loyaltyOnly = false } = {}) {
+async function scenario({ states = {}, linked = { ...config('333'), expectedPhone: '966511111111' }, accountPhone = '966511111111', fault, tenant = loco, getterError = false, configuration = env, loyaltyOnly = false, brand = false } = {}) {
   const calls = [], gets = [];
   const fetcher = async (url, init) => {
     const instance = /waInstance(\d+)/.exec(url)[1]; calls.push({ instance, ...init });
@@ -35,10 +37,13 @@ async function scenario({ states = {}, linked = { ...config('333'), expectedPhon
   const router = load('lib/whatsapp/customer-routing.ts', {
     '@/lib/whatsapp/green-api': green,
     '@/lib/whatsapp/green-api-marketing': marketing,
-    '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: loco },
-    '@/lib/data/brand-whatsapp': { getLocoCustomerWhatsAppCredentials: async id => { gets.push(id); if (getterError) throw Error('private-token'); return linked; } },
+    '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: loco, WAHED_MASOUB_CAFE_ID: wahed, supportsPrivateWhatsApp },
+    '@/lib/data/brand-whatsapp': {
+      getLocoCustomerWhatsAppCredentials: async id => { assert.equal(id,loco); gets.push(id); if (getterError) throw Error('private-token'); return linked; },
+      getBrandCustomerWhatsAppCredentials: async id => { assert.equal(id,wahed); gets.push(id); if (getterError) throw Error('private-token'); return linked; },
+    },
   });
-  const selected = await (loyaltyOnly ? router.selectLocoLoyaltySender(tenant) : router.selectLocoCustomerSender(tenant));
+  const selected = await (brand ? loyaltyOnly ? router.selectBrandLoyaltySender(tenant) : router.selectBrandCustomerSender(tenant) : loyaltyOnly ? router.selectLocoLoyaltySender(tenant) : router.selectLocoCustomerSender(tenant));
   const result = selected ? await green.sendGreenApiCustomerMessage(selected, { phone: '966500000000', message: 'isolated customer test' }) : null;
   return { calls, gets, selected, result, router };
 }
@@ -71,13 +76,26 @@ async function scenario({ states = {}, linked = { ...config('333'), expectedPhon
   const incidentGreen = load('lib/whatsapp/green-api.ts', {}, {...env,GREEN_API_TEMPORARY_BACKUP_ONLY:'true'}, async()=>{throw Error('Unexpected network');});
   const documents = load('lib/whatsapp/company-document.ts', {
     './green-api': incidentGreen,
-    './customer-routing': {selectLocoCustomerSender:async()=>{throw Error('Unexpected routing');}},
-    './brand-connection-types': {LOCO_CAFE_ID:loco},
+    './customer-routing': {selectBrandCustomerSender:async()=>{throw Error('Unexpected routing');}},
+    './brand-connection-types': {LOCO_CAFE_ID:loco,supportsPrivateWhatsApp},
   }, env, async()=>{throw Error('Unexpected document submission');});
   for (const tenant of [loco,'other']) { assert.equal(await documents.selectCompanyDocumentSender(tenant),null); checks++; }
   await assert.rejects(documents.sendCompanyDocument(config('222'),{}),/MESSAGING_TEMPORARILY_PAUSED/); checks++;
   for(const purpose of ['finance_cashier_login','owner_login','cashier_login',null,undefined]) { assert.equal(normal.router.isLocoCustomerOtp(loco,purpose),false); checks++; }
   for(const purpose of ['customer_signup','customer_login']) { assert.equal(normal.router.isLocoCustomerOtp(loco,purpose),true); assert.equal(normal.router.isLocoCustomerOtp('other',purpose),false); checks++; }
   assert.equal(normal.router.isLocoCustomerOtp(null,'customer_login'),false); checks++;
+  for (const [options, expected] of [[{},'333'],[{linked:null},'111'],[{states:{333:'notAuthorized'}},'111'],[{states:{333:'timeout'}},'111'],[{accountPhone:'966522222222'},'111'],[{getterError:true},'111'],[{states:{111:'notAuthorized'}},'333'],[{linked:null,states:{111:'notAuthorized'}},'222']]) {
+    const x=await scenario({...options,brand:true,tenant:wahed});assert.equal(x.selected?.idInstance,expected);assert.deepEqual(x.gets,[wahed]);assert.equal(x.calls.filter(c=>c.method==='POST').length,1);checks++;
+  }
+  for(const fault of ['timeout','json','ack',400,403,429,500]) {
+    const x=await scenario({brand:true,tenant:wahed,fault});assert.equal(x.selected.idInstance,'333');assert.equal(x.calls.filter(c=>c.method==='POST').length,1);assert.ok(x.calls.every(c=>c.instance==='333'),'Wahed private POST cannot trigger platform fallback');checks++;
+  }
+  for(const options of [{linked:null},{states:{333:'notAuthorized'}},{accountPhone:'966522222222'},{states:{333:'timeout'}}]) {
+    const x=await scenario({...options,brand:true,tenant:wahed,loyaltyOnly:true});assert.equal(x.selected,null,'worker decides primary fallback before POST');assert.equal(x.calls.filter(c=>c.method==='POST').length,0);checks++;
+  }
+  const otherBrand=await scenario({brand:true,tenant:'another-cafe'});assert.equal(otherBrand.selected,null);assert.equal(otherBrand.calls.length,0);assert.equal(otherBrand.gets.length,0);checks++;
+  for(const purpose of ['customer_signup','customer_login']) {assert.equal(normal.router.isBrandCustomerOtp(wahed,purpose),true);assert.equal(normal.router.isBrandCustomerOtp('other',purpose),false);checks++;}
+  for(const purpose of ['owner_login','cashier_login','finance_cashier_login',null]) {assert.equal(normal.router.isBrandCustomerOtp(wahed,purpose),false);checks++;}
+  const brandedLoco=await scenario({brand:true,tenant:loco,loyaltyOnly:true,linked:null});assert.equal(brandedLoco.selected,null,'generic adapter preserves strict LOCO loyalty');checks++;
   console.log(`PASS ${checks} LOCO customer routing cases; mocked provider only, no real messages`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -9,6 +9,10 @@ export async function executeInventory(input:unknown,slug?:string){
   try{
     const command=inventoryCommandSchema.parse(branchInput(input));
     const{client,cafe}=await inventoryContext(true,slug);
+    if(command.action==='document'){
+      const details=command.payload.payload as Record<string,unknown>|undefined;
+      if(details?.purpose==='disposal'&&(command.payload.kind!=='issue'||String(details.note??'').trim().length<5))throw new Error('حدد إذن صرف مخزني واكتب سبب الإتلاف بخمسة أحرف على الأقل');
+    }
     if(command.action==='item'&&command.payload.unitTemplateId){
       const current=await client.rpc('erp_inventory_read',{p_cafe:cafe.id,p_query:{id:command.id||null}});
       assetError(current.error);

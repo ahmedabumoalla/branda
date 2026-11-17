@@ -1,0 +1,11 @@
+.list{list-style:none;margin:0;padding:18px;display:grid;gap:14px;min-width:0;color:#514552}
+.item{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;padding:16px;border:1px solid #ecd8ef;border-radius:12px;background:#fff;min-width:0;align-items:start}
+.photo{position:relative;min-width:0;width:100%;height:144px;border:1px solid #ecd8ef;border-radius:10px;overflow:hidden;background:#fcf7fc}
+.photo img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}
+.missing{height:100%;display:grid;align-content:center;justify-items:center;gap:10px;padding:12px;text-align:center;color:#756775;font-size:12px}
+.caption{position:absolute;bottom:5px;inset-inline:5px;text-align:center;background:#ffffffed;border-radius:4px;color:#514552;font-size:10px;padding:3px}
+.info{min-width:0;display:grid;gap:10px}.info h4{font-size:17px;font-weight:700;margin:0;overflow-wrap:anywhere}.info p{font-size:13px;line-height:1.8;margin:0;color:#756775;overflow-wrap:anywhere}.sku{font-size:12px;color:#756775;overflow-wrap:anywhere}
+.quantity{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 12px;border-radius:8px;background:#fcf7fc;font-size:12px}.quantity strong{font-size:24px;color:#87318c}.quantity small{font-size:13px;font-weight:600}
+.identity{grid-column:1/-1;min-width:0;border-top:1px solid #ecd8ef;padding-top:12px}.label{font-size:12px;color:#756775}.barcode{margin-top:6px;background:#fff;min-width:0;display:grid;justify-items:center;gap:4px}.bars{max-width:100%;overflow-x:auto;width:100%;text-align:center;background:#fff}.bars svg{display:inline-block;vertical-align:middle;max-width:none}.bars:focus-visible{outline:3px solid #87318c;outline-offset:2px}.code{max-width:100%;overflow-wrap:anywhere;font-family:monospace;font-size:18px;letter-spacing:1px;line-height:1.8;color:#111;user-select:all}.barcodeError,.noBarcode{font-size:12px;line-height:1.8;color:#756775;text-align:center}
+@media(min-width:1350px){.item{grid-template-columns:150px minmax(150px,1fr) minmax(240px,1fr)}.identity{grid-column:auto;border-top:0;border-inline-start:1px solid #ecd8ef;padding-top:0;padding-inline-start:16px}}
+@media(max-width:480px){.list{padding:12px}.item{grid-template-columns:100px minmax(0,1fr);padding:12px;gap:12px}.photo{height:120px}.info h4{font-size:15px}.quantity{padding:8px}.quantity strong{font-size:21px}}

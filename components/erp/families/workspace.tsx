@@ -20,13 +20,16 @@ type Open =
 const activityLabels = { received: "استلام", returned: "إرجاع للأسرة", paid: "دفعة للأسرة", sold: "بيع", sale_return: "مرتجع بيع" } as const;
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh" }).format(new Date());
 
-export function FamiliesWorkspace({ initialSnapshot }: { initialSnapshot: FamilySnapshot }) {
+export function FamiliesWorkspace({ initialSnapshot, section, embedded = false }: { initialSnapshot: FamilySnapshot; section?: "sales" | "returns" | "settlements" | "accounts"; embedded?: boolean }) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [source, setSource] = useState(initialSnapshot);
   if (source !== initialSnapshot) { setSource(initialSnapshot); setSnapshot(initialSnapshot); }
-  const [view, setView] = useState<View>("families");
+  const sectionView: View = section === "sales" || section === "returns" ? "activity" : section === "settlements" ? "receipts" : "families";
+  const [view, setView] = useState<View>(sectionView);
+  const [sourceSection, setSourceSection] = useState(section);
   const [open, setOpen] = useState<Open>(null);
+  if (sourceSection !== section) { setSourceSection(section); setView(sectionView); setOpen(null); }
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -42,7 +45,8 @@ export function FamiliesWorkspace({ initialSnapshot }: { initialSnapshot: Family
     setOpen(null); setNotice(message);
     const result = await getFamilies(snapshot.slug);
     if (result.ok) setSnapshot(result.data);
-    router.refresh();
+    else setNotice(result.message);
+    if (!embedded) router.refresh();
   }
 
   return <main className={s.page} dir="rtl">
@@ -104,7 +108,7 @@ export function FamiliesWorkspace({ initialSnapshot }: { initialSnapshot: Family
 
       {view === "receipts" && <ReceiptsTable snapshot={snapshot} rows={snapshot.consignments} familyName={familyName} branchName={branchName} onReturn={id => setOpen({ kind: "return", consignmentId: id })} onPay={id => setOpen({ kind: "pay", consignmentId: id })} />}
       {view === "items" && <ItemsTable snapshot={snapshot} items={snapshot.items} familyName={familyName} placeName={placeName} branchName={branchName} />}
-      {view === "activity" && <ActivityTable snapshot={snapshot} rows={snapshot.activity} familyName={familyName} branchName={branchName} />}
+      {view === "activity" && <ActivityTable snapshot={snapshot} rows={snapshot.activity.filter(row => section === "sales" ? row.kind === "sold" || row.kind === "sale_return" : section === "returns" ? row.kind === "returned" || row.kind === "sale_return" : true)} familyName={familyName} branchName={branchName} />}
     </div>
 
     {open?.kind === "family" && <FamilyDialog snapshot={snapshot} family={open.family} onClose={() => setOpen(null)} onSaved={() => reload("تم حفظ بيانات الأسرة")} />}

@@ -149,25 +149,27 @@ export function BrandPhonePage({ initialDashboard }: { initialDashboard: BrandWh
     if (result) { setDisconnectReview(false); setNotice("تم طلب فصل الرقم نتابع تأكيد الحالة تلقائيًا"); }
   }
 
-  const connected = status === "connected" && Boolean(dashboard?.connection?.verifiedPhone);
+  const brandName = dashboard?.brandName || "العلامة";
+  const connected = status === "connected" && Boolean(dashboard?.connection?.verifiedPhone) && dashboard?.connection?.verifiedPhone === dashboard?.connection?.phone;
   const ready = connected && dashboard?.transactionalEnabled;
   const canConnect = !dashboard?.connection || status === "disconnected";
   const disabled = busy || !configured;
   const statusLabel = status === "pairing" ? qr ? "بانتظار مسح الرمز" : qrWaiting ? "جارٍ تجهيز رمز الربط" : "جاهز لطلب رمز الربط"
     : status === "connected" && !connected ? "جارٍ التحقق من الرقم" : connected && !dashboard?.transactionalEnabled ? "متصل ويحتاج تفعيل الخدمة" : labels[status];
-  return <DashboardPageShell title="ربط رقم العلامة التجارية" subtitle="اربط واتساب لوكو لتصل رموز التحقق ورسائل الترحيب لعملائك من رقم العلامة">
+  return <DashboardPageShell title="ربط رقم العلامة التجارية" subtitle={`اربط واتساب ${brandName} لتصل رسائل العملاء من رقم العلامة`}>
     <div dir="rtl" className={styles.page}>
       {error && <p className={styles.error} role="alert">{error}</p>}
       {notice && <p className={styles.notice} role="status">{notice}</p>}
       {!dashboard ? <section className={styles.panel}><p>لم نتمكن من تحميل حالة الرقم</p><button type="button" className={styles.button} disabled={busy} onClick={() => void request()}>{busy ? "جارٍ التحميل" : "إعادة المحاولة"}</button></section> : <>
         <section className={styles.panel} aria-labelledby="brand-phone-heading">
-          <div className={styles.heading}><div><p className={styles.eyebrow}>واتساب العلامة</p><h2 id="brand-phone-heading">رقم لوكو أقرب لعملائها</h2></div><span role="status" className={styles.badge} data-connected={ready}>{ready && <CheckCheck size={16} aria-hidden="true" />}{statusLabel}</span></div>
+          <div className={styles.heading}><div><p className={styles.eyebrow}>واتساب العلامة</p><h2 id="brand-phone-heading">ربط رقم {brandName}</h2></div><span role="status" className={styles.badge} data-connected={ready}>{ready && <CheckCheck size={16} aria-hidden="true" />}{statusLabel}</span></div>
+          {dashboard.platformFallback && <p className={styles.notice}>{ready ? "الإرسال من رقمكم الخاص عند توفر الاتصال ورقم برندة بديل قبل الإرسال عند الحاجة" : "الإرسال الحالي من رقم برندة ويمكنكم ربط رقمكم الخاص اختياريًا"}</p>}
           {!configured && <p className={styles.error} role="status">خدمة ربط الرقم غير جاهزة حاليًا تواصل مع دعم برندة</p>}
           <div className={styles.layout}>
             <div className={styles.details}>
-              {canConnect ? <form onSubmit={connect} className={styles.form}><label htmlFor="brand-whatsapp-phone" className={styles.field}>رقم واتساب لوكو<input id="brand-whatsapp-phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="+9665XXXXXXXX" required maxLength={24} value={phone} disabled={disabled} onChange={event => setPhone(event.target.value)} /></label><button className={styles.button} disabled={disabled}><Smartphone size={18} aria-hidden="true" />{busy ? "جارٍ تجهيز الاتصال" : "ربط الرقم"}</button></form> : <>
+              {canConnect ? <form onSubmit={connect} className={styles.form}><label htmlFor="brand-whatsapp-phone" className={styles.field}>رقم واتساب {brandName}<input id="brand-whatsapp-phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="+9665XXXXXXXX" required maxLength={24} value={phone} disabled={disabled} onChange={event => setPhone(event.target.value)} /></label><button className={styles.button} disabled={disabled}><Smartphone size={18} aria-hidden="true" />{busy ? "جارٍ تجهيز الاتصال" : "ربط الرقم"}</button></form> : <>
                 <p className={styles.number}>الرقم المطلوب <bdi dir="ltr">+{dashboard.connection?.phone}</bdi>{connected && <>الرقم المتصل <strong><bdi dir="ltr">+{dashboard.connection?.verifiedPhone}</bdi></strong></>}</p>
-                {status === "mismatch" && <p className={styles.error}>الرقم الذي مسح الرمز مختلف عن الرقم المطلوب افصل الاتصال ثم اربط رقم لوكو الصحيح</p>}
+                {status === "mismatch" && <p className={styles.error}>الرقم الذي مسح الرمز مختلف عن الرقم المطلوب افصل الاتصال ثم اربط رقم العلامة الصحيح</p>}
                 {connected && !dashboard.transactionalEnabled && <button type="button" className={styles.button} disabled={disabled} onClick={() => void connect()}>تفعيل الرقم لرسائل العملاء</button>}
                 {["uncertain", "provisioning", "error"].includes(status) && <button type="button" className={styles.button} disabled={disabled} onClick={() => void connect()}>استكمال ربط الرقم</button>}
                 {status === "pairing" && <button type="button" className={styles.button} disabled={disabled} onClick={requestQr}><QrCode size={18} aria-hidden="true" />{qrWaiting ? "إعادة طلب الرمز" : qr ? "تجديد رمز الربط" : "إظهار رمز الربط"}</button>}
@@ -178,13 +180,13 @@ export function BrandPhonePage({ initialDashboard }: { initialDashboard: BrandWh
             <div className={styles.qrPanel} aria-busy={busy || qrWaiting}>{qr && status === "pairing" ? <>
               {/* The QR is a short-lived inline PNG; no remote image or provider credential is rendered. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className={styles.qr} src={qr} width={240} height={240} alt="رمز ربط واتساب لوكو امسحه من الأجهزة المرتبطة" />
+              <img className={styles.qr} src={qr} width={240} height={240} alt={`رمز ربط واتساب ${brandName} امسحه من الأجهزة المرتبطة`} />
               <p>امسح الرمز من جوالك</p><small>يتجدد الرمز أثناء فتح الصفحة</small>
-            </> : <div className={styles.qrPlaceholder}>{ready ? <CheckCheck size={48} aria-hidden="true" /> : <QrCode size={48} aria-hidden="true" />}<p role="status">{ready ? "رقم لوكو متصل وجاهز" : busy || qrWaiting ? "ننتظر جاهزية رمز الربط" : "سيظهر رمز الربط هنا"}</p><small>{qrWaiting ? "قد يستغرق التجهيز حتى خمس دقائق أبق الصفحة مفتوحة" : ready ? "يمكنك متابعة الاتصال من هذه الصفحة" : "استخدم واتساب الرقم الذي أدخلته"}</small></div>}</div>
+            </> : <div className={styles.qrPlaceholder}>{ready ? <CheckCheck size={48} aria-hidden="true" /> : <QrCode size={48} aria-hidden="true" />}<p role="status">{ready ? "رقم العلامة متصل وجاهز" : busy || qrWaiting ? "ننتظر جاهزية رمز الربط" : "سيظهر رمز الربط هنا"}</p><small>{qrWaiting ? "قد يستغرق التجهيز حتى خمس دقائق أبق الصفحة مفتوحة" : ready ? "يمكنك متابعة الاتصال من هذه الصفحة" : "استخدم واتساب الرقم الذي أدخلته"}</small></div>}</div>
           </div>
-          {disconnectReview && <div ref={reviewRef} tabIndex={-1} className={styles.review} role="region" aria-labelledby="disconnect-title"><h3 id="disconnect-title">فصل رقم لوكو؟</h3><p>سيُفصل الرقم عن العلامة وتتوقف الرسائل المجدولة من هذا الرقم وتنتظر رسائل الولاء إعادة ربطه وتستمر رموز التحقق عبر أرقام برندة</p><div className={styles.actions}><button type="button" className={styles.danger} disabled={busy} onClick={() => void disconnect()}>تأكيد فصل الرقم</button><button type="button" className={styles.secondary} disabled={busy} onClick={() => setDisconnectReview(false)}>الاحتفاظ بالاتصال</button></div></div>}
+          {disconnectReview && <div ref={reviewRef} tabIndex={-1} className={styles.review} role="region" aria-labelledby="disconnect-title"><h3 id="disconnect-title">فصل رقم {brandName}؟</h3><p>{dashboard.platformFallback ? "سيُفصل الرقم الخاص وتتوقف حملاته المجدولة وتستمر رسائل العملاء من رقم برندة" : "سيُفصل الرقم عن العلامة وتتوقف الرسائل المجدولة من هذا الرقم وتنتظر رسائل الولاء إعادة ربطه وتستمر رموز التحقق عبر أرقام برندة"}</p><div className={styles.actions}><button type="button" className={styles.danger} disabled={busy} onClick={() => void disconnect()}>تأكيد فصل الرقم</button><button type="button" className={styles.secondary} disabled={busy} onClick={() => setDisconnectReview(false)}>الاحتفاظ بالاتصال</button></div></div>}
         </section>
-        <aside className={styles.fallback} aria-labelledby="fallback-heading"><h2 id="fallback-heading">رسائل الولاء من رقم لوكو فقط</h2><p>تُرسل رسائل الترحيب وروابط بطاقات الولاء من رقم لوكو المرتبط وتنتظر عودة الاتصال عند انقطاعه دون استخدام رقم المنصة</p><p>رموز التحقق تستخدم رقم لوكو أولًا مع رقم المنصة بديلًا عند الحاجة</p></aside>
+        <aside className={styles.fallback} aria-labelledby="fallback-heading"><h2 id="fallback-heading">{dashboard.platformFallback ? "رقم برندة جاهز والرقم الخاص اختياري" : "رسائل الولاء من رقم لوكو فقط"}</h2><p>{dashboard.platformFallback ? "تستمر رسائل التحقق والترحيب وروابط الولاء من برندة حتى تربطوا رقمكم ويتم التحقق منه وبعد الربط يُستخدم رقمكم أولًا" : "تُرسل رسائل الترحيب وروابط بطاقات الولاء من رقم لوكو المرتبط وتنتظر عودة الاتصال عند انقطاعه دون استخدام رقم المنصة"}</p><p>{dashboard.platformFallback ? "لا يُجهز اتصال خاص قبل الضغط على ربط الرقم وعند تعذر اتصاله قبل الإرسال يُستخدم رقم برندة" : "رموز التحقق تستخدم رقم لوكو أولًا مع رقم المنصة بديلًا عند الحاجة"}</p></aside>
       </>}
     </div>
   </DashboardPageShell>;

@@ -8,7 +8,8 @@
  min-height:100vh;padding:clamp(14px,2.4vw,30px);background:var(--paper);color:var(--ink);font-family:Aldeem,"Segoe UI",Tahoma,sans-serif;font-size:13px;line-height:1.7;color-scheme:light}
 .page *{box-sizing:border-box}
 .page :is(h1,h2,h3,p){margin:0}
-.page :is(button,input,select,textarea){font:inherit;color:inherit}
+/* Base inheritance must not override an action's foreground colour. */
+:where(.page) :where(button,input,select,textarea){font:inherit;color:inherit}
 .page :is(button,a,input,select,textarea,summary):focus-visible{outline:3px solid var(--rose);outline-offset:2px}
 .page bdi{unicode-bidi:isolate}
 

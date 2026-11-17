@@ -2,6 +2,7 @@ import { createBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import type { WalletMember } from "./types";
 import { walletArtifactKey } from "./artifact-cache";
 import { isMqas77Wallet, MQAS77_WALLET_COLORS, MQAS77_WALLET_VERSION, MQAS77_WALLET_NAME } from "./mqas77-design";
+import { normalizeWalletLocations, walletLocationText } from "./branch-locations";
 
 export function googleClassId(issuerId: string, cafeId: string) {
   const override = process.env.GOOGLE_WALLET_RAST_CLASS_ID;
@@ -24,9 +25,18 @@ export function walletColors(member: WalletMember) {
 }
 
 export function walletLocations(member: WalletMember) {
+  return walletAppleLocations(member).map(({ latitude, longitude }) => ({ latitude, longitude }));
+}
+
+export function walletAppleLocations(member: WalletMember) {
   const { latitude, longitude } = member.experience;
-  if (latitude === null || longitude === null || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return [];
-  return [{ latitude, longitude }];
+  const legacy = typeof latitude === "number" && typeof longitude === "number" ? [{ latitude, longitude }] : [];
+  return normalizeWalletLocations(member.branchLocations ?? legacy).map(location => ({
+    latitude: location.latitude, longitude: location.longitude,
+    relevantText: location.nearbyMessage || (location.branchName
+      ? walletLocationText(`${member.cafeName} — ${location.branchName}`)
+      : walletLocationText(member.experience.nearbyMessage || member.cafeName)),
+  }));
 }
 
 export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl: string) {
