@@ -5,6 +5,8 @@ import sharp from "sharp";
 import { buildFinanceThermalReceiptHtml } from "@/lib/export/finance-thermal-receipt-html";
 import { renderFinanceThermalReceiptPdf } from "@/lib/export/finance-thermal-receipt-pdf";
 import type { FinanceCustomerReceipt } from "@/lib/finance/customer-receipt";
+import type { FinanceReceiptSeller } from "@/lib/finance/brand-finance";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getFinanceReceiptBrandForCafe } from "./finance-receipt-brand";
 
 async function receiptLogo(receipt: FinanceCustomerReceipt): Promise<string | null> {
@@ -16,9 +18,10 @@ async function receiptLogo(receipt: FinanceCustomerReceipt): Promise<string | nu
     if (brand.logoUrl.startsWith("data:")) {
       bytes = Buffer.from(brand.logoUrl.split(",")[1], "base64");
     } else {
-      const localAsset = brand.logoUrl.startsWith("/");
-      if (localAsset && !/\.(png|jpe?g|webp)$/i.test(brand.logoUrl)) throw new Error("INVALID_RECEIPT_LOGO_PATH");
       const url = new URL(brand.logoUrl, "https://barndaksa.com");
+      // Platform-hosted brand art may be stored as an absolute barndaksa.com URL instead of a root path
+      const localAsset = url.origin === "https://barndaksa.com" && (brand.logoUrl.startsWith("/") || brand.logoUrl.startsWith("https://barndaksa.com/"));
+      if (localAsset && !/\.(png|jpe?g|webp)$/i.test(url.pathname)) throw new Error("INVALID_RECEIPT_LOGO_PATH");
       const storage = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
       if (!(localAsset && url.origin === "https://barndaksa.com") && (url.origin !== storage.origin || !url.pathname.startsWith("/storage/v1/object/"))) throw new Error("INVALID_RECEIPT_LOGO_ORIGIN");
       const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(5000), cache: "no-store" });
@@ -42,6 +45,22 @@ export async function createFinanceCustomerReceiptPdf(receipt: FinanceCustomerRe
     readFile(path.join(process.cwd(), "public/fonts/tajawal-regular.ttf"), "base64"),
     readFile(path.join(process.cwd(), "public/fonts/tajawal-bold.ttf"), "base64"),
   ]).then(([regular,bold])=>({regular,bold})).catch(error=>{fonts=undefined;throw error;});
-  const [resolvedFonts, logo] = await Promise.all([fonts, receiptLogo(receipt)]);
-  return renderFinanceThermalReceiptPdf(buildFinanceThermalReceiptHtml(receipt, resolvedFonts, logo));
+  const [resolvedFonts, logo, seller] = await Promise.all([fonts, receiptLogo(receipt), receiptSeller(receipt)]);
+  return renderFinanceThermalReceiptPdf(buildFinanceThermalReceiptHtml(seller ? { ...receipt, receiptSeller: seller } : receipt, resolvedFonts, logo));
+}
+
+/** The queued projection omits the seller, so the WhatsApp copy reads the brand's current tax identity */
+async function receiptSeller(receipt: FinanceCustomerReceipt): Promise<FinanceReceiptSeller | null> {
+  if (receipt.receiptSeller || !receipt.cafeId) return null;
+  try {
+    const admin = createAdminClient();
+    const [cafe, settings] = await Promise.all([
+      admin.from("cafes").select("name").eq("id", receipt.cafeId).maybeSingle(),
+      admin.from("cafe_settings").select("tax_number").eq("cafe_id", receipt.cafeId).maybeSingle(),
+    ]);
+    const name = typeof cafe.data?.name === "string" ? cafe.data.name.trim() : "";
+    const vatNumber = typeof settings.data?.tax_number === "string" ? settings.data.tax_number.trim() : "";
+    // Only a valid VAT registration turns the copy into a simplified tax invoice with the ZATCA QR
+    return name && /^3[0-9]{13}3$/.test(vatNumber) ? { name, vatNumber } : null;
+  } catch { console.warn("FINANCE_RECEIPT_SELLER_UNAVAILABLE"); return null; }
 }
