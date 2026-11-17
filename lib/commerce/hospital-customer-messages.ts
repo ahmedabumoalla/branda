@@ -21,17 +21,17 @@ export function hospitalCustomerMessage(context: CustomerContext) {
   const row = contextSchema.parse(context);
   if (row.kind === "account") return [
     `أهلًا ${row.customerName}`,
-    "حسابك في مايند جاهز",
+    "حسابك في MND جاهز",
     "من هنا تقدر تراجع فواتيرك ومدفوعاتك والمبالغ المتبقية وتدخل برقم جوالك",
     `https://barndaksa.com/c/${row.brand.slug}/hospital-account`,
   ].join("\n\n");
   if (row.kind === "invoice") {
     if (!row.document) throw new Error("Hospital invoice missing");
-    return ["شكرًا لاختيارك مايند", "سعدنا بطلبك ونتمنى لك يومًا جميلًا", `فاتورتك رقم ${row.document.number} مرفقة مع الرسالة`].join("\n\n");
+    return ["شكرًا لاختيارك MND", "سعدنا بطلبك ونتمنى لك يومًا جميلًا", `فاتورتك رقم ${row.document.number} مرفقة مع الرسالة`].join("\n\n");
   }
   if (!row.cafeId || !row.profileId || !row.cardId) throw new Error("Hospital loyalty identity missing");
   const token = createLoyaltySessionToken({ slug: row.brand.slug, cafeId: row.cafeId, profileId: row.profileId, phoneHash: loyaltyIdentityHash(row.phone) });
-  return ["يا هلا فيك في مايند", "بطاقة الولاء جاهزة لك", "افتح بطاقتك وأضفها إلى محفظة جوالك", `https://barndaksa.com/loyalty/${row.brand.slug}/access?token=${encodeURIComponent(token)}`].join("\n\n");
+  return ["يا هلا فيك في MND", "بطاقة الولاء جاهزة لك", "افتح بطاقتك وأضفها إلى محفظة جوالك", `https://barndaksa.com/loyalty/${row.brand.slug}/access?token=${encodeURIComponent(token)}`].join("\n\n");
 }
 
 /** Customer delivery is enabled on production; explicit false is an emergency stop. Local and preview never dispatch. */

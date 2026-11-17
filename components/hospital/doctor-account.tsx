@@ -33,8 +33,8 @@ export function HospitalDoctorAccount({ result, loginHref, initialLanguage = "ar
   return <main className={s.page} dir={language === "ar" ? "rtl" : "ltr"} lang={language}>
     <div className={s.shell}>
       <header className={s.header}>
-        <Link href="/menu/mind-hospital" className={s.brand} aria-label={t("منيو مايند", "MIND menu")}>
-          {logoFailed ? <strong>MIND</strong> : <Image src={safeLogo(data?.brand.logoUrl)} alt="MIND Café & Bakery" width={168} height={72} unoptimized priority onError={() => setLogoFailed(true)} />}
+        <Link href="/menu/mind-hospital" className={s.brand} aria-label={t("منيو MND", "MND menu")}>
+          {logoFailed ? <strong>MND</strong> : <Image src={safeLogo(data?.brand.logoUrl)} alt="MND Café & Bakery" width={168} height={72} unoptimized priority onError={() => setLogoFailed(true)} />}
         </Link>
         <div className={s.actions}>
           <button type="button" className={s.button} onClick={() => setLanguage(language === "ar" ? "en" : "ar")} aria-label={t("التبديل للإنجليزية", "Switch to Arabic")}><Globe2 size={17} aria-hidden="true" />{language === "ar" ? "English" : "العربية"}</button>
@@ -42,14 +42,14 @@ export function HospitalDoctorAccount({ result, loginHref, initialLanguage = "ar
         </div>
       </header>
       <section className={s.welcome} aria-labelledby="doctor-account-title">
-        <p className={s.eyebrow}>{t("مايند · المستشفى", "MIND · Hospital")}</p>
-        <h1 id="doctor-account-title">{t("حسابك لدى مايند", "Your MIND account")}</h1>
+        <p className={s.eyebrow}>{t("MND · المستشفى", "MND · Hospital")}</p>
+        <h1 id="doctor-account-title">{t("حسابك لدى MND", "Your MND account")}</h1>
         {data ? <div className={s.identity}><span>{financePosDisplayName(data.doctor.name, language)}</span><bdi>{data.doctor.phone}</bdi></div> : <p className={s.intro}>{t("فواتيرك ومدفوعاتك في مكان واحد", "Your invoices and payments in one place")}</p>}
       </section>
       {!data ? <section className={s.empty} role={result.state === "unavailable" ? "alert" : "status"}>
         <ReceiptText size={34} aria-hidden="true" />
         <h2>{result.state === "unlinked" ? t("لم تُسجل فاتورة لحسابك بعد", "No invoice has been linked to your account yet") : result.state === "unavailable" ? t("تعذر تحميل حسابك الآن", "Your account could not be loaded") : t("تحقق من جوالك لعرض حسابك", "Verify your phone to view your account")}</h2>
-        <p>{result.state === "unlinked" ? t("ستظهر هنا فواتيرك بعد تأكيد الكاشير لها على رقم جوالك", "Your invoices appear here once the cashier confirms them against your phone number") : result.state === "unavailable" ? t("حاول مرة أخرى بعد قليل أو تواصل مع كاشير مايند", "Try again shortly or contact the MIND cashier") : t("استخدم رقم الجوال نفسه المسجل في طلباتك", "Use the same phone number you entered in your orders")}</p>
+        <p>{result.state === "unlinked" ? t("ستظهر هنا فواتيرك بعد تأكيد الكاشير لها على رقم جوالك", "Your invoices appear here once the cashier confirms them against your phone number") : result.state === "unavailable" ? t("حاول مرة أخرى بعد قليل أو تواصل مع كاشير MND", "Try again shortly or contact the MND cashier") : t("استخدم رقم الجوال نفسه المسجل في طلباتك", "Use the same phone number you entered in your orders")}</p>
         {(result.state === "login" || result.state === "verify-phone") && <Link className={s.primary} href={loginHref}>{t("الدخول برقم الجوال", "Sign in with your phone")}<ArrowUpRight size={17} aria-hidden="true" /></Link>}
         {result.state === "unavailable" && <button className={s.primary} type="button" onClick={() => window.location.reload()}>{t("إعادة المحاولة", "Try again")}</button>}
         <Link className={s.menuLink} href="/menu/mind-hospital">{t("العودة للمنيو", "Back to the menu")}</Link>
@@ -57,7 +57,7 @@ export function HospitalDoctorAccount({ result, loginHref, initialLanguage = "ar
         <section className={s.summary} aria-label={t("ملخص الحساب", "Account summary")}>
           <article><span><ReceiptText size={18} aria-hidden="true" />{t("صافي فواتيرك", "Net invoiced")}</span><strong>{money(data.totalInvoiced)}</strong></article>
           <article><span><Check size={18} aria-hidden="true" />{t("المدفوع", "Paid")}</span><strong>{money(data.totalPaid)}</strong></article>
-          <article className={s.balance}><span><Wallet size={18} aria-hidden="true" />{data.balance < 0 ? t("رصيد لك", "Credit in your favour") : t("المتبقي عليك", "Amount due")}</span><strong>{money(Math.abs(data.balance))}</strong><small>{data.balance > 0 ? t("يمكنك السداد لدى كاشير مايند", "You can pay at the MIND cashier") : t("لا توجد مستحقات عليك", "No payment is due")}</small></article>
+          <article className={s.balance}><span><Wallet size={18} aria-hidden="true" />{data.balance < 0 ? t("رصيد لك", "Credit in your favour") : t("المتبقي عليك", "Amount due")}</span><strong>{money(Math.abs(data.balance))}</strong><small>{data.balance > 0 ? t("يمكنك السداد لدى كاشير MND", "You can pay at the MND cashier") : t("لا توجد مستحقات عليك", "No payment is due")}</small></article>
         </section>
         <section className={s.invoices} aria-labelledby="doctor-invoices-title">
           <div className={s.sectionHeading}><h2 id="doctor-invoices-title">{t("فواتيرك", "Your invoices")}</h2><span>{number(data.invoices.length)} {t("فاتورة", "invoices")}</span></div>
@@ -74,7 +74,7 @@ export function HospitalDoctorAccount({ result, loginHref, initialLanguage = "ar
             </div>
           </details>)}
         </section>
-        <footer className={s.footer}><span>{t("للاستفسار أو السداد تواصل مع كاشير مايند", "For enquiries or payment, contact the MIND cashier")}</span><Link href="/menu/mind-hospital">{t("اطلب من المنيو", "Order from the menu")}<ArrowUpRight size={16} aria-hidden="true" /></Link></footer>
+        <footer className={s.footer}><span>{t("للاستفسار أو السداد تواصل مع كاشير MND", "For enquiries or payment, contact the MND cashier")}</span><Link href="/menu/mind-hospital">{t("اطلب من المنيو", "Order from the menu")}<ArrowUpRight size={16} aria-hidden="true" /></Link></footer>
       </>}
     </div>
   </main>;

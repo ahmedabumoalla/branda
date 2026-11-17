@@ -14,7 +14,7 @@ function load(file, mocks = {}) {
   return exports;
 }
 const id = '11111111-1111-4111-8111-111111111111', doctor = '22222222-2222-4222-8222-222222222222';
-const fixture = { brand: { name: 'مايند', slug: 'mind-hospital', logoUrl: null }, doctor: { id: doctor, name: 'أحمد محمد', phone: '966500000001' }, invoices: [{ id: '33333333-3333-4333-8333-333333333333', number: 4, createdAt: '2026-11-14T10:00:00Z', total: 100, paid: 40, outstanding: 60, status: 'posted', items: [{ name: 'أمريكانو', quantity: 2, unitPrice: 50, total: 100 }] }], totalInvoiced: 100, totalPaid: 40, balance: 60 };
+const fixture = { brand: { name: 'MND', slug: 'mind-hospital', logoUrl: null }, doctor: { id: doctor, name: 'أحمد محمد', phone: '966500000001' }, invoices: [{ id: '33333333-3333-4333-8333-333333333333', number: 4, createdAt: '2026-11-14T10:00:00Z', total: 100, paid: 40, outstanding: 60, status: 'posted', items: [{ name: 'أمريكانو', quantity: 2, unitPrice: 50, total: 100 }] }], totalInvoiced: 100, totalPaid: 40, balance: 60 };
 let user = { id, phone: '+966500000001', phone_confirmed_at: '2026-11-14T09:00:00Z' }, reply = { data: fixture, error: null }, calls = [], checks = 0, authFailure = false;
 const { readHospitalDoctorPortal } = load('lib/data/hospital-doctor-portal.ts', {
   '@/lib/supabase/server': { getSessionUser: async () => { if (authFailure) throw Error('private auth failure'); return user; } },
@@ -36,7 +36,7 @@ async function main() {
   });
   const render = (result, initialLanguage = 'ar') => renderToStaticMarkup(React.createElement(HospitalDoctorAccount, { result, initialLanguage, loginHref: '/c/mind-hospital/login?next=%2Fc%2Fmind-hospital%2Fhospital-account' }));
   const ar = render({ state: 'ready', data: fixture }); assert(ar.includes('أحمد محمد')); assert(ar.includes('أمريكانو')); assert(ar.includes('المتبقي عليك')); assert(ar.includes('<details')); checks++;
-  const en = render({ state: 'ready', data: fixture }, 'en'); assert(en.includes('Your MIND account')); assert(en.includes('Americano')); assert(!en.includes('أحمد')); assert(!en.includes('أمريكانو')); assert(en.includes('dir="ltr"')); checks++;
+  const en = render({ state: 'ready', data: fixture }, 'en'); assert(en.includes('Your MND account')); assert(en.includes('Americano')); assert(!en.includes('أحمد')); assert(!en.includes('أمريكانو')); assert(en.includes('dir="ltr"')); checks++;
   const failure = render({ state: 'unavailable' }); assert(!failure.includes('100')); assert(!failure.includes('أحمد محمد')); assert(failure.includes('تعذر تحميل حسابك الآن')); checks++;
   const login = render({ state: 'login' }); assert(login.includes('next=%2Fc%2Fmind-hospital%2Fhospital-account')); assert(!login.includes('966500000001')); checks++;
   const unsafeLogo = render({ state: 'ready', data: { ...fixture, brand: { ...fixture.brand, logoUrl: 'javascript:alert(1)' } } }); assert(!unsafeLogo.includes('javascript:')); assert(unsafeLogo.includes('dabab-hospital-logo-v1.webp')); checks++;

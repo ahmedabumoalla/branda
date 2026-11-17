@@ -1,3 +1,5 @@
+- [MND display-name correction](MND_NAME_20261118.md)
+
 - [Package service and section controls](PACKAGE_OPTIONS_20261118.md)
 
 - [One-month trial policy and publication](MONTH_TRIAL_20261118.md)

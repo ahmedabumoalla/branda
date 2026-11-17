@@ -8,7 +8,7 @@ import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalida
 const settingsSchema = z.object({ whatsappInvoiceEnabled: z.boolean() });
 async function ownerContext(slug: string) {
   const result = await getBrandFinanceContext(slug);
-  if (result.cafe.slug !== "mind-hospital" || result.cafe.role !== "owner") throw new Error("إعدادات نقاط البيع متاحة لمالك مايند فقط");
+  if (result.cafe.slug !== "mind-hospital" || result.cafe.role !== "owner") throw new Error("إعدادات نقاط البيع متاحة لمالك MND فقط");
   return result;
 }
 export async function readFinancePosSettings(slug: string) {

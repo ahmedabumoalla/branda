@@ -37,7 +37,7 @@ async function loadCafeMeta(slug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   if (slug === "mind-hospital" && (await headers()).get(hospitalAccountRouteHeader) === "1") {
-    return { title: "حسابك لدى مايند | MIND", robots: { index: false, follow: false }, referrer: "same-origin" };
+    return { title: "حسابك لدى MND | MND", robots: { index: false, follow: false }, referrer: "same-origin" };
   }
   requireStorefrontEnabled();
   const normalizedSlug = slug.trim().toLowerCase();

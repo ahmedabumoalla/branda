@@ -47,7 +47,7 @@ export function signatureBrand(slug: string, branchSlug?: string): SignatureBran
   const brand = Object.prototype.hasOwnProperty.call(signatureBrands, slug) ? signatureBrands[slug as keyof typeof signatureBrands] : null;
   if (brand?.key !== "dabab") return brand;
   if (branchSlug === "coffee") return { ...brand, variant: "coffee", hero: "dabab-coffee-hero", headline: "قهوة على مهل", emphasis: "ومذاق يكمّل يومك", note: "فنجانك المفضل ولقمة تحلّي اللحظة", catalog: "من أول رشفة لآخر لقمة", headerNote: "فرع الكوفي", welcome: "نجهّز لك قهوة ولحظة على ذوقك", locationUrl: undefined };
-  if (branchSlug === "hospital") return { ...brand, variant: "hospital", name: "MIND CAFÉ & BAKERY", logo: "dabab-hospital-logo", signature: "MIND CAFÉ & BAKERY", hero: "dabab-hospital-hero", headline: "لحظة هادئة", emphasis: "تكمّل يومك", note: "قهوة وكروسان ووجبات على مدار الأسبوع", catalog: "اختياراتك على مدار الأسبوع", headerNote: "فرع المستشفى", welcome: "لحظة ونجهّز لك منيو المستشفى", locationUrl: undefined };
+  if (branchSlug === "hospital") return { ...brand, variant: "hospital", name: "MND CAFÉ & BAKERY", logo: "dabab-hospital-logo", signature: "MND CAFÉ & BAKERY", hero: "dabab-hospital-hero", headline: "لحظة هادئة", emphasis: "تكمّل يومك", note: "قهوة وكروسان ووجبات على مدار الأسبوع", catalog: "اختياراتك على مدار الأسبوع", headerNote: "فرع المستشفى", welcome: "لحظة ونجهّز لك منيو المستشفى", locationUrl: undefined };
   return brand;
 }
 

@@ -43,7 +43,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const query = await searchParams;
   const showcase = query?.showcase === "1";
   const branch = typeof query?.branch === "string" ? query.branch : undefined;
-  if (slug === "brand-8ad185ee82e3" && branch === "hospital") return { title: "مايند | MIND Café & Bakery", alternates: { canonical: `/menu/${MIND_HOSPITAL_SLUG}` } };
+  if (slug === "brand-8ad185ee82e3" && branch === "hospital") return { title: "MND | MND Café & Bakery", alternates: { canonical: `/menu/${MIND_HOSPITAL_SLUG}` } };
   if (showcase && !await isPublicShowcase(slug)) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
   const loyaltyBrand = await getPublicLoyaltyLanding(slug);
   if (loyaltyBrand) return { title: `${loyaltyBrand.identity.name} | الولاء والمكافآت`, description: `انضم إلى برنامج ولاء ${loyaltyBrand.identity.name} واجمع أختامك`, alternates: { canonical: `/loyalty/${loyaltyBrand.identity.slug}/qr` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };

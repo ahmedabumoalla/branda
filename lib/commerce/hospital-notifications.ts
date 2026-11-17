@@ -5,8 +5,8 @@ import { selectGreenApiPlatformSender, sendGreenApiCustomerMessage } from "@/lib
 type HospitalNotification = { id: string; lease_token: string; phone: string; order_status: "accepted" | "cancelled"; language: "ar" | "en"; customer_name: string; order_number: number; reason: string };
 export function hospitalNotificationText(job: HospitalNotification) {
   return job.language === "en"
-    ? `MIND\nOrder #${job.order_number}\n${job.order_status === "accepted" ? "Your hospital order has been accepted" : `Your hospital order was declined\nReason: ${job.reason}`}`
-    : `مايند\nالطلب رقم ${job.order_number}\n${job.order_status === "accepted" ? "تم تأكيد طلب المستشفى" : `تم رفض طلب المستشفى\nالسبب: ${job.reason}`}`;
+    ? `MND\nOrder #${job.order_number}\n${job.order_status === "accepted" ? "Your hospital order has been accepted" : `Your hospital order was declined\nReason: ${job.reason}`}`
+    : `MND\nالطلب رقم ${job.order_number}\n${job.order_status === "accepted" ? "تم تأكيد طلب المستشفى" : `تم رفض طلب المستشفى\nالسبب: ${job.reason}`}`;
 }
 
 /** Explicit activation is required at the later combined release; never dispatch from local preview. */

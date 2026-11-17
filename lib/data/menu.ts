@@ -553,7 +553,7 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
   const parsed = productSchema.parse(input);
   const cafe = await requireOwnerCafeContext("menu");
   if (parsed.priceMode !== undefined && cafe.slug !== "mind-hospital") {
-    throw new Error("طريقة تسعير الكاشير متاحة لمنتجات مايند المستشفى فقط");
+    throw new Error("طريقة تسعير الكاشير متاحة لمنتجات MND المستشفى فقط");
   }
   if (parsed.butcherDetails && cafe.businessCategory !== "butcher_shops") {
     throw new Error("مواصفات اللحوم متاحة لحساب الملحمة فقط");

@@ -60,11 +60,11 @@ export function HospitalDoctorLogin() {
   return <main className={s.page} dir={language === "ar" ? "rtl" : "ltr"} lang={language}>
     <div className={form.shell}>
       <header className={s.header}>
-        <Link href="/menu/mind-hospital" className={s.brand} aria-label={t("منيو مايند", "MIND menu")}><Image src="/menu-art/dabab/dabab-hospital-logo-v1.webp" alt="MIND Café & Bakery" width={140} height={60} priority /></Link>
+        <Link href="/menu/mind-hospital" className={s.brand} aria-label={t("منيو MND", "MND menu")}><Image src="/menu-art/dabab/dabab-hospital-logo-v1.webp" alt="MND Café & Bakery" width={140} height={60} priority /></Link>
         <button type="button" className={s.button} onClick={() => { setLanguage(language === "ar" ? "en" : "ar"); setError(""); }}><Globe2 size={17} aria-hidden="true" />{language === "ar" ? "English" : "العربية"}</button>
       </header>
       <section className={s.welcome}>
-        <p className={s.eyebrow}>{t("مايند · المستشفى", "MIND · Hospital")}</p>
+        <p className={s.eyebrow}>{t("MND · المستشفى", "MND · Hospital")}</p>
         <h1>{t("فواتيرك وحسابك", "Your invoices and account")}</h1>
         <p className={s.intro}>{t("استخدم رقم الجوال نفسه المسجل في طلباتك", "Use the same mobile number you entered in your orders")}</p>
       </section>

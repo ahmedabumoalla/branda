@@ -5,7 +5,7 @@ import { readHospitalDoctorPortal } from "@/lib/data/hospital-doctor-portal";
 import { HospitalDoctorAccount } from "@/components/hospital/doctor-account";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "حسابك لدى مايند | MIND", robots: { index: false, follow: false }, referrer: "same-origin" };
+export const metadata: Metadata = { title: "حسابك لدى MND | MND", robots: { index: false, follow: false }, referrer: "same-origin" };
 
 export default async function HospitalDoctorAccountPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
