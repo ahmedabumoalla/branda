@@ -43,6 +43,9 @@ try {
   `);
   const configuredMigration=(await readdir('supabase/migrations')).find(file=>file.endsWith('_configured_default_trial.sql'));
   await db.exec(await readFile(`supabase/migrations/${configuredMigration}`,'utf8'));
+  // Exercise the deployed trigger's public registration path; no admin drafts exist in this fixture
+  await db.exec('CREATE SCHEMA brand_onboarding_private; CREATE TABLE brand_onboarding_private.accounts(id uuid,state text,cafe_id uuid,proof text);');
+  await db.exec(await readFile('supabase/migrations/20261014004927_admin_brand_auth_identity_order.sql','utf8'));
   await db.exec('CREATE TRIGGER before_signup_default_plan_trial BEFORE INSERT ON subscriptions FOR EACH ROW EXECUTE FUNCTION public.force_signup_default_plan_to_trial();');
   check(await v("SELECT duration_count=7 AND duration_unit='day' FROM platform_plans WHERE id='configured'"),'legacy 15-day display repaired');
   await db.exec("CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();");
@@ -111,5 +114,13 @@ try {
   check(await v("SELECT count(*)=1 FROM subscriptions WHERE plan_id='configured' AND expires_at-started_at=interval '3 days'"),'next registration follows edited days with no 7/15 hardcoding');
   check(await v("SELECT duration_unit='month' AND duration_count=1 AND amount_sar=99 FROM subscriptions WHERE plan_id='paid'"),'paid billing preserved');
   await db.exec(await readFile("supabase/tests/owner_onboarding_postflight.sql","utf8")); checks++;
+  for(const [challenge,phone] of [[7,'966577777777'],[8,'966588888888']]) {
+    check((await begin(challenge,phone,{...draft,email:null,mapsUrl:null,slug:`without-email-${challenge}`})).ok,'registration accepts omitted email and location');
+    await q('SELECT public.mark_owner_onboarding_sent($1,$2,true)',[id(challenge),proof]);
+    check((await verify(challenge)).ok,'phone verification still required');
+    await create(challenge+20,challenge,null,phone);
+    check(await v('SELECT email IS NULL FROM profiles WHERE id=$1',[id(challenge+20)]),'missing email stored as NULL, not a shared empty alias');
+    check(await v('SELECT owner_email IS NULL AND google_maps_url IS NULL AND google_maps_latitude IS NULL AND google_maps_longitude IS NULL FROM cafe_settings WHERE cafe_id=(SELECT id FROM cafes WHERE owner_user_id=$1)',[id(challenge+20)]),'settings accept absent email and location');
+  }
   console.log(`PASS owner onboarding SQL: ${checks} real PostgreSQL checks; no provider or production mutation.`);
 } finally { await db.close(); }

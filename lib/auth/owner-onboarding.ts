@@ -23,9 +23,11 @@ export const ownerOnboardingSchema = z.object({
   brandNameAr: z.string().trim().min(2).max(120).regex(/[\u0600-\u06ff]/),
   brandNameEn: z.string().trim().min(2).max(120).regex(/^[A-Za-z0-9 &'().-]+$/).regex(/[A-Za-z]/),
   ownerName: z.string().trim().min(2).max(120),
-  email: z.string().trim().email().max(254).transform(value => value.toLowerCase()),
+  email: z.string().trim().pipe(z.union([z.literal(""), z.string().email().max(254)]))
+    .nullish().transform(value => value?.toLowerCase() || null),
   phone: z.string().trim().max(24).transform(normalizeSaudiPhone).refine(value => Boolean(value), "أدخل رقم جوال سعودي صحيحًا"),
-  mapsUrl,
+  mapsUrl: z.string().trim().pipe(z.union([z.literal(""), mapsUrl]))
+    .nullish().transform(value => value || null),
   couponCode: z.string().trim().max(30).optional().transform(value => value?.toUpperCase() || ""),
 });
 export type OwnerOnboardingInput = z.input<typeof ownerOnboardingSchema>;
@@ -49,7 +51,7 @@ const unavailable = (): OwnerOnboardingResult => ({ ok: false, message: "تعذ�
 
 export async function requestOwnerOnboarding(input: OwnerOnboardingInput): Promise<OwnerOnboardingResult> {
   const parsed = ownerOnboardingSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, message: "راجع البيانات وأدخل رقم جوال سعودي ورابط خرائط Google صحيحين" };
+  if (!parsed.success) return { ok: false, message: "راجع البيانات وأدخل رقم جوال سعودي صحيحًا وبريدًا إلكترونيًا صحيحًا إن أضفته" };
   if (!isGreenApiConfigured()) return unavailable();
   try {
     const admin = createAdminClient();
@@ -80,7 +82,7 @@ export async function requestOwnerOnboarding(input: OwnerOnboardingInput): Promi
       await admin.rpc("mark_owner_onboarding_sent", { p_id: id, p_session_hash: sessionHash, p_sent: false });
       return unavailable();
     }
-    const location = await resolveOwnerMapPreview(parsed.data.mapsUrl);
+    const location = parsed.data.mapsUrl ? await resolveOwnerMapPreview(parsed.data.mapsUrl) : null;
     const marked = await admin.rpc("mark_owner_onboarding_sent", { p_id: id, p_session_hash: sessionHash, p_sent: true, p_location: location ?? {} });
     if (marked.error) return unavailable();
     (await cookies()).set(COOKIE, `${id}.${secret}`, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 15 * 60 });

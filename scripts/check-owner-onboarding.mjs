@@ -25,7 +25,7 @@ function context(options={}) {
   const rpc=async(name,args)=>{events.push({name,args});
     if(name==="begin_owner_onboarding")return {data:{ok:!options.limited},error:null};
     if(name==="verify_owner_onboarding")return {data:{ok:!options.badCode},error:null};
-    if(name==="get_verified_owner_onboarding")return {data:options.unverified?null:{draft:valid,phone:"966511111111"},error:null};
+    if(name==="get_verified_owner_onboarding")return {data:options.unverified?null:{draft:options.draft??valid,phone:"966511111111"},error:null};
     return {data:true,error:null};
   };
   const stubs={
@@ -33,7 +33,7 @@ function context(options={}) {
     "@/lib/barndaksa/env":{getSupabaseServiceRoleKey:()=>"test-secret-never-production"},
     "@/lib/supabase/admin":{createAdminClient:()=>({rpc,auth:{admin:{createUser:async input=>{events.push({name:"createUser",input});return {data:{user:{id:"new-owner"}},error:options.createError?{}:null};}}}})},
     "@/lib/supabase/server":{createClient:async()=>({auth:{signInWithPassword:async input=>{events.push({name:"signIn",input});return {data:{session:options.signInError?null:{}},error:null};}}})},
-    "@/lib/maps/resolve-branch-location":{resolveBranchGoogleMapsUrl:async()=>{if(options.mapError)throw Error("unavailable");return {latitude:24,longitude:46};}},
+    "@/lib/maps/resolve-branch-location":{resolveBranchGoogleMapsUrl:async()=>{events.push({name:"mapPreview"});if(options.mapError)throw Error("unavailable");return {latitude:24,longitude:46};}},
     "@/lib/whatsapp/green-api":{isGreenApiConfigured:()=>!options.unconfigured,sendGreenApiOtp:async input=>{capturedCode=input.code;events.push({name:"provider"});if(options.providerError)throw Error("provider-error");return {providerMessageId:"test"};}},
   };
   return {api:load("lib/auth/owner-onboarding.ts",stubs),events,jar,get code(){return capturedCode;}};
@@ -51,7 +51,20 @@ await test(async()=>{const c=context();await c.api.requestOwnerOnboarding(valid)
 await test(async()=>{const c=context();await c.api.requestOwnerOnboarding(valid);await c.api.verifyOwnerOnboarding(c.code);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"});assert(result.ok);assert.equal(result.redirectTo,"/dashboard");const creation=c.events.find(e=>e.name==="createUser").input;assert.equal(creation.phone_confirm,true);assert.equal(creation.email_confirm,false);assert.equal(creation.email,undefined);assert.equal(creation.app_metadata.owner_onboarding_proof.length,64);assert(!creation.user_metadata.primary_branch_name);assert.equal(c.jar.size,0);assert.equal(c.events.find(e=>e.name==="signIn").input.phone,"+966511111111");});
 await test(async()=>{const c=context({createError:true});await c.api.requestOwnerOnboarding(valid);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"});assert(!result.ok);assert(!c.events.some(e=>e.name==="signIn"));});
 await test(async()=>{const c=context({signInError:true});await c.api.requestOwnerOnboarding(valid);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"});assert(result.ok);assert.equal(result.redirectTo,"/login");});
-await test(()=>{const Page=load("app/register/page.tsx",{"next/link":{__esModule:true,default:"a"},"@/app/actions/auth":{},"@/components/ui/barndaksa-logo":{BarndaksaLogo:()=>React.createElement("span",null,"brand")}}).default;const html=renderToStaticMarkup(React.createElement(Page));assert.equal((html.match(/<input/g)||[]).length,7);assert(!html.includes('type="password"'));assert(!html.includes("Mapbox"));assert(html.includes("تحقق واتساب"));assert(html.includes("الباقة الأساسية"));});
+await test(()=>{const Page=load("app/register/page.tsx",{"next/link":{__esModule:true,default:"a"},"@/app/actions/auth":{},"@/components/ui/barndaksa-logo":{BarndaksaLogo:()=>React.createElement("span",null,"brand")}}).default;const html=renderToStaticMarkup(React.createElement(Page));assert.equal((html.match(/<input/g)||[]).length,6);assert(!html.includes('type="password"'));assert(!html.includes("Mapbox"));assert(!html.includes('type="url"')&&!html.includes('<iframe')&&!html.includes('موقع الفرع الأساسي'));assert(!html.match(/<input[^>]*type="email"[^>]*>/)[0].includes('required'));assert(html.includes('البريد الإلكتروني (اختياري)'));assert(html.match(/<input[^>]*type="tel"[^>]*>/)[0].includes('required'));assert(html.includes("تحقق واتساب"));assert(html.includes("الباقة الأساسية"));});
+for(const email of ['', '   ', undefined, null]) await test(async()=>{
+  const input={...valid,email};delete input.mapsUrl;
+  const c=context({draft:input});assert((await c.api.requestOwnerOnboarding(input)).ok);
+  const request=c.events.find(event=>event.name==='begin_owner_onboarding');
+  assert.equal(request.args.p_draft.email,null);assert.equal(request.args.p_draft.mapsUrl,null);
+  assert(!c.events.some(event=>event.name==='mapPreview'));
+  assert((await c.api.verifyOwnerOnboarding(c.code)).ok);
+  assert((await c.api.completeOwnerOnboarding({password:'12345678',confirmPassword:'12345678'})).ok);
+  assert.equal(c.events.find(event=>event.name==='createUser').input.email,undefined);
+  assert.equal(c.events.find(event=>event.name==='signIn').input.phone,'+966511111111');
+});
+await test(async()=>{const c=context();assert((await c.api.requestOwnerOnboarding({...valid,email:' Owner@Example.invalid ',mapsUrl:''})).ok);assert.equal(c.events.find(event=>event.name==='begin_owner_onboarding').args.p_draft.email,'owner@example.invalid');assert(!c.events.some(event=>event.name==='mapPreview'));});
+for(const email of ['invalid', 'owner@', 'a'.repeat(255)+'@example.invalid'])await test(async()=>{const c=context();assert(!(await c.api.requestOwnerOnboarding({...valid,email})).ok);assert.equal(c.events.length,0);});
 
 function loginContext(options={}) {
   const calls=[];const chain=data=>{const builder=new Proxy({}, {get:(_,key)=>key==="maybeSingle"?async()=>({data,error:null}):()=>builder});return builder;};
