@@ -23,7 +23,11 @@ No browser, real test messages or live test accounts
 
 ## Release
 
-Database active; application publication pending
+Application: 210864037ca3f825d4d1988569a0d1387c95c347
+Vercel: dpl_BLCwJ2VoLJSFh59CBR2gNjXpfsk3 READY
+Both domain aliases and returned HTML match exact deployment, HTTP200: 2026-11-17T21:32:40.993Z
+Evidence: production-http.json
+Follow-up commit: documentation only
 
 ## Rollback
 
