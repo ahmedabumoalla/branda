@@ -11,12 +11,14 @@ const {homeBrands}=load('lib/marketing/home-brands.ts');
 const props={contacts:{whatsapp:'0508333556'},featuredBrandSlugs:homeBrands.map(b=>b.slug)};
 const html=renderToStaticMarkup(React.createElement(BrandaHome,props));
 assert.equal((html.match(/data-brand=/g)||[]).length,8);
-const logos=html.split('class="logoGrid"')[1].split('</section>')[0];
+const logos=html.split('class="logoViewport"')[1].split('</section>')[0];
 assert(!logos.includes('<p')&&!logos.includes('<h3')&&!logos.includes('<figcaption'),'Logos only, no visible captions');
 for(const brand of homeBrands){assert(logos.includes(brand.slug));if(brand.image)assert(fs.existsSync('public'+brand.image));}
 assert(!html.includes('/brand-home/reference-')&&!html.includes('+650')&&!html.includes('dashboardScene')&&!html.includes('partnerTrack'));
 assert(html.includes('data-home-design="branda-business-journey"')&&html.includes('href="/login"'));
 assert(html.includes('aria-controls="home-navigation"')&&html.includes('aria-pressed="true"')&&html.includes('href="#pricing"'));
+assert.equal((logos.match(/class="logoGroup"/g)||[]).length,2);
+assert(logos.includes('aria-hidden="true" data-copy="1"'));
 const signed=renderToStaticMarkup(React.createElement(BrandaHome,{...props,account:{href:'/dashboard',name:'Owner'}}));assert(signed.includes('href="/dashboard"'));
 const empty=renderToStaticMarkup(React.createElement(BrandaHome,{...props,featuredBrandSlugs:[]}));assert(!empty.includes('id="clients"'));
 const plan={id:'pro',name:'Saved plan',description:'Saved description',priceMonthly:123,trialDays:0,features:[{id:'menu',label:'Menu'}],durations:[]};
@@ -27,6 +29,7 @@ const Interactive=load('components/marketing/branda-home-redesign.tsx',{...stubs
 function walk(node,predicate){if(!node||typeof node!=='object')return null;if(predicate(node))return node;for(const child of React.Children.toArray(node.props?.children)){const result=walk(child,predicate);if(result)return result;}return null;}
 cursor=0;let tree=Interactive(props);walk(tree,node=>node.type==='button'&&node.props['aria-controls']==='journey-detail'&&node.props.children[1].props.children[0].props.children==='خلّ الزيارة تتكرر').props.onClick();
 cursor=0;tree=Interactive(props);assert(walk(tree,node=>node.type==='h3'&&node.props.children==='خلّ الزيارة تتكرر'));
+walk(tree,node=>node.type==='button'&&node.props.className==='logoPause').props.onClick();cursor=0;tree=Interactive(props);assert(walk(tree,node=>node.props?.className==='logoTrack'&&node.props['data-paused']===true));
 walk(tree,node=>node.type==='button'&&node.props['aria-label']==='Switch to English').props.onClick();cursor=0;tree=Interactive(props);assert.equal(tree.props.dir,'ltr');assert.equal(tree.props.lang,'en');
 
 (async()=>{

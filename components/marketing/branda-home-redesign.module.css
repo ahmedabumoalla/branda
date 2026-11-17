@@ -64,10 +64,17 @@
 .journeyDetail>small { color:#4d5f50; font-size:11px }
 .brands { background:var(--cream); padding:55px max(32px,calc((100vw - 1280px)/2)); display:grid; grid-template-columns:.85fr 1.5fr; gap:70px; align-items:center; border-block:1px solid var(--line) }
 .brands h2 { font-size:clamp(23px,2.5vw,32px); margin-top:15px }
-.logoGrid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px }
+.logoShowcase { min-width:0 }
+.logoViewport { overflow:hidden; width:100%; border-radius:3px; direction:ltr }
+.logoTrack { display:flex; width:max-content; min-width:200%; direction:ltr; animation:brandDrift 28s linear infinite; will-change:transform }
+.logoGroup { display:flex; align-items:center; gap:16px; padding-inline-end:16px; justify-content:space-around; flex:1 0 auto }
+.logoGroup .brandLogo { flex:0 0 172px }
+.logoTrack[data-paused=true],.logoViewport:hover .logoTrack,.logoViewport:focus-within .logoTrack { animation-play-state:paused }
+.logoPause { display:flex; align-items:center; gap:8px; min-height:44px; margin-top:8px; padding:8px 0; border:0; background:transparent; color:var(--muted); font-size:12px!important }
+@keyframes brandDrift { from { transform:translateX(0) } to { transform:translateX(-50%) } }
 .brandLogo { display:flex; align-items:center; justify-content:center; min-width:0; height:115px; padding:17px; background:var(--paper); border-radius:3px; border:1px solid #e6e5df }
 .brandLogo>img { width:100%; height:100%; max-width:150px; object-fit:contain }
-.brandLogo[data-brand=brand-edbc2c01385b] { background:#080808 }
+.brandLogo[data-logo=brand-edbc2c01385b] { background:#080808 }
 .operations { display:grid; grid-template-columns:1.1fr 1fr; gap:90px; align-items:center }
 .operations h2 { margin-top:18px }
 .operations>div>p { color:var(--muted); font-size:16px; line-height:2; margin:22px 0 }
@@ -95,14 +102,14 @@
 .footer>div { display:flex; flex-wrap:wrap; gap:22px; font-size:13px }
 .page[dir=ltr] .primary svg,.page[dir=ltr] .textLink svg,.page[dir=ltr] .routeStop>svg,.page[dir=ltr] .journeyChoices button>svg:last-child { transform:rotate(180deg) }
 @media(min-width:1450px) { .hero { min-height:690px } }
-@media(max-width:1000px) { .nav { gap:16px }.hero { gap:35px }.hero h1 { font-size:58px }.brands { gap:30px; grid-template-columns:1fr }.logoGrid { grid-template-columns:repeat(4,minmax(0,1fr)) }.operations,.contact { gap:40px }.journeyDetail { padding:30px } }
+@media(max-width:1000px) { .nav { gap:16px }.hero { gap:35px }.hero h1 { font-size:58px }.brands { gap:30px; grid-template-columns:1fr }.operations,.contact { gap:40px }.journeyDetail { padding:30px } }
 @media(max-width:760px) {
  .navbar { width:calc(100% - 32px); min-height:74px; gap:14px }.navbar img { width:95px; height:42px }.menuButton { display:flex }.navActions { gap:4px }.page .signIn { padding:10px 14px;font-size:13px }.language { padding:10px }
  .nav { display:none; position:absolute; top:74px; inset-inline:0; padding:16px 24px 24px; background:var(--paper); border-bottom:1px solid var(--line); box-shadow:0 12px 20px #2927220a }.nav[data-open=true] { display:flex; flex-direction:column; align-items:stretch; gap:0 }
  .hero { grid-template-columns:1fr; gap:35px; padding:45px 24px 0 }.hero h1 { font-size:clamp(45px,10vw,65px); letter-spacing:-1px }.heroIntro>p { font-size:17px }.heroRoute { padding:22px }.heroFoot { margin:0; font-size:10px }.routeStop { padding:18px 0 }.routeStop strong { font-size:18px }
  .heroActions { gap:18px }.page .primary { font-size:14px; padding:14px 20px }.section { width:calc(100% - 40px); padding:65px 0 }.sectionHead { grid-template-columns:1fr; gap:16px }.sectionHead>p { font-size:15px }.journeyLayout { grid-template-columns:1fr; gap:22px }.journeyChoices button { padding:18px; gap:15px }.journeyChoices strong { font-size:18px }.journeyDetail { min-height:340px; padding:28px 23px }
- .brands { padding:40px 20px; gap:28px }.logoGrid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px }.brandLogo { height:100px; padding:13px }.brands h2 { font-size:25px }
+ .brands { padding:40px 20px; gap:28px }.logoGroup { gap:12px; padding-inline-end:12px }.logoGroup .brandLogo { flex-basis:144px }.brandLogo { height:100px; padding:13px }.brands h2 { font-size:25px }
  .operations,.faq,.contact { grid-template-columns:1fr; gap:30px }.contact { padding:45px 20px }.contactCopy { padding:0 }.faq summary { font-size:16px }.footer { width:calc(100% - 40px); gap:22px; padding:30px 0 }.footer>p { flex-basis:100%; order:2 }
 }
-@media(max-width:390px) { .logoGrid { grid-template-columns:repeat(2,minmax(0,1fr)) }.heroActions { align-items:stretch; flex-direction:column }.heroLink { align-self:flex-start } }
-@media(prefers-reduced-motion:reduce) { .page * { scroll-behavior:auto!important; transition:none!important; animation:none!important } }
+@media(max-width:390px) { .heroActions { align-items:stretch; flex-direction:column }.heroLink { align-self:flex-start } }
+@media(prefers-reduced-motion:reduce) { .page * { scroll-behavior:auto!important; transition:none!important; animation:none!important }.logoViewport { overflow-x:auto }.logoGroup { min-width:0 }.logoGroup[data-copy="1"],.logoPause { display:none }.logoTrack { min-width:100%; will-change:auto } }
