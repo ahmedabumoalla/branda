@@ -57,13 +57,22 @@ await test("Admin override cannot open missing package services but may suspend 
   const rows = access.getSidebarFeaturesForBrand({ planId: "pro", plans: [{id: "pro", features: ["menu"]}], overrides: [{ featureId: "loyalty", enabled: true }, {featureId: "menu", enabled: false}] });
   assert.deepEqual(rows, []);
 });
-await test("Trial previews offers and loyalty without granting access", () => {
+await test("Trial navigation hides every unassigned service", () => {
   const rows = access.getSidebarFeaturesForBrand({ planId: "trial", plans: [{ id: "trial", features: ["menu", "settings"] }], isTrial: true });
-  assert.deepEqual(rows.map(row => row.feature.id), ["menu", "offers", "loyalty", "settings"]);
+  assert.deepEqual(rows.map(row => row.feature.id), ["menu", "settings"]);
   assert.deepEqual(rows.filter(row => row.access.effectiveEnabled).map(row => row.feature.id), ["menu", "settings"]);
   assert.equal(permissions.cafeHasFeature("loyalty", { planId: "trial", plans: [{ id: "trial", features: ["menu", "settings"] }] }), false);
   assert.deepEqual(access.getSidebarFeaturesForBrand({ planId: "", plans: [], isTrial: true }), []);
 });
+await test("Trial navigation respects explicit administrator disables", () => {
+  const rows = access.getSidebarFeaturesForBrand({ planId: "trial", plans: [{ id: "trial", features: ["offers", "loyalty"] }], isTrial: true, overrides: [{featureId: "offers", enabled: false}] });
+  assert.deepEqual(rows.map(row => row.feature.id), ["loyalty"]);
+});
+
+if (process.argv.includes('--features-only')) {
+  console.log(`PASS sidebar feature visibility: ${checks} checks`);
+  process.exit(0);
+}
 
 function serverPage({ slug = "rast", configured = true, missing = false, contextError = false } = {}) {
   const calls = [];

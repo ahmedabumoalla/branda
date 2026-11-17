@@ -137,5 +137,21 @@ try {
     await q('SELECT public.mark_owner_onboarding_sent($1,$2,true)',[id(challenge),proof]);await verify(challenge);await create(challenge+100,challenge,null,phone);
     check(await v("SELECT s.status='trialing' AND s.amount_sar=0 AND s.expires_at-s.started_at=interval '30 days' FROM subscriptions s JOIN cafes c ON c.id=s.cafe_id WHERE c.owner_user_id=$1",[id(challenge+100)]),'new account receives actual free thirty days');
   }
+  await db.exec(await readFile('supabase/migrations/20261118000400_verified_owner_auth_metadata_order.sql','utf8'));
+  const orderedPhone='966599888777';
+  check((await begin(70,orderedPhone,{...draft,email:null,mapsUrl:null,slug:'ordered-owner'},'7'.repeat(64))).ok,'ordered registration begins');
+  await q('SELECT public.mark_owner_onboarding_sent($1,$2,true)',[id(70),proof]);
+  check((await verify(70)).ok,'ordered registration verified');
+  await db.exec('BEGIN');
+  await q("INSERT INTO auth.users(id,phone,raw_user_meta_data,raw_app_meta_data) VALUES($1,$2,'{\"account_type\":\"cafe_owner\"}','{\"provider\":\"phone\"}')",[id(170),orderedPhone]);
+  check(await v('SELECT NOT EXISTS(SELECT 1 FROM profiles WHERE id=$1)',[id(170)]),'owner not created before protected metadata');
+  await q('UPDATE auth.users SET raw_app_meta_data=$2::jsonb WHERE id=$1',[id(170),JSON.stringify({owner_onboarding_id:id(70),owner_onboarding_proof:proof})]);
+  await db.exec('COMMIT');
+  check(await v("SELECT role='cafe_owner' FROM profiles WHERE id=$1",[id(170)]),'GoTrue insert then metadata update commits owner');
+  check(await v('SELECT consumed_by=$2 FROM owner_onboarding_private.challenges WHERE id=$1',[id(70),id(170)]),'proof consumed exactly once');
+  await denied("INSERT INTO auth.users(id,phone,raw_user_meta_data,raw_app_meta_data) VALUES($1,'966599888776','{\"account_type\":\"cafe_owner\"}','{}')",[id(171)]);
+  check(await v('SELECT NOT EXISTS(SELECT 1 FROM auth.users WHERE id=$1)',[id(171)]),'unverified deferred owner fully rolled back');
+  await q("INSERT INTO auth.users(id,phone,raw_user_meta_data,raw_app_meta_data) VALUES($1,'966599888775','{}','{}')",[id(172)]);
+  check(await v("SELECT role='customer' FROM profiles WHERE id=$1",[id(172)]),'ordinary customer path preserved');
   console.log(`PASS owner onboarding SQL: ${checks} real PostgreSQL checks; no provider or production mutation.`);
 } finally { await db.close(); }

@@ -155,5 +155,5 @@ export function getSidebarFeaturesForBrand(context: {
     .map((feature) => ({
       feature,
       access: accessMap.get(feature.id),
-    })).filter(row => row.access?.effectiveEnabled || (context.isTrial && (row.feature.id === "loyalty" || row.feature.id === "offers")));
+    })).filter(row => row.access?.effectiveEnabled);
 }
