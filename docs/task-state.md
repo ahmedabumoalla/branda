@@ -1,3 +1,9 @@
+# Loco reward redemption WhatsApp notice (Claude) - PUBLISHED - 2026-11-17
+
+- Loco only: after a committed reward redemption (cashier reader, reward page or POS sale), one WhatsApp message from the Branda platform number to the brand settings number or the owner phone, with customer name, customer phone, reward and the redeeming employee
+- GitHub main 69c3274df93d3c4f6394e53e8b0c17f591e4a930, GitHub deployment record Production success. No database change. TypeScript and text integrity pass. No message sent and no browser test
+- Details: docs/BARNDAKSA_HANDOFF/LOCO_REWARD_ALERT_20261117.md
+
 # Loco staff dashboard permissions (Claude) - PUBLISHED - 2026-11-17
 
 - Loco only: new owner section إدارة صلاحيات الموظفين. Non-cashier employees and existing cashiers get dashboard login by phone and owner-set password, plus menu, loyalty messages and rewards permissions. Cashier login and permissions unchanged
