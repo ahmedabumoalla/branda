@@ -316,11 +316,15 @@ const productGalleryItemSchema = z.object({
   mimeType: z.string().optional(),
 });
 
+// Legacy imports use PostgreSQL UUIDs without RFC version/variant bits
+// Keep canonical hex validation while preserving existing catalogue identities
+const menuRecordId = z.guid();
+
 const productSchema = z.object({
   branchId: z.string().uuid().optional().nullable(),
-  id: z.string().uuid().optional(),
+  id: menuRecordId.optional(),
   name: z.string().min(1),
-  categoryId: z.string().uuid().optional().nullable(),
+  categoryId: menuRecordId.optional().nullable(),
   category: z.string().optional(),
   description: z.string().optional().default(""),
   price: z.number().finite().min(0),
@@ -357,7 +361,7 @@ const productSchema = z.object({
     discountMode: z.enum(["percent", "fixed_price"]).optional(),
     discountPercent: z.number().min(0).max(100).optional(),
     discountedPrice: z.number().min(0).optional(),
-    freeProductId: z.string().uuid().optional(),
+    freeProductId: menuRecordId.optional(),
     customText: z.string().optional(),
     startDate: z.string().refine((value) => Number.isFinite(Date.parse(value))),
     endDate: z.string().refine((value) => Number.isFinite(Date.parse(value))),
@@ -707,7 +711,7 @@ export async function softDeleteMenuProduct(productId: string) {
 
 const categorySchema = z.object({
   branchId: z.string().uuid().optional().nullable(),
-  id: z.string().uuid().optional(),
+  id: menuRecordId.optional(),
   name: z.string().min(1),
   description: z.string().optional(),
   sortOrder: z.number().int(),
@@ -868,7 +872,7 @@ export type DeleteMenuCategoryResult =
 export async function softDeleteMenuCategory(
   categoryId: string
 ): Promise<DeleteMenuCategoryResult> {
-  const parsedCategoryId = z.string().uuid().parse(categoryId);
+  const parsedCategoryId = menuRecordId.parse(categoryId);
   const cafe = await requireOwnerCafeContext("menu");
   const supabase = await createClient();
   await assertMenuWriteSource(supabase, cafe.id, "menu_categories", parsedCategoryId);
