@@ -134,6 +134,7 @@ const settingsSchema = z.object({
   purchasedDomain: z.string().optional(),
   purchasedDomainStatus: z.string().optional(),
   logoStoragePath: z.string().optional().nullable(),
+  logoPalette: z.object({ primary: z.string().regex(/^#[a-f0-9]{6}$/i), secondary: z.string().regex(/^#[a-f0-9]{6}$/i), text: z.string().regex(/^#[a-f0-9]{6}$/i) }).optional(),
   themeId: z.string().optional(),
 });
 
@@ -161,7 +162,7 @@ export async function updateCafeSettings(input: z.infer<typeof settingsSchema>):
     theme_id: parsed.themeId,
   };
 
-  const { data, error } = await supabase.rpc("save_owner_cafe_settings", { p_cafe_id: cafe.id, p_settings: payload });
+  const { data, error } = await supabase.rpc("save_owner_cafe_settings_with_identity", { p_cafe_id: cafe.id, p_settings: payload, p_palette: parsed.logoPalette ?? null });
   if (error) throw new Error(error.code === "42501" ? "ليست لديك صلاحية تعديل إعدادات هذه العلامة" : "تعذر حفظ إعدادات العلامة حاول مرة أخرى");
   if (!data || data.cafe?.id !== cafe.id || data.settings?.cafe_id !== cafe.id || typeof data.cafe.name !== "string" || typeof data.cafe.slug !== "string") {
     throw new Error("لم يتم تأكيد حفظ الإعدادات أعد المحاولة");

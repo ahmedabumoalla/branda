@@ -22,6 +22,8 @@ import { loadPublicLoyaltyBrandSnapshot } from "@/lib/data/loyalty-brand-snapsho
 import { resolvePublishedStoragePathToUrl, storageBucketForLogo } from "@/lib/storage/resolve-storage-url";
 import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits } from "@/lib/loyalty/read-identifier";
 import { loadWalletBranchLocations } from "@/lib/data/wallet-branch-locations";
+import { getLoyaltyBranch } from "@/lib/data/loyalty-branches";
+import { branchIdentity, branchProgram } from "@/lib/loyalty/branch-appearance";
 
 export async function getLoyaltyExperience(cafeId: string) {
   const [{ data, error }, { data: category }] = await Promise.all([
@@ -61,23 +63,24 @@ export const getLoyaltyBrand = cache(async (slug: string) => {
     || settings?.logoDataUrl
     || (appearance.logoPath ? await resolvePublishedStoragePathToUrl(storageBucketForLogo(), appearance.logoPath) : appearance.logoUrl)
     || (slug === "rast" ? "/menu-logos/kawakib-transparent-20261008.png" : null);
-  return { cafeId: String(cafe.id), identity: { businessCategory: appearance.businessCategory, slug: String(cafe.slug), name: String(cafe.name), nameEn: String(cafe.name_en ?? ""), logoUrl, logoDisplayUrl: logoUrl ? `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1` : null, ...(slug === "rast" ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }) }, program };
+  return { cafeId: String(cafe.id), identity: { businessCategory: appearance.businessCategory, slug: String(cafe.slug), name: String(cafe.name), nameEn: String(cafe.name_en ?? ""), logoUrl, logoDisplayUrl: logoUrl ? `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1` : null, ...(slug === "rast" && !program.autoLogo ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }) }, program };
 });
 
-export async function getLoyaltyMembership(slug: string) {
+export async function getLoyaltyMembership(slug: string, branchId?: string) {
   const brand = await getLoyaltyBrand(slug);
   if (!brand || !brand.program.enabled) return null;
   const profile = await getLoyaltyCustomerProfile(slug);
   if (!profile) return null;
   const [view, rewards] = await Promise.all([
-    getCustomerLoyaltyCardViewForProfile(slug, String(profile.id)),
+    getCustomerLoyaltyCardViewForProfile(slug, String(profile.id), branchId),
     getCustomerRewardInstances(slug, String(profile.id)),
   ]);
   if (!view) return null;
   const availableRewards = rewards
-    .filter((reward) => reward.sourceType === "loyalty" && reward.status === "available" && (!reward.expiresAt || Date.parse(reward.expiresAt) > Date.now()))
+    .filter((reward) => reward.loyaltyCardId === view.card.id && reward.sourceType === "loyalty" && reward.status === "available" && (!reward.expiresAt || Date.parse(reward.expiresAt) > Date.now()))
     .map((reward) => ({ ...reward, qrPayload: createBarndaksaQrPayload("customer-reward", reward.rewardCode) }));
-  return { ...view, card: { ...view.card, availableRewards: availableRewards.length }, rewards: availableRewards, loadedAt: Date.now() };
+  const branch = view.card.branchId ? await getLoyaltyBranch(view.card.cafeId, view.card.branchId, true) : null;
+  return { ...view, identity: branch ? branchIdentity(brand.identity, branch) : brand.identity, ...(branch ? { program: branchProgram(view.program, branch), cafeName: branch.name } : {}), card: { ...view.card, availableRewards: availableRewards.length }, rewards: availableRewards, loadedAt: Date.now() };
 }
 
 // Only trusted wallet webservice callers may use this privileged snapshot.
@@ -99,7 +102,22 @@ async function loadWalletMemberFromView(view: CustomerLoyaltyCardView): Promise<
   ]);
   if (!brand) return null;
   if (error) throw new Error("تعذر تحديث مكافآت البطاقة");
+  if (view.card.branchId) {
+    const branch = await getLoyaltyBranch(view.card.cafeId, view.card.branchId, true);
+    if (!branch) return null;
+    return { ...view, cafeName: branch.name, branchId: branch.id, bannerUrl: branch.banner, program: branchProgram(view.program, branch),
+      card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: branch.logo,
+      experience: { ...experience, nearbyMessage: branch.nearbyMessage, latitude: branch.latitude, longitude: branch.longitude },
+      branchLocations };
+  }
   return { ...view, card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: brand.identity.logoUrl, experience, branchLocations };
+}
+
+export async function getBranchLoyaltyBrand(slug: string, branchId?: string | null, issuedCard = false) {
+  const brand = await getLoyaltyBrand(slug);
+  if (!brand || !branchId) return brand;
+  const branch = await getLoyaltyBranch(brand.cafeId, branchId, issuedCard);
+  return branch ? { ...brand, identity: branchIdentity(brand.identity, branch), program: branchProgram(brand.program, branch) } : null;
 }
 
 export async function getAuthorizedWalletMember(cardCode: string) {
@@ -141,7 +159,7 @@ export async function saveOwnerLoyaltyExperience(input: LoyaltyExperienceInput) 
 }
 
 const programSchema = z.object({
-  stampStyle: z.enum(["ceramic", "paper", "meal", "brand", "scissors", "comb", "plant"]).optional(),
+  stampStyle: z.enum(["ceramic", "paper", "meal", "brand", "scissors", "comb", "plant", "shirt"]).optional(),
   enabled: z.boolean(), cardTitle: z.string().trim().min(2).max(80), cardSubtitle: z.string().trim().min(2).max(140),
   purchasesRequired: z.number().int().min(1).max(100), rewardProductId: z.string().uuid().nullable(),
   rewardName: z.string().trim().min(2).max(80), stampLabel: z.string().min(1).max(40), terms: z.string().max(1000),

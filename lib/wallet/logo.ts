@@ -4,7 +4,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { walletBaseUrl } from "./config";
 import type { WalletMember } from "./types";
-import { clearLogoBackdrop } from "@/lib/loyalty/logo-alpha";
+import { clearUniformLogoBackground } from "@/lib/cafe/logo-transparency";
 import { createWalletArtifactCache, walletArtifactKey } from "./artifact-cache";
 
 const cachedLogo = createWalletArtifactCache(8 * 1024 * 1024, 128, 30_000);
@@ -56,7 +56,9 @@ export async function walletBrandLogo(member: Pick<WalletMember, "logoUrl" | "ca
 async function renderBrandLogo(member: Pick<WalletMember, "logoUrl" | "cafeName" | "program">) {
   const { data, info } = await sharp(await brandAsset(member), { limitInputPixels: 16_000_000 })
     .resize(640, 400, { fit: "inside", withoutEnlargement: true }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  clearLogoBackdrop(data, info.width, info.height);
+  const pixels = new Uint8ClampedArray(data);
+  clearUniformLogoBackground(pixels, info.width, info.height);
+  data.set(pixels);
   return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).trim()
     .resize(640, 200, { fit: "contain", background: "#00000000" }).png().toBuffer();
 }

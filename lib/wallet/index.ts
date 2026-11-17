@@ -195,9 +195,16 @@ async function deliverBrandMessage(cafeId: string, title: string, body: string, 
   if (previous?.google?.status === "accepted") result.google = previous.google;
   else if (readiness.google && googleCount) {
     try {
-      await notifyGoogleBrand(cafeId, title, body, messageId);
+      const branchIds = new Set<string | undefined>();
+      const ids = passes.filter(pass => pass.provider === "google").map(pass => pass.card_id);
+      for (let offset = 0; offset < ids.length; offset += 100) {
+        const { data: cards, error } = await createAdminClient().from("loyalty_cards").select("loyalty_branch_id").eq("cafe_id", cafeId).in("id", ids.slice(offset, offset + 100));
+        if (error || cards?.length !== ids.slice(offset, offset + 100).length) throw new Error("wallet_branch_tracking_unavailable");
+        for (const card of cards ?? []) branchIds.add(card.loyalty_branch_id || undefined);
+      }
+      for (const branchId of branchIds) await notifyGoogleBrand(cafeId, title, body, messageId, branchId);
       await recordPromotionRecipients(messageId, cafeId, "google", passes.filter(pass => pass.provider === "google").map(pass => pass.card_id));
-      result.google = { status: "accepted", count: 1 };
+      result.google = { status: "accepted", count: branchIds.size };
     } catch (error) { result.google = providerFailed(error); }
   }
   if (previous?.apple?.status === "accepted") result.apple = previous.apple;

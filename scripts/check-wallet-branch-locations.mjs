@@ -51,6 +51,7 @@ assert.equal(selectBranchWalletLocations([{ ...branches[0], lat: null, lng: null
 
 let rows = [], error = null, features = ["branches"], calls = [];
 const query = {
+  maybeSingle() { return Promise.resolve({ data: { slug: "brand-1c2b6f7e028f" }, error }); },
   select(value) { calls.push(["select", value]); return this; },
   eq(key, value) { calls.push(["eq", key, value]); return this; },
   order(key) { calls.push(["order", key]); return this; },
@@ -81,4 +82,7 @@ features = [];
 calls = [];
 assert.equal(await loadWalletBranchLocations("brand-a"), undefined);
 assert.deepEqual(calls, [], "Brands without branch entitlement must not query branches");
+features = ["loyalty"];
+rows = [row];
+assert.equal((await loadWalletBranchLocations("brand-a")).length, 1, "Fawasel loyalty-only includes all active branch locations");
 console.log("Wallet branch location selection, tenant scope, eligibility, fallback and provider limit checks passed");

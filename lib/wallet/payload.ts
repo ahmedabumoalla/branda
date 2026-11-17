@@ -4,7 +4,8 @@ import { walletArtifactKey } from "./artifact-cache";
 import { isMqas77Wallet, MQAS77_WALLET_COLORS, MQAS77_WALLET_VERSION, MQAS77_WALLET_NAME } from "./mqas77-design";
 import { normalizeWalletLocations, walletLocationText } from "./branch-locations";
 
-export function googleClassId(issuerId: string, cafeId: string) {
+export function googleClassId(issuerId: string, cafeId: string, branchId?: string) {
+  if (branchId) return `${issuerId}.branda_${cafeId.replace(/-/g, "")}_branch_${branchId.replace(/-/g, "")}`;
   const override = process.env.GOOGLE_WALLET_RAST_CLASS_ID;
   if (override && cafeId === "3c697864-d371-4190-87ab-48f183cdf2d5") {
     if (!override.startsWith(`${issuerId}.`) || !/^[a-zA-Z0-9._-]{1,200}$/.test(override)) throw new Error("wallet_invalid_class_id");
@@ -18,8 +19,8 @@ export function googleObjectId(issuerId: string, member: { card: Pick<WalletMemb
 }
 
 export function walletColors(member: WalletMember) {
-  if (isMqas77Wallet(member.cafeSlug)) return MQAS77_WALLET_COLORS;
-  if (member.cafeSlug === "rast") return { background: "#3b1420", foreground: "#f8f2e8", accent: "#d8b67a" };
+  if ((isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)) return MQAS77_WALLET_COLORS;
+  if (member.cafeSlug === "rast" && !member.program.autoLogo) return { background: "#3b1420", foreground: "#f8f2e8", accent: "#d8b67a" };
   const hex = (value: string | undefined, fallback: string) => /^#[\da-f]{6}$/i.test(value ?? "") ? value! : fallback;
   return { background: hex(member.program.cardBackground, "#4a281d"), foreground: hex(member.program.cardForeground, "#fcf8f3"), accent: hex(member.program.cardAccent, "#d9a33f") };
 }
@@ -40,15 +41,15 @@ export function walletAppleLocations(member: WalletMember) {
 }
 
 export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl: string) {
-  const mqas77 = isMqas77Wallet(member.cafeSlug);
+  const mqas77 = (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo);
   const logoVersion = mqas77 ? MQAS77_WALLET_VERSION : walletArtifactKey(JSON.stringify([member.cafeName, member.logoUrl, member.program.cardBackground]));
   return {
-    id: googleClassId(issuerId, member.card.cafeId),
+    id: googleClassId(issuerId, member.card.cafeId, member.branchId),
     issuerName: mqas77 ? MQAS77_WALLET_NAME : member.cafeName,
     localizedIssuerName: { defaultValue: { language: mqas77 ? "en" : "ar", value: mqas77 ? MQAS77_WALLET_NAME : member.cafeName } },
     programName: member.program.cardTitle,
     localizedProgramName: { defaultValue: { language: "ar", value: member.program.cardTitle } },
-    programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/brand/${encodeURIComponent(member.cafeSlug)}/logo?v=${logoVersion}${mqas77 ? "&wallet=mqas77" : ""}` }, contentDescription: { defaultValue: { language: "ar", value: member.cafeName } } },
+    programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/brand/${encodeURIComponent(member.cafeSlug)}/logo?v=${logoVersion}${member.branchId ? `&branch=${encodeURIComponent(member.branchId)}` : ""}${mqas77 ? "&wallet=mqas77" : ""}` }, contentDescription: { defaultValue: { language: "ar", value: member.cafeName } } },
     reviewStatus: "UNDER_REVIEW",
     multipleDevicesAndHoldersAllowedStatus: "ONE_USER_ALL_DEVICES",
     hexBackgroundColor: walletColors(member).background,
@@ -60,13 +61,13 @@ export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl
 
 export function buildGoogleObject(member: WalletMember, issuerId: string, artworkUrl?: string) {
   return {
-    id: googleObjectId(issuerId, member), classId: googleClassId(issuerId, member.card.cafeId),
+    id: googleObjectId(issuerId, member), classId: googleClassId(issuerId, member.card.cafeId, member.branchId),
     state: member.program.enabled ? "ACTIVE" : "INACTIVE",
     barcode: { type: "QR_CODE", value: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), alternateText: member.card.displayNumber || member.card.cardCode },
-    loyaltyPoints: isMqas77Wallet(member.cafeSlug)
+    loyaltyPoints: (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
       ? { label: "مكافآت جاهزة", balance: { string: String(member.card.availableRewards) } }
       : { label: member.program.stampLabel, balance: { string: `${member.card.stampsInCycle} / ${member.program.purchasesRequired}` } },
-    secondaryLoyaltyPoints: isMqas77Wallet(member.cafeSlug)
+    secondaryLoyaltyPoints: (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
       ? { label: "أختام للمكافأة", balance: { int: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) } }
       : { label: "المكافآت المتاحة", balance: { int: member.card.availableRewards } },
     merchantLocations: walletLocations(member),

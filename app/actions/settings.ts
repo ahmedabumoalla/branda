@@ -10,7 +10,7 @@ export async function fetchOwnerSettingsAction() {
   return getOwnerCafeSettings();
 }
 
-export async function saveSettingsAction(settings: CafeSettings) {
+export async function saveSettingsAction(settings: CafeSettings, logoPalette?: { primary: string; secondary: string; text: string } | null) {
   await assertOwnerServiceEnabled("settings");
   const saved = await updateCafeSettings({
     cafeName: settings.cafeName,
@@ -28,6 +28,7 @@ export async function saveSettingsAction(settings: CafeSettings) {
     purchasedDomain: settings.purchasedDomain,
     purchasedDomainStatus: settings.purchasedDomainStatus,
     logoStoragePath: settings.logoAssetId ?? null,
+    logoPalette: logoPalette ?? undefined,
   });
   revalidatePath("/dashboard", "layout");
   revalidatePath(`/menu/${saved.cafeSlug}`);

@@ -1,4 +1,6 @@
 "use client";
+import { prepareLoyaltyLogoAction } from "@/app/actions/loyalty-logo";
+import type { LogoPalette } from "@/lib/cafe/prepare-loyalty-logo";
 
 import { Eye, EyeOff, ImagePlus, KeyRound, Save, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -60,6 +62,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
     text: string;
   } | null>(null);
 
+  const [logoPalette, setLogoPalette] = useState<LogoPalette | null>(null);
   const [pendingLogo, setPendingLogo] = useState<OptimizedImageResult | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>();
   const resolvedLogoUrl = useResolvedCafeLogoUrl(settings, logoPreviewUrl);
@@ -92,7 +95,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
         next.logoAssetId = uploaded.storagePath;
       }
 
-      const savedSettings = await saveSettingsAction(next);
+      const savedSettings = await saveSettingsAction(next, pendingLogo ? logoPalette : null);
       setSettings(savedSettings);
       if (pendingLogo) {
         setPendingLogo(null);
@@ -176,19 +179,23 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
     setLogoUploading(true);
     showToast({ type: "loading", message: "جاري تحسين الصورة" });
     try {
-      const optimized = await optimizeImageForStorage(file, "cafe-logo");
+      const form = new FormData(); form.set("file", file);
+      const prepared = await prepareLoyaltyLogoAction(form);
+      const blob = await (await fetch(prepared.dataUrl)).blob();
+      const optimized: OptimizedImageResult = { blob, mimeType: "image/webp", width: prepared.width, height: prepared.height, sizeBytes: blob.size, originalSizeBytes: file.size, wasOptimized: true, fileName: "logo.webp" };
+      setLogoPalette(prepared.palette);
       revokeObjectUrl(logoPreviewUrl);
       setLogoPreviewUrl(URL.createObjectURL(optimized.blob));
       setPendingLogo(optimized);
       showToast({
         type: "success",
-        message: "تم تجهيز الصورة بنجاح — اضغط حفظ الإعدادات لتثبيتها",
+        message: "تم تجهيز الشعار وألوان بطاقة الولاء اضغط حفظ الإعدادات لتطبيقها",
       });
     } catch (err) {
       showToast({
         type: "error",
         message:
-          err instanceof ImagePipelineError
+          err instanceof Error
             ? err.message
             : "تعذر قراءة الصورة جرّب ملف PNG أو JPG أو WEBP",
       });
@@ -270,6 +277,11 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
                 )}
               </div>
 
+              {pendingLogo && logoPalette && <div className="mt-4 rounded-2xl p-4" style={{ background: logoPalette.primary, color: logoPalette.text }}>
+                <span className="text-sm font-bold">ألوان بطاقة الولاء</span>
+                <div className="mt-2 flex justify-center gap-2" aria-label="الألوان المستخرجة من الشعار">{[logoPalette.primary, logoPalette.secondary, logoPalette.text].map(color => <span key={color} className="h-6 w-6 rounded-full border border-current" style={{ background: color }} />)}</div>
+                <p className="mt-2 text-xs">تطبق على البطاقة عند حفظ الإعدادات</p>
+              </div>}
               <input
                 ref={fileRef}
                 type="file"

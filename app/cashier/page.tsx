@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getLoyaltyBrand } from "@/lib/data/loyalty-experience";
+import { getLoyaltyBrand, getBranchLoyaltyBrand } from "@/lib/data/loyalty-experience";
 import { getCashierConsole, getCashierToken, getCashierLandingPath, requireCashierSessionContext } from "@/lib/data/cashier";
 import { RastCashier } from "@/components/rast-loyalty/rast-cashier";
 import { PublicServiceUnavailable } from "@/components/public-service-unavailable";
@@ -27,7 +27,7 @@ export default async function CashierPage() {
     redirect("/cashier/login");
   }
 
-  const brand = await getLoyaltyBrand(data.cafe.slug);
+  const brand = data.cashier.loyaltyBranchId ? await getBranchLoyaltyBrand(data.cafe.slug, data.cashier.loyaltyBranchId) : await getLoyaltyBrand(data.cafe.slug);
   if (data.cafe.businessCategory === "hair_salons") return <><CashierSessionGuard /><RastCashier initialData={data} identity={brand?.identity} /></>;
   const token = await getCashierToken();
   if (!token) redirect("/cashier/login");

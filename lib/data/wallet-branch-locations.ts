@@ -9,7 +9,12 @@ import { selectBranchWalletLocations } from "@/lib/wallet/branch-locations";
 export const loadWalletBranchLocations = cache(async (cafeId: string) => {
   const features = await getCafeFeatureCodes(cafeId);
   // Menu accounts see branch management even without the legacy branches add-on
-  if (!featureCodesAllow(features, "branches") && !featureCodesAllow(features, "menu")) return undefined;
+  if (!featureCodesAllow(features, "branches") && !featureCodesAllow(features, "menu")) {
+    if (!featureCodesAllow(features, "loyalty")) return undefined;
+    const { data: cafe, error } = await createAdminClient().from("cafes").select("slug").eq("id", cafeId).maybeSingle();
+    if (error) throw new Error("تعذر تحميل مواقع الفروع");
+    if (cafe?.slug !== "brand-1c2b6f7e028f") return undefined;
+  }
   const { data, error } = await createAdminClient().from("branches")
     .select("id,cafe_id,name,lat,lng,active,deleted_at,is_primary,sort_order,welcome_message,wallet_location_managed")
     .eq("cafe_id", cafeId).order("is_primary", { ascending: false }).order("sort_order").order("id");

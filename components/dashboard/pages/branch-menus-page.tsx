@@ -13,7 +13,7 @@ type Draft = { id: string; expectedUpdatedAt: string | null; name: string; addre
 function errorMessage(error: unknown, fallback: string) { return error instanceof Error && /[\u0600-\u06ff]/.test(error.message) && error.message.length < 240 ? error.message : fallback; }
 function coordinate(value: string) { return Number(value.trim().replace(/[٠-٩]/g, char => String("٠١٢٣٤٥٦٧٨٩".indexOf(char))).replace("٫", ".")); }
 
-export function BranchMenusPage({ branches, slug, configError }: { branches: MenuBranch[]; slug: string; configError?: string }) {
+export function BranchMenusPage({ branches, slug, configError, loyaltyEnabled = false }: { branches: MenuBranch[]; slug: string; configError?: string; loyaltyEnabled?: boolean }) {
   const [rows, setRows] = useState(branches), [draft, setDraft] = useState<Draft | null>(null);
   const [mapUrl, setMapUrl] = useState(""), [error, setError] = useState(""), [notice, setNotice] = useState("");
   const [busy, setBusy] = useState<string | null>(null), [locating, setLocating] = useState(false);
@@ -81,6 +81,7 @@ export function BranchMenusPage({ branches, slug, configError }: { branches: Men
   }
   const disabled = Boolean(busy || configError);
   return <DashboardPageShell title="الفروع" subtitle="أضف فروع العلامة وحدد مواقعها والمنيو الخاص بكل فرع"><div className={styles.page} dir="rtl">
+    {loyaltyEnabled && <Link href="/dashboard/loyalty/branches" className={styles.secondary}>شعارات الفروع وبطاقات الولاء وربط الكاشير</Link>}
     <div className={styles.toolbar}><div><h2>إدارة الفروع</h2><p>{rows.length} فرع · {rows.filter(branch => branch.active).length} فرع نشط</p></div><button type="button" className={styles.primary} onClick={() => openForm()} disabled={disabled || Boolean(draft)}><Plus size={18} aria-hidden="true" />إضافة فرع</button></div>
     {(error || configError) && <p ref={errorPanel} className={styles.error} role="alert" tabIndex={-1}>{error || configError}</p>}
     {notice && <p className={styles.notice} role="status">{notice}</p>}

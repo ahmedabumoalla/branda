@@ -46,7 +46,7 @@ export async function loadPublicLoyaltyBrandSnapshot(slug: string) {
     identity: {
       businessCategory: appearance.businessCategory, slug: String(cafe.slug), name: String(cafe.name), nameEn: String(cafe.name_en ?? ""),
       logoUrl, logoDisplayUrl: logoUrl ? `/api/wallet/brand/${encodeURIComponent(cafe.slug)}/logo?v=brand-stamps-v1` : null,
-      ...(cafe.slug === "rast" ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }),
+      ...(cafe.slug === "rast" && !program.autoLogo ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }),
     },
     program,
   };

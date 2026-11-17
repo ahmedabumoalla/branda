@@ -1,4 +1,4 @@
-import { getLoyaltyBrand } from "@/lib/data/loyalty-experience";
+import { getBranchLoyaltyBrand } from "@/lib/data/loyalty-experience";
 import { walletBrandLogo } from "@/lib/wallet/apple";
 import { isMqas77Wallet } from "@/lib/wallet/mqas77-design";
 import { mqas77GoogleLogo } from "@/lib/wallet/mqas77-assets";
@@ -9,7 +9,7 @@ export async function GET(_request: Request, context: Context) {
   const { slug } = await context.params;
   if (!/^[a-zA-Z0-9_-]{1,100}$/.test(slug)) return new Response(null, { status: 404 });
   try {
-    const brand = await getLoyaltyBrand(slug);
+    const brand = await getBranchLoyaltyBrand(slug, new URL(_request.url).searchParams.get("branch"), true);
     // The public brand mark also appears in the owner's inactive-program preview.
     // getLoyaltyBrand still enforces the current brand/package entitlement.
     if (!brand) return new Response(null, { status: 404 });

@@ -28,6 +28,7 @@ export type CashierConsole = {
     loyaltyCardEnabled?: boolean;
   };
   cashier: {
+    loyaltyBranchId?: string | null;
     financeLinked?: boolean;
     id: string;
     fullName: string;
@@ -350,6 +351,7 @@ export async function startOwnerCashierSession() {
 }
 
 export type CashierSessionContext = {
+  loyaltyBranchId?: string | null;
   financeLinked?: boolean;
   canUseLoyalty: boolean;
   canUsePager: boolean;
@@ -410,7 +412,7 @@ export async function requireCashierSessionContext(
     await Promise.all([
       admin
         .from("cafe_cashiers")
-        .select("id,full_name,email,employee_number,active,owner_user_id,can_use_loyalty,can_use_pager,pager_station")
+        .select("id,full_name,email,employee_number,active,owner_user_id,can_use_loyalty,can_use_pager,pager_station,loyalty_branch_id")
         .eq("id", String(session.cashier_id))
         .eq("cafe_id", String(session.cafe_id))
         .maybeSingle(),
@@ -459,6 +461,7 @@ export async function requireCashierSessionContext(
   }
 
   return {
+    loyaltyBranchId: cashier.loyalty_branch_id ? String(cashier.loyalty_branch_id) : null,
     canUseLoyalty: cashier.can_use_loyalty === true,
     canUsePager: cashier.can_use_pager === true,
     pagerStation: String(cashier.pager_station ?? ""),
@@ -626,6 +629,7 @@ export async function getCashierConsole({ recordEntry = true, includeOrders = tr
       canUseLoyalty: verifiedSession.canUseLoyalty,
       canUsePager: verifiedSession.canUsePager,
       pagerStation: verifiedSession.pagerStation,
+      loyaltyBranchId: verifiedSession.loyaltyBranchId,
     },
     orders,
     operationOrders: orders,

@@ -20,9 +20,9 @@ import { lookupRastCashierReward } from "@/lib/data/customer-rewards";
 import { localizeCashierCatalog } from "@/lib/cashier/catalog-translation";
 import { notifyLocoRewardRedeemed } from "@/lib/loyalty/loco-redemption-alert";
 
-export async function enrollLoyaltyAction(slug: string, phone: string, name: string, birthDate?: string) {
+export async function enrollLoyaltyAction(slug: string, phone: string, name: string, birthDate?: string, branchId?: string) {
   try {
-    return await enrollLoyaltyCustomer({ slug, phone, name, birthDate: typeof birthDate === "string" && birthDate ? birthDate : undefined });
+    return await enrollLoyaltyCustomer({ slug, phone, name, birthDate: typeof birthDate === "string" && birthDate ? birthDate : undefined, branchId });
   } catch { return { ok: false as const, message: "تعذر إكمال التسجيل حاول لاحقًا" }; }
 }
 

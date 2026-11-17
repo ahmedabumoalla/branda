@@ -55,7 +55,7 @@ export function RastEnrollment({ identity, program, authenticated = false }: { i
     }
     pendingRef.current = true; setPending(true); setError("");
     try {
-      const result = await enrollLoyaltyAction(identity.slug, digits, name.trim(), asksBirthDate ? birthDate : undefined);
+      const result = await enrollLoyaltyAction(identity.slug, digits, name.trim(), asksBirthDate ? birthDate : undefined, identity.branchId);
       if (!result.ok) { setError(result.message); return; }
       setReturning(result.returningCustomer); setStage("done");
       openCard();

@@ -37,6 +37,7 @@ export const integratedSystemGroups: SystemGroup[] = [
   { id: "credits", label: "النقاط والأرصدة", icon: Coins, items: [{ label: "إدارة شحن الأرصدة", href: "/dashboard/system/credits/charges" }, { label: "إدارة استهلاك الأرصدة", href: "/dashboard/system/credits/usages" }, { label: "إدارة الباقات", href: "/dashboard/system/credits/packages" }, { label: "أنواع الرصيد", href: "/dashboard/system/credits/types" }] },
   { id: "loyalty", label: "الولاء", icon: Star, items: [
     { label: "إدارة المكافآت", href: "/dashboard/loyalty", feature: "loyalty" },
+    { label: "هوية الفروع", href: "/dashboard/loyalty/branches", feature: "branches" },
     { label: "إدارة الكاشير", href: "/dashboard/cashier", feature: "cashier" },
     { label: "سجل عملاء الولاء", href: "/dashboard/loyalty/customers", feature: "loyalty" },
     { label: "سجل عمليات الكاشير", href: "/dashboard/read-operations", feature: "loyalty" },
@@ -104,6 +105,7 @@ export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] 
       { label: "عرض المتجر", href: `/menu/${encodeURIComponent(cafeSlug)}`, feature: "menu" },
       ...group.items.filter(item => item.href !== "/dashboard/menu"),
     ] };
+    if (group.id === "loyalty") return { ...group, items: group.items.map(item => item.href === "/dashboard/loyalty/branches" ? { ...item, label: "الفروع", feature: "loyalty" } : item) };
     if (group.id === "reports") return { ...group, items: group.items.filter(item => item.section === "reports" || storeReportPaths.has(item.href?.split("/").at(-1) ?? "")) };
     if (group.id === "customers") return { ...group, items: group.items.filter(item => !item.href?.endsWith("/appointments")) };
     if (group.id === "accounting") return { ...group, items: group.items.filter(item => !item.href?.includes("/assets")) };

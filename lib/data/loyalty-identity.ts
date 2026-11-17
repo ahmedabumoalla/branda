@@ -5,7 +5,7 @@ import { approvedLoyaltyColors } from "@/lib/loyalty/approved-design";
 
 export function mapLoyaltyBrandAppearance(slug: string, businessCategory: unknown, data: Record<string, unknown> | null | undefined) {
   const palette = data?.palette && typeof data.palette === "object" && !Array.isArray(data.palette) ? data.palette as Record<string, unknown> : null;
-  return { businessCategory: String(businessCategory ?? "cafes_coffee"), colors: approvedLoyaltyColors(slug, palette), logoPath: data?.logo_storage_path as string | null, logoUrl: data?.logo_url as string | null };
+  return { autoLogo: palette?.autoLogo === true, businessCategory: String(businessCategory ?? "cafes_coffee"), colors: approvedLoyaltyColors(slug, palette), logoPath: data?.logo_storage_path as string | null, logoUrl: data?.logo_url as string | null };
 }
 
 /** Call after the existing owner/public loyalty entitlement guard; cache is request-local. */

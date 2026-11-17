@@ -8,5 +8,6 @@ export function brandStampArtwork(slug: string): string | undefined {
 /** Old café defaults become botanical stamps for Together; an explicit logo choice is retained. */
 export function brandStampStyle(slug: string, value: unknown): LoyaltyStampStyle {
   const style = loyaltyStampStyle(value);
+  if (slug === "brand-1c2b6f7e028f" && style !== "brand") return "shirt";
   return brandStampArtwork(slug) && style !== "brand" ? "plant" : style;
 }

@@ -127,9 +127,9 @@ export async function issueGoogleSaveUrl(member: WalletMember) {
   return `https://pay.google.com/gp/v/save/${token}`;
 }
 
-export async function notifyGoogleBrand(cafeId: string, title: string, body: string, messageId: string) {
+export async function notifyGoogleBrand(cafeId: string, title: string, body: string, messageId: string, branchId?: string) {
   const config = googleConfig();
-  const classPath = `loyaltyClass/${encodeURIComponent(googleClassId(config.issuerId, cafeId))}`;
+  const classPath = `loyaltyClass/${encodeURIComponent(googleClassId(config.issuerId, cafeId, branchId))}`;
   const current = await request(classPath, "GET");
   if (!current.ok) throw new Error(`google_wallet_read_${current.status}`);
   const existing = await current.json();

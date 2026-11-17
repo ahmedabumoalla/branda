@@ -29,7 +29,7 @@ export function verifyWalletArtToken(cardId: string, token: string) {
 }
 
 export function walletArtUrl(member: WalletMember) {
-  const appearance = walletArtifactKey(JSON.stringify([walletColors(member), member.program.purchasesRequired, member.logoUrl, member.cafeName, ...(isMqas77Wallet(member.cafeSlug) ? [MQAS77_WALLET_VERSION] : [])]));
+  const appearance = walletArtifactKey(JSON.stringify([walletColors(member), member.program.purchasesRequired, member.logoUrl, member.cafeName, member.bannerUrl, ...((isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo) ? [MQAS77_WALLET_VERSION] : [])]));
   return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${brandStampStyle(member.cafeSlug, member.program.stampStyle)}:${member.card.updatedAt}:${appearance}`)}`;
 }
 
@@ -79,7 +79,10 @@ export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark 
 }
 
 export async function walletStampArtwork(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false) {
-  if (isMqas77Wallet(member.cafeSlug) && member.program.purchasesRequired <= 10) {
+  if (member.bannerUrl && /^data:image\/webp;base64,[a-zA-Z0-9+/=]+$/.test(member.bannerUrl) && member.bannerUrl.length <= 500_000) {
+    return cachedArtwork(walletArtifactKey(member.bannerUrl + scale), () => sharp(Buffer.from(member.bannerUrl!.split(",")[1], "base64"), { limitInputPixels: 16_000_000 }).resize(375 * scale, 144 * scale, { fit: "cover" }).png().toBuffer());
+  }
+  if ((isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo) && member.program.purchasesRequired <= 10) {
     const emblem = `data:image/png;base64,${(await mqas77Emblem()).toString("base64")}`;
     const artwork = mqas77StampSvg(member, emblem, scale, dark);
     return cachedArtwork(walletArtifactKey(artwork), () => sharp(Buffer.from(artwork)).png().toBuffer());

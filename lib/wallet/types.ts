@@ -7,6 +7,8 @@ export type WalletMember = {
   cafeSlug: string;
   cafeName: string;
   logoUrl: string | null;
+  branchId?: string;
+  bannerUrl?: string | null;
   /** undefined keeps the legacy single location; [] explicitly clears locations */
   branchLocations?: WalletBranchLocation[];
   experience: {

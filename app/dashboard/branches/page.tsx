@@ -16,5 +16,5 @@ export default async function BranchesPage() {
   const features = await getOwnerFeatureCodes();
   if (!featureCodesAllow(features, "menu") || !featureCodesAllow(features, "branches") || featureCodesAllow(features, "finance")) return <DashboardFeatureBlockedState title="الفروع" />;
   const result = await getOwnerMenuBranches().catch(() => null);
-  return <BranchMenusPage branches={result?.branches ?? []} slug={result?.cafe.slug ?? ""} configError={result ? undefined : "تعذر تحميل الفروع أعد تحميل الصفحة"} />;
+  return <BranchMenusPage loyaltyEnabled={featureCodesAllow(features, "loyalty")} branches={result?.branches ?? []} slug={result?.cafe.slug ?? ""} configError={result ? undefined : "تعذر تحميل الفروع أعد تحميل الصفحة"} />;
 }

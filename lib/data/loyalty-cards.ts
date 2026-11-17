@@ -16,6 +16,7 @@ import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
 
 export type LoyaltyCardProgram = {
+  autoLogo?: boolean;
   stampStyle?: LoyaltyStampStyle;
   brandSlug?: string;
   logoUrl?: string;
@@ -37,6 +38,7 @@ export type LoyaltyCardProgram = {
 };
 
 export type LoyaltyBrandCard = {
+  branchId?: string | null;
   id: string;
   cafeId: string;
   cardCode: string;
@@ -164,7 +166,7 @@ export function mapLoyaltyProgramSnapshot(row: Record<string, unknown> | null | 
   const isSalon = businessCategory === "hair_salons";
   const defaults = isSalon ? { ...defaultProgram, rewardName: "خدمة مجانية عند اكتمال البطاقة", stampStyle: "scissors" as const } : defaultProgram;
   const savedStyle = brandStampStyle(slug, (row?.card_design as Record<string, unknown> | null)?.stampStyle);
-  const brandColors = { brandSlug: slug, logoUrl: `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1`, cardBackground: colors.background, cardForeground: colors.foreground, cardAccent: colors.accent };
+  const brandColors = { autoLogo: appearance.autoLogo, brandSlug: slug, logoUrl: `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1`, cardBackground: colors.background, cardForeground: colors.foreground, cardAccent: colors.accent };
   if (!row) return { ...defaults, ...brandColors };
   const product = Array.isArray(row.menu_products) ? row.menu_products[0] : row.menu_products;
   return {
@@ -190,6 +192,7 @@ export function mapLoyaltyProgramSnapshot(row: Record<string, unknown> | null | 
 
 function mapCard(row: Record<string, unknown>): LoyaltyBrandCard {
   return {
+    branchId: row.loyalty_branch_id ? String(row.loyalty_branch_id) : null,
     id: String(row.id),
     cafeId: String(row.cafe_id ?? ""),
     cardCode: String(row.card_code),
@@ -597,6 +600,7 @@ export async function getCurrentCustomerLoyaltyCardView(slug: string): Promise<C
 export async function getCustomerLoyaltyCardViewForProfile(
   slug: string,
   customerProfileId: string,
+  branchId?: string,
 ): Promise<CustomerLoyaltyCardView | null> {
   const cafe = await getCafeBySlug(slug);
   if (!cafe) return null;
@@ -604,7 +608,9 @@ export async function getCustomerLoyaltyCardViewForProfile(
 
   const profile = await getLoyaltyCustomerProfile(slug);
   if (!profile || profile.id !== customerProfileId) return null;
-  const { data, error } = await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
+  const { data, error } = branchId
+    ? await createAdminClient().rpc("issue_branch_loyalty_card", { p_customer_profile_id: profile.id, p_branch: z.string().uuid().parse(branchId) })
+    : await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
   if (error) throw new Error("تعذر إصدار بطاقة الولاء تحقق من تفعيل البرنامج");
   return getLoyaltyCardViewByCode(String(data));
 }

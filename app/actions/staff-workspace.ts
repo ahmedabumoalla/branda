@@ -1,7 +1,7 @@
 "use server";
 
 import { getCashierConsole, requireCashierPermission } from "@/lib/data/cashier";
-import { getLoyaltyBrand } from "@/lib/data/loyalty-experience";
+import { getLoyaltyBrand, getBranchLoyaltyBrand } from "@/lib/data/loyalty-experience";
 import { getPagerPage, getStaffPagerContext } from "@/lib/data/pager";
 import { cashierWorkspaceKey } from "@/lib/cashier/workspace-session";
 import type { StaffScreen, StaffScreenResult } from "@/lib/cashier/workspace-types";
@@ -18,7 +18,7 @@ export async function loadStaffScreenAction(screen: StaffScreen, expectedSession
     }
     const data = await getCashierConsole({ recordEntry: false });
     if (!data) return { ok: false };
-    const brand = await getLoyaltyBrand(data.cafe.slug);
+    const brand = data.cashier.loyaltyBranchId ? await getBranchLoyaltyBrand(data.cafe.slug, data.cashier.loyaltyBranchId) : await getLoyaltyBrand(data.cafe.slug);
     return { ok: true, value: { screen, data, identity: brand?.identity } };
   } catch {
     return { ok: false };
