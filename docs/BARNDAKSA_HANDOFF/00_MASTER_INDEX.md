@@ -1,3 +1,5 @@
+- [Registration and sidebar hotfix](REGISTRATION_SIDEBAR_HOTFIX_20261118.md)
+
 - [MND display-name correction](MND_NAME_20261118.md)
 
 - [Package service and section controls](PACKAGE_OPTIONS_20261118.md)
