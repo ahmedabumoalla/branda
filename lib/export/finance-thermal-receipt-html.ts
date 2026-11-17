@@ -30,7 +30,9 @@ export function buildFinanceThermalReceiptHtml(receipt: FinanceCustomerReceipt, 
     summary: { sales: 0, purchases: 0, expenses: 0, profit: 0, receivables: 0, payables: 0, inventoryValue: 0 },
   };
   const brand: ReceiptBrand = { name: data.brandName, logoUrl: logoDataUrl, color: "#3a2117" };
-  const article = renderToStaticMarkup(createElement(FinanceReceipt, { document, snapshot, brand, copy: "customer" }));
+  // The embedded Tajawal font has no Arabic decimal or thousands separator glyphs, so the PDF showed empty boxes
+  const article = renderToStaticMarkup(createElement(FinanceReceipt, { document, snapshot, brand, copy: "customer" }))
+    .replace(/٫/g, ".").replace(/٬/g, ",");
   const css = thermalReceiptCss("80", "https://barndaksa.com")
     .replace('https://barndaksa.com/fonts/tajawal-regular.ttf', `data:font/ttf;base64,${fonts.regular}`)
     .replace('https://barndaksa.com/fonts/tajawal-bold.ttf', `data:font/ttf;base64,${fonts.bold}`);
