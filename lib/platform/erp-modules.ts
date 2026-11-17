@@ -3,6 +3,7 @@
 // A package without a list (null) includes every section, which is how every existing package behaves.
 export const erpModuleCatalog = [
   { id: "finance", title: "مزايا باقة برندة المالية", modules: [
+    ["overview", "النظرة العامة"], ["tracking", "المتابعة والتتبع"], ["families", "الأسر المنتجة"],
     ["sales", "المبيعات"], ["pos", "نقاط البيع"], ["store", "المتجر الإلكتروني"], ["customers", "العملاء"], ["credits", "النقاط والأرصدة"], ["memberships", "العضويات"],
     ["inventory", "المخزون"], ["purchases", "المشتريات"], ["finance", "المالية"], ["accounting", "الحسابات العامة"], ["reports", "التقارير"], ["branches", "الفروع"],
     ["templates", "القوالب"], ["tasks", "إدارة المهام"], ["bookings", "الحجوزات"], ["contracting", "المقاولات"], ["installments", "إدارة الأقساط"],

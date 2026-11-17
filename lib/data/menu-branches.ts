@@ -11,6 +11,7 @@ export function mapMenuBranch(row: Record<string, unknown>): MenuBranch {
 
 export async function getOwnerMenuBranches() {
   await assertOwnerServiceEnabled("menu");
+  await assertOwnerServiceEnabled("branches");
   const cafe = await requireOwnerCafeContext("menu");
   // Scoped session reads retain branch RLS, including legacy branches without a slug
   const client = await createClient();

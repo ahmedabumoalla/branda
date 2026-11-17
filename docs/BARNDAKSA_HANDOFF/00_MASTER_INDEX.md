@@ -1,3 +1,5 @@
+- [Package service and section controls](PACKAGE_OPTIONS_20261118.md)
+
 - [One-month trial policy and publication](MONTH_TRIAL_20261118.md)
 
 [تحديث الفروع والديم وواحد معصوب — ١٧ نوفمبر ٢٠٢٦](BRANCHES_ALDEEM_RELEASE_20261117.md)

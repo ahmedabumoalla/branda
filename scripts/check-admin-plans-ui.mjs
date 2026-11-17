@@ -246,3 +246,26 @@ for (const [foreground, background] of [["f2f3ec", "181c1b"], ["b3bdb7", "202624
   assert.ok((Math.max(a, b) + .05) / (Math.min(a, b) + .05) >= 4.5, `text contrast ${foreground}/${background}`);
 }
 console.log("PASS admin plans: SSR, save/payment handlers, immediate persistent deletion, draft preservation, cancel/pending/duplicate/failure/retry, trial/default protection and responsive styles.");
+
+// Every finance section is interactive immediately, independently per package
+const modules=load(path.resolve('lib/platform/erp-modules.ts'));
+const moduleView=harness([fixture('a',['finance','menu','branches']),fixture('b',['finance'])]);
+let mt=moduleView.render();
+const mb=(tree,id)=>nodes(tree).find(n=>n.props?.['data-module-id']===id);
+assert.equal(nodes(mt).filter(n=>n.props?.['data-module-id']).length,modules.erpModuleIds.length);
+assert(mb(mt,'branches').props['aria-pressed']);mb(mt,'branches').props.onClick();mt=moduleView.render();assert.equal(mb(mt,'branches').props['aria-pressed'],false);
+await nodes(mt).find(n=>n.type==='form').props.onSubmit({preventDefault(){}});
+assert(!moduleView.calls.at(-1)[1][0].erpModules.includes('branches'));assert.equal(moduleView.calls.at(-1)[1][1].erpModules,undefined);
+const reload=harness(moduleView.calls.at(-1)[1]);assert.equal(mb(reload.render(),'branches').props['aria-pressed'],false);
+button(mt,'إخفاء كل الأقسام').props.onClick();mt=moduleView.render();assert(nodes(mt).filter(n=>n.props?.['data-module-id']).every(n=>!n.props['aria-pressed']));
+button(mt,'إظهار كل الأقسام').props.onClick();mt=moduleView.render();assert(nodes(mt).filter(n=>n.props?.['data-module-id']).every(n=>n.props['aria-pressed']));
+const search=nodes(mt).find(n=>n.type==='input'&&n.props.type==='search');search.props.onChange({target:{value:'الموظفون'}});mt=moduleView.render();assert.equal(nodes(mt).filter(n=>n.props?.['data-module-id']).length,1);
+search.props.onChange({target:{value:'no-matching-department'}});assert(text(moduleView.render()).includes('لا توجد أقسام مطابقة'));
+const branchView=harness([fixture('branch-plan',['menu','branches'])]);let bt=branchView.render();featureButton(bt,'branches').props.onClick();await nodes(branchView.render()).find(n=>n.type==='form').props.onSubmit({preventDefault(){}});assert.deepEqual(branchView.calls[0][1][0].features,['menu']);
+assert(access.getEffectiveBrandFeatureCodes(['menu','branches']).includes('branches'));assert(!access.getEffectiveBrandFeatureCodes(['menu']).includes('branches'));
+assert.deepEqual(modules.resolveErpModules([['sales'],['purchases']]),['sales','purchases']);assert.deepEqual(modules.resolveErpModules([[]]),[]);assert.equal(modules.resolveErpModules([null,['sales']]),null);
+const navStubs={'next/navigation':{usePathname:()=>'/dashboard/finance',useSearchParams:()=>new URLSearchParams()},'./dashboard-navigation-link':{DashboardNavigationLink:({children,scroll,prefetch,...rest})=>React.createElement('a',rest,children)}};
+const {FinanceSidebarMenu}=load(path.resolve('components/dashboard/finance-sidebar-menu.tsx'),navStubs);
+const menuHtml=renderToStaticMarkup(React.createElement(FinanceSidebarMenu,{collapsed:false,onExpand(){},cafeSlug:'test',enabledFeatures:['finance'],allowedModules:['sales']}));
+assert(menuHtml.includes('المبيعات'));assert(!menuHtml.includes('إدارة الفروع'));assert(!menuHtml.includes('قوائم مواد الإنتاج'));
+console.log('PASS plan options: immediate modules, search, bulk actions, independent saves/reload, branch entitlement and real filtered finance sidebar');

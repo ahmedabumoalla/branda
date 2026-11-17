@@ -149,7 +149,7 @@ export function DashboardAppLayout({
   }, [expiresAt, serverNow, retry, router]);
 
   const currentFeature = useMemo(() => {
-    if (pathname === "/dashboard/branches") return dashboardPlatformFeatures.find(feature => feature.id === "menu");
+    if (pathname === "/dashboard/branches") return dashboardPlatformFeatures.find(feature => feature.id === "branches");
     if (pathname === "/dashboard/read-operations") return dashboardPlatformFeatures.find(feature => feature.id === "loyalty");
     if (["gifts_flowers", "clothing_stores", "retail_stores"].includes(guard.snapshot?.settings.businessCategory ?? "") && (pathname === "/dashboard/orders" || pathname.startsWith("/dashboard/orders/"))) return dashboardPlatformFeatures.find(feature => feature.id === "menu");
     const sorted = [...dashboardPlatformFeatures].sort((a, b) => b.href.length - a.href.length);

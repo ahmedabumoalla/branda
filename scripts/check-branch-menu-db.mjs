@@ -79,6 +79,33 @@ try{
  await mode(10,110,cleared.updated_at,true);
  check(String(syncRevision)===String(await value('select updated_at from wallet_passes where card_id=$1',[id(900)])),'Menu adoption does not trigger wallet sync');
  await q("update cafes set status='cancelled' where id=$1",[id(10)]);await reject(()=>save(10,111),'42501','Cancelled brand cannot mutate');
+
+ await db.exec(`CREATE SCHEMA brand_cancellation_private;
+ ALTER FUNCTION platform_access_private.service_enabled(uuid,text) SET SCHEMA brand_cancellation_private;
+ ALTER FUNCTION brand_cancellation_private.service_enabled(uuid,text) RENAME TO service_enabled_previous;
+ CREATE FUNCTION brand_cancellation_private.cancelled(uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT EXISTS(SELECT 1 FROM public.cafes WHERE id=$1 AND status='cancelled') $$;
+ CREATE TABLE platform_plans(id text PRIMARY KEY,features jsonb,active boolean DEFAULT true,erp_modules jsonb);
+ CREATE TABLE subscriptions(cafe_id uuid,plan_id text,status text,started_at timestamptz,expires_at timestamptz);
+ CREATE TABLE brand_feature_overrides(cafe_id uuid,feature_id text,enabled boolean);
+ INSERT INTO platform_plans VALUES('menu','["menu"]',true,NULL),('loyalty','["loyalty"]',true,NULL);
+ INSERT INTO subscriptions VALUES('${id(10)}','menu','active',now(),now()+interval '30 days');
+ UPDATE cafes SET status='active' WHERE id='${id(10)}';`);
+ await db.exec("CREATE OR REPLACE FUNCTION platform_access_private.service_enabled(p_cafe_id uuid, p_feature text)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n SELECT NOT brand_cancellation_private.cancelled(p_cafe_id) AND brand_cancellation_private.service_enabled_previous(p_cafe_id,p_feature);\n$function$\n");
+ await db.exec(await fs.readFile('supabase/migrations/20261118000200_package_branch_access.sql','utf8'));
+ await db.exec(await fs.readFile('supabase/migrations/20261118000201_package_branch_defaults.sql','utf8'));
+ check(await value("select features ? 'branches' from platform_plans where id='menu'"),'existing menu branch capability preserved');
+ check(!(await value("select features ? 'branches' from platform_plans where id='loyalty'")),'other packages unchanged');
+ check(await value("select platform_access_private.service_enabled($1,'branches')",[id(10)]),'branches explicitly entitled');
+ await save(10,9120);
+ await q("update platform_plans set features='[\"menu\"]' where id='menu'");
+ await reject(()=>save(10,9121),'42501','disabled branch package blocks direct RPC');
+ check(await value("select platform_access_private.service_enabled($1,'menu')",[id(10)]),'disabling branches preserves menu');
+ await q("update platform_plans set features='[\"menu\",\"branches\"]' where id='menu'");
+ await q("update subscriptions set expires_at=now()-interval '1 day'");await reject(()=>save(10,9122),'42501','expired branch package denied');
+ await q("update subscriptions set expires_at=now()+interval '1 day',started_at=now()+interval '1 hour'");await reject(()=>save(10,9122),'42501','future branch package denied');
+ await q("update subscriptions set started_at=now()-interval '1 hour'");
+ await q("insert into brand_feature_overrides values($1,'branches',false)",[id(10)]);await reject(()=>save(10,9122),'42501','disabled brand override denied');
+ await q("delete from brand_feature_overrides");await q("update cafes set status='cancelled' where id=$1",[id(10)]);await reject(()=>save(10,9122),'42501','cancelled brand remains denied');
  await fs.writeFile('.codex-tmp/branch-menu-db-verification.json',JSON.stringify({at:new Date().toISOString(),runtime:process.version,migration:file,sha256:createHash('sha256').update(source).digest('hex'),records,scope:'local PGlite only, no retained live records'},null,2));
  console.log(`Branch menus SQL: ${records.length} behavioral checks passed`);
 }catch(error){console.error(error.message,error.where??'');process.exitCode=1;}finally{await db.close();}

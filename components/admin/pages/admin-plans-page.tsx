@@ -36,6 +36,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
   const [requests, setRequests] = useState(initialRequests);
   const [selectedId, setSelectedId] = useState(initialPlans[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
+  const [moduleSearch, setModuleSearch] = useState("");
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
@@ -224,19 +225,32 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
               </section>
 
               {isIncluded(plan, "finance") ? <section className={styles.section} aria-labelledby="plan-modules-title">
-                <div className={styles.sectionHeading}><div><h3 id="plan-modules-title">أقسام النظام المتكامل في هذه الباقة</h3><p>{plan.erpModules ? "تظهر للعلامة الأقسام المحددة فقط" : "الباقة تشمل كل الأقسام حدد أقسامًا لتقييدها"}</p></div>
-                  <label className={styles.toggle}><input type="checkbox" checked={!!plan.erpModules} onChange={(event) => updatePlan(plan.id, { erpModules: event.target.checked ? [...erpModuleIds] : null })} />تحديد الأقسام</label></div>
-                {plan.erpModules ? erpModuleCatalog.map((group) => <div key={group.id}>
-                  <div className={styles.sectionHeading}><div><h3>{group.title}</h3></div><span className={styles.count}>{group.modules.filter(([id]) => plan.erpModules!.includes(id)).length} / {group.modules.length}</span></div>
-                  <div className={styles.featureGrid}>{group.modules.map(([id, label]) => {
-                    const enabled = plan.erpModules!.includes(id);
-                    return <button type="button" key={id} className={styles.feature} aria-pressed={enabled} onClick={() => toggleErpModule(plan.id, id)}>
-                      <span><strong>{label}</strong><small>{enabled ? "يظهر في حساب العلامة" : "غير مشمول في هذه الباقة"}</small></span><span className={styles.checkBox} aria-hidden="true">{enabled ? <Check size={17} /> : null}</span>
-                    </button>;
-                  })}</div>
-                </div>) : null}
-                <p className={styles.policy}>القسم غير المشمول يختفي من قائمة العلامة وإذا اشتركت العلامة في أكثر من باقة مالية تظهر أقسامها مجتمعة</p>
-              </section> : null}
+                <div className={styles.sectionHeading}><div><h3 id="plan-modules-title">أقسام برندة المالية</h3><p>اضغط على أي قسم لتحديد ظهوره ضمن هذه الباقة</p></div><span className={styles.count} role="status">{(plan.erpModules ?? erpModuleIds).length} / {erpModuleIds.length}</span></div>
+                <div className={styles.moduleTools}>
+                  <label className={styles.moduleSearch}>البحث عن قسم<input type="search" value={moduleSearch} onChange={event => setModuleSearch(event.target.value)} placeholder="المبيعات أو الفروع أو التصنيع" /></label>
+                  <button type="button" className={styles.secondary} onClick={() => updatePlan(plan.id, { erpModules: [...erpModuleIds] })}>إظهار كل الأقسام</button>
+                  <button type="button" className={styles.secondary} onClick={() => updatePlan(plan.id, { erpModules: [] })}>إخفاء كل الأقسام</button>
+                </div>
+                {erpModuleCatalog.map(group => {
+                  const selected = plan.erpModules ?? erpModuleIds;
+                  const matches = group.modules.filter(([, label]) => (group.title + " " + label).includes(moduleSearch.trim()));
+                  if (!matches.length) return null;
+                  const allEnabled = group.modules.every(([id]) => selected.includes(id));
+                  return <div key={group.id} className={styles.moduleGroup}>
+                    <div className={styles.sectionHeading}><div><h3>{group.title}</h3><p>{group.modules.filter(([id]) => selected.includes(id)).length} من {group.modules.length} أقسام ظاهرة</p></div>
+                      <button type="button" className={styles.secondary} aria-pressed={allEnabled} onClick={() => updatePlan(plan.id, { erpModules: erpModuleIds.filter(id => group.modules.some(([key]) => key === id) ? !allEnabled : selected.includes(id)) })}>{allEnabled ? "إخفاء المجموعة" : "إظهار المجموعة"}<span className={styles.srOnly}> {group.title}</span></button></div>
+                    <div className={styles.featureGrid}>{matches.map(([id, label]) => {
+                      const enabled = selected.includes(id);
+                      return <button type="button" key={id} data-module-id={id} className={styles.feature} aria-pressed={enabled} onClick={() => toggleErpModule(plan.id, id)}>
+                        <span><strong>{label}</strong><small>{enabled ? "ظاهر ضمن الباقة" : "مخفي من قائمة العلامة"}</small></span><span className={styles.checkBox} aria-hidden="true">{enabled ? <Check size={17} /> : null}</span>
+                      </button>;
+                    })}</div>
+                  </div>;
+                })}
+                {!erpModuleCatalog.some(group => group.modules.some(([, label]) => (group.title + " " + label).includes(moduleSearch.trim()))) && <p role="status" className={styles.policy}>لا توجد أقسام مطابقة للبحث</p>}
+                <p className={styles.policy}>القسم المخفي لا يظهر في القائمة بعد الحفظ وتحديث حساب العلامة إذا كانت للعلامة عدة باقات تظهر الأقسام المشمولة في أي باقة مفعلة</p>
+                <p className={styles.policy}>إعدادات الحساب والاشتراك تبقى متاحة لإدارة الحساب وصلاحيات الموظفين تبقى مستقلة</p>
+              </section> : <section className={styles.section}><h3>أقسام برندة المالية</h3><p className={styles.policy}>فعّل خدمة برندة المالية أعلاه لاختيار أقسامها لهذه الباقة</p></section>}
 
               <section className={styles.section} aria-labelledby="plan-details-title">
                 <h3 id="plan-details-title">تفاصيل الباقة</h3>

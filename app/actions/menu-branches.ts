@@ -21,7 +21,7 @@ const modeSchema = z.object({ id: z.string().uuid(), expectedUpdatedAt: revision
 async function context() {
   const cafe = await requireOwnerCafeContext();
   const features = await getOwnerFeatureCodes();
-  if (!featureCodesAllow(features, "menu") || featureCodesAllow(features, "finance")) throw new Error("إدارة فروع المنيو غير متاحة لهذا الحساب");
+  if (!featureCodesAllow(features, "menu") || !featureCodesAllow(features, "branches") || featureCodesAllow(features, "finance")) throw new Error("إدارة فروع المنيو غير متاحة لهذا الحساب");
   return cafe;
 }
 

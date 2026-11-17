@@ -14,7 +14,7 @@ export default async function BranchesPage() {
     return <BranchMenusPage branches={[]} slug="" configError="خدمة الفروع غير جاهزة حاليًا" />;
   }
   const features = await getOwnerFeatureCodes();
-  if (!featureCodesAllow(features, "menu") || featureCodesAllow(features, "finance")) return <DashboardFeatureBlockedState title="الفروع" />;
+  if (!featureCodesAllow(features, "menu") || !featureCodesAllow(features, "branches") || featureCodesAllow(features, "finance")) return <DashboardFeatureBlockedState title="الفروع" />;
   const result = await getOwnerMenuBranches().catch(() => null);
   return <BranchMenusPage branches={result?.branches ?? []} slug={result?.cafe.slug ?? ""} configError={result ? undefined : "تعذر تحميل الفروع أعد تحميل الصفحة"} />;
 }

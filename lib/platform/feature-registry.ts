@@ -224,6 +224,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
   },
   {
     id: "branches",
+    brandNavigation: true,
     titleAr: "الفروع",
     titleEn: "Branches",
     descriptionAr: "إدارة الفروع ومعلوماتها المرتبطة بالعلامة",
