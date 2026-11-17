@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readMaintenanceSessionCookie } from "@/lib/platform/maintenance";
+import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
+import { brandStaffAccessFromPermissions, type BrandStaffAccess, type BrandStaffPermission } from "@/lib/staff/brand-staff-access";
 
 export type CafeContext = {
   id: string;
@@ -11,6 +13,8 @@ export type CafeContext = {
   name: string;
   businessCategory: string;
   role: "owner" | "manager" | "staff" | "platform_admin";
+  /** Set only for Loco dashboard employees; every other caller treats them as having no brand access */
+  staff?: BrandStaffAccess;
 };
 
 export const getCafeBySlug = cache(async (slug: string) => {
@@ -61,7 +65,7 @@ export const getPublicCafeBySlugAdmin = cache(async (slug: string) => {
 });
 
 // React cache is request-scoped: parallel loaders share a check, never another user's session.
-export const getOwnerCafeContext = cache(async (): Promise<CafeContext | null> => {
+const readCafeContext = cache(async (): Promise<CafeContext | null> => {
   const supabase = await createClient();
   const user = await getActiveUser(supabase);
   if (!user) return null;
@@ -131,7 +135,7 @@ export const getOwnerCafeContext = cache(async (): Promise<CafeContext | null> =
 
   const { data: member } = await supabase
     .from("cafe_members")
-    .select("role, cafes!inner(id, slug, name, business_category)")
+    .select("role, permissions, cafes!inner(id, slug, name, business_category)")
     .eq("user_id", user.id)
     .neq("cafes.status", "archived")
     .is("cafes.deleted_at", null)
@@ -151,15 +155,35 @@ export const getOwnerCafeContext = cache(async (): Promise<CafeContext | null> =
       name: cafe.name,
       businessCategory: cafe.business_category ?? "cafes_coffee",
       role: member.role as CafeContext["role"],
+      // User request 2026-11-17: Loco employees enter only the sections the owner granted
+      ...(member.role === "staff" && cafe.id === LOCO_CAFE_ID ? { staff: brandStaffAccessFromPermissions(member.permissions) } : {}),
     };
   }
 
   return null;
 });
 
-export async function requireOwnerCafeContext(): Promise<CafeContext> {
-  const ctx = await getOwnerCafeContext();
+/** Owner, manager and admin context; Loco dashboard employees get null so existing pages stay closed to them */
+export const getOwnerCafeContext = cache(async (): Promise<CafeContext | null> => {
+  const ctx = await readCafeContext();
+  return ctx?.staff ? null : ctx;
+});
+
+/** Dashboard shell context that also admits Loco employees */
+export async function getDashboardCafeContext(): Promise<CafeContext | null> {
+  return readCafeContext();
+}
+
+/**
+ * Loco employees pass only when the caller names a permission they hold ("any" covers shared shell data)
+ * Owners, managers and platform admins are unaffected
+ */
+export async function requireOwnerCafeContext(staffPermission?: BrandStaffPermission | "any"): Promise<CafeContext> {
+  const ctx = await readCafeContext();
   if (!ctx) {
+    throw new Error("Unauthorized: no cafe access");
+  }
+  if (ctx.staff && (!staffPermission || (staffPermission !== "any" && !ctx.staff[staffPermission]))) {
     throw new Error("Unauthorized: no cafe access");
   }
   return ctx;

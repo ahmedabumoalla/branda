@@ -7,7 +7,7 @@ export type MenuBranch = { id: string; name: string; slug: string; primary: bool
 
 export async function getOwnerMenuBranches() {
   await assertOwnerServiceEnabled("menu");
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext("menu");
   const client = await createClient();
   const { data, error } = await client.from("branches").select("id,name,menu_slug,is_primary,active")
     .eq("cafe_id", cafe.id).not("menu_slug", "is", null).is("deleted_at", null).order("sort_order").order("id");

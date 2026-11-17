@@ -9,6 +9,7 @@ import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { getOwnerMenu } from "@/lib/data/menu";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getOwnerMenuBranches } from "@/lib/data/menu-branches";
+import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { redirect } from "next/navigation";
 
 type MenuLoadResult =
@@ -19,8 +20,9 @@ type MenuLoadResult =
 
 async function loadDashboardMenu(branchId?: string): Promise<MenuLoadResult> {
   try {
-    const features = await getOwnerFeatureCodes();
-    if (featureCodesAllow(features, "finance") && featureCodesAllow(features, "menu")) {
+    const [features, cafe] = await Promise.all([getOwnerFeatureCodes(), requireOwnerCafeContext("menu")]);
+    // Loco employees edit the menu directly; the integrated inventory belongs to the owner
+    if (!cafe.staff && featureCodesAllow(features, "finance") && featureCodesAllow(features, "menu")) {
       return { status: "integrated" };
     }
     if (!featureCodesAllow(features, "menu")) {

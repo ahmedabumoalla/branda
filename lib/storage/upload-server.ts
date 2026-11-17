@@ -117,7 +117,7 @@ export async function uploadOptimizedImage(
   _purpose: ImageAssetPurpose,
   entityId: string
 ) {
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext(bucket === "menu-products" || bucket === "menu-categories" ? "menu" : undefined);
 
   if (file.size <= 0) {
     throw new Error("Missing file");
@@ -188,7 +188,7 @@ export async function uploadGeneratedImageBytes(
 }
 
 export async function deleteStorageObject(bucket: StorageBucket, storagePath: string) {
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext(bucket === "menu-products" || bucket === "menu-categories" ? "menu" : undefined);
   const pathCafeId = storagePath.split("/")[0];
 
   if (pathCafeId !== cafe.id) {
@@ -220,7 +220,7 @@ function videoMimeFromFile(file: File) {
 }
 
 export async function uploadProductVideo(file: File, entityId: string) {
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext("menu");
 
   if (file.size <= 0) throw new Error("Missing file");
   if (file.size > MAX_SERVER_UPLOAD_BYTES) throw new Error("حجم الفيديو كبير جدًا اختر ملفًا أقل من 40MB");

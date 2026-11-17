@@ -4,9 +4,11 @@ import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getOwnerCafeContext } from "@/lib/data/cafes";
+import { getDashboardCafeContext } from "@/lib/data/cafes";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { fetchOwnerDashboardShellAction } from "@/app/actions/dashboard-shell";
+import { brandStaffLandingPath, brandStaffPathAllowed } from "@/lib/staff/brand-staff-access";
 
 const dashboardFont = IBM_Plex_Sans_Arabic({
   subsets: ["arabic", "latin"],
@@ -21,14 +23,20 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   // Finance staff membership never grants access to the brand dashboard.
-  if (!await getOwnerCafeContext()) redirect("/login");
+  const cafe = await getDashboardCafeContext();
+  if (!cafe) redirect("/login");
+  // Loco employees open only the sections their owner granted
+  if (cafe.staff) {
+    const pathname = (await headers()).get("x-branda-pathname") ?? "";
+    if (!brandStaffPathAllowed(cafe.staff, pathname)) redirect(brandStaffLandingPath(cafe.staff));
+  }
   const [maintenanceSession, entryClient, initialSnapshot] = await Promise.all([
     getCurrentMaintenanceSession(),
     createClient().catch(() => null),
     fetchOwnerDashboardShellAction().catch(() => null),
   ]);
   // Capture request cookies before after(); analytics must not delay page navigation.
-  if (entryClient) after(() => recordCurrentBrandDashboardEntry("/dashboard", entryClient));
+  if (entryClient && !cafe.staff) after(() => recordCurrentBrandDashboardEntry("/dashboard", entryClient));
 
   return (
     <main dir="rtl" className={`${dashboardFont.className} min-h-screen overflow-x-hidden bg-[#FCF8F3] text-[#311912]`}>

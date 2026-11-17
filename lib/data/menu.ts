@@ -254,7 +254,7 @@ export async function getPublicMenuBySlug(slug: string) {
 }
 
 export async function getOwnerMenu(branchId?: string | null) {
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext("menu");
   const supabase = await createClient();
 
   if (branchId) {
@@ -526,7 +526,7 @@ async function upsertEventTicketSettings(
 
 export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
   const parsed = productSchema.parse(input);
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext("menu");
   if (parsed.priceMode !== undefined && cafe.slug !== "mind-hospital") {
     throw new Error("طريقة تسعير الكاشير متاحة لمنتجات مايند المستشفى فقط");
   }
@@ -671,7 +671,7 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
 }
 
 export async function softDeleteMenuProduct(productId: string) {
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext("menu");
   const supabase = await createClient();
   const { error } = await supabase
     .from("menu_products")
@@ -710,7 +710,7 @@ type MenuCategoryPayload = {
 
 export async function upsertMenuCategory(input: z.infer<typeof categorySchema>) {
   const parsed = categorySchema.parse(input);
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext("menu");
   const supabase = await createClient();
 
   const payload: MenuCategoryPayload = {
@@ -845,7 +845,7 @@ export async function softDeleteMenuCategory(
   categoryId: string
 ): Promise<DeleteMenuCategoryResult> {
   const parsedCategoryId = z.string().uuid().parse(categoryId);
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext("menu");
   const supabase = await createClient();
 
   const { count, error: productsError } = await supabase

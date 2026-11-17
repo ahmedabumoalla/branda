@@ -34,6 +34,8 @@ export async function proxy(incoming: NextRequest) {
   const hospitalAccount = isHospitalAccountRoute(incoming.nextUrl.pathname);
   const requestHeaders = new Headers(incoming.headers);
   requestHeaders.delete(hospitalAccountRouteHeader);
+  // Server-only path marker for the dashboard employee allow-list; never trusted from the client
+  requestHeaders.set("x-branda-pathname", incoming.nextUrl.pathname);
   if (hospitalAccount) requestHeaders.set(hospitalAccountRouteHeader, "1");
   const request = new NextRequest(incoming, { headers: requestHeaders });
   const recovery = await recoverExpiredCashierAction(request);

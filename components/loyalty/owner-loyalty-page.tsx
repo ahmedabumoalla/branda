@@ -7,6 +7,7 @@ import { getLoyaltyBrand, getLoyaltyExperience } from "@/lib/data/loyalty-experi
 import { defaultLoyaltyExperience } from "@/lib/loyalty/experience-types";
 import { getWalletReadiness } from "@/lib/wallet";
 import type { LoyaltyDashboardView } from "@/components/rast-loyalty/rast-dashboard";
+import { getDashboardCafeContext } from "@/lib/data/cafes";
 
 export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "customers" | "messages" } = {}) {
   const features = await getOwnerFeatureCodes().catch(() => []);
@@ -16,7 +17,9 @@ export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "cus
   const view: LoyaltyDashboardView = requestedView ?? "rewards";
   const needsProgram = view === "rewards";
 
-  const dashboard = await getOwnerLoyaltyProgramSettings().catch(() => null);
+  const staffPermission = view === "rewards" ? "rewards" as const : view === "messages" ? "messages" as const : undefined;
+  const [dashboard, cafe] = await Promise.all([getOwnerLoyaltyProgramSettings(staffPermission).catch(() => null), getDashboardCafeContext()]);
+  const staffMode = Boolean(cafe?.staff);
   if (dashboard) {
     const [brand, experience, products] = await Promise.all([
       getLoyaltyBrand(dashboard.cafeSlug),
@@ -24,7 +27,7 @@ export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "cus
       needsProgram && featureCodesAllow(features, "menu") ? getOwnerLoyaltyRewardProducts() : Promise.resolve([]),
     ]);
     if (brand) return <>{experience.error && <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{experience.error}</p>}<RastLoyaltyDashboard initialDashboard={{ program: dashboard.program }} identity={brand.identity}
-      view={view} initialExperience={experience.settings} walletAvailability={getWalletReadiness()} products={products}
+      view={view} initialExperience={experience.settings} walletAvailability={getWalletReadiness()} products={products} staffMode={staffMode}
       signupUrl={`${(process.env.NEXT_PUBLIC_APP_URL || "https://barndaksa.com").replace(/\/$/, "")}/loyalty/${encodeURIComponent(dashboard.cafeSlug)}?source=qr`} /></>;
     return <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">تعذر تحميل هوية برنامج الولاء حاول تحديث الصفحة</p>;
   }

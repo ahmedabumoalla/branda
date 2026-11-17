@@ -278,6 +278,11 @@ export async function loginOwnerAction(
       };
     }
 
+    // Loco employees whose owner enabled dashboard login (user request 2026-11-17)
+    const { findBrandStaffLanding } = await import("@/lib/staff/brand-staff-server");
+    const staffLanding = await findBrandStaffLanding(authData.user.id);
+    if (staffLanding) return { ok: true as const, message: "تم تسجيل الدخول بنجاح", redirectTo: staffLanding };
+
     await supabase.auth.signOut({ scope: "local" });
     return { ok: false as const, message: "لا تملك صلاحية الدخول لهذه اللوحة", redirectTo: null };
   } catch (error) {

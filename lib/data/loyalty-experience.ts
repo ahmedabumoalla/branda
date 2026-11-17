@@ -150,10 +150,22 @@ const programSchema = z.object({
 
 export async function saveBrandLoyaltyProgram(input: { program: z.infer<typeof programSchema>; experience: LoyaltyExperienceInput }) {
   const program = programSchema.parse(input.program);
-  const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
+  const [cafe, features] = await Promise.all([requireOwnerCafeContext("rewards"), getOwnerFeatureCodes()]);
   if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك");
   const experience = await parseExperienceInput(input.experience);
   if (experience.rewardKind === "product" && !program.rewardProductId) throw new Error("اختر منتج المكافأة");
+  if (cafe.staff) {
+    // Loco employees change stamps, reward and branch location only; the database re-checks the grant
+    const { error } = await (await createClient()).rpc("save_brand_staff_loyalty_rewards", {
+      p_cafe_id: cafe.id, p_purchases_required: program.purchasesRequired, p_reward_name: program.rewardName,
+      p_reward_product_id: experience.rewardKind === "product" ? program.rewardProductId : null,
+      p_reward_kind: experience.rewardKind ?? "custom",
+      p_reward_discount_percent: experience.rewardKind === "discount" ? experience.rewardDiscountPercent : null,
+      p_nearby_message: experience.nearbyMessage, p_latitude: experience.latitude, p_longitude: experience.longitude,
+    });
+    if (error) throw new Error("تعذر حفظ المكافأة إعداداتك لم تتغير");
+    return;
+  }
   const { error } = await (await createClient()).rpc("set_rast_loyalty_settings", { p_cafe_id: cafe.id, p_program: { ...program, cardDesign: { ...(program.cardDesign && typeof program.cardDesign === "object" && !Array.isArray(program.cardDesign) ? program.cardDesign : {}), ...(program.stampStyle ? { stampStyle: program.stampStyle } : {}) } }, p_experience: experience });
   if (error) throw new Error("تعذر حفظ برنامج الولاء إعداداتك لم تتغير");
 }

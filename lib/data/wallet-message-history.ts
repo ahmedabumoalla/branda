@@ -15,13 +15,16 @@ export async function getWalletMessageHistory(input: MessageHistoryInput) {
   if (profileError || profile?.status !== "active") throw new MessageHistoryAccessError("Message history access denied");
   // A supplied brand is exclusively an active platform-admin operation.
   if (filters.brandId && profile.role !== "platform_admin") throw new MessageHistoryAccessError("Message history access denied");
-  const cafeId = filters.brandId ?? (await requireOwnerCafeContext()).id;
+  const context = filters.brandId ? null : await requireOwnerCafeContext("messages");
+  const cafeId = filters.brandId ?? context?.id ?? "";
   const db = createAdminClient();
   const { data: cafe, error: cafeError } = await db.from("cafes").select("id,owner_user_id").eq("id", cafeId).is("deleted_at", null).maybeSingle();
   if (cafeError || !cafe) throw new MessageHistoryAccessError("Message history access denied");
   if (profile.role !== "platform_admin" && cafe.owner_user_id !== user.id) {
     const { data: member, error: memberError } = await db.from("cafe_members").select("role").eq("cafe_id", cafeId).eq("user_id", user.id).maybeSingle();
-    if (memberError || !member || !["owner", "manager"].includes(member.role)) throw new MessageHistoryAccessError("Message history access denied");
+    // Loco employees with the owner-granted messages permission read their brand history
+    const staffAllowed = member?.role === "staff" && context?.id === cafeId && context.staff?.messages === true;
+    if (memberError || !member || !(["owner", "manager"].includes(member.role) || staffAllowed)) throw new MessageHistoryAccessError("Message history access denied");
   }
   // The private queue stays inaccessible to browser clients. Return only display fields.
   const { data, count, error } = await db.from("wallet_notification_jobs")

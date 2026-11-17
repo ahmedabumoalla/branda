@@ -110,8 +110,9 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
 
 export async function sendLoyaltyWalletAnnouncementAction(title: string, body: string) {
   const message = z.object({ title: z.string().trim().min(2).max(80), body: z.string().trim().min(2).max(240) }).parse({ title, body });
-  const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
-  if (!["owner", "manager", "platform_admin"].includes(cafe.role)) throw new Error("لا تملك صلاحية إرسال تنبيهات الولاء");
+  const [cafe, features] = await Promise.all([requireOwnerCafeContext("messages"), getOwnerFeatureCodes()]);
+  // Loco employees reach this line only with the owner-granted messages permission
+  if (!cafe.staff?.messages && !["owner", "manager", "platform_admin"].includes(cafe.role)) throw new Error("لا تملك صلاحية إرسال تنبيهات الولاء");
   if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك");
   const result = await notifyBrandWalletMembers(cafe.id, cafe.slug, message.title, message.body);
   const statuses = [result.apple.status, result.google.status];

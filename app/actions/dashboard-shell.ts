@@ -2,7 +2,8 @@
 
 import { getCafeServiceAccess } from "@/lib/data/feature-entitlements";
 import type { PlatformFeature } from "@/lib/platform/admin-data";
-import { getOwnerCafeContext } from "@/lib/data/cafes";
+import { getDashboardCafeContext } from "@/lib/data/cafes";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformPlans } from "@/lib/data/admin";
 import { mapDbSettingsToCafeSettings } from "@/lib/data/mappers";
 import type { AppNotification } from "@/lib/mock/notifications";
@@ -24,11 +25,12 @@ function fallbackSettings(cafe: { slug: string; name: string; businessCategory?:
 }
 
 export async function fetchOwnerDashboardShellAction() {
-  const cafe = await getOwnerCafeContext();
+  const cafe = await getDashboardCafeContext();
   if (!cafe) {
     return {
       serverTime: Date.now(),
       unauthenticated: true as const,
+      staff: null,
       planId: "",
       subscription: null,
       serviceSubscriptions: [],
@@ -46,16 +48,19 @@ export async function fetchOwnerDashboardShellAction() {
   const [plans, serviceAccess, settingsResult] = await Promise.all([
     getPlatformPlans(),
     getCafeServiceAccess(cafe.id),
-    supabase
-      .from("cafe_settings")
-      .select("*")
-      .eq("cafe_id", cafe.id)
-      .maybeSingle(),
+    // Loco employees see the brand logo only, never the owner's contact settings
+    cafe.staff
+      ? createAdminClient().from("cafe_settings").select("logo_storage_path").eq("cafe_id", cafe.id).maybeSingle()
+      : supabase
+        .from("cafe_settings")
+        .select("*")
+        .eq("cafe_id", cafe.id)
+        .maybeSingle(),
   ]);
 
   if (settingsResult.error) throw settingsResult.error;
 
-  const settings = settingsResult.data
+  const settings = settingsResult.data && !cafe.staff
     ? mapDbSettingsToCafeSettings(cafe.slug, settingsResult.data as Parameters<typeof mapDbSettingsToCafeSettings>[1])
     : fallbackSettings(cafe);
   settings.cafeName = cafe.name;
@@ -70,6 +75,8 @@ export async function fetchOwnerDashboardShellAction() {
 
   return {
     serverTime: Date.now(),
+    // Loco employee sections; absent for owners and managers
+    staff: cafe.staff ?? null,
     planId: serviceAccess.planId,
     subscription: serviceAccess.subscription,
     serviceSubscriptions: serviceAccess.serviceSubscriptions,

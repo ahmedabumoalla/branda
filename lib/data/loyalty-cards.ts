@@ -207,9 +207,10 @@ function mapCard(row: Record<string, unknown>): LoyaltyBrandCard {
 }
 
 /** Settings needs the program, not the customer/cashier/history collections. */
-export async function getOwnerLoyaltyProgramSettings() {
-  const cafe = await requireOwnerCafeContext();
-  const supabase = await createClient();
+export async function getOwnerLoyaltyProgramSettings(staffPermission?: "rewards" | "messages") {
+  const cafe = await requireOwnerCafeContext(staffPermission);
+  // Loco employees hold no database loyalty key; the read stays scoped to their verified brand
+  const supabase = cafe.staff ? createAdminClient() : await createClient();
   const [{ data, error }] = await Promise.all([
     supabase.from("cafe_loyalty_programs").select("*, menu_products(name)").eq("cafe_id", cafe.id).maybeSingle(),
     getLoyaltyBrandAppearance(cafe.id, cafe.slug),
@@ -220,7 +221,7 @@ export async function getOwnerLoyaltyProgramSettings() {
 
 /** Minimal reward selector; no image signing or full menu/category hydration. */
 export async function getOwnerLoyaltyRewardProducts() {
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext("rewards");
   const supabase = await createClient();
   const { data, error } = await supabase.from("menu_products").select("id,name")
     .eq("cafe_id", cafe.id).is("deleted_at", null).order("name");

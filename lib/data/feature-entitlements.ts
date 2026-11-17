@@ -76,7 +76,7 @@ export async function hasBrandFeature(brandId: string, featureKey: string): Prom
 }
 
 export async function getOwnerFeatureCodes() {
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext("any");
   return getCafeFeatureCodes(cafe.id);
 }
 

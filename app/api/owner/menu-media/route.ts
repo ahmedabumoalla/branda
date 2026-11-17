@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOwnerCafeContext } from "@/lib/data/cafes";
+import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { assertOwnerServiceEnabled } from "@/lib/data/owner-service-access";
 import { isOwnedMenuAsset } from "@/lib/menu/standalone-menu";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -10,7 +10,7 @@ const headers = { "Cache-Control": "private, no-store", Vary: "Cookie" };
 export async function GET(request: Request) {
   const path = new URL(request.url).searchParams.get("path");
   if (!path || path.length > 1024) return NextResponse.json({ error: "Invalid path" }, { status: 400, headers });
-  const cafe = await getOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext("menu").catch(() => null);
   if (!cafe) return NextResponse.json({ error: "Authentication required" }, { status: 401, headers });
   if (!isOwnedMenuAsset(path, cafe.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403, headers });
   try {
