@@ -10,7 +10,10 @@ const {BrandaHome}=load('components/marketing/branda-home-redesign.tsx',stubs);
 const {homeBrands}=load('lib/marketing/home-brands.ts');
 const props={contacts:{whatsapp:'0508333556'},featuredBrandSlugs:homeBrands.map(b=>b.slug)};
 const html=renderToStaticMarkup(React.createElement(BrandaHome,props));
-assert.equal((html.match(/data-brand=/g)||[]).length,8);
+assert.equal((html.match(/data-brand=/g)||[]).length,9);
+assert(html.includes('data-brand="brand-9010051467ed"'));
+assert(html.includes('/menu-art/tea-bakery/logo-v1.png'));
+assert(html.indexOf('id="clients"')<html.indexOf('id="features"'));
 const logos=html.split('class="logoViewport"')[1].split('</section>')[0];
 assert(!logos.includes('<p')&&!logos.includes('<h3')&&!logos.includes('<figcaption'),'Logos only, no visible captions');
 for(const brand of homeBrands){assert(logos.includes(brand.slug));if(brand.image)assert(fs.existsSync('public'+brand.image));}
@@ -51,7 +54,13 @@ walk(tree,node=>node.type==='button'&&node.props['aria-label']==='Switch to Engl
  let rows=[{slug:'eligible',subscriptions:[active]},{slug:'trial',subscriptions:[{...active,status:'trialing'}]},{slug:'free',subscriptions:[{...active,platform_plans:{active:true,price_sar:0}}]},{slug:'expired',subscriptions:[{...active,expires_at:'2020-01-01T00:00:00Z'}]},{slug:'future',subscriptions:[{...active,started_at:'2099-01-01T00:00:00Z'}]},{slug:'inactive-plan',subscriptions:[{...active,platform_plans:{active:false,price_sar:100}}]}],failure=false,filters=[];
  const db={from(table){assert.equal(table,'cafes');const chain={select(columns){assert(!columns.includes('*'));return chain;},in(...args){filters.push(args);return chain;},eq(...args){filters.push(args);return chain;},is(...args){filters.push(args);return chain;},then(resolve){return Promise.resolve({data:rows,error:failure?new Error('offline'):null}).then(resolve);}};return chain;}};
  const dal=load('lib/data/home-featured-brands.ts',{'@/lib/supabase/admin':{createAdminClient:()=>db}});
- assert.deepEqual(await dal.getHomeFeaturedBrandSlugs(),['eligible']);assert(filters.some(([key,value])=>key==='is_public'&&value===true));assert(filters.some(([key,value])=>key==='slug'&&value.length===8));
+ assert.deepEqual(await dal.getHomeFeaturedBrandSlugs(),['eligible']);assert(filters.some(([key,value])=>key==='is_public'&&value===true));assert(filters.some(([key,value])=>key==='slug'&&value.length===9));
+ rows=[{slug:'brand-9010051467ed',subscriptions:[{...active,status:'trialing',platform_plans:{active:true,price_sar:0}}]},{slug:'brand-9a8c97305195',subscriptions:[{...active,status:'trialing'}]}];
+ assert.deepEqual(await dal.getHomeFeaturedBrandSlugs(),['brand-9010051467ed']);
+ for(const override of [{status:'cancelled'},{expires_at:'2020-01-01T00:00:00Z'},{started_at:'2099-01-01T00:00:00Z'},{platform_plans:{active:false,price_sar:0}}]) {
+   rows=[{slug:'brand-9010051467ed',subscriptions:[{...active,status:'trialing',...override}]}];
+   assert.deepEqual(await dal.getHomeFeaturedBrandSlugs(),[],'Explicit showcase trial still requires a current available subscription');
+ }
  failure=true;assert.deepEqual(await dal.getHomeFeaturedBrandSlugs(),[]);
  console.log('PASS logo-only curated brands, empty/error states, saved pricing/account links, workflow/language interaction, contact retry/idempotency/validation, non-trial/current subscription eligibility');
 })().catch(error=>{console.error(error);process.exitCode=1});

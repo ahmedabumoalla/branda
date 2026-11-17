@@ -7,4 +7,5 @@ export const homeBrands = [
   { slug: "brand-871ec6e243c0", name: "توقذر بلانت", image: "/together/logo.webp" },
   { slug: "shahi-w-hail", name: "شاهي وهيل", image: "/menu-logos/shahi-transparent-v2.webp" },
   { slug: "brand-edbc2c01385b", name: "مقص 77", image: "/mqas77/wallet-emblem-v1.png" },
+  { slug: "brand-9010051467ed", name: "تي اند بيكري", image: "/menu-art/tea-bakery/logo-v1.png" },
 ] as const;
