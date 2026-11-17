@@ -21,7 +21,7 @@ No browser, live test messages or retained test records
 
 ## Publication
 
-Database active; publish isolated release next
+Application04fcc1596848e39b5e8558f5de09a59e33ed59c3, Verceldpl_AFKo49PPbCPzXwpKbkRxxppLi9FX READY, both aliases exact deployment HTTP200 verified2026-11-17T21:49:36.682Z; follow-up docs only
 
 ## Workspace
 
