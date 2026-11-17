@@ -1,3 +1,7 @@
+- [Loyalty logo and branch identity](LOYALTY_BRANCH_IDENTITY_20261118.md)
+
+- [Signup choice, directory counts and pager scope](SIGNUP_DIRECTORY_PAGER_20261118.md)
+
 - [Registration and sidebar hotfix](REGISTRATION_SIDEBAR_HOTFIX_20261118.md)
 
 - [MND display-name correction](MND_NAME_20261118.md)
