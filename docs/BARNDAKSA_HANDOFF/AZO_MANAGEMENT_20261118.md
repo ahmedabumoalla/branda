@@ -1,3 +1,5 @@
+- AZO OWNER DELIVERY2026-11-18: User explicitly requested sending existing management login details to the owner. Exactly one provider submission accepted02:52:38Z; read-only provider status sent at02:55:59Z, delivery/read not confirmed. No password reset, subscription change or extra message. Redacted evidence output/azo-management-20261118/owner-access-message.json; credentials excluded from handoff
+
 # Azo brand management — 2026-11-18
 
 Published f3ee9a985cf1474eb8d69173e9b39b74eab72388, Vercel dpl_FUqradiU6f3tachvemvQgymF7gE9 READY, both domains/exact HTTP verified 2026-11-18T02:26:26.657Z; actual authenticated brand selector and both loyalty dashboards passed with menu/offers absent
