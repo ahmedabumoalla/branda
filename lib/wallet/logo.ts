@@ -11,7 +11,13 @@ const cachedLogo = createWalletArtifactCache(8 * 1024 * 1024, 128, 30_000);
 
 async function brandAsset(member: Pick<WalletMember, "logoUrl" | "cafeName" | "program">) {
   if (!member.logoUrl) {
-    const color = /^#[\da-f]{6}$/i.test(member.program.cardBackground) ? member.program.cardBackground : "#3b1420";
+    const background = /^#[\da-f]{6}$/i.test(member.program.cardBackground) ? member.program.cardBackground : "#3b1420";
+    const [r, g, b] = background.slice(1).match(/../g)!.map(value => {
+      const channel = parseInt(value, 16) / 255;
+      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    // A transparent fallback must contrast with the pass, never reuse its background.
+    const color = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.179 ? "#000000" : "#ffffff";
     const title = member.cafeName.slice(0, 80).replace(/[&<>"']/g, value => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[value]!);
     return Buffer.from(`<svg width="640" height="200" xmlns="http://www.w3.org/2000/svg"><text x="320" y="125" text-anchor="middle" font-size="72" fill="${color}">${title}</text></svg>`);
   }

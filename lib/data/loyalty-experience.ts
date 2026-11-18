@@ -106,7 +106,7 @@ async function loadWalletMemberFromView(view: CustomerLoyaltyCardView): Promise<
     const branch = await getLoyaltyBranch(view.card.cafeId, view.card.branchId, true);
     if (!branch) return null;
     return { ...view, cafeName: branch.name, branchId: branch.id, bannerUrl: branch.banner, program: branchProgram(view.program, branch),
-      card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: branch.logo,
+      card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: branch.logo || brand.identity.logoUrl,
       experience: { ...experience, nearbyMessage: branch.nearbyMessage, latitude: branch.latitude, longitude: branch.longitude },
       branchLocations };
   }

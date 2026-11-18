@@ -68,7 +68,8 @@ export async function issueApplePass(member: WalletMember) {
     formatVersion: 1, passTypeIdentifier: config.passTypeIdentifier, teamIdentifier: config.teamIdentifier,
     serialNumber: member.card.cardCode, organizationName: member.cafeName, description: `${member.cafeName} - ${member.program.cardTitle}`,
     backgroundColor: rgb(colors.background), foregroundColor: rgb(colors.foreground), labelColor: rgb(colors.foreground), sharingProhibited: true, suppressStripShine: true,
-    ...(mqas77 ? { logoText: MQAS77_WALLET_NAME, labelColor: rgb("#fff4df") } : {}),
+    logoText: mqas77 ? MQAS77_WALLET_NAME : member.cafeName,
+    ...(mqas77 ? { labelColor: rgb("#fff4df") } : {}),
     userInfo: { artworkVersion: mqas77 ? MQAS77_WALLET_VERSION : `${WALLET_ART_VERSION}:apple-burgundy-v1`, iconVersion: APPLE_ICON_VERSION },
     webServiceURL: `${config.baseUrl}/api/wallet/apple`, authenticationToken: appleAuthToken(member.card.cardCode),
   });

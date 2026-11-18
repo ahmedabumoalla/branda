@@ -106,6 +106,28 @@ try {
   assert(!art.verifyWalletArtToken(member.card.id, apple.appleAuthToken(member.card.cardCode)));
   const entries = unpackStoredZip(await apple.issueApplePass(member));
   const pass = JSON.parse(entries["pass.json"]);
+  assert.equal(pass.logoText, member.cafeName, "Native identity remains visible independently of logo artwork");
+  const sharp = requireDependency("sharp");
+  const { walletBrandLogo } = load("lib/wallet/logo.ts");
+  for (const [background, expected] of [["#151515", 255], ["#ffffff", 0]]) {
+    const fallback = { ...member, cafeSlug: "fallback", cafeName: "Fallback brand", logoUrl: null,
+      program: { ...member.program, cardBackground: background } };
+    const { data, info } = await sharp(await walletBrandLogo(fallback)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    let visible = 0;
+    for (let i = 0; i < data.length; i += info.channels) {
+      if (data[i + 3] > 200) { visible++; assert(Math.abs(data[i] - expected) <= 3, "Fallback contrasts with background after rasterization"); }
+    }
+    assert(visible > 100, "Fallback identity must not be transparent");
+    const fallbackPass = JSON.parse(unpackStoredZip(await apple.issueApplePass(fallback))["pass.json"]);
+    assert.equal(fallbackPass.logoText, fallback.cafeName);
+    assert.equal(fallbackPass.serialNumber, member.card.cardCode, "Appearance fix preserves the installed card identity");
+  }
+  const { branchIdentity, branchProgram } = load("lib/loyalty/branch-appearance.ts");
+  const parent = { name: "Parent", logoUrl: member.logoUrl, logoDisplayUrl: member.logoUrl };
+  const noLogoBranch = { id: "branch-id", name: "Branch", logo: null, background: "#151515", foreground: "#ffffff", accent: "#ffff00" };
+  assert.equal(branchIdentity(parent, noLogoBranch).logoUrl, parent.logoUrl);
+  assert.equal(branchProgram({ ...member.program, logoUrl: member.logoUrl }, noLogoBranch).logoUrl, member.logoUrl);
+  assert.equal(branchIdentity(parent, { ...noLogoBranch, logo: "/branch.png" }).logoUrl, "/branch.png");
   assert.equal(pass.serialNumber, member.card.cardCode);
   assert.equal(pass.storeCard.headerFields[0].value, "3 / 7");
   assert.equal(pass.locations[0].relevantText, "Welcome to Rast");
