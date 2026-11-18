@@ -1,6 +1,6 @@
 # Azo brand management — 2026-11-18
 
-Account, two independent loyalty subscriptions and logos created; source checked, publication pending
+Published f3ee9a985cf1474eb8d69173e9b39b74eab72388, Vercel dpl_FUqradiU6f3tachvemvQgymF7gE9 READY, both domains/exact HTTP verified 2026-11-18T02:26:26.657Z; actual authenticated brand selector and both loyalty dashboards passed with menu/offers absent
 
 - One Auth owner and one management account named ادارة براندات Azo, with restaurant azo-bait-ezzo and coffee azo-house-cafe as separate cafe tenants
 - Both use pro loyalty-only,30-day trial, no menu/offers/finance; no charge or messages
@@ -15,3 +15,5 @@ Account, two independent loyalty subscriptions and logos created; source checked
 - Existing login-alias test lacked the previously added staff-landing stub; repaired harness without weakening role assertions and added managed-login redirect coverage
 - No browser, device proximity delivery or real message tests; no retained synthetic financial records
 - Evidence output/azo-management-20261118 and output/fawasel-branches-20261118/azo-*.json; credentials excluded
+
+- Published verification: actual owner session selects each brand through POST, correct brand dashboard/name/navigation, rejects unauthorized brand; no browser or real messages
