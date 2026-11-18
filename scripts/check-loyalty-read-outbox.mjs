@@ -148,4 +148,26 @@ await check("terminal history bounded while pending work is retained", async () 
   const queue = make(store); await queue.save("code", "CARD123"); assert.equal((await queue.list()).length, 101);
   now += 8 * 86400_000; assert.equal((await queue.list()).length, 1);
 });
+await check("device saves and failed or duplicate reads cannot claim a successful stamp", async () => {
+  const { readDisplay } = load("lib/loyalty/read-display.ts");
+  assert.equal(readDisplay({}).state, "pending");
+  assert.equal(readDisplay({ errorCode: "rejected:invalid_phone", errorMessage: "Invalid phone" }).state, "failed");
+  assert.equal(readDisplay({ errorCode: "rejected:invalid_phone", errorMessage: "Invalid phone" }).detail, "Invalid phone");
+  for (const status of ["pending", "processing", "duplicate", "needs_review", "failed"]) {
+    assert.notEqual(readDisplay({ operation: operation("id", status) }).state, "succeeded");
+  }
+  assert.equal(readDisplay({ operation: operation("id", "succeeded") }).state, "succeeded");
+});
+await check("copied WhatsApp numbers with invisible direction marks resolve as phones and deduplicate", async () => {
+  const { normalizeLoyaltyDigits, resolveReadMethod } = load("lib/loyalty/read-identifier.ts");
+  const copied = String.fromCharCode(0x2066) + "+966 50 123 4567" + String.fromCharCode(0x2069);
+  assert.equal(normalizeLoyaltyDigits(copied), "+966 50 123 4567");
+  assert.equal(resolveReadMethod("code", copied), "phone");
+  const queue = make(memoryStore());
+  const first = await queue.save("code", copied);
+  const again = await queue.save("phone", "0501234567");
+  assert.equal(first.row.method, "phone");
+  assert.equal(again.row.requestId, first.row.requestId);
+  assert.equal(again.duplicate, true);
+});
 console.log(`PASS ${checks} loyalty read outbox behavior checks (isolated store; no customer operations)`);

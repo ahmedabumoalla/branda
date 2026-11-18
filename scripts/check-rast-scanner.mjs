@@ -242,11 +242,13 @@ const summaryHtml = renderToStaticMarkup(React.createElement(RastCashierReadSumm
 for (const [state, count] of [["succeeded", 1], ["pending", 4], ["failed", 4]]) {
   assert(summaryHtml.match(new RegExp(`data-state="${state}"[^]*?<strong>${new Intl.NumberFormat("ar").format(count)}</strong>`)), `Honest ${state} count`);
 }
-assert.equal((summaryHtml.match(/data-state=/g) ?? []).length, 3, "Only three counters appear");
-assert(summaryHtml.includes('role="status"') && summaryHtml.includes('aria-live="polite"') && summaryHtml.includes('aria-atomic="true"'));
-assert.equal((summaryHtml.match(/class="sr-only"/g) ?? []).length, 3, "Every icon has an accessible status label");
+assert.equal((summaryHtml.match(/<button[^>]*data-state=/g) ?? []).length, 3, "Three labeled counters filter the device history");
+assert(summaryHtml.includes('aria-live="polite"') && summaryHtml.includes('aria-atomic="true"'));
+assert(summaryHtml.includes('أختام مسجلة') && summaryHtml.includes('لم تُسجل'), "Status labels are visible without hovering");
 assert.equal((summaryHtml.match(/title=/g) ?? []).length, 3, "Every icon explains its meaning");
-assert(!/private-|0501234567|2026-11-08|<ol|<time|<bdi/.test(summaryHtml), "Counters reveal no customer, identifier, time, error or operation rows");
+assert(!/private-request-|0501234567/.test(summaryHtml), "History never exposes raw input or internal request IDs");
+assert(summaryHtml.includes('private-local-error') && summaryHtml.includes('private-server-error'), "Failed scans show their actual reason without extra clicks");
+assert(summaryHtml.includes('<time') && summaryHtml.includes('<bdi'), "History identifies the scan time and masked identifier");
 const emptySummary = renderToStaticMarkup(React.createElement(RastCashierReadSummary, { rows: [] }));
 assert.equal((emptySummary.match(new RegExp(`<strong>${new Intl.NumberFormat("ar").format(0)}</strong>`, "g")) ?? []).length, 3, "Empty state keeps three zero counters");
 assert.equal(cashierText("en", "لم تُسجل"), "Not recorded");
@@ -325,7 +327,7 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
   allowed = true;
   for (const operation of operations) await operation();
   await assert.rejects(() => ownerData.recordOwnerLoyaltyOperation({ cardCode: "CARD123" }), /شاشة الموظف/);
-  assert.deepEqual(rpcCalls, ["execute_loyalty_audited_operation", "preview_loyalty_reward", "execute_loyalty_audited_operation", "preview_loyalty_card"]);
+  assert.deepEqual(rpcCalls, ["execute_loyalty_audited_operation", "preview_loyalty_reward", "execute_loyalty_audited_operation", "preview_loyalty_card"].flatMap(name => ["brand_finance_loyalty_session_guard", name]));
   await cashierData.cashierScanLoyalty({ cafeId, cardCode: "١" });
   assert.equal(rpcPayloads.at(-1).p_code, "SECURECARD123", "Legacy cashier resolves Arabic short numbers before audited stamping");
   assert(queryFilters.some(f => f.table === "loyalty_cards" && f.column === "cafe_id" && f.value === cafeId), "Number lookup is authenticated brand scoped");

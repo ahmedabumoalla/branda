@@ -9,6 +9,7 @@ import { logoutCashierAction } from "@/app/actions/cashier";
 import type { CashierConsole } from "@/lib/data/cashier";
 import type { CashierRewardPreview } from "@/lib/data/customer-rewards";
 import type { LocalRead } from "@/lib/loyalty/read-outbox";
+import { readDisplay } from "@/lib/loyalty/read-display";
 import { RastCameraScanner } from "./rast-camera-scanner";
 import { useReadOutbox } from "./use-read-outbox";
 import { useCustomerSummary } from "./use-customer-summary";
@@ -23,24 +24,37 @@ import { localizedText, type CashierMessage } from "@/lib/cashier/language";
 import layout from "./rast-cashier.module.css";
 
 export function RastCashierReadSummary({ rows }: { rows: readonly LocalRead[] }) {
-  const { t, locale } = useCashierLanguage();
+  const { t, errorText, locale } = useCashierLanguage();
+  const [filter, setFilter] = useState<"all" | "succeeded" | "pending" | "failed" | null>(null);
   const counts = { succeeded: 0, pending: 0, failed: 0 };
-  for (const row of rows) {
-    const operation = row.operation;
-    if (operation?.status === "succeeded") counts.succeeded++;
-    else if (row.errorCode?.startsWith("rejected:") || operation?.status === "duplicate" || operation?.status === "needs_review" || (operation?.status === "failed" && !operation.retryable)) counts.failed++;
-    else counts.pending++;
-  }
+  for (const row of rows) counts[readDisplay(row).state]++;
   const counters = [
     { state: "succeeded", count: counts.succeeded, label: "أختام مسجلة", hint: "أختام أكد النظام تسجيلها بنجاح", icon: CircleCheck },
     { state: "pending", count: counts.pending, label: "تحتاج مزامنة", hint: "قراءات محفوظة أو قيد المعالجة أو قابلة لإعادة المزامنة", icon: CloudUpload },
     { state: "failed", count: counts.failed, label: "لم تُسجل", hint: "لم يُضف ختم وتشمل العمليات المرفوضة والمكررة والتي تحتاج مراجعة", icon: CircleX },
-  ];
-  return <div className={layout.readSummary} role="status" aria-live="polite" aria-atomic="true" aria-label={t("ملخص قراءات هذا الجهاز")}>
-    {counters.map(counter => <span key={counter.state} className={layout.readCounter} data-state={counter.state} title={t(counter.hint)}>
+  ] as const;
+  const displayed = [...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .filter(row => filter === "all" || readDisplay(row).state === (filter ?? "failed")).slice(0, 50);
+  return <div className={layout.readHistory}>
+    <div className={layout.readSummary} aria-live="polite" aria-atomic="true" aria-label={t("ملخص قراءات هذا الجهاز")}>
+    {counters.map(counter => <button type="button" key={counter.state} className={layout.readCounter} data-state={counter.state} title={t(counter.hint)} aria-pressed={filter === counter.state} onClick={() => setFilter(counter.state)}>
       <counter.icon size={20} aria-hidden="true" />
-      <span className="sr-only">{t(counter.label)}: </span><strong>{new Intl.NumberFormat(locale).format(counter.count)}</strong>
-    </span>)}
+      <span>{t(counter.label)}: </span><strong>{new Intl.NumberFormat(locale).format(counter.count)}</strong>
+    </button>)}
+    </div>
+    <button type="button" className={layout.historyToggle} aria-expanded={filter === "all"} onClick={() => setFilter(filter === "all" ? null : "all")}>{t("سجل قراءات هذا الجهاز")}</button>
+    {(filter || displayed.length > 0) && <div className={layout.historyRows}>
+      <p>{t("النتيجة مؤكدة فقط عند ظهور تم تسجيل الختم")}</p>
+      {displayed.length === 0 ? <p>{t("لا توجد قراءات بهذه الحالة")}</p> : displayed.map(row => {
+        const display = readDisplay(row);
+        return <article key={row.requestId} data-state={display.state}>
+          <header><strong>{t(display.label)}</strong><time dateTime={row.createdAt}>{new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-GB", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Riyadh" }).format(new Date(row.createdAt))}</time></header>
+          <p>{row.operation?.customerName || t("القراءة")} <bdi dir="ltr">{row.identifierHint}</bdi></p>
+          <p>{errorText(display.detail)}</p>
+          {row.errorCode?.startsWith("rejected:") && <p>{t("صحح الرقم أو الرمز ثم أعد القراءة")}</p>}
+        </article>;
+      })}
+    </div>}
   </div>;
 }
 
@@ -88,6 +102,9 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
   const previewElement = useRef<HTMLElement>(null);
   const errorElement = useRef<HTMLParagraphElement>(null);
   const reads = useReadOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
+  const [lastReadId, setLastReadId] = useState<string | null>(null);
+  const lastRead = reads.rows.find(row => row.requestId === lastReadId);
+  const readFeedback = lastRead ? readDisplay(lastRead) : null;
   const customerSummary = useCustomerSummary({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
   const [summaryRead, setSummaryRead] = useState<{ requestId: string; lookupId: number; cafeId: string; cashierId: string } | null>(null);
   const selectedRead = summaryRead && summaryRead.cafeId === initialData.cafe.id && summaryRead.cashierId === initialData.cashier.id
@@ -107,7 +124,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
   function updateCode(code: string, immediate = false) {
     if (processing.current || session.busy) return;
     if (summaryRead) customerSummary.clear();
-    resolvedCode.current = ""; session.invalidate(); setValue(code); setPreview(null); setMessage(""); setError(""); setNoRewards(false); setSummaryRead(null);
+    resolvedCode.current = ""; session.invalidate(); setValue(code); setPreview(null); setMessage(""); setError(""); setNoRewards(false); setSummaryRead(null); setLastReadId(null);
     if (kind === "stamp" && code.trim()) customerSummary.lookup(lookupMethod, code, { immediate });
     else customerSummary.clear();
   }
@@ -123,6 +140,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
       try { lookupId = customerSummary.lookup(lookupMethod, value, { immediate: true }); }
       catch { console.warn("cashier_summary_unavailable"); }
       const saved = await reads.save(lookupMethod, value);
+      setLastReadId(saved.row.requestId);
       if (lookupId !== null) setSummaryRead({ requestId: saved.row.requestId, lookupId, cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
       setMessage(saved.duplicate ? "هذه القراءة محفوظة مسبقًا وتنتظر المزامنة" : "تم حفظ القراءة على هذا الجهاز يمكنك خدمة العميل التالي وتابع عدادات المزامنة");
       setValue(""); focusInputAfterScan.current = true;
@@ -216,7 +234,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
           </section>}
           {noRewards && <RastCashierEmptyRewards />}
           {error && <p ref={errorElement} tabIndex={-1} role="alert" className="mt-5 rounded-xl bg-red-50 p-4 text-sm leading-7 text-red-900 focus-visible:outline-2 focus-visible:outline-offset-4">{errorText(error)}</p>}
-          {message && <p role="status" className="mt-5 rounded-xl bg-emerald-50 p-4 font-bold leading-7 text-emerald-900">{t(message)}</p>}
+          {message && <p role="status" className={layout.readFeedback} data-state={readFeedback?.state ?? "succeeded"}>{readFeedback ? <>{t(readFeedback.label)}<br />{errorText(readFeedback.detail)}</> : t(message)}</p>}
         </section>
         {!preview && !confirmedFinanceFlow && <details className={layout.guide}><summary>{t("ببساطة وبثقة")}</summary><div className={layout.guideContent}><p>{t(kind === "stamp" ? "ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يحفظ طلب تسجيل ختم واحد" : "ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يفحص الرمز ويعرض بيانات العميل")} </p>{kind === "stamp" && <p>{t("الحفظ على الجهاز لا يعني اكتمال الختم تابع عدادات المزامنة ولا تمسح بيانات المتصفح قبل اكتمالها")}</p>}<p>{t("المكافأة تُصرف مرة واحدة وتظهر شروطها وصلاحيتها قبل التأكيد")} </p>{!embedded && <Link href={`/loyalty/${identity.slug}${identity.branchId ? `?branch=${encodeURIComponent(identity.branchId)}` : ""}`} className="inline-flex min-h-12 items-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4">{t("صفحة عضوية")} {locale === "en" ? identity.nameEn || identity.name : identity.name}</Link>}</div></details>}
       </div>

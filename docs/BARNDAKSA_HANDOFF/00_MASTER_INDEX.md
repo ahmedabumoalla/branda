@@ -1,3 +1,7 @@
+- [Cashier scan history and copied phone normalization](CASHIER_READ_HISTORY_20261118.md)
+
+- [Loyalty defaults and LA GIOIA identity](LOYALTY_DEFAULTS_20261118.md)
+
 - [Brand settings account access](BRAND_SETTINGS_ACCESS_20261118.md)
 
 - [Azo management account](AZO_MANAGEMENT_20261118.md)

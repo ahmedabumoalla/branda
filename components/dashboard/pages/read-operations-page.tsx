@@ -107,8 +107,9 @@ export function ReadOperationsPage({ initialData, initialError = "" }: { initial
 
   return <section dir="rtl" className={styles.workspace} aria-labelledby="read-operations-title">
     <header className={styles.header}>
-      <div><span className={styles.eyebrow}>الولاء والمكافآت</span><h1 id="read-operations-title">سجل عمليات القراءة</h1>
-        <p>تابع تسجيل الأختام من الكاشير ونتيجة مزامنتها لكل عملية</p></div>
+      <div><span className={styles.eyebrow}>الولاء والمكافآت</span><h1 id="read-operations-title">سجل قراءات الكاشير</h1>
+        <p>وقت القراءة والكاشير والعميل ونتيجة تسجيل الختم أو سبب عدم تسجيله</p>
+        <p>القراءات التي لم تصل للنظام تظهر في سجل الجهاز داخل صفحة الكاشير</p></div>
       <button type="button" className={styles.secondary} disabled={busy} onClick={() => void refresh(page, status)}><RefreshCw size={17} aria-hidden="true" />{busy ? "جاري التحديث" : "تحديث السجل"}</button>
     </header>
 

@@ -41,6 +41,7 @@ export const integratedSystemGroups: SystemGroup[] = [
     { label: "هوية الفروع", href: "/dashboard/loyalty/branches", feature: "branches" },
     { label: "إدارة الكاشير", href: "/dashboard/cashier", feature: "cashier" },
     { label: "سجل عملاء الولاء", href: "/dashboard/loyalty/customers", feature: "loyalty" },
+    { label: "سجل قراءات الكاشير", href: "/dashboard/loyalty/reads", feature: "loyalty" },
     { label: "سجل عمليات الكاشير", href: "/dashboard/read-operations", feature: "loyalty" },
     { label: "إدارة رسائل الولاء", href: "/dashboard/loyalty/messages", feature: "loyalty" },
     { label: "إعدادات الولاء", href: "/dashboard/loyalty/settings", feature: "loyalty", financeOnly: true },

@@ -1,6 +1,9 @@
 /** Human-facing numbers are brand scoped and never public card credentials. */
 export function normalizeLoyaltyDigits(input: string): string {
-  return input.replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 0x6f0 : 0x660)));
+  // Copied WhatsApp phone numbers often include invisible bidi isolates/marks.
+  // Normalize transport formatting before both method detection and validation.
+  return input.replace(/[\u061C\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g, "")
+    .replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 0x6f0 : 0x660))).trim();
 }
 export function isLoyaltyDisplayNumber(input: string): boolean {
   return /^[1-9]\d{0,4}$/.test(input);

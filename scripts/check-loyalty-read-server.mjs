@@ -61,7 +61,7 @@ await check("only loyalty-card QR and bounded valid identifiers accepted", async
   await assert.rejects(dal.enqueueLoyaltyRead({ ...input, method: "code", value: createBarndaksaQrPayload("customer-reward", "CARD123") }), { code: "invalid_code" });
 });
 await check("phone entered in card field uses phone enrollment and card identifiers remain codes", async () => {
-  for (const value of ["0501234567", "501234567", "+966 50 123 4567", "00966501234567", "٠٥٠١٢٣٤٥٦٧", "۰۵۰۱۲۳۴۵۶۷"]) {
+  for (const value of ["0501234567", "501234567", "+966 50 123 4567", "00966501234567", "٠٥٠١٢٣٤٥٦٧", "۰۵۰۱۲۳۴۵۶۷", String.fromCharCode(0x2066) + "+966 50 123 4567" + String.fromCharCode(0x2069), String.fromCharCode(0x61c) + "٠٥٠١٢٣٤٥٦٧"]) {
     await dal.enqueueLoyaltyRead({ ...input, method: "code", value });
     assert.equal(calls.at(-1).input.p_method, "phone"); assert.equal(calls.at(-1).input.p_value, "966501234567");
   }
