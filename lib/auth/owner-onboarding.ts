@@ -5,6 +5,7 @@ import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeInputDigits } from "@/lib/auth/input-digits";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isGreenApiConfigured, sendGreenApiOtp } from "@/lib/whatsapp/green-api";
@@ -26,7 +27,7 @@ export const ownerOnboardingSchema = z.object({
   ownerName: z.string().trim().min(2).max(120),
   email: z.string().trim().pipe(z.union([z.literal(""), z.string().email().max(254)]))
     .nullish().transform(value => value?.toLowerCase() || null),
-  phone: z.string().trim().max(24).transform(normalizeSaudiPhone).refine(value => Boolean(value), "أدخل رقم جوال سعودي صحيحًا"),
+  phone: z.string().trim().max(64).transform(normalizeSaudiPhone).refine(value => Boolean(value), "أدخل رقم جوال سعودي صحيحًا"),
   mapsUrl: z.string().trim().pipe(z.union([z.literal(""), mapsUrl]))
     .nullish().transform(value => value || null),
   couponCode: z.string().trim().max(30).optional().transform(value => value?.toUpperCase() || ""),
@@ -52,7 +53,19 @@ const unavailable = (): OwnerOnboardingResult => ({ ok: false, message: "تعذ�
 
 export async function requestOwnerOnboarding(input: OwnerOnboardingInput): Promise<OwnerOnboardingResult> {
   const parsed = ownerOnboardingSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, message: "راجع البيانات وأدخل رقم جوال سعودي صحيحًا وبريدًا إلكترونيًا صحيحًا إن أضفته" };
+  if (!parsed.success) {
+    const messages: Record<string, string> = {
+      brandNameAr: "اكتب اسم العلامة بالعربية من حرفين إلى ١٢٠ حرفًا",
+      brandNameEn: "اكتب اسم العلامة بالإنجليزية من حرفين إلى ١٢٠ حرفًا دون رموز خاصة",
+      ownerName: "اكتب اسم المسؤول من حرفين إلى ١٢٠ حرفًا",
+      phone: "أدخل رقم جوال سعودي من ١٠ أرقام يبدأ بـ 05 أو اكتبه مع مفتاح +966",
+      email: "البريد الإلكتروني غير صحيح صححه أو اتركه فارغًا فهو اختياري",
+      mapsUrl: "أدخل رابطًا صحيحًا من خرائط Google أو اتركه فارغًا",
+      couponCode: "كوبون الخصم يجب ألا يتجاوز ٣٠ حرفًا",
+      planChoice: "اختر باقة الولاء أو باقة الولاء والمنيو",
+    };
+    return { ok: false, message: messages[String(parsed.error.issues[0]?.path[0])] ?? "راجع بيانات التسجيل وأكمل الحقول المطلوبة" };
+  }
   if (!isGreenApiConfigured()) return unavailable();
   try {
     const admin = createAdminClient();
@@ -92,6 +105,7 @@ export async function requestOwnerOnboarding(input: OwnerOnboardingInput): Promi
 }
 
 export async function verifyOwnerOnboarding(code: string): Promise<OwnerOnboardingResult> {
+  code = normalizeInputDigits(code).trim();
   if (!/^\d{6}$/.test(code)) return { ok: false, message: "أدخل رمز التحقق المكوّن من ستة أرقام" };
   try {
     const proof = await sessionProof();

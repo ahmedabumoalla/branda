@@ -1,3 +1,5 @@
+- [Owner signup validation](SIGNUP_VALIDATION_20261118.md)
+
 - [Admin brand directory logos](ADMIN_BRAND_LOGOS_20261118.md)
 
 - [Cashier scan history and copied phone normalization](CASHIER_READ_HISTORY_20261118.md)

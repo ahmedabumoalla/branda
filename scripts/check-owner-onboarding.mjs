@@ -19,6 +19,11 @@ function load(file,stubs={}) {
 }
 let checks=0;
 async function test(run){await run();checks++;}
+const phoneUtils=load("lib/auth/phone-utils.ts");
+for(const input of ["0511111111", "511111111", "+966 51 111 1111", "00966 51 111 1111", "+966 (0)51 111 1111", "٠٥١١١١١١١١", "۰۵۱۱۱۱۱۱۱۱", "\u2066+٩٦٦ ٥١ ١١١ ١١١١\u2069"])
+  await test(()=>assert.equal(phoneUtils.normalizeSaudiPhone(input),"966511111111"));
+for(const input of ["", "+971501111111", "+447700900123", "051111", "٠٥١١١١١١١١١", "12345"])
+  await test(()=>assert.equal(phoneUtils.normalizeSaudiPhone(input),null));
 const valid={brandNameAr:"علامة الاختبار",brandNameEn:"Test Brand",ownerName:"Test Owner",email:"owner@example.invalid",phone:"0511111111",mapsUrl:"https://google.com/maps?q=24,46",couponCode:""};
 function context(options={}) {
   const events=[], jar=new Map(); let capturedCode="";
@@ -38,6 +43,10 @@ function context(options={}) {
   };
   return {api:load("lib/auth/owner-onboarding.ts",stubs),events,jar,get code(){return capturedCode;}};
 }
+for(const [field,value,expected] of [["brandNameAr","Test","بالعربية"],["brandNameEn","علامة","بالإنجليزية"],["ownerName","x","المسؤول"],["email","invalid","البريد الإلكتروني"],["phone","05111","رقم جوال سعودي"]])
+  await test(async()=>{const c=context();const result=await c.api.requestOwnerOnboarding({...valid,[field]:value});assert(!result.ok);assert(result.message.includes(expected));if(field!=="phone")assert(!result.message.includes("سعودي"));assert.equal(c.events.length,0);});
+for(const phone of ["٠٥١١١١١١١١", "\u2066+۹۶۶ ۵۱ ۱۱۱ ۱۱۱۱\u2069", "+966 (0)51 111 1111"])
+  await test(async()=>{const c=context();assert((await c.api.requestOwnerOnboarding({...valid,phone,email:"",mapsUrl:""})).ok);assert.equal(c.events.find(e=>e.name==="begin_owner_onboarding").args.p_phone,"966511111111");const arabicCode=c.code.replace(/\d/g,d=>String.fromCharCode(0x660+Number(d)));assert((await c.api.verifyOwnerOnboarding(arabicCode)).ok);assert((await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"})).ok);assert.equal(c.events.find(e=>e.name==="createUser").input.phone,"+966511111111");});
 await test(async()=>{const c=context();assert.equal((await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"})).ok,false);assert.equal(c.events.length,0);});
 for(const mapsUrl of ["https://evil.invalid/maps","https://google.com.evil.invalid/maps","https://user:pass@google.com/maps","https://google.com:99/maps","http://google.com/maps"])
   await test(async()=>{const c=context();assert.equal((await c.api.requestOwnerOnboarding({...valid,mapsUrl})).ok,false);assert.equal(c.events.length,0);});

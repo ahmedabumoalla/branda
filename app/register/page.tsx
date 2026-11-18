@@ -6,6 +6,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { registerCafeOwnerAction, requestOwnerRegistrationOtpAction, verifyOwnerRegistrationOtpAction } from "@/app/actions/auth";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import styles from "./register.module.css";
+import { normalizeInputDigits } from "@/lib/auth/input-digits";
 
 const steps = ["بيانات العلامة", "تحقق واتساب", "كلمة المرور"];
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -97,12 +98,12 @@ export default function RegisterPage() {
             <Field label="اسم المسؤول"><input placeholder="الاسم الكامل" value={draft.ownerName} onChange={event => update("ownerName", event.target.value)} required minLength={2} maxLength={120} autoComplete="name" /></Field>
             <div className={styles.columns}>
               <Field label="البريد الإلكتروني (اختياري)"><input type="email" placeholder="name@example.com" value={draft.email} onChange={event => update("email", event.target.value)} maxLength={254} autoComplete="email" dir="ltr" /></Field>
-              <Field label="رقم الجوال المرتبط بواتساب"><input type="tel" placeholder="05xxxxxxxx" value={draft.phone} onChange={event => update("phone", event.target.value)} required maxLength={24} autoComplete="tel" dir="ltr" /></Field>
+              <Field label="رقم الجوال المرتبط بواتساب"><input type="tel" placeholder="05xxxxxxxx" value={draft.phone} onChange={event => update("phone", event.target.value)} required maxLength={64} autoComplete="tel" dir="ltr" /></Field>
             </div>
             <p className={styles.hint}><ShieldCheck size={15} aria-hidden="true" /> سنرسل رمز التحقق إلى رقم واتساب هذا</p></div>
             <details className={styles.coupon}><summary><TicketPercent size={18} aria-hidden="true" /> لديك كوبون خصم؟ <span>اختياري</span></summary><Field label="كوبون الخصم"><input placeholder="أدخل رمز الكوبون" value={draft.couponCode} onChange={event => update("couponCode", event.target.value)} maxLength={30} dir="ltr" autoCapitalize="characters" /></Field></details>
           </> : step === 1 ? <>
-            <Field label="رمز التحقق"><input className={styles.otp} value={code} onChange={event => setCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))} required pattern="[0-9]{6}" maxLength={6} inputMode="numeric" autoComplete="one-time-code" dir="ltr" /></Field>
+            <Field label="رمز التحقق"><input className={styles.otp} value={code} onChange={event => setCode(normalizeInputDigits(event.target.value).replace(/[^0-9]/g, "").slice(0, 6))} required pattern="[0-9]{6}" maxLength={32} inputMode="numeric" autoComplete="one-time-code" dir="ltr" /></Field>
             <p className={styles.note}>الرمز صالح لخمس دقائق لا تشاركه مع أي شخص</p>
           </> : <>
             <div className={styles.verified}><ShieldCheck size={20} aria-hidden="true" /> تم التحقق من رقم واتساب</div>

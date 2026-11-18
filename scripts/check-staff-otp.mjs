@@ -15,7 +15,7 @@ const mocks={
  'server-only':{},
  'next/headers':{cookies:async()=>({get:name=>jar.has(name)?{value:jar.get(name)}:undefined,set:(name,value,opts)=>{writes.push({name,value,opts});jar.set(name,value);},delete:name=>jar.delete(name)}),headers:async()=>new Map()},
  '@/lib/barndaksa/env':{getSupabaseServiceRoleKey:()=> 'isolated-test-key'},
- '@/lib/auth/phone-utils':load('lib/auth/phone-utils.ts',{'server-only':{}}),
+ '@/lib/auth/phone-utils':load('lib/auth/phone-utils.ts',{'server-only':{},'@/lib/auth/input-digits':load('lib/auth/input-digits.ts',{})}),
  '@/lib/data/cashier':{cashierSessionCookie:'barndaksa_cashier_session'},
  '@/lib/whatsapp/green-api':{isGreenApiConfigured:()=>configured,sendGreenApiOtp:async input=>{if(sendFail)throw Error('provider secret');sent.push(input);}},
  '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name,args)=>{calls.push({name,args});return {error:name===rpcFail?{message:'private sql error'}:null,data:name==='begin_staff_otp'?{ok:allow,brandName}:name==='mark_staff_otp_sent'?mark:{ok:verified,token:'a'.repeat(48),expiresAt:sessionExpiry ?? new Date(Date.now()+28800000).toISOString()}};}})},
