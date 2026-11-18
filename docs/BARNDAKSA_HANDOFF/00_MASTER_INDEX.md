@@ -1,3 +1,5 @@
+- [Loyalty guide](LOYALTY_GUIDE_20261118.md)
+
 - [Deployment packaging optimization](DEPLOYMENT_PACKAGING_20261118.md)
 
 - [Loyalty logo and branch identity](LOYALTY_BRANCH_IDENTITY_20261118.md)

@@ -63,6 +63,7 @@ const nodes = tree => !tree || typeof tree !== 'object' ? [] : [tree, ...React.C
   const page = nodes(await Page());
   assert.equal(page.filter(x => x.type === 'iframe').length, 1);
   assert(page.some(x => x.props?.href === '/api/loyalty-guide?download=1'));
+  assert(page.some(x => x.props?.href === '#loyalty-guide-preview' && !x.props.target));
   assert(page.some(x => x.type === 'iframe' && x.props.title && x.props.src === '/api/loyalty-guide#view=FitH'));
 
   const navigation = load('components/dashboard/integrated-system-navigation.ts');
