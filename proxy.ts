@@ -8,6 +8,7 @@ import { recoverExpiredCashierAction } from "@/lib/cashier/session-recovery";
 import { hospitalAccountLoginPath, hospitalAccountRouteHeader, isHospitalAccountRoute, isLegacyHospitalAccountLogin } from "@/lib/commerce/hospital-account-routing";
 
 const AUTH_REFRESH_PREFIXES = [
+  "/brands",
   "/dashboard",
   "/finance",
   "/admin",

@@ -8,6 +8,7 @@ import {
   storageBucketForLogo,
 } from "@/lib/storage/resolve-storage-url";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
+import { managedBrandLogo } from "@/lib/brands/management";
 
 type PublicSettingsRow = {
   cafe_id: string;
@@ -114,6 +115,7 @@ export async function getOwnerCafeSettings(): Promise<CafeSettings> {
       storageBucketForLogo(),
       data.logo_storage_path as string
     );
+    if (!settings.logoDataUrl && cafe.managementName) settings.logoDataUrl = await managedBrandLogo(cafe.id);
   }
   return settings;
 }

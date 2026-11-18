@@ -18,7 +18,7 @@ export function dashboardSessionIdentity(session: { user: { id: string }; access
 export function DashboardCacheBoundary() {
   const pathname = usePathname();
   const router = useRouter();
-  const protectedArea = /^\/(admin|dashboard)(\/|$)/.test(pathname);
+  const protectedArea = /^\/(admin|dashboard|brands)(\/|$)/.test(pathname);
   const lastRefresh = useRef(0);
   // Retain identity while visiting public pages so a cached dashboard cannot be
   // accepted as the baseline after another tab signs in to a different account.

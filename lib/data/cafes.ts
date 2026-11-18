@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { readMaintenanceSessionCookie } from "@/lib/platform/maintenance";
 import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
 import { brandStaffAccessFromPermissions, type BrandStaffAccess, type BrandStaffPermission } from "@/lib/staff/brand-staff-access";
+import { readBrandManagement, selectedManagedBrand } from "@/lib/brands/management";
+import { redirect } from "next/navigation";
 
 export type CafeContext = {
   id: string;
@@ -15,6 +17,8 @@ export type CafeContext = {
   role: "owner" | "manager" | "staff" | "platform_admin";
   /** Set only for Loco dashboard employees; every other caller treats them as having no brand access */
   staff?: BrandStaffAccess;
+  managementName?: string;
+  managementUserId?: string;
 };
 
 export const getCafeBySlug = cache(async (slug: string) => {
@@ -111,6 +115,13 @@ const readCafeContext = cache(async (): Promise<CafeContext | null> => {
         role: "platform_admin",
       };
     }
+  }
+
+  const management = await readBrandManagement(supabase, user);
+  if (management) {
+    const selected = await selectedManagedBrand(management);
+    if (!selected) redirect("/brands");
+    return { ...selected, role: "owner", managementName: management.name, managementUserId: management.userId };
   }
 
   const { data: owned } = await supabase

@@ -1,3 +1,5 @@
+- [Azo management account](AZO_MANAGEMENT_20261118.md)
+
 - [Loyalty branches rollout](LOYALTY_BRANCH_ROLLOUT_20261118.md)
 
 - [Loyalty guide](LOYALTY_GUIDE_20261118.md)

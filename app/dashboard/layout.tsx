@@ -12,6 +12,7 @@ import { fetchOwnerDashboardShellAction } from "@/app/actions/dashboard-shell";
 import { brandStaffLandingPath, brandStaffPathAllowed } from "@/lib/staff/brand-staff-access";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { ManagedBrandBoundary } from "@/components/brands/managed-brand-boundary";
 
 const dashboardFont = IBM_Plex_Sans_Arabic({
   subsets: ["arabic", "latin"],
@@ -47,6 +48,8 @@ export default async function DashboardLayout({
 
   return (
     <main dir="rtl" className={`${dashboardFont.className} min-h-screen overflow-x-hidden bg-[#FCF8F3] text-[#311912]`}>
+      {cafe.managementUserId && <ManagedBrandBoundary userId={cafe.managementUserId} brandId={cafe.id} />}
+      {cafe.managementName && <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E7DBD1] bg-white px-5 py-3 text-sm"><span>{cafe.managementName} <span className="mx-2" aria-hidden="true">/</span><strong>{cafe.name}</strong></span><a href="/brands" className="rounded-lg bg-[#713B26] px-4 py-3 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2">تبديل العلامة</a></div>}
       <DashboardAppLayout
         initialSnapshot={initialSnapshot}
         maintenanceSession={

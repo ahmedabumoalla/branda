@@ -1,6 +1,6 @@
 # Loyalty branches rollout and pager navigation — 2026-11-18
 
-Database applied and verified; application checks passed; publication pending
+Published974352d4f94c340ee352edfe4f28355090795e7f, Verceldpl_J4W2sB5vgmiuezAJA5rVyuNPsbBq READY; both aliases and HTTP verified2026-11-18T02:08:25Z
 
 - All active loyalty accounts, existing/new, receive Fawasel-style branches inside loyalty
 - Existing Loco brand-9a8c97305195 and Wahed brand-3c0437f1733a workflows, branch entitlements and separate menu navigation are preserved

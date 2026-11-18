@@ -10,6 +10,7 @@ import type { AppNotification } from "@/lib/mock/notifications";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import { createClient } from "@/lib/supabase/server";
 import { resolveErpModules } from "@/lib/platform/erp-modules";
+import { managedBrandLogo } from "@/lib/brands/management";
 
 function fallbackSettings(cafe: { slug: string; name: string; businessCategory?: string }): CafeSettings {
   return {
@@ -69,6 +70,7 @@ export async function fetchOwnerDashboardShellAction() {
   const logoStoragePath = settingsResult.data?.logo_storage_path as string | null | undefined;
   if (logoStoragePath) {
     settings.logoAssetId = logoStoragePath;
+    if (cafe.managementName) settings.logoDataUrl = await managedBrandLogo(cafe.id);
     // The sidebar already resolves this path through the authorized media API.
     // Optional branding must not block the entire authenticated page on Storage.
   }

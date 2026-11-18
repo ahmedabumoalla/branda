@@ -240,6 +240,11 @@ export async function loginOwnerAction(
     }
 
     if (["cafe_owner", "cafe_manager", "cafe_staff"].includes(String(profile.role))) {
+      if (authData.user.app_metadata?.brand_management === true) {
+        const { readBrandManagement } = await import("@/lib/brands/management");
+        await readBrandManagement(supabase, authData.user);
+        return { ok: true as const, message: "تم تسجيل الدخول بنجاح", redirectTo: "/brands" };
+      }
       const { data: membershipData } = await supabase
         .from("cafe_members")
         .select("cafe_id,cafes(id,name,slug,business_category)")
