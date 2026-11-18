@@ -105,7 +105,7 @@ export async function requestOwnerOnboarding(input: OwnerOnboardingInput): Promi
 }
 
 export async function verifyOwnerOnboarding(code: string): Promise<OwnerOnboardingResult> {
-  code = normalizeInputDigits(code).trim();
+  code = typeof code === "string" && code.length <= 64 ? normalizeInputDigits(code).trim() : "";
   if (!/^\d{6}$/.test(code)) return { ok: false, message: "أدخل رمز التحقق المكوّن من ستة أرقام" };
   try {
     const proof = await sessionProof();
