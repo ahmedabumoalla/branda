@@ -24,6 +24,7 @@ import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits } 
 import { loadWalletBranchLocations } from "@/lib/data/wallet-branch-locations";
 import { getLoyaltyBranch } from "@/lib/data/loyalty-branches";
 import { branchIdentity, branchProgram } from "@/lib/loyalty/branch-appearance";
+import { stampStyles } from "@/lib/loyalty/stamp-style";
 
 export async function getLoyaltyExperience(cafeId: string) {
   const [{ data, error }, { data: category }] = await Promise.all([
@@ -159,7 +160,7 @@ export async function saveOwnerLoyaltyExperience(input: LoyaltyExperienceInput) 
 }
 
 const programSchema = z.object({
-  stampStyle: z.enum(["ceramic", "paper", "meal", "brand", "scissors", "comb", "plant", "shirt"]).optional(),
+  stampStyle: z.enum(stampStyles).optional(),
   enabled: z.boolean(), cardTitle: z.string().trim().min(2).max(80), cardSubtitle: z.string().trim().min(2).max(140),
   purchasesRequired: z.number().int().min(1).max(100), rewardProductId: z.string().uuid().nullable(),
   rewardName: z.string().trim().min(2).max(80), stampLabel: z.string().min(1).max(40), terms: z.string().max(1000),

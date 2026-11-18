@@ -1,3 +1,4 @@
+- [Last Ring telecom loyalty icons](LAST_RING_LOYALTY_ICONS_20261119.md) - 2026-11-19
 - [Primary WhatsApp retries](PRIMARY_WHATSAPP_RETRIES_20261119.md) - 2026-11-19
 - [Branch wallet identity correction](BRANCH_WALLET_IDENTITY_20261119.md)
 

@@ -20,6 +20,7 @@ const snapshot=load('lib/data/loyalty-brand-snapshot.ts',{
 });
 const read=()=>snapshot.loadPublicLoyaltyBrandSnapshot('brand');
 const experience=load('lib/data/loyalty-experience.ts',{
+ '@/lib/loyalty/stamp-style':stamp,
  '@/lib/data/loyalty-brand-snapshot':snapshot,
  '@/lib/data/feature-entitlements':{getPublicCafeFeatureCodesBySlug:()=>assert.fail('Joined fresh gate replaces subscription waterfall')},
  '@/lib/data/cafes':{getCafeBySlug:()=>assert.fail('Public snapshot must not repeat RLS cafe lookup')},
