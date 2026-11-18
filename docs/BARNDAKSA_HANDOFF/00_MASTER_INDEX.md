@@ -1,3 +1,5 @@
+- [Loyalty cashier video guide](CASHIER_VIDEO_GUIDE_20261118.md)
+
 - [Owner signup validation](SIGNUP_VALIDATION_20261118.md)
 
 - [Admin brand directory logos](ADMIN_BRAND_LOGOS_20261118.md)

@@ -138,7 +138,7 @@ try {
     "next/headers": { cookies: async () => ({ get: () => token ? { value: token } : undefined, set: (...args) => cookieWrites.push(args) }) },
     "@/lib/supabase/admin": { createAdminClient: () => admin },
     "@/lib/supabase/server": { createClient: async () => ({
-      rpc: async (name, args) => { rpcCalls.push({ name, args }); return { data: [ownerSession], error: rpcFailure }; },
+      rpc: async (name, args) => { rpcCalls.push({ name, args }); return { data: name === "current_account_active" ? true : [ownerSession], error: rpcFailure }; },
       auth: { getUser: async () => { authReads++; return { data: { user }, error: authError }; } },
     }) },
     "@/lib/data/cafes": { requireOwnerCafeContext: async () => ({ id: cafeId, role }) },
@@ -158,7 +158,10 @@ try {
     try { assert.equal(await cashierData.startOwnerCashierSession(), undefined); }
     finally { if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous; }
     assert.deepEqual(rpcCalls[0], { name: "start_owner_cashier_session", args: { p_cafe_id: cafeId } });
-    assert.deepEqual(cookieWrites[0], ["barndaksa_cashier_session", token, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 28800 }]);
+    const maxAge = cookieWrites[0][2].maxAge;
+    const remaining = Math.floor((Date.parse(ownerSession.expires_at) - Date.now()) / 1000);
+    assert(maxAge >= remaining && maxAge <= remaining + 1 && maxAge <= 12 * 60 * 60);
+    assert.deepEqual(cookieWrites[0], ["barndaksa_cashier_session", token, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge }]);
   });
   const goodOwnerSession = { ...ownerSession };
   for (const [label, patch] of [["invalid date", { expires_at: "bad date" }], ["expired", { expires_at: "2000-01-01" }], ["tenant mismatch", { cafe_id: "other-cafe" }], ["missing token", { token: "" }]]) {
@@ -207,21 +210,24 @@ try {
   const requests = [], timeoutDurations = [];
   let response = { ok: true, json: async () => ({ idMessage: "provider-test-id" }) };
   try {
-    Object.assign(process.env, { GREEN_API_API_URL: "https://provider.invalid/", GREEN_API_ID_INSTANCE: "test-instance", GREEN_API_API_TOKEN_INSTANCE: "test-secret", GREEN_API_REQUEST_TIMEOUT_MS: "4321" });
+    Object.assign(process.env, { GREEN_API_API_URL: "https://api.green-api.com/", GREEN_API_ID_INSTANCE: "123456", GREEN_API_API_TOKEN_INSTANCE: "test-secret", GREEN_API_REQUEST_TIMEOUT_MS: "4321" });
     AbortSignal.timeout = (duration) => { timeoutDurations.push(duration); return new AbortController().signal; };
-    globalThis.fetch = async (url, options) => { requests.push({ url, options }); return response; };
+    globalThis.fetch = async (url, options) => { if (url.includes("/getStateInstance/")) return { ok: true, json: async () => ({ stateInstance: "authorized" }) }; requests.push({ url, options }); return response; };
     const { sendGreenApiCashierWelcome } = load("lib/whatsapp/green-api.ts", baseStubs);
     const message = { phone: "+966501234567", fullName: "Test employee", brandName: "Test brand", email: "employee@example.test", password };
-    await check("welcome uses normalized chat and exact credentials with private bounded request", async () => {
+    await check("welcome sends one tutorial video with login caption and no credentials", async () => {
       const result = await sendGreenApiCashierWelcome(message);
       assert.deepEqual(result, { providerMessageId: "provider-test-id" });
       const { url, options } = requests[0];
-      assert.equal(url, "https://provider.invalid/waInstancetest-instance/sendMessage/test-secret");
+      assert.equal(url, "https://api.green-api.com/waInstance123456/sendFileByUrl/test-secret");
       assert.equal(options.method, "POST"); assert.equal(options.cache, "no-store"); assert(options.signal instanceof AbortSignal);
-      assert.equal(timeoutDurations[0], 4321);
+      assert.equal(timeoutDurations.at(-1), 30000);
       const body = JSON.parse(options.body);
-      assert.equal(body.chatId, "966501234567@c.us"); assert.equal(body.linkPreview, false); assert(!body.message.includes(password)); assert(!body.message.includes(message.email));
-      for (const value of ["https://barndaksa.com/cashier/login", message.fullName, message.brandName]) assert(body.message.includes(value));
+      assert.equal(body.chatId, "966501234567@c.us"); assert(!body.caption.includes(password)); assert(!body.caption.includes(message.email));
+      assert.equal(body.urlFile, "https://barndaksa.com/guides/cashier-loyalty-20261118.mp4");
+      assert.equal(body.fileName, "branda-cashier-loyalty.mp4"); assert(body.caption.length <= 1024);
+      assert.equal(requests.length, 1);
+      for (const value of ["https://barndaksa.com/cashier/login", message.fullName, message.brandName, "شرح استخدام الكاشير"]) assert(body.caption.includes(value));
       assert(!JSON.stringify(result).includes(password)); assert(!JSON.stringify(result).includes("test-secret"));
     });
     await check("welcome rejects invalid recipient before fetch", async () => {
@@ -240,7 +246,7 @@ try {
     await check("welcome uses default timeout for invalid configuration", async () => {
       response = { ok: true, json: async () => ({ idMessage: "provider-test-id" }) };
       process.env.GREEN_API_REQUEST_TIMEOUT_MS = "invalid";
-      await sendGreenApiCashierWelcome(message); assert.equal(timeoutDurations.at(-1), 10000);
+      await sendGreenApiCashierWelcome(message); assert.equal(timeoutDurations.at(-1), 30000);
     });
     await check("welcome missing configuration fails before fetch", async () => {
       delete process.env.GREEN_API_API_TOKEN_INSTANCE; const before = requests.length;

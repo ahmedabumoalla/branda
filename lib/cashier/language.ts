@@ -5,6 +5,11 @@ export type LocalizedText = { ar: string; en: string };
 export type CashierMessage = string | { text: string; values: Record<string, string | number | LocalizedText> };
 export const cashierLanguageCookie = "branda-cashier-language";
 const readEnglish: Record<string, string> = {
+  "شرح استخدام الكاشير": "Cashier video guide",
+  "إغلاق الشرح": "Close guide",
+  "شرح الدخول وتسجيل الأختام وصرف المكافآت": "How to sign in, collect stamps and redeem rewards",
+  "تعذر تشغيل الفيديو افتحه من الرابط أدناه": "The video could not play Open it using the link below",
+  "فتح الفيديو في نافذة مستقلة": "Open video in a new window",
   "سجل قراءات هذا الجهاز": "Scans on this device",
   "النتيجة مؤكدة فقط عند ظهور تم تسجيل الختم": "A stamp is confirmed only when it shows Stamp recorded",
   "لا توجد قراءات بهذه الحالة": "No scans with this status",

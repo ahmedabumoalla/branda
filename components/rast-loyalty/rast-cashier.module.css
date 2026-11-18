@@ -12,6 +12,9 @@
 .identity img { width: 88px; height: 40px; }
 .title { margin-top: 6px; font-size: 22px; font-weight: 700; line-height: 1.4; }
 .greeting { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.greeting { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.greeting p { flex: 1 1 240px; margin: 0; }
+.guideRow { display: flex; justify-content: flex-end; grid-column: 1 / -1; }
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .tools > * { min-width: 0; max-width: 100%; }
 .tools a, .tools button { min-height: 44px; padding-inline: 12px; font-size: 13px; white-space: normal; }

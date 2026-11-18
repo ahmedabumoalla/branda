@@ -1,4 +1,5 @@
 import "server-only";
+import { cashierGuideFilename, cashierGuideUrl } from "@/lib/cashier/guide";
 
 const DEFAULT_GREEN_API_TIMEOUT_MS = 10_000;
 
@@ -209,21 +210,25 @@ export async function sendGreenApiCashierWelcome(input: {
 }) {
   if (!/^\+9665\d{8}$/.test(input.phone)) throw new Error("INVALID_CASHIER_RECIPIENT");
   const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
-  const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
+  const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendFileByUrl/${apiTokenInstance}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     cache: "no-store",
-    signal: AbortSignal.timeout(greenApiTimeoutMs()),
+    signal: AbortSignal.timeout(Math.max(greenApiTimeoutMs(), 30_000)),
     body: JSON.stringify({
       chatId: `${input.phone.slice(1)}@c.us`,
-      linkPreview: false,
-      message: [
+      urlFile: cashierGuideUrl,
+      fileName: cashierGuideFilename,
+      caption: [
         `مرحبًا ${input.fullName}`,
         `تم إنشاء حسابك في نقطة تشغيل ${input.brandName}`,
         "",
         "رابط الدخول:",
         "https://barndaksa.com/cashier/login",
         "أدخل رقم جوالك واطلب رمز التحقق عبر واتساب للدخول",
+        "",
+        "شاهد الفيديو المرفق لشرح الدخول وتسجيل الأختام وصرف المكافآت",
+        "تجد الفيديو دائمًا من زر شرح استخدام الكاشير داخل صفحتك",
         "",
         "لا تشارك رمز التحقق مع أي شخص",
       ].join("\n"),

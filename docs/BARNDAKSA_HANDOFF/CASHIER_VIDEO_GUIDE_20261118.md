@@ -1,0 +1,11 @@
+# Loyalty cashier video guide
+
+User supplied the cashier tutorial and requested it with the initial cashier message and a clear button without redesigning the cashier. The original video is published unchanged at /guides/cashier-loyalty-20261118.mp4:13077604bytes, SHA2569bcde7406b0a8b4666c3546247f99ba38309f012222dbb8bce30a828830be965,59.70seconds,H264/AAC,1080x1920. Its moov atom already precedes media data. It is a static CDN asset, not streamed through an application function or loaded on the initial cashier page. Existing PDF guide access is unchanged.
+
+New loyalty-cashier welcomes submit one Green API sendFileByUrl request with the video and existing login instructions as its caption. No passwords or OTP values are included. Sender selection, recipient validation and truthful provider-acknowledgement semantics remain; timeout has a30second minimum for media. No automatic retry after uncertain submission, no resend to existing staff and no real test messages. Account creation still succeeds if notification submission fails. Finance sales-cashier welcome messages are unchanged.
+
+The video button sits beside the existing greeting, retaining brand colors and existing language/logout/scan controls. Embedded loyalty readers also expose it. Native dialog has controls, inline mobile playback, no autoplay, preload none, Escape/backdrop/close dismissal, focus/scroll restoration, pause on close and an independent-video fallback. English cashier controls are localized; the user-provided video remains Arabic.
+
+Verification:41cashier onboarding/provider/security cases, scanner/tenant authorization suite, new guide SSR/state/CSS checks and mandatory TypeScript/text. Corrected preexisting test fixtures for the current12hour session, current_account_active RPC and authorized sender preflight; production auth/session behavior was not changed. No browser UI inspection or real WhatsApp delivery claim. Asset evidence output/cashier-guide-20261118/asset.json and command/input provenance checks.json.
+
+Provider contract checked against https://green-api.com/en/docs/api/sending/SendFileByUrl/ on2026-11-18. Native file delivery uses an MP4 URL/fileName and caption, maximum caption1024characters. Production asset/range and deployment evidence are recorded after release.

@@ -22,6 +22,7 @@ import { CashierLanguageSwitch, useCashierLanguage } from "@/components/cashier/
 import { AnalyticsCouponRedemption } from "@/components/cashier/analytics-coupon-redemption";
 import { localizedText, type CashierMessage } from "@/lib/cashier/language";
 import layout from "./rast-cashier.module.css";
+import { CashierGuideButton } from "@/components/cashier/cashier-guide";
 
 export function RastCashierReadSummary({ rows }: { rows: readonly LocalRead[] }) {
   const { t, errorText, locale } = useCashierLanguage();
@@ -205,9 +206,10 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
         <CashierLanguageSwitch />
             <form action={logoutCashierAction}><button disabled={pending} aria-label={t("تسجيل الخروج")} title={t("تسجيل الخروج")} className={layout.logout}><LogOut size={18} aria-hidden="true" /><span className={layout.logoutLabel}>{t("تسجيل الخروج")}</span></button></form>
         </div>
-      <p className={layout.greeting}>{t({ text: "أهلًا {name} هنا تسجّل الأختام وتصرف المكافآت", values: { name: initialData.cashier.fullName } })}</p>
+      <div className={layout.greeting}><p>{t({ text: "أهلًا {name} هنا تسجّل الأختام وتصرف المكافآت", values: { name: initialData.cashier.fullName } })}</p><CashierGuideButton /></div>
       </header>}
       <div className={layout.body}>
+        {embedded && <div className={layout.guideRow}><CashierGuideButton /></div>}
         <section aria-labelledby={preview ? "rast-scan-preview" : "scan-heading"} className={layout.scanPanel}>
           <div className={layout.tabs} role="group" aria-label={t("نوع العملية")}>
             {([{ id: "stamp", title: t("تسجيل ختم"), icon: BadgeCheck }, { id: "redeem", title: t("صرف مكافأة"), icon: Gift }] as const).map((tab) => <button key={tab.id} type="button" aria-pressed={kind === tab.id} disabled={pending} onClick={() => { if (processing.current || session.busy) return; setKind(tab.id); updateCode(""); }} className={`flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-4 ${kind === tab.id ? "bg-[var(--cashier-ink)] text-[var(--cashier-button-text)]" : "border border-[var(--cashier-ink)]/20"}`}><tab.icon size={19} aria-hidden="true" />{tab.title}</button>)}
