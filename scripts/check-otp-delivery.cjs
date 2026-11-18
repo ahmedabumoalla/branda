@@ -5,7 +5,7 @@ const { createHmac, randomBytes } = require('node:crypto');
 function load(file, mocks) {
   const output = {};
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new Function('require', 'exports', code)(name => name in mocks ? mocks[name] : require(name), output);
+  new Function('require', 'exports', code)(name => name in mocks ? mocks[name] : name.startsWith('@/') ? load(name.slice(2)+'.ts',mocks) : require(name), output);
   return output;
 }
 let count = 0;
@@ -33,8 +33,8 @@ const delivery = load('lib/auth/otp-delivery.ts', {
   'server-only': {}, '@/lib/supabase/admin': { createAdminClient: () => admin },
   '@/lib/barndaksa/env': { getSupabaseServiceRoleKey: () => key },
   '@/lib/whatsapp/customer-routing': {
-    isLocoCustomerOtp: (cafeId,purpose) => cafeId === loco && ['customer_signup','customer_login'].includes(purpose),
-    selectLocoCustomerSender: async () => { selections++; return selectedSender; },
+    isBrandCustomerOtp: (cafeId,purpose) => cafeId === loco && ['customer_signup','customer_login'].includes(purpose),
+    selectBrandCustomerSender: async () => { selections++; return selectedSender; },
   },
   '@/lib/whatsapp/green-api': {
     greenApiProviderInstanceKey: () => 'isolated-provider',

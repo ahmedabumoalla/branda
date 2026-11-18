@@ -28,8 +28,7 @@ export async function selectBrandCustomerSender(cafeId: string): Promise<GreenAp
   if (cafeId === LOCO_CAFE_ID) return selectLocoCustomerSender(cafeId);
   if (!supportsPrivateWhatsApp(cafeId)) return null;
   const { primary, backup } = getGreenApiCustomerPlatformSenders();
-  if (isGreenApiBackupOnly()) return backup && await isGreenApiCustomerSenderReady(backup) ? backup : null;
-  const linked = await selectBrandLoyaltySender(cafeId);
+  const linked = isGreenApiBackupOnly() ? null : await selectBrandLoyaltySender(cafeId);
   if (linked) return linked;
   if (primary && await isGreenApiCustomerSenderReady(primary)) return primary;
   if (backup && await isGreenApiCustomerSenderReady(backup)) return backup;
@@ -48,12 +47,8 @@ export async function selectLocoLoyaltySender(cafeId: string): Promise<GreenApiC
 
 /** Existing access/document flows retain their pre-submit platform fallback. */
 export async function selectLocoCustomerSender(cafeId: string): Promise<GreenApiCustomerSender | null> {
-  if (isGreenApiBackupOnly()) {
-    const { backup } = getGreenApiCustomerPlatformSenders();
-    return backup && await isGreenApiCustomerSenderReady(backup) ? backup : null;
-  }
   if (cafeId !== LOCO_CAFE_ID) return null;
-  const linked = await selectLocoLoyaltySender(cafeId);
+  const linked = isGreenApiBackupOnly() ? null : await selectLocoLoyaltySender(cafeId);
   if (linked) return linked;
   const { primary, backup } = getGreenApiCustomerPlatformSenders();
   if (primary && await isGreenApiCustomerSenderReady(primary)) return primary;

@@ -10,7 +10,7 @@ export async function runSalonMessageJobs(limit = 10) {
   const result = { configured: isGreenApiConfigured(), claimed: 0, sent: 0, skipped: 0, uncertain: 0 };
   if (!result.configured) return result;
   const db = createAdminClient();
-  const { data, error } = await db.rpc("salon_claim_messages_v3", { p_limit: Math.min(20, Math.max(1, limit)) });
+  const { data, error } = await db.rpc("salon_claim_messages_v3", { p_limit: Math.min(10, Math.max(1, limit)) });
   if (error) throw error;
   const jobs = (data ?? []) as { id: string; booking_id: string; cafe_id: string; kind: string; phone: string; lease_token: string }[];
   result.claimed = jobs.length;

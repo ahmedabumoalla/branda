@@ -1,3 +1,6 @@
+- [Primary WhatsApp retries](PRIMARY_WHATSAPP_RETRIES_20261119.md) - 2026-11-19
+- [Branch wallet identity correction](BRANCH_WALLET_IDENTITY_20261119.md)
+
 - [Owner welcome and setup video](OWNER_WELCOME_VIDEO_20261118.md)
 
 - [Loyalty cashier video guide](CASHIER_VIDEO_GUIDE_20261118.md)

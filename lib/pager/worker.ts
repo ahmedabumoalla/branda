@@ -17,8 +17,8 @@ export async function runPagerMessageJobs(limit = 100) {
   const maximum = Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), 100)) : 100;
   const startedAt = Date.now();
   const result = { claimed: 0, queued: 0, skipped: 0, failed: 0 };
-  // Two waves leave room for primary readiness retries (8.25s), backup readiness
-  // (2.5s) and send (10s), within the ninety-second lease and route deadline.
+  // Two waves fit three thirty-second retry intervals, readiness and send time
+  // within the four-minute lease and five-minute route deadline.
   while (result.claimed < maximum && Date.now() - startedAt < 15_000) {
     const jobs = await claimPagerMessages(Math.min(10, maximum - result.claimed));
     if (!jobs.length) break;

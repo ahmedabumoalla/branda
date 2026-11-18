@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { runSubscriptionRenewalReminders } from "@/lib/subscriptions/renewal-reminders";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 90;
+export const maxDuration = 300;
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   const expected = Buffer.from(secret ? `Bearer ${secret}` : ""), supplied = Buffer.from(request.headers.get("authorization") ?? "");

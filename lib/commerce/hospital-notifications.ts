@@ -13,7 +13,7 @@ export function hospitalNotificationText(job: HospitalNotification) {
 export async function runHospitalNotifications() {
   if (process.env.NODE_ENV !== "production" || process.env.VERCEL !== "1" || process.env.VERCEL_ENV !== "production" || process.env.HOSPITAL_NOTIFICATIONS_ENABLED !== "true") return { disabled: true, claimed: 0, queued: 0 };
   const client = createAdminClient();
-  const claimed = await client.rpc("hospital_notifications_claim", { p_limit: 10 });
+  const claimed = await client.rpc("hospital_notifications_claim", { p_limit: 1 });
   if (claimed.error) throw new Error("Hospital notification queue unavailable");
   let queued = 0;
   for (const job of claimed.data as HospitalNotification[]) {

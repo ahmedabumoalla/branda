@@ -110,7 +110,7 @@ try {
   equal(await response.json(),{error:"pager_queue_unavailable"},"route sanitizes provider or DB error");
   equal(response.headers.get("cache-control"),"no-store","failure response uncacheable");
   const config=JSON.parse(await readFile("vercel.json","utf8"));equal(config.crons.find(x=>x.path==="/api/pager/jobs")?.schedule,"* * * * *","minute production schedule configured");
-  equal(route.maxDuration,90,"route allows final batch and database overhead within ninety seconds");
+  equal(route.maxDuration,300,"route accommodates primary retry waits and batch completion");
 
   let afters=[],transitionCalls=[],transitionError=false,actionWorkers=0;
   const actions=await load("app/actions/pager.ts",{
@@ -126,7 +126,10 @@ try {
 
   process.env.GREEN_API_API_URL="https://1100.api.greenapi.com";process.env.GREEN_API_ID_INSTANCE="111";process.env.GREEN_API_API_TOKEN_INSTANCE="test-token";
   process.env.GREEN_API_REQUEST_TIMEOUT_MS="90000";
-  const sender=await load("lib/whatsapp/green-api.ts");let fetchCalls=[];
+  const sender=await load("lib/whatsapp/green-api.ts", {
+    "@/lib/cashier/guide": await load("lib/cashier/guide.ts"),
+    "@/lib/whatsapp/owner-guide": await load("lib/whatsapp/owner-guide.ts"),
+  });let fetchCalls=[];
   globalThis.fetch=async(url,options)=>{if(url.includes('getStateInstance'))return Response.json({stateInstance:'authorized'});fetchCalls.push({url,options});return Response.json({idMessage:"mock-provider-id"});};
   equal(await sender.sendGreenApiPagerMessage({phone:"966500000001",message:"exact invoice"}),{providerMessageId:"mock-provider-id"},"sender accepts provider ID without claiming delivery");
   equal(JSON.parse(fetchCalls[0].options.body),{chatId:"966500000001@c.us",linkPreview:false,message:"exact invoice"},"sender address and payload exact");

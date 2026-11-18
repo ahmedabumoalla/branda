@@ -5,6 +5,9 @@ import { FinanceOfflineSessionGuard } from "@/components/finance/finance-offline
 import { DashboardCacheBoundary } from "@/components/dashboard/dashboard-cache-boundary";
 import "./globals.css";
 
+// Sender failover may require three thirty-second intervals before submission.
+export const maxDuration = 300;
+
 const BARNDAKSA_APP_ICON = "/brand/barndaksa-app-icon-512.png";
 const PWA_INSTALL_CAPTURE_SCRIPT = `
 (function () {

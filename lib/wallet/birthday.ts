@@ -22,7 +22,8 @@ export async function dispatchBirthdayGreetings(limit = 1) {
   const result = { processed: 0, queued: 0, rejected: 0, unknown: 0, deferred: false };
   if (!await isGreenApiLoyaltyWelcomeReady()) return { ...result, deferred: true };
   const admin = createAdminClient();
-  for (let index = 0; index < Math.min(5, Math.max(1, limit)); index++) {
+  const startedAt = Date.now();
+  for (let index = 0; index < Math.min(5, Math.max(1, limit)) && Date.now() - startedAt < 70_000; index++) {
     const { data, error } = await admin.rpc("claim_loyalty_birthday_greeting", { p_primary_ready: true });
     if (error) throw new Error("birthday_greeting_claim_unavailable");
     if (!data) break;

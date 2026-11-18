@@ -8,11 +8,12 @@ const env = {
   GREEN_API_OTP_BACKUP_MEDIA_URL: 'https://7700.media.greenapi.com', GREEN_API_TEMPORARY_BACKUP_ONLY: 'false',
 };
 function context(options = {}) {
-  const calls = [], config = {...env, ...options.env};
+  const calls = [], delays = [], config = {...env, ...options.env};
+  let now = 0;
   let primaryState = options.primary || 'authorized';
   let primaryReads = 0;
   const fetcher = async (url, init) => {
-    calls.push({url, ...init});
+    calls.push({url, ...init, at:now});
     if (url.includes('getStateInstance')) {
       if (url.includes('waInstance111')) {
         primaryReads++;
@@ -22,18 +23,19 @@ function context(options = {}) {
       return Response.json({stateInstance: url.includes('waInstance111') ? primaryState : options.backup || 'authorized'});
     }
     if (options.timeout) throw Error('fixture');
+    if (options.primaryStatus && url.includes('waInstance111')) return new Response('', {status:options.primaryStatus});
     if (options.status) return new Response('', {status:options.status});
     return Response.json({idMessage:'fixture-ack'});
   };
   function load(file, imports = {}) {
     const exports = {};
     const code = ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-    new Function('require','exports','process','fetch','setTimeout',code)(n=>n==='server-only'||n.includes('green-api-partner')?{}:imports[n]??require(n),exports,{env:config},fetcher,fn=>{fn();return 0;});
+    new Function('require','exports','process','fetch','setTimeout',code)(n=>n==='server-only'||n.includes('green-api-partner')?{}:imports[n]??(n.startsWith('@/')?load(n.slice(2)+'.ts',imports):require(n)),exports,{env:config},fetcher,(fn,ms)=>{delays.push(ms);now+=ms;fn();return 0;});
     return exports;
   }
   const api=load('lib/whatsapp/green-api.ts');
   const campaign=load('lib/whatsapp/green-api-platform-campaigns.ts',{'./green-api':api});
-  return {api,campaign,calls,sends:()=>calls.filter(c=>c.method==='POST'),recover:()=>{primaryState='authorized';}};
+  return {api,campaign,calls,delays,sends:()=>calls.filter(c=>c.method==='POST'),recover:()=>{primaryState='authorized';}};
 }
 (async()=>{
   let checks=0;
@@ -45,6 +47,7 @@ function context(options = {}) {
       assert.match(c.sends()[0].url,/waInstance111/);
       assert.ok(c.calls.every(call=>!call.url.includes('waInstance222')),'temporary primary failure must not touch backup');
       assert.equal(c.calls.filter(call=>call.url.includes('getStateInstance')).length,transientFailures+1);
+      assert.deepEqual(c.delays,Array(transientFailures).fill(30_000));
       checks++;
     }
   }
@@ -55,6 +58,8 @@ function context(options = {}) {
     assert.match(c.calls[3].url,/waInstance222.*getStateInstance/);
     assert.equal(c.sends().length,1);
     assert.match(c.sends()[0].url,/waInstance222/);
+    assert.deepEqual(c.delays,[30_000,30_000,30_000]);
+    assert.equal(c.sends()[0].at,90_000);
     checks++;
   }
   {
@@ -91,5 +96,19 @@ function context(options = {}) {
   c=context({primary:'notAuthorized'});await c.api.sendGreenApiPagerMessage({phone:'966500000001',message:'first'});c.recover();await c.api.sendGreenApiPagerMessage({phone:'966500000001',message:'second'});
   assert.match(c.sends()[0].url,/waInstance222/);assert.match(c.sends()[1].url,/waInstance111/);checks++;
   c=context({primary:'notAuthorized'});const result=await c.api.sendGreenApiSubscriptionReminder({phone:'966500000001',message:'renewal'},async()=>{assert.match(c.calls.at(-1).url,/getStateInstance/);return false;});assert.equal(result.status,'skipped');assert.equal(c.sends().length,0);checks++;
+  for(const method of ['sendGreenApiSupabaseOtp','sendGreenApiOwnerWelcome']) {
+    for(const primaryStatus of [401,403,429,466]) {
+      c=context({primaryStatus});await c.api[method]({phone:'966500000001',phoneNormalized:'966500000001',code:'123456',brandName:'Fixture',password:'fixture-only',startsTrial:false});
+      assert.deepEqual(c.sends().map(s=>s.url.includes('waInstance111')?'primary':'backup'),['primary','primary','primary','backup']);
+      assert.deepEqual(c.sends().map(s=>s.at),[0,30_000,60_000,90_000]);
+      assert.equal(new Set(c.sends().map(s=>s.body)).size,1);checks++;
+    }
+    c=context({env:{GREEN_API_ACCESS_SENDER:'backup'}});await c.api[method]({phone:'966500000001',phoneNormalized:'966500000001',code:'123456',brandName:'Fixture',password:'fixture-only',startsTrial:false});
+    assert.match(c.sends()[0].url,/waInstance111/);assert.equal(c.sends().length,1);assert.deepEqual(c.delays,[]);checks++;
+    for(const options of [{timeout:true},{status:500},{status:408}]) {
+      c=context(options);await assert.rejects(()=>c.api[method]({phone:'966500000001',phoneNormalized:'966500000001',code:'123456',brandName:'Fixture',password:'fixture-only',startsTrial:false}));
+      assert.equal(c.sends().length,1);assert.deepEqual(c.delays,[]);checks++;
+    }
+  }
   console.log(`PASS ${checks} platform primary/backup, recovery, media and no-duplicate scenarios; mocked only`);
 })().catch(e=>{console.error(e);process.exitCode=1;});

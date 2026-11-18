@@ -6,7 +6,7 @@ import { enqueueOtpDelivery, deliverQueuedOtp } from "@/lib/auth/otp-delivery";
 import { isAllowedCustomerOtpPhone, isPhoneOtpRequiredForBrand } from "@/lib/auth/phone-otp";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const MAX_BODY_BYTES = 32 * 1024;
 const sendSmsHookSchema = z.object({

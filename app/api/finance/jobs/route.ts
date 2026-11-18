@@ -4,7 +4,7 @@ import { dispatchFinancePosCustomerMessages } from "@/lib/data/finance-pos-custo
 import { createFinanceCustomerReceiptPdf } from "@/lib/data/finance-customer-receipt";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET ?? "";
   const supplied = Buffer.from(request.headers.get("authorization") ?? "");

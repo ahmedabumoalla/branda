@@ -11,7 +11,8 @@ export function subscriptionReminderText(job: RenewalReminder) {
 
 export async function runSubscriptionRenewalReminders() {
   const db = createAdminClient();
-  const { data, error } = await db.rpc("claim_subscription_renewal_reminders", { p_limit: 20 });
+  // At most two concurrent waves fit the primary retry policy and lease budget.
+  const { data, error } = await db.rpc("claim_subscription_renewal_reminders", { p_limit: 10 });
   if (error) throw new Error("REMINDER_CLAIM_FAILED");
   const jobs = (data ?? []) as RenewalReminder[];
   const result = { claimed: jobs.length, queued: 0, skipped: 0, unknown: 0, retry: 0, failed: 0 };

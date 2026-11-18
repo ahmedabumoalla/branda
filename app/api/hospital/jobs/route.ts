@@ -4,7 +4,7 @@ import { runHospitalCustomerMessages } from "@/lib/commerce/hospital-customer-me
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   const supplied = request.headers.get("authorization") ?? "";

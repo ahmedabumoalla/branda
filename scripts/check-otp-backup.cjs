@@ -9,7 +9,7 @@ const base = {
 function load(file, env, fetcher) {
   const exports = {};
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new Function('require', 'exports', 'process', 'fetch', code)(name => name === 'server-only' || name.includes('green-api-partner') ? {} : require(name), exports, { env }, fetcher);
+  new Function('require', 'exports', 'process', 'fetch', 'setTimeout', code)(name => name === 'server-only' || name.includes('green-api-partner') ? {} : name.startsWith('@/') ? load(name.slice(2)+'.ts',env,fetcher) : require(name), exports, { env }, fetcher,fn=>{fn();return 0;});
   return exports;
 }
 async function scenario({ state = 'authorized', backupState = 'authorized', status = 200, ambiguous, env = base, method = 'sendGreenApiSupabaseOtp' } = {}) {
@@ -40,9 +40,9 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
     assert.equal(x.error, undefined); assert.equal(x.sends.length, 1);
     assert.match(x.sends[0].url, /waInstance111/, 'default must prefer primary'); checks++;
     const forced = await scenario({ method, env: { ...env, GREEN_API_ACCESS_SENDER: 'backup' } });
-    assert.equal(forced.error, undefined); assert.ok(forced.calls.every(c => c.url.includes('waInstance222'))); checks++;
+    assert.equal(forced.error, undefined); assert.ok(forced.calls.every(c => c.url.includes('waInstance111'))); checks++;
     const down = await scenario({ method, env: { ...env, GREEN_API_ACCESS_SENDER: 'backup' }, backupState: 'notAuthorized' });
-    assert.ok(down.error); assert.equal(down.sends.length, 0); checks++;
+    assert.equal(down.error, undefined); assert.equal(down.sends.length, 1); assert.match(down.sends[0].url,/waInstance111/); checks++;
   }
   for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp', 'sendGreenApiOwnerWelcome']) {
     const normal = await scenario({ method });
@@ -53,8 +53,8 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
     }
   }
   for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp', 'sendGreenApiOwnerWelcome']) for (const status of [401, 403, 429, 466]) {
-    const x = await scenario({ method, status }); assert.equal(x.error, undefined); assert.equal(x.sends.length, 2);
-    assert.equal(x.sends[0].body, x.sends[1].body, 'same code and recipient'); checks++;
+    const x = await scenario({ method, status }); assert.equal(x.error, undefined); assert.equal(x.sends.length, 4);
+    assert.equal(new Set(x.sends.map(s=>s.body)).size,1,'same code and recipient'); checks++;
   }
   for (const status of [400, 408, 500, 502, 504]) {
     const x = await scenario({ status }); assert.ok(x.error); assert.equal(x.sends.length, 1); checks++;
@@ -72,12 +72,12 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
   }
   const ownerBackup = await scenario({ method: 'sendGreenApiOwnerWelcome', state: 'notAuthorized' });
   const ownerBody = JSON.parse(ownerBackup.sends[0].body);
-  assert.equal(ownerBody.chatId, '966500000001@c.us'); assert.ok(ownerBody.message.includes('fixture-only')); checks++;
+  assert.equal(ownerBody.chatId, '966500000001@c.us'); assert.ok(ownerBody.caption.includes('fixture-only')); checks++;
   const legacy = await scenario({ env: Object.fromEntries(Object.entries(base).filter(([k]) => !k.includes('BACKUP'))) });
-  assert.equal(legacy.error, undefined); assert.equal(legacy.calls.length, 1); checks++;
+  assert.equal(legacy.error, undefined); assert.equal(legacy.calls.length, 2); checks++;
   for (const value of ['http://7700.api.greenapi.com', 'https://evil.example', 'https://api.greenapi.com/steal']) {
     const x = await scenario({ env: { ...base, GREEN_API_OTP_BACKUP_API_URL: value } });
-    assert.equal(x.error, undefined); assert.equal(x.calls.length, 1); assert.match(x.sends[0].url, /waInstance111/); checks++;
+    assert.equal(x.error, undefined); assert.equal(x.calls.length, 2); assert.match(x.sends[0].url, /waInstance111/); checks++;
   }
   const invalid = load('lib/whatsapp/green-api.ts', base, () => { throw Error('must not request'); });
   await assert.rejects(() => invalid.sendGreenApiSupabaseOtp({ phoneNormalized: 'bad', code: '123456' }), /OTP_INPUT_INVALID/); checks++;
@@ -93,8 +93,8 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
   for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp', 'sendGreenApiPagerMessage']) {
     const x = await scenario({ method, env: incidentEnv });
     assert.equal(x.error, undefined); assert.equal(x.sends.length, 1);
-    assert.ok(x.calls.every(c => c.url.includes('waInstance222'))); checks++;
-    const down = await scenario({ method, env: incidentEnv, backupState: 'notAuthorized' });
+    assert.ok(x.calls.every(c => c.url.includes('waInstance111'))); checks++;
+    const down = await scenario({ method, env: incidentEnv, state: 'notAuthorized', backupState: 'notAuthorized' });
     assert.ok(down.error); assert.equal(down.sends.length, 0); checks++;
   }
   const incidentCalls = [];
@@ -110,6 +110,6 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
   await assert.rejects(() => incident.sendGreenApiCustomerMessage(primary,{phone:'966500000001',message:'welcome'}), /MESSAGING_TEMPORARILY_PAUSED/); checks++;
   assert.equal(incidentCalls.length,0); checks++;
   assert.equal((await incident.sendGreenApiCustomerMessage(primary,{phone:'966500000001',message:'otp'},10000,'otp')).status,'queued');
-  assert.ok(incidentCalls.every(c=>c.url.includes('waInstance222'))); checks++;
+  assert.ok(incidentCalls.every(c=>c.url.includes('waInstance111'))); checks++;
   console.log(`PASS ${checks} sender and incident-mode scenarios; mocked only, no messages sent`);
 })().catch(e => { console.error(e); process.exitCode = 1; });

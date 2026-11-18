@@ -7,7 +7,7 @@ const supportsPrivateWhatsApp = id => id === loco || id === wahed;
 function load(file, mocks = {}, env = process.env, fetcher = globalThis.fetch) {
   const exports = {};
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new Function('require', 'exports', 'process', 'fetch', code)(name => name === 'server-only' ? {} : name in mocks ? mocks[name] : require(name), exports, { env }, fetcher);
+  new Function('require', 'exports', 'process', 'fetch', 'setTimeout', code)(name => name === 'server-only' ? {} : name in mocks ? mocks[name] : name.startsWith('@/') ? load(name.slice(2)+'.ts',mocks,env,fetcher) : require(name), exports, { env }, fetcher,fn=>{fn();return 0;});
   return exports;
 }
 const config = id => ({ apiUrl: 'https://api.greenapi.com', idInstance: id, apiTokenInstance: 'isolated-token-' + id });
@@ -69,7 +69,7 @@ async function scenario({ states = {}, linked = { ...config('333'), expectedPhon
     assert.equal(x.result.status, typeof fault === 'number' && fault < 500 && fault !== 408 ? 'rejected' : 'unknown'); checks++;
   }
   const foreign = await scenario({tenant:'another-cafe'}); assert.equal(foreign.selected,null); assert.equal(foreign.calls.length,0); assert.equal(foreign.gets.length,0); checks++;
-  const missingPrimary = await scenario({linked:null,configuration:{...env,GREEN_API_ID_INSTANCE:''}}); assert.equal(missingPrimary.selected.idInstance,'222'); checks++;
+  const missingPrimary = await scenario({linked:null,configuration:{...env,GREEN_API_ID_INSTANCE:''}}); assert.equal(missingPrimary.selected,null); checks++;
   const invalidBrand = await scenario({linked:{...config('333'),apiUrl:'https://evil.example'}}); assert.equal(invalidBrand.selected.idInstance,'111'); checks++;
   const changedPhone = await scenario({accountPhone:'966522222222'}); assert.equal(changedPhone.selected.idInstance,'111'); assert.equal(changedPhone.calls.filter(c=>c.method==='POST').length,1); checks++;
   const normal = await scenario();

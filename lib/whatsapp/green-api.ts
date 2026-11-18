@@ -52,25 +52,15 @@ async function sendOwnerWelcomeVideo(phone: string, caption: string) {
   if (caption.length > 1024) throw new Error("OWNER_WELCOME_REJECTED");
   const primary = await requireDeliveryConfig("owner");
   const backup = backupOtpSender(primary);
-  let sender = primary;
-  // Choose before submitting credentials so a disconnected primary cannot queue them.
-  // Never retry an ambiguous POST on another instance: it may already be accepted.
-  if (backup && (preferBackupForAccess() || !await otpSenderReady(validateOtpSender(primary)))) {
-    if (!await otpSenderReady(backup)) throw new Error("OWNER_WELCOME_REJECTED");
-    sender = backup;
-  }
   const send = (target: OtpSender) => fetch(otpEndpoint(target, "sendFileByUrl"), {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
-    signal: AbortSignal.timeout(Math.max(30_000, greenApiTimeoutMs())),
+    signal: AbortSignal.timeout(30_000),
     body: JSON.stringify({ chatId: `${phone}@c.us`, urlFile: ownerGuideUrl, fileName: ownerGuideFilename, caption }),
   });
   let response: Response;
-  try { response = await send(sender); } catch { throw new Error("OWNER_WELCOME_UNCERTAIN"); }
-  // Only an explicit refusal permits a second submission; never retry an unknown outcome
-  if (!response.ok && sender === primary && backup && [401, 403, 429, 466].includes(response.status) && await otpSenderReady(backup)) {
-    try { response = await send(backup); } catch { throw new Error("OWNER_WELCOME_UNCERTAIN"); }
-  }
-  if (!response.ok) throw new Error(response.status < 500 ? "OWNER_WELCOME_REJECTED" : "OWNER_WELCOME_UNCERTAIN");
+  try { response = await submitPlatformMessage(validateOtpSender(primary), backup, send); }
+  catch (error) { throw new Error(error instanceof Error && error.message === "PLATFORM_SENDERS_UNAVAILABLE" ? "OWNER_WELCOME_REJECTED" : "OWNER_WELCOME_UNCERTAIN"); }
+  if (!response.ok) throw new Error(response.status < 500 && response.status !== 408 ? "OWNER_WELCOME_REJECTED" : "OWNER_WELCOME_UNCERTAIN");
   let data: GreenApiSendResponse;
   try { data = await response.json(); } catch { throw new Error("OWNER_WELCOME_UNCERTAIN"); }
   if (typeof data.idMessage !== "string" || !data.idMessage) throw new Error("OWNER_WELCOME_UNCERTAIN");
@@ -330,8 +320,8 @@ export type GreenApiCustomerSender = OtpSender;
 
 export function getGreenApiCustomerPlatformSenders() {
   let primary: OtpSender | null = null;
-  try { primary = validateOtpSender(requireGreenApiConfig()); } catch { /* Missing primary does not disable standby. */ }
-  return { primary, backup: backupOtpSender(primary ?? { apiUrl: "", idInstance: "", apiTokenInstance: "" }) };
+  try { primary = validateOtpSender(requireGreenApiConfig()); } catch { /* Standby cannot bypass a missing primary configuration. */ }
+  return { primary, backup: primary ? backupOtpSender(primary) : null };
 }
 
 export async function isGreenApiCustomerSenderReady(sender: GreenApiCustomerSender) {
@@ -341,7 +331,8 @@ export async function isGreenApiCustomerSenderReady(sender: GreenApiCustomerSend
 /** Exactly one POST. Selection/failover must finish before calling this function. */
 export async function sendGreenApiCustomerMessage(sender: GreenApiCustomerSender, input: { phone: string; message: string }, timeoutMs = 10_000, kind: "otp" | "other" = "other"): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
   if (!/^9665\d{8}$/.test(input.phone) || !input.message.trim() || input.message.length > 2000) throw new Error("INVALID_CUSTOMER_MESSAGE");
-  const config = validateOtpSender(isGreenApiBackupOnly() ? await requireDeliveryConfig(kind) : sender);
+  if (isGreenApiBackupOnly() && kind === "other") throw new Error("MESSAGING_TEMPORARILY_PAUSED");
+  const config = validateOtpSender(sender);
   try {
     const response = await fetch(otpEndpoint(config, "sendMessage"), {
       method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
@@ -353,12 +344,6 @@ export async function sendGreenApiCustomerMessage(sender: GreenApiCustomerSender
     return typeof data?.idMessage === "string" && data.idMessage.length > 0 && data.idMessage.length <= 200
       ? { status: "queued", providerMessageId: data.idMessage } : { status: "unknown" };
   } catch { return { status: "unknown" }; }
-}
-
-// Prefer the primary again; the explicit backup override remains available during incidents.
-// Campaigns and the durable queue's logical identity are intentionally unaffected.
-function preferBackupForAccess() {
-  return process.env.GREEN_API_ACCESS_SENDER?.trim() === "backup";
 }
 
 function validateOtpSender(sender: OtpSender): OtpSender {
@@ -388,20 +373,38 @@ function otpEndpoint(sender: OtpSender, method: "getStateInstance" | "sendMessag
   return `${sender.apiUrl}/waInstance${sender.idInstance}/${method}/${sender.apiTokenInstance}`;
 }
 
+const PRIMARY_RETRY_DELAY_MS = 30_000;
+const waitForPrimaryRetry = () => new Promise<void>(resolve => setTimeout(resolve, PRIMARY_RETRY_DELAY_MS));
+
+async function probeSenderReady(sender: OtpSender) {
+  try {
+    const response = await fetch(otpEndpoint(sender, "getStateInstance"), {
+      cache: "no-store", redirect: "error", signal: AbortSignal.timeout(2500),
+    });
+    return response.ok && (await response.json())?.stateInstance === "authorized";
+  } catch { return false; }
+}
+
 async function otpSenderReady(sender: OtpSender) {
-  // A single slow/failed readiness request must not move traffic off Branda.
-  // Retry only these read-only probes, never an uncertain message submission.
+  // Three primary attempts, thirty seconds apart, then the fourth slot may use standby.
   const attempts = sender.idInstance === process.env.GREEN_API_ID_INSTANCE?.trim() ? 3 : 1;
   for (let attempt = 0; attempt < attempts; attempt++) {
-    if (attempt) await new Promise(resolve => setTimeout(resolve, 250 * attempt));
-    try {
-      const response = await fetch(otpEndpoint(sender, "getStateInstance"), {
-        cache: "no-store", redirect: "error", signal: AbortSignal.timeout(2500),
-      });
-      if (response.ok && (await response.json())?.stateInstance === "authorized") return true;
-    } catch { /* Retry the read-only primary probe within the bounded readiness budget. */ }
+    if (await probeSenderReady(sender)) return true;
+    if (attempts === 3) await waitForPrimaryRetry();
   }
   return false;
+}
+
+async function submitPlatformMessage(primary: OtpSender, backup: OtpSender | null, send: (sender: OtpSender) => Promise<Response>) {
+  for (let attempt = 0; attempt < (backup ? 4 : 3); attempt++) {
+    if (attempt) await waitForPrimaryRetry();
+    const sender = attempt < 3 ? primary : backup!;
+    if (!await probeSenderReady(sender)) continue;
+    // Transport errors and ambiguous acknowledgements are not permission to duplicate a message.
+    const response = await send(sender);
+    if (response.ok || ![401, 403, 429, 466].includes(response.status) || attempt === (backup ? 3 : 2)) return response;
+  }
+  throw new Error("PLATFORM_SENDERS_UNAVAILABLE");
 }
 
 /** OTP entry points and owner welcome can use the backup; campaigns cannot. OTP queue admission remains bound
@@ -411,60 +414,42 @@ async function otpSenderReady(sender: OtpSender) {
 async function sendVerificationCode(phone: string, code: string, message: string, timeoutMs: number) {
   if (!/^9665\d{8}$/.test(phone) || !/^\d{6}$/.test(code)) throw new Error("OTP_INPUT_INVALID");
   const primary = validateOtpSender(await requireDeliveryConfig("otp"));
-  const backup = isGreenApiBackupOnly() ? null : backupOtpSender(primary);
-  let sender = primary;
-  if (backup && (preferBackupForAccess() || !await otpSenderReady(primary))) {
-    if (!await otpSenderReady(backup)) throw new Error("OTP_SENDERS_UNAVAILABLE");
-    sender = backup;
+  const backup = backupOtpSender(primary);
+  let response: Response;
+  try {
+    response = await submitPlatformMessage(primary, backup, sender => fetch(otpEndpoint(sender, "sendMessage"), {
+      method: "POST", headers: { "content-type": "application/json" },
+      cache: "no-store", redirect: "error",
+      signal: AbortSignal.timeout(Math.max(1000, Math.min(25_000, timeoutMs))),
+      body: JSON.stringify({ chatId: `${phone}@c.us`, message, linkPreview: false }),
+    }));
+  } catch (error) { throw new Error(error instanceof Error && error.message === "PLATFORM_SENDERS_UNAVAILABLE" ? "OTP_SENDERS_UNAVAILABLE" : "OTP_SEND_OUTCOME_UNKNOWN"); }
+  if (!response.ok) {
+    throw new Error(`OTP_SEND_HTTP_${response.status}`);
   }
-  for (let attempt = 0; attempt < 2; attempt++) {
-    let response: Response;
-    try {
-      response = await fetch(otpEndpoint(sender, "sendMessage"), {
-        method: "POST", headers: { "content-type": "application/json" },
-        cache: "no-store", redirect: "error",
-        signal: AbortSignal.timeout(Math.max(1000, Math.min(25_000, timeoutMs))),
-        body: JSON.stringify({ chatId: `${phone}@c.us`, message, linkPreview: false }),
-      });
-    } catch { throw new Error("OTP_SEND_OUTCOME_UNKNOWN"); }
-    if (!response.ok) {
-      if (sender === primary && backup && [401, 403, 429, 466].includes(response.status) && await otpSenderReady(backup)) {
-        sender = backup;
-        continue;
-      }
-      throw new Error(`OTP_SEND_HTTP_${response.status}`);
-    }
-    let payload: GreenApiSendResponse;
-    try { payload = await response.json(); } catch { throw new Error("OTP_SEND_OUTCOME_UNKNOWN"); }
-    if (!payload || typeof payload.idMessage !== "string" || !payload.idMessage || payload.idMessage.length > 200) {
-      throw new Error("OTP_SEND_OUTCOME_UNKNOWN");
-    }
-    return { providerMessageId: payload.idMessage };
+  let payload: GreenApiSendResponse;
+  try { payload = await response.json(); } catch { throw new Error("OTP_SEND_OUTCOME_UNKNOWN"); }
+  if (!payload || typeof payload.idMessage !== "string" || !payload.idMessage || payload.idMessage.length > 200) {
+    throw new Error("OTP_SEND_OUTCOME_UNKNOWN");
   }
-  throw new Error("OTP_SENDERS_UNAVAILABLE");
+  return { providerMessageId: payload.idMessage };
 }
 
-/** Explicit incident switch; stays on standby until the operator restores primary. */
+/** Legacy pause flag never bypasses the mandatory primary attempt policy. */
 export function isGreenApiBackupOnly() {
   return process.env.GREEN_API_TEMPORARY_BACKUP_ONLY?.trim() === "true";
 }
 
 async function requireDeliveryConfig(kind: "otp" | "owner" | "pager" | "subscription_reminder" | "other") {
-  if (!isGreenApiBackupOnly()) {
-    const configured = requireGreenApiConfig();
-    // These entry points already perform their own pre-submit selection and
-    // explicit-refusal handling. Keep their incident override semantics intact.
-    if (kind === "otp" || kind === "owner") return configured;
-    const primary = validateOtpSender(configured);
-    if (await otpSenderReady(primary)) return primary;
-    const backup = backupOtpSender(primary);
-    if (backup && await otpSenderReady(backup)) return backup;
-    throw new Error("PLATFORM_SENDERS_UNAVAILABLE");
-  }
-  if (kind === "other" || kind === "owner") throw new Error("MESSAGING_TEMPORARILY_PAUSED");
-  const sender = backupOtpSender({ apiUrl: "", idInstance: "", apiTokenInstance: "" });
-  if (!sender || !await otpSenderReady(sender)) throw new Error("BACKUP_SENDER_UNAVAILABLE");
-  return sender;
+  if (isGreenApiBackupOnly() && (kind === "other" || kind === "owner")) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
+  const configured = requireGreenApiConfig();
+  // Access sends share a single attempt budget across readiness and explicit refusals.
+  if (kind === "otp" || kind === "owner") return configured;
+  const primary = validateOtpSender(configured);
+  if (await otpSenderReady(primary)) return primary;
+  const backup = backupOtpSender(primary);
+  if (backup && await otpSenderReady(backup)) return backup;
+  throw new Error("PLATFORM_SENDERS_UNAVAILABLE");
 }
 
 /** Server-only platform credentials; never use this for a brand-owned connection.
