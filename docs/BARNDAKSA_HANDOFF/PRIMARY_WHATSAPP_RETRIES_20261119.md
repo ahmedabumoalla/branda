@@ -25,4 +25,6 @@ Full TypeScript and nine mocked suites passed 2026-11-18T21:56:24.183Z; Node v20
 
 Legacy test loaders and old immediate-standby assertions initially failed; updated to load current dependencies and assert the requested primary-first behavior, then all passed. No real test messages or browser inspection
 
-Initial source b25373a1301a5ed6b4f3ed79dfb74b77013dfdb9 pushed; final worker-budget follow-up passed focused birthday/card-link checks and full TypeScript, evidence followup-checks.json. Publication pending final exact GitHub commit and Vercel READY verification. Root application sources remain untouched; implementation in isolated release worktree
+Published source 34a73af8c75e51a173b4e6599ff2e56e27410f40; Vercel dpl_E1sqniPhXei11Whc7mPPdm6tZ8XR READY and both production aliases verified 2026-11-18T22:20:48.368Z. Read-only production login/register HTTP200 and protected worker routes401 verified 2026-11-18T22:20:58.811Z. No jobs claimed or messages sent. Follow-up card-link/birthday budget and full TypeScript passed; evidence followup-checks.json. Initial superseded build was canceled before publication. Root application sources remain untouched; implementation in isolated release worktree
+
+Read-only primary-provider readiness returned authorized/HTTP200 at 2026-11-18T22:03:45.936Z; this is connection state, not a real delivery test
