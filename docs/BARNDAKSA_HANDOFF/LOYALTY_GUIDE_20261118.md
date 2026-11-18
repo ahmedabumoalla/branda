@@ -14,7 +14,7 @@ Published4e4cf1101ed58e11c4c149a6573154981f7f88b8 Verceldpl_2DvYtPuxL376LaZmAfqx
 
 ## Mobile standalone reader
 
-- MOBILE GUIDE2026-11-18: Native protected PDF opens in a separate tab, navpanes=0 and view=FitH. Mobile/SSR create no iframe or background PDF request; desktop retains same-page preview, responsive listener cleans up. Original16-page PDF, download and loyalty-only authorization unchanged. Focused authorization/navigation/mobile/desktop tests and full TypeScript passed; scoped original text check recorded in output/loyalty-guide-mobile-20261118. Source review plus Chromium parser reference; no device/browser rendering test. Publication pending
+- MOBILE GUIDE2026-11-18: Native protected PDF opens in a separate tab, navpanes=0 and view=FitH. Mobile/SSR create no iframe or background PDF request; desktop retains same-page preview, responsive listener cleans up. Original16-page PDF, download and loyalty-only authorization unchanged. Focused authorization/navigation/mobile/desktop tests and full TypeScript passed; scoped original text check recorded in output/loyalty-guide-mobile-20261118. Source review plus Chromium parser reference; no device/browser rendering test. Publishedfc47d6c42fcc66e9267d3686e4cef113e149d9b2, Verceldpl_6S4UzbNrRb8nqKtFGkzVPQt61akX READY both aliases/exact HTTP verified2026-11-18T02:34:21.582Z; authenticated guide SSR/native links/exact PDF/download and anonymous403 passed
 
 - Chromium source reference: https://chromium.googlesource.com/chromium/src/+/HEAD/chrome/browser/resources/pdf/open_pdf_params_parser.ts
 - PDF viewer controls differ by device; native opening and the download fallback are retained without a new library or changed PDF bytes
