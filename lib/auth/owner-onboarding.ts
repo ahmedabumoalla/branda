@@ -2,13 +2,14 @@ import "server-only";
 
 import { createHmac, randomBytes, randomInt, randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
+import { after } from "next/server";
 import { z } from "zod";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { normalizeInputDigits } from "@/lib/auth/input-digits";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { isGreenApiConfigured, sendGreenApiOtp } from "@/lib/whatsapp/green-api";
+import { isGreenApiConfigured, sendGreenApiOtp, sendGreenApiOwnerSignupWelcome } from "@/lib/whatsapp/green-api";
 import { resolveBranchGoogleMapsUrl } from "@/lib/maps/resolve-branch-location";
 
 const COOKIE = "barndaksa_owner_onboarding";
@@ -136,6 +137,12 @@ export async function completeOwnerOnboarding(input: { password: string; confirm
       app_metadata: { owner_onboarding_id: proof.id, owner_onboarding_proof: proof.sessionHash },
     });
     if (created.error || !created.data.user) return { ok: false, message: "تعذر إنشاء الحساب قد يكون البريد أو الجوال مسجلًا مسبقًا؛ جرّب تسجيل الدخول" };
+    // The account is committed at this point. Media delivery must not delay login or turn
+    // successful signup into a failure. No automatic retry of an ambiguous provider POST.
+    after(async () => {
+      try { await sendGreenApiOwnerSignupWelcome({ phone, brandName: draft.brandNameAr }); }
+      catch { console.warn("[owner-onboarding] welcome video submission unconfirmed"); }
+    });
     (await cookies()).delete(COOKIE);
     const signedIn = await (await createClient()).auth.signInWithPassword({ phone: `+${phone}`, password: password.data });
     if (signedIn.error || !signedIn.data.session) return { ok: true, message: "تم إنشاء حسابك وتفعيل تجربتك المجانية سجّل الدخول للمتابعة", redirectTo: "/login" };

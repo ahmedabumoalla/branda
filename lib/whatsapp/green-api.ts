@@ -1,5 +1,6 @@
 import "server-only";
 import { cashierGuideFilename, cashierGuideUrl } from "@/lib/cashier/guide";
+import { ownerGuideFilename, ownerGuideUrl } from "@/lib/whatsapp/owner-guide";
 
 const DEFAULT_GREEN_API_TIMEOUT_MS = 10_000;
 
@@ -21,7 +22,34 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
     trialMessage = month.length && week.length
       ? `تجربة مجانية لمدة شهر (٣٠ يومًا) من اليوم لباقات: ${month.map(term => term.planName).join("، ")}\nتجربة مجانية لمدة ٧ أيام من اليوم لباقات: ${week.map(term => term.planName).join("، ")}`
       : month.length ? "تجربتك المجانية شهر كامل (٣٠ يومًا) من اليوم" : "تجربتك المجانية ٧ أيام من اليوم";
+    if (trialMessage.length > 450) trialMessage = "تبدأ التجربة المجانية اليوم لمدة ٣٠ يومًا أو ٧ أيام حسب كل باقة راجع مدة كل باقة في لوحة التحكم";
   }
+  return sendOwnerWelcomeVideo(input.phone, [
+    `مرحبًا بك في برندة حساب ${input.brandName} جاهز`,
+    "المنصة: https://barndaksa.com",
+    "الدخول: https://barndaksa.com/login",
+    `الجوال: ${input.phone}`,
+    `كلمة المرور: ${input.password}`,
+    trialMessage,
+    "شاهد الفيديو المرفق لشرح إعداد حساب الولاء في برندة",
+  ].join("\n"));
+}
+
+/** Called only after verified self-registration commits successfully; never includes the chosen password. */
+export async function sendGreenApiOwnerSignupWelcome(input: { phone: string; brandName: string }) {
+  return sendOwnerWelcomeVideo(input.phone, [
+    `مرحبًا بك في برندة حساب ${input.brandName} جاهز`,
+    "يسعدنا انضمامك ابدأ تجهيز حسابك من لوحة التحكم",
+    "الدخول: https://barndaksa.com/login",
+    `الجوال: ${input.phone}`,
+    "استخدم كلمة المرور التي اخترتها عند التسجيل",
+    "شاهد الفيديو المرفق لشرح إعداد حساب الولاء في برندة",
+  ].join("\n"));
+}
+
+async function sendOwnerWelcomeVideo(phone: string, caption: string) {
+  if (!/^9665\d{8}$/.test(phone)) throw new Error("INVALID_OWNER_RECIPIENT");
+  if (caption.length > 1024) throw new Error("OWNER_WELCOME_REJECTED");
   const primary = await requireDeliveryConfig("owner");
   const backup = backupOtpSender(primary);
   let sender = primary;
@@ -31,17 +59,10 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
     if (!await otpSenderReady(backup)) throw new Error("OWNER_WELCOME_REJECTED");
     sender = backup;
   }
-  const send = (target: OtpSender) => fetch(otpEndpoint(target, "sendMessage"), {
+  const send = (target: OtpSender) => fetch(otpEndpoint(target, "sendFileByUrl"), {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
-    signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
-    body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: [
-      `حساب ${input.brandName} جاهز في برندة`,
-      "المنصة: https://barndaksa.com",
-      "الدخول: https://barndaksa.com/login",
-      `الجوال: ${input.phone}`,
-      `كلمة المرور: ${input.password}`,
-      trialMessage,
-    ].join("\n") }),
+    signal: AbortSignal.timeout(Math.max(30_000, greenApiTimeoutMs())),
+    body: JSON.stringify({ chatId: `${phone}@c.us`, urlFile: ownerGuideUrl, fileName: ownerGuideFilename, caption }),
   });
   let response: Response;
   try { response = await send(sender); } catch { throw new Error("OWNER_WELCOME_UNCERTAIN"); }
@@ -363,7 +384,7 @@ function backupOtpSender(primary: OtpSender): OtpSender | null {
   } catch { return null; }
 }
 
-function otpEndpoint(sender: OtpSender, method: "getStateInstance" | "sendMessage") {
+function otpEndpoint(sender: OtpSender, method: "getStateInstance" | "sendMessage" | "sendFileByUrl") {
   return `${sender.apiUrl}/waInstance${sender.idInstance}/${method}/${sender.apiTokenInstance}`;
 }
 

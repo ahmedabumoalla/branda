@@ -26,7 +26,7 @@ for(const input of ["", "+971501111111", "+447700900123", "051111", "٠٥١١١�
   await test(()=>assert.equal(phoneUtils.normalizeSaudiPhone(input),null));
 const valid={brandNameAr:"علامة الاختبار",brandNameEn:"Test Brand",ownerName:"Test Owner",email:"owner@example.invalid",phone:"0511111111",mapsUrl:"https://google.com/maps?q=24,46",couponCode:""};
 function context(options={}) {
-  const events=[], jar=new Map(); let capturedCode="";
+  const events=[], jar=new Map(), deferred=[]; let capturedCode="";
   const rpc=async(name,args)=>{events.push({name,args});
     if(name==="begin_owner_onboarding")return {data:{ok:!options.limited},error:null};
     if(name==="verify_owner_onboarding")return {data:{ok:!options.badCode},error:null};
@@ -34,15 +34,40 @@ function context(options={}) {
     return {data:true,error:null};
   };
   const stubs={
+    "next/server":{after:callback=>deferred.push(callback)},
     "next/headers":{cookies:async()=>({get:key=>jar.has(key)?{value:jar.get(key)}:undefined,set:(key,val,config)=>{jar.set(key,val);events.push({name:"cookie",config});},delete:key=>jar.delete(key)}),headers:async()=>new Headers()},
     "@/lib/barndaksa/env":{getSupabaseServiceRoleKey:()=>"test-secret-never-production"},
     "@/lib/supabase/admin":{createAdminClient:()=>({rpc,auth:{admin:{createUser:async input=>{events.push({name:"createUser",input});return {data:{user:{id:"new-owner"}},error:options.createError?{}:null};}}}})},
     "@/lib/supabase/server":{createClient:async()=>({auth:{signInWithPassword:async input=>{events.push({name:"signIn",input});return {data:{session:options.signInError?null:{}},error:null};}}})},
     "@/lib/maps/resolve-branch-location":{resolveBranchGoogleMapsUrl:async()=>{events.push({name:"mapPreview"});if(options.mapError)throw Error("unavailable");return {latitude:24,longitude:46};}},
-    "@/lib/whatsapp/green-api":{isGreenApiConfigured:()=>!options.unconfigured,sendGreenApiOtp:async input=>{capturedCode=input.code;events.push({name:"provider"});if(options.providerError)throw Error("provider-error");return {providerMessageId:"test"};}},
+    "@/lib/whatsapp/green-api":{isGreenApiConfigured:()=>!options.unconfigured,sendGreenApiOtp:async input=>{capturedCode=input.code;events.push({name:"provider"});if(options.providerError)throw Error("provider-error");return {providerMessageId:"test"};},sendGreenApiOwnerSignupWelcome:async input=>{events.push({name:"welcome",input});if(options.welcomeError)throw Error("private-provider-error");return {providerMessageId:"welcome-test"};}},
   };
-  return {api:load("lib/auth/owner-onboarding.ts",stubs),events,jar,get code(){return capturedCode;}};
+  return {api:load("lib/auth/owner-onboarding.ts",stubs),events,jar,deferred,get code(){return capturedCode;}};
 }
+for(const planChoice of ['loyalty','menu_loyalty'])for(const signInError of [false,true])await test(async()=>{
+  const c=context({draft:{...valid,planChoice},signInError});
+  await c.api.requestOwnerOnboarding({...valid,planChoice});
+  const result=await c.api.completeOwnerOnboarding({password:'fixture-password',confirmPassword:'fixture-password'});
+  assert(result.ok);assert.equal(c.deferred.length,1);assert(!c.events.some(e=>e.name==='welcome'));
+  await c.deferred[0]();const messages=c.events.filter(e=>e.name==='welcome');assert.equal(messages.length,1);
+  assert.deepEqual(messages[0].input,{phone:'966511111111',brandName:valid.brandNameAr});
+  assert(!JSON.stringify(messages).includes('fixture-password'));
+  assert(!(await c.api.completeOwnerOnboarding({password:'fixture-password',confirmPassword:'fixture-password'})).ok);
+  assert.equal(c.deferred.length,1);
+});
+for(const options of [{createError:true},{unverified:true}])await test(async()=>{
+  const c=context(options);await c.api.requestOwnerOnboarding(valid);
+  assert(!(await c.api.completeOwnerOnboarding({password:'12345678',confirmPassword:'12345678'})).ok);
+  assert.equal(c.deferred.length,0);
+});
+await test(async()=>{
+  const c=context({welcomeError:true});await c.api.requestOwnerOnboarding(valid);
+  assert((await c.api.completeOwnerOnboarding({password:'12345678',confirmPassword:'12345678'})).ok);
+  const original=console.warn,logs=[];console.warn=(...args)=>logs.push(args);
+  try{await c.deferred[0]();}finally{console.warn=original;}
+  assert.equal(c.events.filter(e=>e.name==='welcome').length,1);assert.equal(logs.length,1);
+  assert(!JSON.stringify(logs).includes('private-provider-error'));assert(!JSON.stringify(logs).includes('966511111111'));
+});
 for(const [field,value,expected] of [["brandNameAr","Test","بالعربية"],["brandNameEn","علامة","بالإنجليزية"],["ownerName","x","المسؤول"],["email","invalid","البريد الإلكتروني"],["phone","05111","رقم جوال سعودي"]])
   await test(async()=>{const c=context();const result=await c.api.requestOwnerOnboarding({...valid,[field]:value});assert(!result.ok);assert(result.message.includes(expected));if(field!=="phone")assert(!result.message.includes("سعودي"));assert.equal(c.events.length,0);});
 for(const phone of ["٠٥١١١١١١١١", "\u2066+۹۶۶ ۵۱ ۱۱۱ ۱۱۱۱\u2069", "+966 (0)51 111 1111"])

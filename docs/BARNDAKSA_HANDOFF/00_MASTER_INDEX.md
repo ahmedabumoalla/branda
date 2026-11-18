@@ -1,3 +1,5 @@
+- [Owner welcome and setup video](OWNER_WELCOME_VIDEO_20261118.md)
+
 - [Loyalty cashier video guide](CASHIER_VIDEO_GUIDE_20261118.md)
 
 - [Owner signup validation](SIGNUP_VALIDATION_20261118.md)
