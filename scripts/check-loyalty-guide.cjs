@@ -61,10 +61,33 @@ const nodes = tree => !tree || typeof tree !== 'object' ? [] : [tree, ...React.C
   assert.equal(nodes(await Page()).filter(x => x.type === 'iframe').length, 0);
   features = ['loyalty'];
   const page = nodes(await Page());
-  assert.equal(page.filter(x => x.type === 'iframe').length, 1);
+  const guideUrl = '/api/loyalty-guide#navpanes=0&view=FitH';
   assert(page.some(x => x.props?.href === '/api/loyalty-guide?download=1'));
-  assert(page.some(x => x.props?.href === '#loyalty-guide-preview' && !x.props.target));
-  assert(page.some(x => x.type === 'iframe' && x.props.title && x.props.src === '/api/loyalty-guide#view=FitH'));
+  assert(page.some(x => x.props?.href === guideUrl && x.props.target === '_blank' && x.props.rel.includes('noopener')));
+  assert(page.some(x => x.props?.src === guideUrl));
+  let wide = false, cleanup;
+  const listeners = new Set();
+  const oldWindow = global.window;
+  global.window = { matchMedia: query => {
+    assert.equal(query, '(min-width: 768px)');
+    return { matches: wide, addEventListener: (event, fn) => { assert.equal(event, 'change'); listeners.add(fn); }, removeEventListener: (_, fn) => listeners.delete(fn) };
+  } };
+  const { LoyaltyGuidePreview } = load('components/dashboard/loyalty-guide-preview.tsx', {
+    react: { ...React, useSyncExternalStore: (subscribe, snapshot, serverSnapshot) => {
+      assert.equal(serverSnapshot(), false, 'SSR must not fetch a hidden mobile iframe');
+      cleanup = subscribe(() => {});
+      return snapshot();
+    } },
+  });
+  for (wide of [false, true, false]) {
+    const preview = nodes(LoyaltyGuidePreview({ src: guideUrl }));
+    assert.equal(preview.filter(x => x.type === 'iframe').length, wide ? 1 : 0);
+    if (wide) assert(preview.some(x => x.type === 'iframe' && x.props.title && x.props.src === guideUrl));
+    else assert(preview.some(x => x.type === 'a' && x.props.href === guideUrl && x.props.target === '_blank'));
+    cleanup();
+    assert.equal(listeners.size, 0);
+  }
+  global.window = oldWindow;
 
   const navigation = load('components/dashboard/integrated-system-navigation.ts');
   for (const slug of ['fawasel', 'wahed-maasoub', 'mind-hospital', 'khayal-aldeem', 'new-brand']) {
