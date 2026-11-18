@@ -7,4 +7,4 @@
 - Live read-only preflight: no saved logo, no cards or wallet passes. No fabricated logo, data mutation, push or real messages.
 - Validation: 47 telecom/UI/logo/native-art/authorized-save checks, 45 automatic identity checks, 18 fresh snapshot checks and native wallet integration passed. Snapshot harness initially lacked the newly imported enum stub; corrected and rerun successfully. Full TypeScript passed. Original scoped text integrity run recorded in checks.json. Browser not used.
 - Evidence: output/last-ring-20261119/checks.json and output/fawasel-branches-20261118/last-ring-{brand,preflight}.json. Node20.20.2; commands and input SHA256 identities recorded.
-- Publication pending exact production deployment verification.
+- Published source b65dcb56b4f6d7b7aeec18358f02e8c80f4b8042; Vercel dpl_44BSLruJAt8pZggYeyhQr988R1Ko READY on both production aliases. Public brand signup returned200 with exact deployment marker and phone SVG at 2026-11-18T23:29:39.122Z. No browser/device screenshot verification. No logo uploaded by the customer yet.
