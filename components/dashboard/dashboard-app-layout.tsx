@@ -169,6 +169,9 @@ export function DashboardAppLayout({
       overrides: guard.featureOverrides,
     });
 
+  const accountSettings = pathname === "/dashboard/settings" && !guard.snapshot?.staff &&
+    !cafeHasFeature("finance", { planId: guard.activePlanId, plans: guard.plans, overrides: guard.featureOverrides });
+
   // User requests 2026-11-15: the MIND and Aldeem accounts show the loading skeleton the moment a section is clicked
   // Aldeem mandate 2026-11-15: every control explains itself and loading text placeholders become a quiet progress line
   const aldeem = isAldeemCafe({ slug: guard.cafeSlug });
@@ -242,7 +245,7 @@ export function DashboardAppLayout({
       {pathname === "/dashboard/subscription" || pathname.startsWith("/dashboard/subscription/") ? content
         : guard.loading ? <p role="status" className="p-10 text-center">جارٍ التحقق من الاشتراك</p>
         : guard.error ? <div role="alert" className="p-10 text-center"><p>تعذر التحقق من الاشتراك حاول مجددًا</p><button type="button" className="mt-4 rounded-xl bg-[#38251b] px-5 py-3 text-white" onClick={() => { clearDashboardShellSnapshot(); setGuard(state => ({ ...state, loading: true, error: false })); setRetry(value => value + 1); }}>إعادة المحاولة</button></div>
-        : !guard.activePlanId ? <SubscriptionExpiredState />
+        : !guard.activePlanId && !accountSettings ? <SubscriptionExpiredState />
         : allowed ? content : <DashboardFeatureBlockedState title={currentFeature?.title ?? ""} />}
     </ResponsiveAppShell>
   );

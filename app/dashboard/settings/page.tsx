@@ -50,7 +50,7 @@ export default async function SettingsPage() {
 
 
 
-  const features = await getOwnerFeatureCodes().catch(() => []);
+  const features = await getOwnerFeatureCodes();
   if (!featureCodesAllow(features, "settings")) {
     return <DashboardFeatureBlockedState title="إعدادات البراند" />;
   }

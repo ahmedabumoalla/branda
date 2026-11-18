@@ -13,7 +13,7 @@ function harness(options={}) {
  const context={id:brand,slug:"brand-dabab",name:"ضباب",businessCategory:"cafes_coffee",role:options.role==="platform_admin"?"platform_admin":"owner"};
  const session={auth:{async getUser(){calls.push("auth");return {data:{user:options.signedOut?null:{id:actor}},error:options.authError??null};}},from(table){
   calls.push(`table:${table}`);const query={select(){return query;},eq(key,value){calls.push([table,key,value]);return query;},async maybeSingle(){if(table==="profiles")return {data:{role:options.role??"cafe_owner",status:options.inactive?"suspended":"active"},error:options.profileError??null};if(table==="cafe_settings")return {data:stored,error:null};throw Error(`Unexpected table ${table}`);}};return query;
- },async rpc(rpc,args){calls.push({rpc,args});assert.equal(rpc,"save_owner_cafe_settings");assert.equal(args.p_cafe_id,brand);
+ },async rpc(rpc,args){calls.push({rpc,args});assert.equal(rpc,"save_owner_cafe_settings_with_identity");assert.equal(args.p_cafe_id,brand);
   if(options.rpcError)return {data:null,error:options.rpcError};
   if(options.missingData)return {data:null,error:null};
   name=options.canonicalName??args.p_settings.cafe_name;stored={...stored,...Object.fromEntries(Object.entries(args.p_settings).filter(([key,val])=>key!=="cafe_name"&&val!==undefined))};
@@ -23,6 +23,7 @@ function harness(options={}) {
  const mocks={"server-only":{},"@/lib/supabase/server":{createClient:async()=>session},"@/lib/data/cafes":{
   requireOwnerCafeContext:async()=>{calls.push("context");if(options.contextError)throw Error("Forbidden");return {...context,name:options.freshContext?name:context.name};},getCafeBySlug:async()=>({id:brand,slug:context.slug,name,business_category:"cafes_coffee"})},
   "@/lib/platform/maintenance":{readMaintenanceSessionCookie:async()=>options.noMaintenance?null:maintenance},
+  "@/lib/brands/management":{managedBrandLogo:async()=>undefined},
   "@/lib/data/mappers":{mapDbSettingsToCafeSettings:(slug,row)=>({cafeSlug:slug,cafeName:slug,ownerName:row.owner_name??"",ownerEmail:row.owner_email??"",ownerPhone:row.owner_phone??"",description:row.description??undefined,logoAssetId:row.logo_storage_path??undefined,domainStatus:"غير مربوط"})},
   "@/lib/storage/resolve-storage-url":{resolvePublishedStoragePathToUrl:async(bucket,key)=>`https://assets.example.test/${bucket}/${key}`,storageBucketForLogo:()=>"cafe-logos"},
   "@/lib/data/owner-service-access":{assertOwnerServiceEnabled:async(feature)=>{calls.push(`entitlement:${feature}`);if(options.noEntitlement)throw Error("Service unavailable");}},

@@ -8,6 +8,7 @@ import {
   getEffectiveBrandFeatureAccess,
   getPlanIncludedFeatures,
 } from "@/lib/platform/feature-access";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 export function getPlatformPlans(): PlatformPlan[] {
   return mockPlatformPlans;
@@ -29,6 +30,12 @@ export function cafeHasFeature(
 
   const plans = options?.plans ?? [];
   const activePlanId = options?.planId ?? "";
+  if (feature === "settings") {
+    const active = plans.some(plan => plan.id === activePlanId && plan.active !== false);
+    const codes = active ? getEffectiveBrandFeatureAccess(getPlanIncludedFeatures(activePlanId, plans), options?.overrides)
+      .filter(row => row.effectiveEnabled).map(row => row.feature.id) : [];
+    return featureCodesAllow(codes, "settings");
+  }
   if (!plans.some(plan => plan.id === activePlanId && plan.active !== false)) return false;
   const planFeatures = getPlanIncludedFeatures(activePlanId, plans);
   const access = getEffectiveBrandFeatureAccess(planFeatures, options?.overrides).find((item) => item.feature.id === (feature === "cashier" ? "loyalty" : feature));

@@ -1,3 +1,5 @@
+- [Brand settings account access](BRAND_SETTINGS_ACCESS_20261118.md)
+
 - [Azo management account](AZO_MANAGEMENT_20261118.md)
 
 - [Loyalty branches rollout](LOYALTY_BRANCH_ROLLOUT_20261118.md)
