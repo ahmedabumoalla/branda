@@ -16,6 +16,7 @@ export async function prepareLoyaltyLogo(input: Uint8Array) {
     const { data, info } = await sharp(input, { limitInputPixels: 25_000_000, pages: 1 }).rotate()
       .resize(640, 640, { fit: "inside", withoutEnlargement: true }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const pixels = new Uint8ClampedArray(data);
+    const backdrop = [pixels[0], pixels[1], pixels[2]];
     const backgroundRemoved = clearUniformLogoBackground(pixels, info.width, info.height);
     const bins = new Map<string, { count: number; r: number; g: number; b: number }>();
     for (let i = 0; i < pixels.length; i += 4) {
@@ -30,9 +31,10 @@ export async function prepareLoyaltyLogo(input: Uint8Array) {
     const chromatic = colors.filter(c => Math.max(...c.rgb) - Math.min(...c.rgb) > 40 && c.count > info.width * info.height * .002);
     const main = chromatic[0] ?? colors[0];
     const hex = (rgb: number[]) => `#${rgb.map(n => n.toString(16).padStart(2, "0")).join("")}`;
-    // Use a darker tone of the actual logo hue for readable native wallet fields.
-    const brightness = main.rgb[0] * .2126 + main.rgb[1] * .7152 + main.rgb[2] * .0722;
-    const primary = hex(main.rgb.map(n => Math.round(brightness < 90 ? n + (255 - n) * .93 : n * .23)));
+    // A colored backdrop is part of the identity even after making the logo transparent.
+    // Keep the actual hue; choose readable ink instead of washing dark brands to white.
+    const coloredBackdrop = backgroundRemoved && Math.max(...backdrop) - Math.min(...backdrop) > 8;
+    const primary = hex(coloredBackdrop ? backdrop : main.rgb);
     const secondary = hex(main.rgb);
     const palette: LogoPalette = { primary, secondary, text: readableBrandForeground(primary) };
     const bytes = await sharp(Buffer.from(pixels), { raw: { width: info.width, height: info.height, channels: 4 } }).webp({ lossless: true }).toBuffer();

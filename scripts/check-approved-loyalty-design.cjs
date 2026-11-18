@@ -56,13 +56,13 @@ for (const [className, slots] of [['stamps', 6], ['miniStamps', 5]]) {
   assert(!row.includes('lucide-gift'), 'Marketing sample has no gift stamp slot');
 }
 assert(previewMarkup.includes('lucide-gift'), 'Loyalty service and reward heading keep their meaningful gift icons');
-for (const [background, foreground, emptyFilter, filledFilter] of [
-  ['#0a1f43', '#ffffff', 'brightness(0) invert(1)', 'brightness(0)'],
-  ['#ffffff', '#000000', 'brightness(0)', 'brightness(0) invert(1)'],
-  ['#000000', '#aaaaaa', 'brightness(0) invert(1)', 'brightness(0)'],
+for (const [background, foreground, filledFilter] of [
+  ['#0a1f43', '#ffffff', 'brightness(0)'],
+  ['#ffffff', '#000000', 'brightness(0) invert(1)'],
+  ['#000000', '#aaaaaa', 'brightness(0)'],
 ]) {
   const theme = loyaltyTheme({ slug: 'brand', name: 'Brand', cardBackground: background, cardForeground: foreground });
-  assert.equal(theme['--card-logo-filter'], emptyFilter);
+  assert.equal(theme['--card-logo-filter'], 'none', 'Original brand logo colors stay intact');
   assert.equal(theme['--card-stamp-logo-filter'], filledFilter);
 }
 const stampCss = fs.readFileSync(path.join(root, 'components/rast-loyalty/rast-loyalty.module.css'), 'utf8');
@@ -70,6 +70,12 @@ assert.match(stampCss, /\.stamps li > img\s*\{\s*filter: var\(--card-logo-filter
 assert.match(stampCss, /\.stamps \.collected > img\s*\{\s*filter: var\(--card-stamp-logo-filter, brightness\(0\)\)/);
 const { SharedLoyaltyCard } = load('components/loyalty/shared-loyalty-card.tsx', uiStubs);
 const card = { brandSlug: 'kat-coffe', brandName: 'كاث', cardBackground: '#733b27', cardForeground: '#fcf8f3', cardAccent: '#e6b576', logoPreviewUrl: '/own-logo.png', sampleCode: 'REAL_CARD', stampsRequired: 7, completedStamps: 3, rewardTitle: 'مكافأة كاث' };
+for (const [required, columns] of [[1, 1], [5, 5], [6, 3], [7, 4], [10, 5]]) {
+  const rendered = renderToStaticMarkup(React.createElement(RastStampCard, { identity: { slug: 'brand', name: 'Brand' }, required, stamps: 0, rewardName: 'Reward' }));
+  assert.match(rendered, /<strong dir="ltr"><b>0<\/b>/, 'Visit counter is isolated from RTL text');
+  assert.ok(rendered.includes(`--stamp-columns:${columns}`), 'Compact rows balance across the available space');
+  assert.equal((rendered.match(/<li /g) || []).length, required);
+}
 let html = renderToStaticMarkup(React.createElement(SharedLoyaltyCard, { card, pointsBalance: 12, pointValueSar: .25, pointsEnabled: true }));
 assert(html.includes('brand-stamps-v1') && html.includes('--card-background:#733b27') && html.includes('/own-logo.png'));
 assert.equal((html.match(/aria-label="الختم /g) || []).length, 7); assert.equal((html.match(/class="collected"/g) || []).length, 3);

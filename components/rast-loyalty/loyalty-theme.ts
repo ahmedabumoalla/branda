@@ -51,6 +51,7 @@ export function loyaltyTheme(identity: LoyaltyIdentity): CSSProperties | undefin
     "--card-stamp-background": foreground, "--card-stamp-foreground": background,
     "--card-check": contrast(accent, "#ffffff") >= 4.5 ? accent : ink,
     "--cashier-ink": ink, "--cashier-paper": "#f7f7f4", "--cashier-button-text": "#ffffff",
+    ...(identity.slug === "brand-8d7992142bbb" ? { "--card-logo-width": "144px", "--card-logo-height": "60px" } : {}),
     ...(identity.slug === "brand-406bf519a458" ? {
       "--cream": "#fff8ee", "--blush": "#f4eadc", "--border": "#ded3c4",
       "--card-logo-filter": "none", "--card-logo-width": "144px", "--card-logo-height": "64px",
