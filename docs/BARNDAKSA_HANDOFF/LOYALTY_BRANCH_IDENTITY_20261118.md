@@ -1,6 +1,6 @@
 # Loyalty logo identity and branches — 2026-11-18
 
-Implementation committed; production deployment pending
+Published6a2ffb6a3530587bb668de7f054130c7c95aa449; Verceldpl_2ExJfPkuidcjHZD3eaBqkFsyutch READY, both aliases/exact HTTP and affected public/authenticated-entry routes verified2026-11-17T23:54:43.342Z
 
 - Branch manager: /dashboard/loyalty/branches, visible under loyalty for Fawasel and for entitled branch+loyalty brands; existing menu branches link to it
 - Add/edit branch, actual location/nearby text, transparent logo, derived colors, optional wallet artwork, QR and cashier assignment

@@ -1,3 +1,5 @@
+- [Deployment packaging optimization](DEPLOYMENT_PACKAGING_20261118.md)
+
 - [Loyalty logo and branch identity](LOYALTY_BRANCH_IDENTITY_20261118.md)
 
 - [Signup choice, directory counts and pager scope](SIGNUP_DIRECTORY_PAGER_20261118.md)
