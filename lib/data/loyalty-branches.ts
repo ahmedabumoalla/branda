@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { assertOwnerServiceEnabled } from "@/lib/data/owner-service-access";
-import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
+import { usesExistingBranchWorkflow } from "@/lib/loyalty/branch-access";
 import { resolveBranchGoogleMapsUrl } from "@/lib/maps/resolve-branch-location";
 import type { LoyaltyBranch, LoyaltyBranchesDashboard } from "@/lib/loyalty/branch-types";
 
@@ -22,7 +22,7 @@ export function mapLoyaltyBranch(row: Record<string, unknown>): LoyaltyBranch {
 async function ownerContext() {
   await assertOwnerServiceEnabled("loyalty");
   const cafe = await requireOwnerCafeContext();
-  if (!isFawaselStore(cafe.slug)) await assertOwnerServiceEnabled("branches");
+  if (usesExistingBranchWorkflow(cafe.slug)) await assertOwnerServiceEnabled("branches");
   return cafe;
 }
 

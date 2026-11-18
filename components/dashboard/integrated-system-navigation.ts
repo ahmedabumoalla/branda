@@ -4,6 +4,7 @@ import { financeMenuGroups, financeMenuHref, type FinanceMenuEntry, type Finance
 import { NAQWA_SLUG } from "@/lib/platform/naqwa";
 import { isAldeemCafe } from "@/lib/platform/aldeem";
 import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
+import { usesExistingBranchWorkflow } from "@/lib/loyalty/branch-access";
 import { isMindSalesSimplified, isSalesViewVisible } from "@/lib/finance/sales-features";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { aldeemSystemGroups } from "./aldeem-navigation";
@@ -78,7 +79,8 @@ const mindHiddenGroups = new Set([
 ]);
 
 export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] {
-  const groups = integratedSystemGroups.map(group => group.id === "settings" ? { ...group, items: [...group.items, { label: "إعدادات البراند", href: "/dashboard/settings", feature: "settings" }, { label: "الباقات والاشتراكات", href: "/dashboard/subscription" }] } : group);
+  let groups = integratedSystemGroups.map(group => group.id === "settings" ? { ...group, items: [...group.items, { label: "إعدادات البراند", href: "/dashboard/settings", feature: "settings" }, { label: "الباقات والاشتراكات", href: "/dashboard/subscription" }] } : group);
+  if (!usesExistingBranchWorkflow(cafeSlug)) groups = groups.map(group => group.id === "loyalty" ? { ...group, items: group.items.map(item => item.href === "/dashboard/loyalty/branches" ? { ...item, label: "الفروع", feature: "loyalty" } : item) } : group);
   if (cafeSlug === NAQWA_SLUG) return [
     { id: "overview", label: "نظرة مالية", icon: WalletCards, items: [{ label: "نظرة مالية", section: "overview" }] },
     ...financeMenuGroups.map(group => ({ id: group.id, label: group.label, icon: group.icon, items: group.entries.map(entry => ({ id: entry.id, section: entry.section, view: entry.view, label: entry.section === "cashiers" ? "إدارة المستخدمين والصلاحيات" : entry.label, href: financeMenuHref(entry) ?? undefined })) })),

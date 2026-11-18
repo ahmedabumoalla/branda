@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { selectBranchWalletLocations } from "@/lib/wallet/branch-locations";
+import { usesExistingBranchWorkflow } from "@/lib/loyalty/branch-access";
 
 /** Internal only, called after the wallet member/brand access guard */
 export const loadWalletBranchLocations = cache(async (cafeId: string) => {
@@ -13,7 +14,7 @@ export const loadWalletBranchLocations = cache(async (cafeId: string) => {
     if (!featureCodesAllow(features, "loyalty")) return undefined;
     const { data: cafe, error } = await createAdminClient().from("cafes").select("slug").eq("id", cafeId).maybeSingle();
     if (error) throw new Error("تعذر تحميل مواقع الفروع");
-    if (cafe?.slug !== "brand-1c2b6f7e028f") return undefined;
+    if (!cafe || usesExistingBranchWorkflow(cafe.slug)) return undefined;
   }
   const { data, error } = await createAdminClient().from("branches")
     .select("id,cafe_id,name,lat,lng,active,deleted_at,is_primary,sort_order,welcome_message,wallet_location_managed")

@@ -153,7 +153,7 @@ function LogoutButton() {
 export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, children }: { maintenance: boolean; loyaltyEnabled?: boolean; children?: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const loyaltyPage = pathname === "/dashboard/loyalty/guide" || pathname === "/dashboard/loyalty/settings";
+  const loyaltyPage = pathname === "/dashboard/loyalty/guide" || pathname === "/dashboard/loyalty/settings" || pathname === "/dashboard/loyalty/branches";
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(true);
@@ -217,6 +217,7 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
       <nav aria-label="لوحة تحكم الديم">
         <button type="button" onClick={() => setSection("overview")} className={`${styles.navItem} ${section === "overview" ? styles.active : ""}`} aria-current={section === "overview" ? "page" : undefined}><LayoutDashboard size={19} strokeWidth={1.6} aria-hidden="true" /><span>نظرة عامة</span></button>
         {loyaltyEnabled && <details open><summary className={styles.navItem}><Star size={19} aria-hidden="true" /><span>الولاء</span></summary><div className={styles.submenu}>
+          <Link href="/dashboard/loyalty/branches" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/branches" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/branches" ? "page" : undefined}><Store size={16} aria-hidden="true" /><span>الفروع</span></Link>
           <Link href="/dashboard/loyalty/settings" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/settings" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/settings" ? "page" : undefined}><Settings size={16} aria-hidden="true" /><span>إعدادات الولاء</span></Link>
           <Link href="/dashboard/loyalty/guide" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/guide" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/guide" ? "page" : undefined}><FileText size={16} aria-hidden="true" /><span>دليل نظام الولاء</span></Link>
         </div></details>}

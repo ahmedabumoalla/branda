@@ -1,6 +1,6 @@
 # Loyalty guide — 2026-11-18
 
-Implementation and checks complete; publication verification pending
+Published4e4cf1101ed58e11c4c149a6573154981f7f88b8 Verceldpl_2DvYtPuxL376LaZmAfqxqYDd6N4G READY both aliases exact HTTP verified2026-11-18T01:26Z
 
 - User correction: only accounts with effective loyalty entitlement; existing and new accounts use the same service check, with no creation-date condition
 - Sidebar entry under loyalty settings; disabled guide is absent. Aldeem custom shell also shows the gated entry, renders the guide/settings children and returns to the selected existing workspace section

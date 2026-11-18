@@ -49,9 +49,9 @@ for (const closed of [{ active: false }, { deletedAt: "2026-11-17" }]) {
 assert.equal(selectBranchWalletLocations([{ ...branches[0], lat: null, lng: null }]).configured, false);
 assert.equal(selectBranchWalletLocations([{ ...branches[0], lat: null, lng: null, walletLocationManaged: true }]).configured, true);
 
-let rows = [], error = null, features = ["branches"], calls = [];
+let rows = [], error = null, features = ["branches"], calls = [], slug = "brand-1c2b6f7e028f";
 const query = {
-  maybeSingle() { return Promise.resolve({ data: { slug: "brand-1c2b6f7e028f" }, error }); },
+  maybeSingle() { return Promise.resolve({ data: { slug }, error }); },
   select(value) { calls.push(["select", value]); return this; },
   eq(key, value) { calls.push(["eq", key, value]); return this; },
   order(key) { calls.push(["order", key]); return this; },
@@ -85,4 +85,13 @@ assert.deepEqual(calls, [], "Brands without branch entitlement must not query br
 features = ["loyalty"];
 rows = [row];
 assert.equal((await loadWalletBranchLocations("brand-a")).length, 1, "Fawasel loyalty-only includes all active branch locations");
+for (slug of ["new-loyalty-brand", "existing-loyalty-brand"]) {
+  assert.equal((await loadWalletBranchLocations("brand-a")).length, 1, "All loyalty brands include branch locations");
+}
+for (slug of ["brand-9a8c97305195", "brand-3c0437f1733a"]) {
+  features = ["loyalty"];
+  assert.equal(await loadWalletBranchLocations("brand-a"), undefined, "Protected brands retain legacy eligibility");
+  features = ["loyalty", "branches"];
+  assert.equal((await loadWalletBranchLocations("brand-a")).length, 1, "Protected branch locations remain available with existing entitlement");
+}
 console.log("Wallet branch location selection, tenant scope, eligibility, fallback and provider limit checks passed");
