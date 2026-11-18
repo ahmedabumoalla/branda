@@ -43,6 +43,7 @@ export const integratedSystemGroups: SystemGroup[] = [
     { label: "سجل عمليات الكاشير", href: "/dashboard/read-operations", feature: "loyalty" },
     { label: "إدارة رسائل الولاء", href: "/dashboard/loyalty/messages", feature: "loyalty" },
     { label: "إعدادات الولاء", href: "/dashboard/loyalty/settings", feature: "loyalty", financeOnly: true },
+    { label: "دليل نظام الولاء", href: "/dashboard/loyalty/guide", feature: "loyalty" },
   ] },
   { id: "memberships", label: "العضويات", icon: BadgeCheck, items: [{ label: "إدارة العضويات", href: "/dashboard/system/memberships" }, { label: "إدارة الاشتراكات", href: "/dashboard/system/memberships/renewals" }, { label: "سياسة العضويات", href: "/dashboard/system/memberships/policy" }] },
   { id: "inventory", label: "المخزون", icon: Boxes, items: [{ label: "المنتجات والخدمات", href: "/dashboard/system/inventory/items" }, { label: "المستودعات", href: "/dashboard/system/inventory/warehouses" }, { label: "جرد المخزون", href: "/dashboard/system/inventory/stocktaking" }, { label: "إعدادات المخزون والمنتجات", href: "/dashboard/system/inventory/settings" }] },

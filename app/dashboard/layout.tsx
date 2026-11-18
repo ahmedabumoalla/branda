@@ -10,6 +10,8 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { fetchOwnerDashboardShellAction } from "@/app/actions/dashboard-shell";
 import { brandStaffLandingPath, brandStaffPathAllowed } from "@/lib/staff/brand-staff-access";
+import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 const dashboardFont = IBM_Plex_Sans_Arabic({
   subsets: ["arabic", "latin"],
@@ -32,8 +34,8 @@ export default async function DashboardLayout({
     if (!brandStaffPathAllowed(cafe.staff, pathname)) redirect(brandStaffLandingPath(cafe.staff));
   }
   if (!cafe.staff && cafe.slug === "khayal-aldeem") {
-    const maintenance = await getCurrentMaintenanceSession();
-    return <div className={dashboardFont.className}><AldeemCleanDashboard maintenance={!!maintenance} /></div>;
+    const [maintenance, features] = await Promise.all([getCurrentMaintenanceSession(), getCafeFeatureCodes(cafe.id).catch(() => [])]);
+    return <div className={dashboardFont.className}><AldeemCleanDashboard maintenance={!!maintenance} loyaltyEnabled={featureCodesAllow(features, "loyalty")}>{children}</AldeemCleanDashboard></div>;
   }
   const [maintenanceSession, entryClient, initialSnapshot] = await Promise.all([
     getCurrentMaintenanceSession(),

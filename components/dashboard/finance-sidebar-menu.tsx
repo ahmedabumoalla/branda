@@ -77,6 +77,7 @@ export function FinanceSidebarMenu({ collapsed, onExpand, onNavigate, cafeSlug =
           <div id={`${id}-${groupId}`} hidden={!open} className={styles.items}>
             {items.map((item, index) => {
               const href = systemItemHref(item, context);
+              if (item.href === "/dashboard/loyalty/guide" && !href) return null;
               if (!href) return <div key={item.label} aria-disabled="true" className={`${styles.item} ${styles.unavailable}`}><span>{item.label}</span>{item.financeOnly ? <span className={styles.status}>متاحة مع باقة المالية</span> : groupId !== "loyalty" && <span className={styles.status}>غير متاح حاليًا</span>}</div>;
               return <Link key={item.label} href={href} scroll={false} prefetch={active && item.section ? false : cafeSlug === "mind-hospital" && visible && open && index < 3 && !isCurrent(href) ? true : undefined}
                 onClick={event => {

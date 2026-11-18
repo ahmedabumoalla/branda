@@ -150,9 +150,10 @@ function LogoutButton() {
   return <button disabled={pending}><LogOut size={17} aria-hidden="true" />{pending ? "جار الخروج" : "تسجيل الخروج"}</button>;
 }
 
-export function AldeemCleanDashboard({ maintenance }: { maintenance: boolean }) {
+export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, children }: { maintenance: boolean; loyaltyEnabled?: boolean; children?: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const loyaltyPage = pathname === "/dashboard/loyalty/guide" || pathname === "/dashboard/loyalty/settings";
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(true);
@@ -167,7 +168,11 @@ export function AldeemCleanDashboard({ maintenance }: { maintenance: boolean }) 
   const [manufacturingOpen, setManufacturingOpen] = useState(true);
   const [financeOpen, setFinanceOpen] = useState(true);
   const [employeesOpen, setEmployeesOpen] = useState(true);
-  const [section, setSection, locationReady] = useAldeemLocation<Section>("section", "overview", ["overview", ...systemGroups.flatMap(group => group.children.map(child => child.id))]);
+  const [section, setWorkspaceSection, locationReady] = useAldeemLocation<Section>("section", "overview", ["overview", ...systemGroups.flatMap(group => group.children.map(child => child.id))]);
+  function setSection(value: Section) {
+    if (loyaltyPage) router.push(`/dashboard?aldeem.section=${encodeURIComponent(value)}`);
+    else setWorkspaceSection(value);
+  }
   const [salesVisited, setSalesVisited] = useState(false);
   const [quotesVisited, setQuotesVisited] = useState(false);
   const [returnsVisited, setReturnsVisited] = useState(false);
@@ -194,7 +199,7 @@ export function AldeemCleanDashboard({ maintenance }: { maintenance: boolean }) 
   const selectedEmployee = employeeSections.find((item) => item.id === section);
   const selectedPage = selectedSales ?? selectedPurchase ?? selectedPos ?? selectedInventory ?? selectedProducer ?? selectedFranchise ?? selectedWorkshop ?? selectedCustomer ?? selectedManufacturing ?? selectedFinance ?? selectedEmployee ?? selectedSettings;
   // Old bookmarks reopen the new workspace, never the retired dashboard UI.
-  useEffect(() => { if (pathname !== "/dashboard") router.replace(`/dashboard${window.location.search}`); }, [pathname, router]);
+  useEffect(() => { if (pathname !== "/dashboard" && !loyaltyPage) router.replace(`/dashboard${window.location.search}`); }, [pathname, router, loyaltyPage]);
   function exitMaintenance() {
     setError("");
     startTransition(async () => {
@@ -211,6 +216,10 @@ export function AldeemCleanDashboard({ maintenance }: { maintenance: boolean }) 
       <div className={styles.workspace}><span className={styles.dot} aria-hidden="true" />مساحة عمل الديم</div>
       <nav aria-label="لوحة تحكم الديم">
         <button type="button" onClick={() => setSection("overview")} className={`${styles.navItem} ${section === "overview" ? styles.active : ""}`} aria-current={section === "overview" ? "page" : undefined}><LayoutDashboard size={19} strokeWidth={1.6} aria-hidden="true" /><span>نظرة عامة</span></button>
+        {loyaltyEnabled && <details open><summary className={styles.navItem}><Star size={19} aria-hidden="true" /><span>الولاء</span></summary><div className={styles.submenu}>
+          <Link href="/dashboard/loyalty/settings" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/settings" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/settings" ? "page" : undefined}><Settings size={16} aria-hidden="true" /><span>إعدادات الولاء</span></Link>
+          <Link href="/dashboard/loyalty/guide" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/guide" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/guide" ? "page" : undefined}><FileText size={16} aria-hidden="true" /><span>دليل نظام الولاء</span></Link>
+        </div></details>}
         <button type="button" className={`${styles.navItem} ${selectedSales ? styles.groupSelected : ""}`} onClick={() => setSalesOpen((open) => !open)} aria-expanded={salesOpen} aria-controls="aldeem-sales-menu">
           <ReceiptText size={19} strokeWidth={1.6} aria-hidden="true" /><span>المبيعات</span><ChevronDown size={15} className={`${styles.chevron} ${salesOpen ? styles.expanded : ""}`} aria-hidden="true" />
         </button>
@@ -289,8 +298,8 @@ export function AldeemCleanDashboard({ maintenance }: { maintenance: boolean }) 
         {error && <p role="alert">{error}</p>}
       </footer>
     </aside>
-    <main id="aldeem-overview" className={styles.canvas} tabIndex={-1} aria-label={selectedPage?.title ?? "نظرة عامة"}>
-      {!locationReady ? <p role="status">جار استعادة الصفحة</p> : <>
+    <main id="aldeem-overview" className={styles.canvas} tabIndex={-1} aria-label={loyaltyPage ? "الولاء" : selectedPage?.title ?? "نظرة عامة"}>
+      {loyaltyPage ? children : !locationReady ? <p role="status">جار استعادة الصفحة</p> : <>
       {selectedPage && <header className={styles.pageHeader}><span>{selectedSales ? "المبيعات" : selectedPurchase ? "المشتريات" : selectedPos ? "نقاط البيع" : selectedInventory ? "المخزون" : selectedProducer ? "الأسر المنتجة" : selectedFranchise ? "الفرنشايز" : selectedWorkshop ? "المعمل" : selectedCustomer ? "العملاء" : selectedManufacturing ? "التصنيع" : selectedFinance ? "المالية" : selectedEmployee ? "الموظفين" : "الإعدادات"}</span><h1>{selectedPage.title}</h1></header>}
       {section === "system-sections" && <SystemSectionSettings />}
       {section === "overview" ? <AldeemRealOverview onNavigate={value => setSection(value as Section)} /> : section === "inventory-warehouses" || section === "finance-treasuries" ? <AldeemOperationalPresentation key={section} section={section} /> : ALDEEM_OPERATIONAL_SECTIONS[section] && <AldeemOperationalWorkspace key={section} section={section} />}
