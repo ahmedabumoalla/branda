@@ -24,6 +24,7 @@ import type { SubscriptionPaymentRequest, SubscriptionRequestPage } from "@/lib/
 import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
 import { mapAdminWhatsAppSummary, type AdminWhatsAppConnectionRow } from "@/lib/whatsapp/admin-sender-summary";
 import { normalizeErpModules } from "@/lib/platform/erp-modules";
+import { getAdminBrandLogos } from "@/lib/data/admin-brand-logos";
 
 
 function normalizeCafeStatus(status: unknown): PlatformCafe["status"] {
@@ -574,12 +575,13 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
 
   const rows = (cafes ?? []) as Record<string, unknown>[];
   const cafeIds = rows.map((row) => String(row.id)).filter(Boolean);
-  const [featureOverridesByCafeId, subscriptionStates, metricsByCafeId, cancellations, whatsAppByCafeId] = await Promise.all([
+  const [featureOverridesByCafeId, subscriptionStates, metricsByCafeId, cancellations, whatsAppByCafeId, logosByCafeId] = await Promise.all([
     getCafeFeatureOverridesByCafeIds(cafeIds),
     getAdminBrandSubscriptionStates(cafeIds),
     getBrandDirectoryMetrics(supabase, cafeIds),
     supabase.from("brand_account_cancellations").select("cafe_id,actor_id,actor_name,cancelled_at,origin,reason").in("cafe_id", cafeIds),
     getBrandDirectoryWhatsApp(cafeIds),
+    getAdminBrandLogos(supabase, rows),
   ]);
   if (cancellations.error) throw cancellations.error;
   const cancellationByCafe = new Map((cancellations.data ?? []).map(row => [row.cafe_id, { actorId: row.actor_id, actorName: row.actor_name, cancelledAt: row.cancelled_at, origin: "user" as const, reason: row.reason }]));
@@ -625,8 +627,8 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
         ownerLoginEmail: String(ownerProfile?.email ?? settings?.owner_email ?? ""),
         passwordAccessNote: "لا يمكن عرض كلمة المرور الأصلية؛ استخدم رابط إعادة التعيين أو تحديثها من لوحة الصيانة الآمنة",
         maintenanceAccountNumber: makeMaintenanceAccountNumber(cafeId, slug),
-        logoUrl: String(settings?.logo_url ?? ""),
-        logoAssetId: settings?.logo_storage_path ? String(settings.logo_storage_path) : undefined,
+        logoUrl: logosByCafeId.get(cafeId)?.url ?? "",
+        logoAssetId: logosByCafeId.get(cafeId)?.path,
         description: settings?.description ? String(settings.description) : undefined,
         instagram: settings?.instagram ? String(settings.instagram) : undefined,
         whatsapp: settings?.whatsapp ? String(settings.whatsapp) : undefined,

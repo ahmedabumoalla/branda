@@ -319,4 +319,16 @@ await test(() => downloadHarness(async runtime => {
   assert.equal(withClass(h, "exportFeedback")[0].props.role, "status");
   assert.equal(runtime.anchors.length, 1);
 }));
+await test(() => {
+  const cafe = { ...cafes[0], logoUrl: "https://brand.test/logo.png" };
+  const h = harness("BrandIdentity", { cafe, onManage() {} }, source + "\nexport { BrandIdentity };");
+  const logo = () => nodes(h.render()).find(node => node.type === "img");
+  assert.equal(logo().props.src, cafe.logoUrl);
+  logo().props.onError();
+  assert.equal(logo().props.src, "/brand/barndaksa-logo-brown.png");
+  cafe.logoUrl = "https://brand.test/replacement.png";
+  assert.equal(logo().props.src, cafe.logoUrl);
+  cafe.logoUrl = "";
+  assert.equal(logo().props.src, "/brand/barndaksa-logo-brown.png");
+});
 console.log(`PASS brand directory: ${checks} isolated CSS, SSR, filters, pagination, dialog, contrast and all-brand Excel download checks; no live mutations`);

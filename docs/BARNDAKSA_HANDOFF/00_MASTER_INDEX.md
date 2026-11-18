@@ -1,3 +1,5 @@
+- [Admin brand directory logos](ADMIN_BRAND_LOGOS_20261118.md)
+
 - [Cashier scan history and copied phone normalization](CASHIER_READ_HISTORY_20261118.md)
 
 - [Loyalty defaults and LA GIOIA identity](LOYALTY_DEFAULTS_20261118.md)

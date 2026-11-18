@@ -62,7 +62,8 @@ function BrandIdentity({ cafe, onManage }: { cafe: PlatformCafe; onManage: Props
     <span className={s.avatar}>{cafe.logoUrl && failedLogo !== cafe.logoUrl
       // eslint-disable-next-line @next/next/no-img-element
       ? <img src={cafe.logoUrl} alt="" loading="lazy" width={44} height={44} onError={() => setFailedLogo(cafe.logoUrl ?? null)} />
-      : <Building2 aria-hidden="true" />}</span>
+      // eslint-disable-next-line @next/next/no-img-element
+      : <img src="/brand/barndaksa-logo-brown.png" alt="شعار برندة" loading="lazy" width={44} height={44} />}</span>
     <div className={s.identityText}><button type="button" className={s.name} onClick={() => onManage(cafe)} aria-haspopup="dialog" aria-label={`فتح ملف ${cafe.name}`}><bdi>{cafe.name}</bdi></button>
       <bdi className={s.slug}>/{cafe.slug}</bdi><span className={s.account}><span>رقم الصيانة</span><bdi>{cafe.maintenanceAccountNumber || "غير مضاف"}</bdi></span>
       <BrandWhatsAppStatus cafe={cafe} />

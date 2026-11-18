@@ -91,6 +91,7 @@ type Props = {
 export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStatus, planPending, updatePlan, removePlans, close, onDeleted, onUpdated }: Props) {
   const router = useRouter();
   const [maintenancePending, setMaintenancePending] = useState(false);
+  const [failedLogo, setFailedLogo] = useState<string | null>(null);
   const [maintenanceError, setMaintenanceError] = useState("");
   const [maintenanceLoginRequired, setMaintenanceLoginRequired] = useState(false);
   const maintenanceInFlight = useRef(false);
@@ -187,9 +188,11 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
       <div className={s.overview}>
         {cafe.cancellation && <BrandArchiveFiles cafeId={cafe.id} />}
         <div className={s.identity}>
-          <div className={s.avatar}>{cafe.logoUrl
+          <div className={s.avatar}>{cafe.logoUrl && failedLogo !== cafe.logoUrl
             // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={cafe.logoUrl} alt={cafe.name} /> : <Building2 aria-hidden="true" />}</div>
+            ? <img src={cafe.logoUrl} alt={cafe.name} onError={() => setFailedLogo(cafe.logoUrl ?? null)} />
+            // eslint-disable-next-line @next/next/no-img-element
+            : <img src="/brand/barndaksa-logo-brown.png" alt="شعار برندة" />}</div>
           <div className={s.identityText}>
             <p className={s.eyebrow}>علامة تجارية</p>
             <h2 dir="auto">{cafe.name}</h2>
