@@ -25,6 +25,7 @@ export function optimizeDeploymentTraces(root = process.cwd()) {
   let removedBytes = 0;
   let removedEntries = 0;
   let pdfRoutes = 0;
+  const reducedRoutes = [];
 
   for (const file of files) {
     const trace = JSON.parse(readFileSync(file, "utf8"));
@@ -52,13 +53,10 @@ export function optimizeDeploymentTraces(root = process.cwd()) {
     let next = [...trace.files];
     if (runtime) {
       pdfRoutes++;
-      // Covers PDF handlers, background jobs and server actions alike, including
-      // future consumers outside the broad compatibility includes in next.config.
-      const binDirectory = path.resolve(path.dirname(runtime), "../bin");
-      for (const name of binaries) {
-        const binary = path.join(binDirectory, name);
-        if (!existsSync(binary) || statSync(binary).size === 0) throw new Error(`Required Chromium asset missing: ${name}`);
-        if (!resolved.includes(binary)) next.push(slash(path.relative(path.dirname(file), binary)));
+      // Preserve existing PDF traces byte-for-byte. Shared Next.js chunks can
+      // mention PDF modules on unrelated pages; never expand their payload here.
+      for (const binary of candidateBinaries) {
+        if (!existsSync(binary) || statSync(binary).size === 0) throw new Error(`Required Chromium asset missing: ${path.basename(binary)}`);
       }
     } else if (packageFiles.every(value => candidateBinaries.has(value))) {
       // Only remove the four explicitly known binary assets when the route has
@@ -69,6 +67,7 @@ export function optimizeDeploymentTraces(root = process.cwd()) {
         removedEntries++;
         return false;
       });
+      if (next.length !== trace.files.length) reducedRoutes.push(slash(path.relative(directory, file)));
     }
     if (JSON.stringify(next) !== JSON.stringify(trace.files)) plans.push({ file, trace: { ...trace, files: next } });
   }
@@ -76,7 +75,7 @@ export function optimizeDeploymentTraces(root = process.cwd()) {
   // Validate every trace before writing any changes. The original binary files
   // stay on disk; only per-route packaging manifests change.
   for (const plan of plans) writeFileSync(plan.file, JSON.stringify(plan.trace));
-  const result = { routes: files.length, pdfRoutes, changedRoutes: plans.length, removedEntries, removedBytes };
+  const result = { routes: files.length, pdfRoutes, changedRoutes: plans.length, removedEntries, removedBytes, reducedRoutes };
   console.log(`[deployment-traces] ${JSON.stringify(result)}`);
   return result;
 }

@@ -29,6 +29,7 @@ try {
   const initialJobs = readFileSync(jobs, "utf8");
   const initialAction = readFileSync(action, "utf8");
   const initialUnrelated = readFileSync(unrelated, "utf8");
+  const initialFuture = readFileSync(future, "utf8");
   const result = optimizeDeploymentTraces(root);
   assert.equal(result.removedEntries, 4);
   assert.equal(result.pdfRoutes, 3);
@@ -37,7 +38,7 @@ try {
   assert.equal(readFileSync(jobs, "utf8"), initialJobs);
   assert.equal(readFileSync(action, "utf8"), initialAction);
   assert.equal(readFileSync(unrelated, "utf8"), initialUnrelated);
-  for (const asset of assets) assert(absolute(future).includes(asset));
+  assert.equal(readFileSync(future, "utf8"), initialFuture, "Never expand a shared-chunk trace");
   assert.equal(optimizeDeploymentTraces(root).changedRoutes, 0);
   for (const asset of assets) assert.equal(readFileSync(asset, "utf8"), "binary-fixture");
 
@@ -53,7 +54,7 @@ try {
   put(assets[0], "");
   assert.throws(() => optimizeDeploymentTraces(root), /Required Chromium asset missing/);
   assert.equal(readFileSync(removable, "utf8"), beforeFailure);
-  console.log("Deployment trace checks passed: non-PDF reduction, PDF/jobs/actions preservation, missing asset recovery, idempotency and fail-closed validation");
+  console.log("Deployment trace checks passed: non-PDF reduction, PDF/jobs/actions preservation, no payload expansion, idempotency and fail-closed validation");
 } finally {
   // This directory is created by this test and contains only its synthetic files.
   rmSync(root, { recursive: true, force: true });
