@@ -9,3 +9,5 @@ Verification2026-11-18:73 isolated actual server/registration SSR checks include
 Additional unrelated suite failures remain: cashier onboarding expects an8hour cookie for an existing12hour fixture; salon suite lacks a mock for the existing active-user import before reaching the changed parser. Those suites are not reported as passed. No production session lifetime or salon behavior was altered.
 
 Evidence: output/fawasel-branches-20261118/signup-validation-audit.json and output/signup-validation-20261118/checks.json. Deployment and mandatory TypeScript/text results are recorded in task state.
+
+Full TypeScript/text passed, source 5583c45bb85cfd92009fff9708f3e094627188d0 published. Vercel dpl_4fu7nttCwTB7MiuACAP2RLc9MXWH READY both aliases 2026-11-18T13:51:35.445Z; deployed register200 and three field-specific validation actions passed 2026-11-18T13:51:49.253Z, no OTP/account created. Detailed command/input provenance in output/signup-validation-20261118/checks.json
