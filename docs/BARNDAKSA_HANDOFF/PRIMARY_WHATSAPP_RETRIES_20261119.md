@@ -11,7 +11,7 @@ User requires the Branda primary sender to be tried three times, thirty seconds 
 - Legacy access-sender override cannot force standby; missing primary credentials fail closed. Existing pause semantics remain for paused message categories
 - Verified private brand senders, LOCO/Wahed routing, entitlements and disabled customer welcomes remain unchanged
 - Function deadlines increased to 300 seconds for affected API workers and inherited server actions. Owner video POST bounded to 30 seconds
-- Four-minute database leases protect active attempts; pager/salon/renewal batches bounded to two waves, hospital notifications one claim, birthday worker stops starting more work after 70 seconds
+- Four-minute database leases protect active attempts; pager/salon/renewal batches bounded to two waves, hospital notifications one claim, birthday/card-link workers account for readiness time and stop claiming additional work after 70 seconds while permitting the first send
 
 ## Database
 
@@ -25,4 +25,4 @@ Full TypeScript and nine mocked suites passed 2026-11-18T21:56:24.183Z; Node v20
 
 Legacy test loaders and old immediate-standby assertions initially failed; updated to load current dependencies and assert the requested primary-first behavior, then all passed. No real test messages or browser inspection
 
-Publication pending exact GitHub commit and Vercel READY verification. Root application sources remain untouched; implementation in isolated release worktree
+Initial source b25373a1301a5ed6b4f3ed79dfb74b77013dfdb9 pushed; final worker-budget follow-up passed focused birthday/card-link checks and full TypeScript, evidence followup-checks.json. Publication pending final exact GitHub commit and Vercel READY verification. Root application sources remain untouched; implementation in isolated release worktree

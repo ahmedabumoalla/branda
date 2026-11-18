@@ -19,11 +19,11 @@ export function birthdayGreetingMessage(job: Greeting) {
 
 /** One greeting per customer per year; the database claim deduplicates concurrent cron workers */
 export async function dispatchBirthdayGreetings(limit = 1) {
+  const startedAt = Date.now();
   const result = { processed: 0, queued: 0, rejected: 0, unknown: 0, deferred: false };
   if (!await isGreenApiLoyaltyWelcomeReady()) return { ...result, deferred: true };
   const admin = createAdminClient();
-  const startedAt = Date.now();
-  for (let index = 0; index < Math.min(5, Math.max(1, limit)) && Date.now() - startedAt < 70_000; index++) {
+  for (let index = 0; index < Math.min(5, Math.max(1, limit)) && (index === 0 || Date.now() - startedAt < 70_000); index++) {
     const { data, error } = await admin.rpc("claim_loyalty_birthday_greeting", { p_primary_ready: true });
     if (error) throw new Error("birthday_greeting_claim_unavailable");
     if (!data) break;

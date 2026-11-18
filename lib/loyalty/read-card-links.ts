@@ -16,11 +16,12 @@ export function stampCardLinkMessage(job: CardLinkJob) {
   return [ `يا هلا فيك في ${name}`, job.cardCreated ? "بطاقة الولاء جاهزة وسجّلنا فيها أول ختم لك" : "تم تسجيل ختمك في بطاقة الولاء", "افتح الرابط لعرض بطاقتك وتحميلها إلى المحفظة", link, "في زيارتك القادمة اعرض بطاقتك للكاشير لتسجيل ختمك" ].join("\n\n");
 }
 export async function dispatchStampCardLinks(limit = 2) {
+  const startedAt = Date.now();
   const result = { processed: 0, queued: 0, rejected: 0, unknown: 0, skipped: 0, deferred: 0 };
   const [primaryReady, locoSender, wahedSender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID), selectBrandLoyaltySender(WAHED_MASOUB_CAFE_ID)]);
   if (!primaryReady && !locoSender && !wahedSender) return result;
   const admin = createAdminClient();
-  for (let index = 0; index < Math.min(5, Math.max(1, limit)); index++) {
+  for (let index = 0; index < Math.min(5, Math.max(1, limit)) && (index === 0 || Date.now() - startedAt < 70_000); index++) {
     const { data, error } = await admin.rpc("claim_stamp_card_link_v2", { p_primary_ready: primaryReady, p_loco_ready: Boolean(locoSender), p_wahed_ready: Boolean(wahedSender) });
     if (error) throw new Error("stamp_card_link_claim_unavailable");
     if (!data) break;
