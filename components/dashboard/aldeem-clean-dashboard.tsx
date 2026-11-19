@@ -297,6 +297,10 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
       <footer className={styles.footer}>
         {maintenance ? <button onClick={exitMaintenance} disabled={pending}><LogOut size={17} aria-hidden="true" />{pending ? "جار إنهاء الصيانة" : "إنهاء وضع الصيانة"}</button> : <form action={logoutAction}><LogoutButton /></form>}
         {error && <p role="alert">{error}</p>}
+        <div className={styles.platformSignature}>
+          <span>يعمل بواسطة</span>
+          <Image src="/brand/barndaksa-logo-brown.png" alt="برندة" width={80} height={43} />
+        </div>
       </footer>
     </aside>
     <main id="aldeem-overview" className={styles.canvas} tabIndex={-1} aria-label={loyaltyPage ? "الولاء" : selectedPage?.title ?? "نظرة عامة"}>
