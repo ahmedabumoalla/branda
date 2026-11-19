@@ -44,6 +44,9 @@
 .footer button:hover{background:var(--aldeem-tint);color:var(--aldeem-primary)}
 .footer button:disabled{opacity:.6;cursor:wait}
 .footer p{font-size:12px;color:#a3284a;margin-top:10px}
+.platformSignature{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid var(--aldeem-line)}
+.platformSignature span{font-size:10px;line-height:1.5;color:var(--aldeem-muted)}
+.platformSignature img{display:block;width:80px;max-width:100%;height:auto;object-fit:contain}
 .shell a:focus-visible,.shell button:focus-visible{outline:2px solid var(--aldeem-primary);outline-offset:3px}
 .canvas{min-width:0;min-height:100dvh;background:#fffdfd}
 .skip{position:fixed;top:8px;inset-inline-start:240px;transform:translateY(-160%);background:#fff;padding:10px 16px;z-index:20;border:1px solid var(--aldeem-primary);border-radius:8px}

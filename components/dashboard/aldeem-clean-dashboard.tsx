@@ -26,6 +26,7 @@ import { AldeemWorkshop } from "@/components/aldeem/workshop";
 import { AldeemFranchiseWorkspace } from "@/components/aldeem/franchise-workspace";
 import { AldeemCustomerPoints } from "@/components/aldeem/customer-points";
 import { useAldeemLocation } from "@/components/aldeem/use-location";
+import { AldeemDemo, DemoSwitch, useAldeemDemo } from "@/components/aldeem/demo";
 
 const settingsSections = [
   { id: "account-settings", title: "إعدادات الحساب", icon: UserRoundCog },
@@ -75,6 +76,12 @@ const customerSections = [
   { id: "customer-balances", title: "أرصدة العملاء", icon: Wallet },
   { id: "customer-points", title: "نقاط العملاء", icon: Star },
 ] as const;
+// Presentation mode only: the stamp card and the points programme open as two separate pages.
+const loyaltyDemoSections = [
+  { id: "loyalty-card", title: "بطاقة الولاء والأختام", icon: Star },
+  { id: "loyalty-points", title: "النقاط وقواعد احتسابها", icon: Target },
+  { id: "loyalty-branches", title: "فروع الولاء", icon: Store },
+] as const;
 const manufacturingSections = [
   { id: "manufacturing-monitor", title: "مراقبة الإنتاج", icon: Monitor },
   { id: "manufacturing-operations", title: "عمليات التصنيع", icon: Factory },
@@ -98,7 +105,7 @@ const employeeSections = [
   { id: "employee-payroll", title: "مسيرات الرواتب", icon: Wallet },
   { id: "employee-organization", title: "الهيكل التنظيمي", icon: Network },
 ] as const;
-type Section = "overview" | typeof settingsSections[number]["id"] | typeof salesSections[number]["id"] | typeof purchaseSections[number]["id"] | typeof posSections[number]["id"] | typeof inventorySections[number]["id"] | typeof producerSections[number]["id"] | typeof franchiseSections[number]["id"] | typeof workshopSections[number]["id"] | typeof customerSections[number]["id"] | typeof manufacturingSections[number]["id"] | typeof financeSections[number]["id"] | typeof employeeSections[number]["id"];
+type Section = "overview" | typeof settingsSections[number]["id"] | typeof salesSections[number]["id"] | typeof purchaseSections[number]["id"] | typeof posSections[number]["id"] | typeof inventorySections[number]["id"] | typeof producerSections[number]["id"] | typeof franchiseSections[number]["id"] | typeof workshopSections[number]["id"] | typeof customerSections[number]["id"] | typeof loyaltyDemoSections[number]["id"] | typeof manufacturingSections[number]["id"] | typeof financeSections[number]["id"] | typeof employeeSections[number]["id"];
 
 const systemGroups = [
   { id: "overview", title: "نظرة عامة", icon: LayoutDashboard, children: [] },
@@ -165,10 +172,12 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
   const [franchiseOpen, setFranchiseOpen] = useState(true);
   const [workshopOpen, setWorkshopOpen] = useState(true);
   const [customersOpen, setCustomersOpen] = useState(true);
+  const [loyaltyOpen, setLoyaltyOpen] = useState(true);
   const [manufacturingOpen, setManufacturingOpen] = useState(true);
   const [financeOpen, setFinanceOpen] = useState(true);
   const [employeesOpen, setEmployeesOpen] = useState(true);
-  const [section, setWorkspaceSection, locationReady] = useAldeemLocation<Section>("section", "overview", ["overview", ...systemGroups.flatMap(group => group.children.map(child => child.id))]);
+  const [section, setWorkspaceSection, locationReady] = useAldeemLocation<Section>("section", "overview", ["overview", ...systemGroups.flatMap(group => group.children.map(child => child.id)), ...loyaltyDemoSections.map(item => item.id)]);
+  const [demo, setDemo] = useAldeemDemo();
   function setSection(value: Section) {
     if (loyaltyPage) router.push(`/dashboard?aldeem.section=${encodeURIComponent(value)}`);
     else setWorkspaceSection(value);
@@ -194,10 +203,11 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
   const selectedFranchise = franchiseSections.find((item) => item.id === section);
   const selectedWorkshop = workshopSections.find((item) => item.id === section);
   const selectedCustomer = customerSections.find((item) => item.id === section);
+  const selectedLoyalty = demo ? loyaltyDemoSections.find((item) => item.id === section) : undefined;
   const selectedManufacturing = manufacturingSections.find((item) => item.id === section);
   const selectedFinance = financeSections.find((item) => item.id === section);
   const selectedEmployee = employeeSections.find((item) => item.id === section);
-  const selectedPage = selectedSales ?? selectedPurchase ?? selectedPos ?? selectedInventory ?? selectedProducer ?? selectedFranchise ?? selectedWorkshop ?? selectedCustomer ?? selectedManufacturing ?? selectedFinance ?? selectedEmployee ?? selectedSettings;
+  const selectedPage = selectedSales ?? selectedPurchase ?? selectedPos ?? selectedInventory ?? selectedProducer ?? selectedFranchise ?? selectedWorkshop ?? selectedCustomer ?? selectedLoyalty ?? selectedManufacturing ?? selectedFinance ?? selectedEmployee ?? selectedSettings;
   // Old bookmarks reopen the new workspace, never the retired dashboard UI.
   useEffect(() => { if (pathname !== "/dashboard" && !loyaltyPage) router.replace(`/dashboard${window.location.search}`); }, [pathname, router, loyaltyPage]);
   function exitMaintenance() {
@@ -214,13 +224,9 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
         <Image src="/aldeem/logo.webp" alt="الديم" width={389} height={73} priority />
       </Link>
       <div className={styles.workspace}><span className={styles.dot} aria-hidden="true" />مساحة عمل الديم</div>
+      <DemoSwitch demo={demo} onChange={next => { setDemo(next); if (!next && section.startsWith("loyalty-")) setSection("overview"); }} />
       <nav aria-label="لوحة تحكم الديم">
         <button type="button" onClick={() => setSection("overview")} className={`${styles.navItem} ${section === "overview" ? styles.active : ""}`} aria-current={section === "overview" ? "page" : undefined}><LayoutDashboard size={19} strokeWidth={1.6} aria-hidden="true" /><span>نظرة عامة</span></button>
-        {loyaltyEnabled && <details open><summary className={styles.navItem}><Star size={19} aria-hidden="true" /><span>الولاء</span></summary><div className={styles.submenu}>
-          <Link href="/dashboard/loyalty/branches" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/branches" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/branches" ? "page" : undefined}><Store size={16} aria-hidden="true" /><span>الفروع</span></Link>
-          <Link href="/dashboard/loyalty/settings" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/settings" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/settings" ? "page" : undefined}><Settings size={16} aria-hidden="true" /><span>إعدادات الولاء</span></Link>
-          <Link href="/dashboard/loyalty/guide" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/guide" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/guide" ? "page" : undefined}><FileText size={16} aria-hidden="true" /><span>دليل نظام الولاء</span></Link>
-        </div></details>}
         <button type="button" className={`${styles.navItem} ${selectedSales ? styles.groupSelected : ""}`} onClick={() => setSalesOpen((open) => !open)} aria-expanded={salesOpen} aria-controls="aldeem-sales-menu">
           <ReceiptText size={19} strokeWidth={1.6} aria-hidden="true" /><span>المبيعات</span><ChevronDown size={15} className={`${styles.chevron} ${salesOpen ? styles.expanded : ""}`} aria-hidden="true" />
         </button>
@@ -269,6 +275,23 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
         <div id="aldeem-customers-menu" className={styles.submenu} hidden={!customersOpen}>
           {customerSections.map(({ id, title, icon: Icon }) => <button key={id} type="button" className={`${styles.subItem} ${section === id ? styles.subActive : ""}`} aria-current={section === id ? "page" : undefined} onClick={() => setSection(id)}><Icon size={16} strokeWidth={1.6} aria-hidden="true" /><span>{title}</span></button>)}
         </div>
+        {demo && !loyaltyPage ? <>
+          <button type="button" className={`${styles.navItem} ${selectedLoyalty ? styles.groupSelected : ""}`} onClick={() => setLoyaltyOpen((open) => !open)} aria-expanded={loyaltyOpen} aria-controls="aldeem-loyalty-menu">
+            <Star size={19} strokeWidth={1.6} aria-hidden="true" /><span>نقاط الولاء والاختام</span><ChevronDown size={15} className={`${styles.chevron} ${loyaltyOpen ? styles.expanded : ""}`} aria-hidden="true" />
+          </button>
+          <div id="aldeem-loyalty-menu" className={styles.submenu} hidden={!loyaltyOpen}>
+            {loyaltyDemoSections.map(({ id, title, icon: Icon }) => <button key={id} type="button" className={`${styles.subItem} ${section === id ? styles.subActive : ""}`} aria-current={section === id ? "page" : undefined} onClick={() => setSection(id)}><Icon size={16} strokeWidth={1.6} aria-hidden="true" /><span>{title}</span></button>)}
+          </div>
+        </> : loyaltyEnabled && <>
+          <button type="button" className={`${styles.navItem} ${loyaltyPage ? styles.groupSelected : ""}`} onClick={() => setLoyaltyOpen((open) => !open)} aria-expanded={loyaltyOpen} aria-controls="aldeem-loyalty-menu">
+            <Star size={19} strokeWidth={1.6} aria-hidden="true" /><span>نقاط الولاء والاختام</span><ChevronDown size={15} className={`${styles.chevron} ${loyaltyOpen ? styles.expanded : ""}`} aria-hidden="true" />
+          </button>
+          <div id="aldeem-loyalty-menu" className={styles.submenu} hidden={!loyaltyOpen}>
+            <Link href="/dashboard/loyalty/branches" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/branches" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/branches" ? "page" : undefined}><Store size={16} aria-hidden="true" /><span>الفروع</span></Link>
+            <Link href="/dashboard/loyalty/settings" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/settings" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/settings" ? "page" : undefined}><Settings size={16} aria-hidden="true" /><span>إعدادات الولاء</span></Link>
+            <Link href="/dashboard/loyalty/guide" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/guide" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/guide" ? "page" : undefined}><FileText size={16} aria-hidden="true" /><span>دليل نظام الولاء</span></Link>
+          </div>
+        </>}
         <button type="button" className={`${styles.navItem} ${selectedManufacturing ? styles.groupSelected : ""}`} onClick={() => setManufacturingOpen((open) => !open)} aria-expanded={manufacturingOpen} aria-controls="aldeem-manufacturing-menu">
           <Factory size={19} strokeWidth={1.6} aria-hidden="true" /><span>المصنع</span><ChevronDown size={15} className={`${styles.chevron} ${manufacturingOpen ? styles.expanded : ""}`} aria-hidden="true" />
         </button>
@@ -297,11 +320,16 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
       <footer className={styles.footer}>
         {maintenance ? <button onClick={exitMaintenance} disabled={pending}><LogOut size={17} aria-hidden="true" />{pending ? "جار إنهاء الصيانة" : "إنهاء وضع الصيانة"}</button> : <form action={logoutAction}><LogoutButton /></form>}
         {error && <p role="alert">{error}</p>}
+        <div className={styles.platformSignature}>
+          <span>يعمل بواسطة</span>
+          <Image src="/brand/barndaksa-logo-brown.png" alt="برندة" width={80} height={43} />
+        </div>
       </footer>
     </aside>
     <main id="aldeem-overview" className={styles.canvas} tabIndex={-1} aria-label={loyaltyPage ? "الولاء" : selectedPage?.title ?? "نظرة عامة"}>
       {loyaltyPage ? children : !locationReady ? <p role="status">جار استعادة الصفحة</p> : <>
-      {selectedPage && <header className={styles.pageHeader}><span>{selectedSales ? "المبيعات" : selectedPurchase ? "المشتريات" : selectedPos ? "نقاط البيع" : selectedInventory ? "المخزون" : selectedProducer ? "الأسر المنتجة" : selectedFranchise ? "الفرنشايز" : selectedWorkshop ? "المعمل" : selectedCustomer ? "العملاء" : selectedManufacturing ? "التصنيع" : selectedFinance ? "المالية" : selectedEmployee ? "الموظفين" : "الإعدادات"}</span><h1>{selectedPage.title}</h1></header>}
+      {selectedPage && <header className={styles.pageHeader}><span>{selectedSales ? "المبيعات" : selectedPurchase ? "المشتريات" : selectedPos ? "نقاط البيع" : selectedInventory ? "المخزون" : selectedProducer ? "الأسر المنتجة" : selectedFranchise ? "الفرنشايز" : selectedWorkshop ? "المعمل" : selectedCustomer ? "العملاء" : selectedLoyalty ? "نقاط الولاء والاختام" : selectedManufacturing ? "التصنيع" : selectedFinance ? "المالية" : selectedEmployee ? "الموظفين" : "الإعدادات"}</span><h1>{selectedPage.title}</h1></header>}
+      {demo ? <AldeemDemo section={section} title={selectedPage?.title ?? "نظرة عامة"} go={value => setSection(value as Section)} /> : <>
       {section === "system-sections" && <SystemSectionSettings />}
       {section === "overview" ? <AldeemRealOverview onNavigate={value => setSection(value as Section)} /> : section === "inventory-warehouses" || section === "finance-treasuries" ? <AldeemOperationalPresentation key={section} section={section} /> : ALDEEM_OPERATIONAL_SECTIONS[section] && <AldeemOperationalWorkspace key={section} section={section} />}
       {selectedProducer && <AldeemFamilies section={section} />}
@@ -318,6 +346,7 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
       {purchasesVisited["purchase-requests"] && <div hidden={section !== "purchase-requests"}><AldeemPurchases kind="request" /></div>}
       {purchasesVisited["purchase-orders"] && <div hidden={section !== "purchase-orders"}><AldeemPurchases kind="order" /></div>}
       {purchasesVisited["purchase-returns"] && <div hidden={section !== "purchase-returns"}><AldeemPurchaseReturns /></div>}
+      </>}
       </>}
     </main>
   </div>;

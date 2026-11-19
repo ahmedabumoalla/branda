@@ -10,6 +10,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Continuity and execution
 
+- USER RELEASE AUTHORIZATION 2026-11-19 (Claude): Before a client meeting the user explicitly asked to publish the Aldeem account with its browser-only presentation data to GitHub and Vercel. This supersedes the same-day Aldeem local-only note for this release. Presentation mode is on by default with a sidebar switch, reads nothing from the database and writes nothing; see components/aldeem/demo and docs/task-state.md
+
+- ALDEEM LOCAL ONLY2026-11-19: User explicitly clarified all Aldeem changes are local only. Do not publish Aldeem source/data changes until newly authorized. Canceled unfinished sidebar logo deployment and reverted its own GitHub commit; keep local logo and loyalty navigation work out of unrelated releases
+
 - RELEASE AUTHORIZATION2026-11-17: User explicitly requested publication of completed Aldeem, Wahed and all eligible menu-brand branch updates to GitHub and Vercel, with handoff updated. Preserve newer production changes in the isolated release worktree. No real test messages or retained test financial records
 
 
