@@ -9,7 +9,7 @@ import s from "./demo.module.css";
 import r from "./reports.module.css";
 
 type Data = ReturnType<typeof useDemo>["d"];
-type Kind = "sar" | "n" | "pct";
+type Kind = "sar" | "n" | "pct" | "dec";
 
 const PERIODS = [
   { id: "day", label: "اليوم", prev: "أمس", factor: 1 / 330, buckets: 16 },
@@ -29,7 +29,7 @@ const AGE_PATTERNS = [[1, 0, 0, 0], [0.7, 0.3, 0, 0], [0.55, 0.25, 0.2, 0], [0.4
 const sar = (value: number) => Math.abs(value) < 1000 ? value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Math.round(value).toLocaleString("en-US");
 const num = (value: number) => Math.round(value).toLocaleString("en-US");
 const pct = (value: number) => `${value.toFixed(1)}%`;
-const fmt = (kind: Kind, value: number) => kind === "sar" ? `${sar(value)} ر.س` : kind === "pct" ? pct(value) : num(value);
+const fmt = (kind: Kind, value: number) => kind === "sar" ? `${sar(value)} ر.س` : kind === "pct" ? pct(value) : kind === "dec" ? value.toFixed(1) : num(value);
 const add = <T,>(rows: T[], pick: (row: T) => number) => rows.reduce((total, row) => total + pick(row), 0);
 // Stable fingerprint so the previous-period comparison never changes between renders.
 const hash = (text: string) => { let h = 2166136261; for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; };
@@ -38,7 +38,10 @@ const hash = (text: string) => { let h = 2166136261; for (let i = 0; i < text.le
 function build(d: Data, periodId: string, branch: string) {
   const period = PERIODS.find(item => item.id === periodId) ?? PERIODS[2];
   const acc = (code: string) => Number(d.accounts.find(row => row.code === code)?.balance ?? 0);
-  const was = (key: string, value: number) => value / (1 + (hash(`${key}|${periodId}|${branch}`) % 260 - 70) / 1000);
+  const raw = (key: string, value: number) => value / (1 + (hash(`${key}|${periodId}|${branch}`) % 260 - 70) / 1000);
+  // Previous-period totals are rebuilt from their own lines below, so every comparison column adds up.
+  const known: Record<string, number> = {};
+  const was = (key: string, value: number) => known[key] ?? raw(key, value);
   const centres = d.costCenters.filter(row => row.kind === "فرع");
   const centreRevenue = sum(centres, "revenue") || 1;
   const shareOf = (index: number) => Number(centres[index]?.revenue ?? 0) / centreRevenue;
@@ -120,6 +123,22 @@ function build(d: Data, periodId: string, branch: string) {
   const centreExpense = sum(d.costCenters, "expense") || 1;
   const centreRows = d.costCenters.map((row, i) => { const revenue = row.kind === "فرع" ? entity.sales * shareOf(i) : row.kind === "إدارة" ? entity.franchise : 0; const expense = (entity.cogs + entity.opexTotal) * Number(row.expense) / centreExpense; return { code: String(row.code), name: String(row.name), kind: String(row.kind), manager: String(row.manager), revenue, expense, result: revenue - expense }; });
   const branchRows = d.branches.map((b, i) => { const centre = centreRows[i]; const name = String(b.name); const basket = ticket * (0.9 + hash(name) % 22 / 100); const count = Math.max(1, Math.round(centre.revenue * 1.15 / basket)); const achievement = 84 + hash(name + periodId) % 34; return { name, city: String(b.city), manager: String(b.manager), sales: centre.revenue, invoices: count, basket: centre.revenue * 1.15 / count, profit: centre.result, margin: centre.result / (centre.revenue || 1) * 100, target: centre.revenue / achievement * 100, achievement }; }).sort((a, b) => b.sales - a.sales);
+
+  {
+    const pS = raw("sales", now.sales), pF = raw("franchise", now.franchise), pC = raw("cogs", now.cogs); const pOpex = now.opex.map(row => raw(row.name, row.value)); const pOT = add(pOpex, value => value);
+    const pRev = pS + pF, pGP = pRev - pC, pOp = pGP - pOT, pZ = Math.max(0, pOp * 0.025), pNet = pOp - pZ;
+    Object.assign(known, { sales: pS, "إيرادات الفرنشايز": pF, revenue: pRev, cogs: pC, gp: pGP, opex: pOT, op: pOp, "مخصص الزكاة 2.5%": pZ, net: pNet, "صافي الربح": pNet, vat: pS * 0.15, gross: pS * 1.15, profit: pS - pC, itemprofit: pS - pC, outvat: pRev * 0.15, gpm: pGP / (pRev || 1) * 100, npm: pNet / (pRev || 1) * 100, itemmargin: (pS - pC) / (pS || 1) * 100 });
+    now.opex.forEach((row, i) => { known[row.name] = pOpex[i]; });
+    const bCash = raw("cash", cash), bRec = raw("receivable", receivable), bStock = raw("stock", stockValue), bFixed = raw("fixed", fixed), bPay = raw("payable", payable), bVat = raw("vatdue", vatDue), bWages = raw("wages", wages), bYear = raw("yearnet", year.net);
+    const bAssets = bCash + bRec + bStock + bFixed, bLiab = bPay + bVat + bWages, bPaid = bAssets - bLiab - capital - retained - bYear;
+    Object.assign(known, { cash: bCash, receivable: bRec, stock: bStock, "الأصول الثابتة بالصافي": bFixed, "مجموع الأصول المتداولة": bCash + bRec + bStock, assets: bAssets, payable: bPay, "ضريبة القيمة المضافة المستحقة": bVat, "رواتب مستحقة": bWages, liabilities: bLiab, "رأس المال": capital, "الأرباح المبقاة": retained, "صافي ربح السنة الحالية": bYear, "توزيعات أرباح مدفوعة": bPaid, "احتياطيات": bPaid, equity: bAssets - bLiab, ratio: (bCash + bRec + bStock) / (bLiab || 1) * 100 });
+    const before = (rows: [string, number][]) => add(rows, ([name, value]) => was(name, value));
+    const fO = before(operatingFlow), fI = before(investingFlow), fF = before(financingFlow);
+    Object.assign(known, { cfo: fO, "صافي النقد من الأنشطة التشغيلية": fO, cfi: fI, "صافي النقد من الأنشطة الاستثمارية": fI, cff: fF, "صافي النقد من الأنشطة التمويلية": fF, change: fO + fI + fF, closing: opening, opening: opening - fO - fI - fF });
+    const eC = raw("ecogs", entity.cogs); const eO = entity.opex.map(row => raw(`e${row.name}`, row.value)); const eOT = add(eO, value => value);
+    Object.assign(known, { ecogs: eC, eopex: eOT, allexp: eC + eOT });
+    entity.opex.forEach((row, i) => { known[`e${row.name}`] = eO[i]; });
+  }
 
   return { period, branch, was, now, entity, year, sales, vat, gross, invoices, basket: gross / invoices, units, items, categories, channels, methods, trend, hours, customers, cashiers, returns, discounts, pointsValue, stockRows, stock, stockValue, stockCategories, stockItems, turnover, cash, receivable, fixed, assets, payable, vatDue, wages, liabilities, capital, retained, dividends, equity, debtors, creditors, operatingFlow, investingFlow, financingFlow, flow, change, closing, opening, outputVat, purchaseBase, inputVat, purchaseCount, centreRows, branchRows, date: d.day(0) };
 }
@@ -383,7 +402,7 @@ function Stock({ m }: { m: Model }) {
       <Stat m={m} id="near" label="قريب الانتهاء" value={m.stock.near} inverse />
       <Stat m={m} id="expired" label="منتهي الصلاحية" value={m.stock.expired} inverse />
       <Stat m={m} id="damaged" label="تالف" value={m.stock.damaged} inverse />
-      <Stat m={m} id="turn" label="معدل دوران المخزون سنويًا" value={m.turnover} kind="n" />
+      <Stat m={m} id="turn" label="معدل دوران المخزون سنويًا" value={m.turnover} kind="dec" />
       <Stat m={m} id="turndays" label="أيام بقاء المخزون" value={365 / (m.turnover || 1)} kind="n" inverse />
     </div>
     <p className={s.hint}>القيم بسعر التكلفة ومأخوذة من تشغيلات المستودعات نفسها وتعرض على مستوى المنشأة كاملة</p>

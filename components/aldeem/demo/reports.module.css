@@ -139,3 +139,4 @@
   .fall i{grid-column:1/-1;grid-row:2}
   .statement td:first-child{min-width:150px}
 }
+.wrap>button{justify-self:start}
