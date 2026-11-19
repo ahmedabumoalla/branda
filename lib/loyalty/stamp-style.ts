@@ -1,4 +1,4 @@
-export const stampStyles = ["ceramic", "paper", "meal", "brand", "scissors", "comb", "plant", "shirt", "phone", "sim", "headphones"] as const;
+export const stampStyles = ["ceramic", "paper", "meal", "brand", "scissors", "comb", "plant", "shirt", "phone", "sim", "headphones", "tea"] as const;
 export type LoyaltyStampStyle = typeof stampStyles[number];
 
 export function loyaltyStampStyle(value: unknown): LoyaltyStampStyle {
@@ -7,6 +7,7 @@ export function loyaltyStampStyle(value: unknown): LoyaltyStampStyle {
 
 // Shared outlines keep the card preview and both native wallets consistent.
 export const stampPaths = {
+  tea: "M6 8h12l-2 11H8L6 8Zm1 4h10M4 22h16M9 2c-2 2 2 2 0 4m5-4c-2 2 2 2 0 4",
   phone: "M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm3 3h4m-3 14h2",
   sim: "M9 2h7l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7l5-5Zm-1 9h8v7H8v-7Zm4 0v7m-4-3h8",
   headphones: "M3 14v-3a9 9 0 0 1 18 0v3M3 12h3v8H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 1-2Zm18 0h-3v8h2a2 2 0 0 0 2-2v-4a2 2 0 0 0-1-2Z",
