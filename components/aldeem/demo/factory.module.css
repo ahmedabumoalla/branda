@@ -143,3 +143,4 @@
 .pick{display:grid;gap:4px;font-size:11.5px;color:#756775}
 .pick select{min-height:40px;min-width:180px;padding:4px 10px;border:1px solid #d9cdd8;border-radius:10px;background:#fff;font:inherit;color:#3f3142}
 @media(max-width:980px){.sheet,.resp{grid-template-columns:1fr}}
+.verify{margin-top:14px}

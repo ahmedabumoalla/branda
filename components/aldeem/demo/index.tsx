@@ -15,6 +15,7 @@ import { DemoWorkshop } from "./workshop";
 import { DemoFactory } from "./factory";
 import { DemoPos } from "./pos";
 import { DemoCustomerPoints } from "./points";
+import { DemoReports } from "./reports";
 import s from "./demo.module.css";
 
 const KEY = "aldeem.demo";
@@ -49,6 +50,7 @@ function SectionView({ section, title }: { section: string; title: string }) {
   if (section === "loyalty-card") return <DemoLoyaltyCard d={d} />;
   if (section === "loyalty-points") return <DemoPoints d={d} />;
   if (section === "customer-points") return <DemoCustomerPoints />;
+  if (section === "finance-reports") return <DemoReports />;
   if (section.startsWith("workshop-")) return <DemoWorkshop section={section} />;
   if (section.startsWith("manufacturing-")) return <DemoFactory section={section} />;
   if (section === "branch-pos-management" || section === "pos-price-management" || section === "pos-active-shifts") return <DemoPos section={section} />;

@@ -5,6 +5,7 @@ import { AlertTriangle, ArrowRight, Check, ClipboardCheck, Factory, PackageSearc
 import type { Row } from "./data";
 import { Badge, Kpis, Register, today, useToast } from "./kit";
 import { clock, FullScreen, useDemo } from "./store";
+import { QualityReport } from "./quality-report";
 import s from "./demo.module.css";
 import f from "./factory.module.css";
 
@@ -226,7 +227,7 @@ export function DemoFactory({ section }: { section: string }) {
           <section className={f.block}><h3><ShieldCheck size={16} aria-hidden="true" />بيانات الباتش</h3>
             <dl className={`${f.resp} ${f.respOne}`}>
               <div><dt>المنتج</dt><dd>{String(qcOrder.product)}</dd><small>أمر <bdi>{String(qcOrder.no)}</bdi> · {String(qcOrder.line)}</small></div>
-              <div><dt>الكمية المنتجة</dt><dd><bdi>{n(Number(qcOrder.produced))}</bdi> {String(qcOrder.unit)}</dd><small>خرج من الخط <bdi>{String(qcOrder.date)} {stageTime(index, 9)}</bdi></small></div>
+              <div><dt>الكمية المنتجة</dt><dd><bdi>{n(Number(qcOrder.produced))}</bdi> {String(qcOrder.unit)}</dd><small>{live >= 10 ? <>خرج من الخط <bdi>{String(qcOrder.date)} {stageTime(index, 9)}</bdi></> : "ما زال على خط الإنتاج"}</small></div>
               <div><dt>مشرف الخط</dt><dd>{String(qcOrder.supervisor)}</dd><small>نفذ فحوص المراحل</small></div>
               <div><dt>مراقب الجودة على الخط</dt><dd>{String(qcOrder.inspector)}</dd><small>اعتمد المراحل ونقاط التحكم الحرجة</small></div>
             </dl>
@@ -257,7 +258,7 @@ export function DemoFactory({ section }: { section: string }) {
   })();
   const operator = <>{station}{labelSheet}{qcSheet}</>;
 
-  if (section === "manufacturing-quality-reports") return <Register title="تقارير الجودة" def={{ action: "إصدار تقرير", kpis: [{ label: "تقارير الجودة", value: n(d.qualityReports.length) }, { label: "متوسط المطابقة", value: "97.8%", tone: "good" }, { label: "باتشات مرفوضة", value: n(d.qualityReports.reduce((total, row) => total + Number(row.rejected), 0)), tone: "bad" }, { label: "شكاوى العملاء", value: n(d.qualityReports.reduce((total, row) => total + Number(row.complaints), 0)), tone: "warn" }], rows: d.qualityReports, cols: [["no", "رقم التقرير", "code"], ["period", "الفترة"], ["batches", "الباتشات", "num"], ["checks", "الفحوصات", "num"], ["pass", "نسبة المطابقة"], ["rejected", "مرفوض", "num"], ["complaints", "شكاوى", "num"], ["issuedBy", "أعده"], ["status", "الحالة", "status"]] }} />;
+  if (section === "manufacturing-quality-reports") return <Register title="تقارير الجودة" renderOpen={(row, back) => <QualityReport row={row} back={back} />} def={{ action: "إصدار تقرير", kpis: [{ label: "تقارير الجودة", value: n(d.qualityReports.length) }, { label: "متوسط المطابقة", value: "97.8%", tone: "good" }, { label: "باتشات مرفوضة", value: n(d.qualityReports.reduce((total, row) => total + Number(row.rejected), 0)), tone: "bad" }, { label: "شكاوى العملاء", value: n(d.qualityReports.reduce((total, row) => total + Number(row.complaints), 0)), tone: "warn" }], rows: d.qualityReports, cols: [["no", "رقم التقرير", "code"], ["period", "الفترة"], ["batches", "الباتشات", "num"], ["checks", "الفحوصات", "num"], ["pass", "نسبة المطابقة"], ["rejected", "مرفوض", "num"], ["complaints", "شكاوى", "num"], ["issuedBy", "أعده"], ["status", "الحالة", "status"]] }} />;
 
   if (section === "manufacturing-quality") {
     const total = Object.keys(prp).length; const done = Object.values(prp).filter(Boolean).length;
