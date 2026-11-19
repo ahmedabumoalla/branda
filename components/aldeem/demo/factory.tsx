@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, ArrowRight, Check, ClipboardCheck, Factory, PackageSearch, ShieldCheck, Tag, Undo2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, ClipboardCheck, Factory, PackageSearch, Printer, ShieldCheck, Tag, Undo2 } from "lucide-react";
 import type { Row } from "./data";
-import { Badge, Kpis, Register, useToast } from "./kit";
+import { Badge, Kpis, Register, today, useToast } from "./kit";
 import { clock, FullScreen, useDemo } from "./store";
 import s from "./demo.module.css";
 import f from "./factory.module.css";
@@ -43,6 +43,18 @@ const PRP: [string, string[]][] = [
   ["النفايات", ["تفريغ الحاويات المغطاة وغسلها", "فصل المنتجات التالفة في منطقة العزل"]],
   ["تدريب العاملين", ["تذكير بداية الوردية بممارسات سلامة الغذاء", "تدريب العاملين الجدد قبل دخول الخط"]],
 ];
+// Final product inspection after the batch leaves the line and before it is distributed.
+const QC_CHECKS: Check[] = [
+  { label: "الفحص الحسي للشكل واللون والطعم والرائحة", limit: "مطابق لمواصفة المنتج" },
+  { label: "الوزن الصافي لعينة من 5 عبوات", limit: "ضمن حد السماح", sample: "501 جم" },
+  { label: "سلامة العبوة وإحكام الإغلاق", limit: "بدون تسريب أو تشوه" },
+  { label: "مطابقة بطاقة البيان والتواريخ ورقم التشغيلة", limit: "مطابقة كاملة" },
+  { label: "حرارة المنتج عند الخروج من الخط", limit: "5 م أو أقل", sample: "3.9 م" },
+  { label: "سحب عينة للفحص الميكروبي وإرسالها للمختبر", limit: "عينة لكل باتش" },
+  { label: "حفظ العينة المرجعية", limit: "حتى نهاية الصلاحية" },
+  { label: "مراجعة سجلات نقاط التحكم الحرجة", limit: "مكتملة وموقعة" },
+];
+const LABEL_CHECKS = ["مطابقة المكونات للوصفة المعتمدة وترتيبها تنازليًا", "إبراز مسببات الحساسية بخط مميز", "الوزن الصافي ضمن حد السماح", "تاريخ الإنتاج والانتهاء ورقم التشغيلة", "ظروف التخزين واسم المنتج وبلد المنشأ", "الحقائق التغذوية والباركود"];
 const PEOPLE = ["فهد العتيبي", "نورة القحطاني", "سلطان الدوسري", "ريم الشمري", "خالد الحربي", "سارة المطيري"];
 const pad = (value: number) => String(value).padStart(2, "0");
 const stageTime = (order: number, stage: number) => `${pad(6 + stage)}:${pad((order * 7 + stage * 11) % 60)}`;
@@ -69,6 +81,12 @@ export function DemoFactory({ section }: { section: string }) {
   const [deviation, setDeviation] = useState<string | null>(null);
   const [traceId, setTraceId] = useState("");
   const [recalled, setRecalled] = useState<Record<string, boolean>>({});
+  const [tickAt, setTickAt] = useState<Record<string, string>>({});
+  const [labelId, setLabelId] = useState("");
+  const [inspectId, setInspectId] = useState("");
+  const [qcTicks, setQcTicks] = useState<Record<string, boolean>>({});
+  const [qcBy, setQcBy] = useState(PEOPLE[1]);
+  const [inspections, setInspections] = useState<Record<string, { by: string; at: string; decision: string }>>({});
   const [prp, setPrp] = useState<Record<string, string>>(() => Object.fromEntries(PRP.flatMap(([, items], group) => items.map((_, index) => [`${group}:${index}`, (group + index) % 4 === 3 ? "" : `${pad(6 + (group % 3))}:${pad((group * 13 + index * 9) % 60)}`]))));
 
   const orders = d.mfgOrders;
@@ -77,6 +95,35 @@ export function DemoFactory({ section }: { section: string }) {
   const product = (name: string) => d.products.find(item => item.name === name) ?? d.products[0];
   const open = (id: string) => { setOpenId(id); setView(null); setDeviation(null); };
   const running = orders.filter(order => liveOf(order) < 10);
+  // Batches finished before the session carry an earlier inspection decision, except every third one, which waits in the inspection queue.
+  const qcOf = (order: Row) => { const index = orders.indexOf(order); return inspections[order.id] ?? (Number(order.stageIndex) >= 10 && index % 3 !== 0 ? { by: PEOPLE[(index + 1) % PEOPLE.length], at: `${String(order.date)} ${stageTime(index, 10)}`, decision: "مفرج عنه" } : null); };
+  const marketOf = (order: Row) => liveOf(order) < 10 ? "قيد الإنتاج" : qcOf(order)?.decision ?? "بانتظار فحص الجودة";
+  const waiting = orders.filter(order => liveOf(order) >= 10 && !qcOf(order));
+  // The label is verified at the packaging stage: the line supervisor performs the checks and the quality inspector approves.
+  const labelCheck = (order: Row) => liveOf(order) > 7 ? { by: approvals[`${order.id}:7`]?.by ?? String(order.inspector), at: approvals[`${order.id}:7`]?.at ?? stageTime(orders.indexOf(order), 7) } : null;
+  const rowButtons = (order: Row) => <div className={f.rowBtns} onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
+    <button type="button" className={s.ghost} onClick={() => setLabelId(order.id)}><Tag size={14} aria-hidden="true" />بطاقة البيان</button>
+    {liveOf(order) >= 10 && <button type="button" className={qcOf(order) ? s.ghost : s.primary} onClick={() => setInspectId(order.id)}><ShieldCheck size={14} aria-hidden="true" />{qcOf(order) ? "عرض الفحص" : "فحص الجودة"}</button>}
+  </div>;
+  const labelOf = (order: Row) => {
+    const index = orders.indexOf(order); const item = product(String(order.product)); const recipe = INGREDIENTS[item.category] ?? INGREDIENTS["حلويات شرقية"];
+    const facts = [["الطاقة", `${320 + (index * 17) % 140} سعرة`], ["الدهون الكلية", `${12 + index % 9} جم`], ["الدهون المشبعة", `${5 + index % 5} جم`], ["الكربوهيدرات", `${38 + (index * 3) % 20} جم`], ["السكريات", `${18 + (index * 5) % 16} جم`], ["البروتين", `${4 + index % 5} جم`], ["الملح", `0.${2 + index % 6} جم`]];
+    return <div className={f.label}>
+      <strong>{item.name}</strong>
+      <p><b>المكونات بترتيب تنازلي:</b> {recipe.list.map(([name, allergen], i) => <span key={name}>{allergen ? <mark>{name}</mark> : name}{i < recipe.list.length - 1 ? "، " : ""}</span>)}</p>
+      <p><b>مسببات الحساسية:</b> {recipe.list.filter(([, allergen]) => allergen).map(([name]) => name).join("، ")}</p>
+      <dl>
+        <div><dt>الوزن الصافي</dt><dd><bdi>500 جم</bdi></dd></div>
+        <div><dt>رقم التشغيلة</dt><dd><bdi>{String(order.batch)}</bdi></dd></div>
+        <div><dt>تاريخ الإنتاج</dt><dd><bdi>{String(order.date)}</bdi></dd></div>
+        <div><dt>تاريخ الانتهاء</dt><dd><bdi>{d.day(item.shelf - Math.floor(index / 3))}</bdi></dd></div>
+      </dl>
+      <p><b>ظروف التخزين:</b> {recipe.storage}</p>
+      <p><b>المنتج:</b> مصنع خيال الديم للحلويات - الرياض - المملكة العربية السعودية</p>
+      <p><b>بلد المنشأ:</b> المملكة العربية السعودية</p>
+      <table><caption>الحقائق التغذوية لكل 100 جم</caption><tbody>{facts.map(([name, value]) => <tr key={name}><td>{name}</td><td><bdi>{value}</bdi></td></tr>)}</tbody></table>
+    </div>;
+  };
   const kpis = [
     { label: "أوامر قيد الإنتاج", value: n(running.length) },
     { label: "أوامر مكتملة ومفرج عنها", value: n(orders.length - running.length), tone: "good" as const },
@@ -87,15 +134,14 @@ export function DemoFactory({ section }: { section: string }) {
   const honest = <p className={s.note}>المراحل وفحوصها مبنية على ممارسات سلامة الغذاء ونظام تحليل المخاطر ونقاط التحكم الحرجة المطبقة ضمن متطلبات الهيئة العامة للغذاء والدواء والمواصفات الخليجية للنظافة وبطاقة البيان ومدد الصلاحية ويراجعها مسؤول الجودة لديكم قبل الاعتماد الرسمي</p>;
 
   const current = orders.find(order => order.id === openId);
-  const operator = current && (() => {
+  const station = current && (() => {
     const index = orders.indexOf(current); const live = liveOf(current); const stage = view ?? Math.min(live, 9); const def = STAGE_DEFS[stage];
     const key = (check: number) => `${current.id}:${stage}:${check}`;
     const isLive = stage === live && live < 10; const held = holds[current.id];
     const ready = def.checks.every((_, check) => ticks[key(check)]);
-    const item = product(String(current.product)); const recipe = INGREDIENTS[item.category] ?? INGREDIENTS["حلويات شرقية"];
+    const lc = labelCheck(current);
     const approved = approvals[`${current.id}:${stage}`] ?? { by: stage % 2 ? String(current.inspector) : String(current.supervisor), at: stageTime(index, stage) };
     const approve = () => { passStage(current.id); setApprovals(all => ({ ...all, [`${current.id}:${stage}`]: { by: String(current.inspector), at: clock() } })); setView(null); toast(stage === 9 ? `أُفرج عن الباتش ${String(current.batch)} وسُلّم للتخزين المبرد` : `اعتُمدت مرحلة ${d.stages[stage]}`); };
-    const facts = [["الطاقة", `${320 + (index * 17) % 140} سعرة`], ["الدهون الكلية", `${12 + index % 9} جم`], ["الدهون المشبعة", `${5 + index % 5} جم`], ["الكربوهيدرات", `${38 + (index * 3) % 20} جم`], ["السكريات", `${18 + (index * 5) % 16} جم`], ["البروتين", `${4 + index % 5} جم`], ["الملح", `0.${2 + index % 6} جم`]];
     return <FullScreen title="واجهة تشغيل خط الإنتاج" subtitle={`${String(current.line)} · أمر ${String(current.no)} · باتش ${String(current.batch)}`} onClose={() => setOpenId("")}>
       <div className={f.op}>
         <aside className={f.list} aria-label="أوامر الإنتاج">{orders.map(order => <button type="button" key={order.id} className={`${f.listItem} ${order.id === current.id ? f.listOn : ""}`} onClick={() => open(order.id)}>
@@ -112,11 +158,11 @@ export function DemoFactory({ section }: { section: string }) {
             <div className={f.blockHead}><div><span>المرحلة <bdi>{stage + 1}</bdi> من <bdi>10</bdi></span><h2>{d.stages[stage]}</h2></div>{def.ccp ? <span className={f.ccp}><ShieldCheck size={15} aria-hidden="true" />نقطة تحكم حرجة</span> : <span className={f.plain}>فحص تشغيلي</span>}</div>
             {def.ccp && <p className={f.limit}>الحد الحرج: {def.ccp} وأي قراءة خارج الحد توقف الباتش وتفتح إجراء تصحيحي</p>}
             <div className={f.checks}>{def.checks.map((check, i) => { const done = stage < live || !!ticks[key(i)]; return <div key={i} className={`${f.check} ${done ? f.checkOn : ""}`}>
-              <div><strong>{check.label}</strong><span>الحد المطلوب: {check.limit}</span></div>
+              <div><strong>{check.label}</strong><span>الحد المطلوب: {check.limit}</span>{done && <small className={f.who}>نفذ التحقق {String(current.supervisor)} مشرف الخط الساعة <bdi>{tickAt[key(i)] ?? stageTime(index, stage)}</bdi></small>}</div>
               {check.sample !== undefined && <input aria-label={`قراءة ${check.label}`} dir="ltr" lang="en" disabled={!isLive} value={readings[key(i)] ?? check.sample} onChange={event => setReadings(all => ({ ...all, [key(i)]: event.target.value }))} />}
-              <button type="button" role="checkbox" aria-checked={done} aria-label={`تحقق من ${check.label}`} disabled={!isLive || !!held} className={f.tick} onClick={() => setTicks(all => ({ ...all, [key(i)]: !all[key(i)] }))}><Check size={16} aria-hidden="true" />{done ? "مطابق" : "تحقق"}</button>
+              <button type="button" role="checkbox" aria-checked={done} aria-label={`تحقق من ${check.label}`} disabled={!isLive || !!held} className={f.tick} onClick={() => { setTicks(all => ({ ...all, [key(i)]: !all[key(i)] })); setTickAt(all => ({ ...all, [key(i)]: clock() })); }}><Check size={16} aria-hidden="true" />{done ? "مطابق" : "تحقق"}</button>
             </div>; })}</div>
-            {stage < live ? <p className={f.signed}><ClipboardCheck size={16} aria-hidden="true" />اعتمدها {approved.by} الساعة <bdi>{approved.at}</bdi></p>
+            {stage < live ? <p className={f.signed}><ClipboardCheck size={16} aria-hidden="true" />نفذ التحقق {String(current.supervisor)} مشرف الخط واعتمد المرحلة {approved.by} الساعة <bdi>{approved.at}</bdi></p>
               : isLive ? <div className={f.actions}>
                 <button type="button" className={s.primary} disabled={!ready || !!held} onClick={approve}>{stage === 9 ? "اعتماد الإفراج عن الباتش" : "اعتماد المرحلة"}</button>
                 <button type="button" className={s.ghost} disabled={!!held} onClick={() => setDeviation(deviation === null ? "" : null)}><AlertTriangle size={15} aria-hidden="true" />تسجيل انحراف</button>
@@ -128,21 +174,10 @@ export function DemoFactory({ section }: { section: string }) {
         </main>
         <aside className={f.side}>
           <section className={f.block}><h3><Tag size={16} aria-hidden="true" />بطاقة البيان</h3>
-            <div className={f.label}>
-              <strong>{item.name}</strong>
-              <p><b>المكونات بترتيب تنازلي:</b> {recipe.list.map(([name, allergen], i) => <span key={name}>{allergen ? <mark>{name}</mark> : name}{i < recipe.list.length - 1 ? "، " : ""}</span>)}</p>
-              <p><b>مسببات الحساسية:</b> {recipe.list.filter(([, allergen]) => allergen).map(([name]) => name).join("، ")}</p>
-              <dl>
-                <div><dt>الوزن الصافي</dt><dd><bdi>500 جم</bdi></dd></div>
-                <div><dt>رقم التشغيلة</dt><dd><bdi>{String(current.batch)}</bdi></dd></div>
-                <div><dt>تاريخ الإنتاج</dt><dd><bdi>{String(current.date)}</bdi></dd></div>
-                <div><dt>تاريخ الانتهاء</dt><dd><bdi>{d.day(item.shelf - Math.floor(index / 3))}</bdi></dd></div>
-              </dl>
-              <p><b>ظروف التخزين:</b> {recipe.storage}</p>
-              <p><b>المنتج:</b> مصنع خيال الديم للحلويات - الرياض - المملكة العربية السعودية</p>
-              <p><b>بلد المنشأ:</b> المملكة العربية السعودية</p>
-              <table><caption>الحقائق التغذوية لكل 100 جم</caption><tbody>{facts.map(([name, value]) => <tr key={name}><td>{name}</td><td><bdi>{value}</bdi></td></tr>)}</tbody></table>
-            </div>
+            {labelOf(current)}
+            <p className={f.who}>{lc ? <>نفذ التحقق من البطاقة {String(current.supervisor)} مشرف الخط واعتمدها {lc.by} مراقب الجودة الساعة <bdi>{lc.at}</bdi></> : `يتحقق من البطاقة في مرحلة ${d.stages[7]}`}</p>
+            <button type="button" className={`${s.primary} ${f.wide}`} onClick={() => setLabelId(current.id)}><Tag size={15} aria-hidden="true" />فتح بطاقة البيان وسجل التحقق</button>
+            {live >= 10 && <button type="button" className={`${s.ghost} ${f.wide}`} onClick={() => setInspectId(current.id)}><ShieldCheck size={15} aria-hidden="true" />مركز الفحص والجودة</button>}
           </section>
           <section className={f.block}><h3><ClipboardCheck size={16} aria-hidden="true" />سجل الباتش</h3>
             <ol className={f.log}>{Array.from({ length: Math.min(live, 10) }, (_, i) => { const record = approvals[`${current.id}:${i}`]; return <li key={i}><bdi>{record?.at ?? stageTime(index, i)}</bdi><span>{d.stages[i]}</span></li>; }).reverse()}{live === 0 && <li><span>لم تعتمد أي مرحلة بعد</span></li>}</ol>
@@ -152,13 +187,84 @@ export function DemoFactory({ section }: { section: string }) {
     </FullScreen>;
   })();
 
+  const labelOrder = orders.find(order => order.id === labelId);
+  const labelSheet = labelOrder && (() => {
+    const lc = labelCheck(labelOrder); const qc = qcOf(labelOrder); const live = liveOf(labelOrder);
+    return <FullScreen title="بطاقة البيان" subtitle={`${String(labelOrder.product)} · أمر ${String(labelOrder.no)} · باتش ${String(labelOrder.batch)}`} onClose={() => setLabelId("")}>
+      <div className={f.sheet}>
+        <section className={f.block}><h3><Tag size={16} aria-hidden="true" />البطاقة المطبوعة على العبوة</h3>{labelOf(labelOrder)}
+          <div className={f.actions}><button type="button" className={s.primary} onClick={() => { log(`طباعة بطاقة البيان للباتش ${String(labelOrder.batch)}`); toast("أُرسلت بطاقة البيان للطابعة"); }}><Printer size={15} aria-hidden="true" />طباعة بطاقة البيان</button></div>
+        </section>
+        <div className={f.main}>
+          <section className={f.block}>
+            <div className={f.blockHead}><div><span>التحقق من بطاقة البيان</span><h2>من نفذ التحقق ومتى</h2></div><Badge>{lc ? "مطابق" : "قيد الإنتاج"}</Badge></div>
+            <dl className={f.resp}>
+              <div><dt>نفذ التحقق</dt><dd>{lc ? String(labelOrder.supervisor) : "لم ينفذ بعد"}</dd><small>مشرف الخط</small></div>
+              <div><dt>اعتمد البطاقة</dt><dd>{lc ? lc.by : "لم تعتمد بعد"}</dd><small>مراقب الجودة{lc && <> · <bdi>{lc.at}</bdi></>}</small></div>
+              <div><dt>فحص الجودة بعد التصنيع</dt><dd>{qc ? qc.by : live >= 10 ? "بانتظار الفحص" : "بعد خروج الباتش من الخط"}</dd><small>{qc ? <>{qc.decision} · <bdi>{qc.at}</bdi></> : "مسؤول الجودة"}</small></div>
+            </dl>
+            <ul className={f.verify}>{LABEL_CHECKS.map(item => <li key={item} className={lc ? f.verifyOn : ""}><span><i><Check size={13} aria-hidden="true" /></i>{item}</span><small>{lc ? <>{String(labelOrder.supervisor)} · <bdi>{lc.at}</bdi></> : `يتحقق منه في مرحلة ${d.stages[7]}`}</small></li>)}</ul>
+            <div className={f.actions}>
+              <button type="button" className={s.ghost} onClick={() => { setLabelId(""); setInspectId(labelOrder.id); }}><ShieldCheck size={15} aria-hidden="true" />مركز الفحص والجودة</button>
+              <button type="button" className={s.ghost} onClick={() => { setLabelId(""); open(labelOrder.id); }}><Factory size={15} aria-hidden="true" />واجهة تشغيل الباتش</button>
+            </div>
+          </section>
+          {honest}
+        </div>
+      </div>
+    </FullScreen>;
+  })();
+
+  const qcOrder = orders.find(order => order.id === inspectId);
+  const qcSheet = qcOrder && (() => {
+    const index = orders.indexOf(qcOrder); const live = liveOf(qcOrder); const qc = qcOf(qcOrder);
+    const key = (check: number) => `${qcOrder.id}:${check}`; const ready = QC_CHECKS.every((_, check) => qcTicks[key(check)]);
+    const decide = (decision: string) => { setInspections(all => ({ ...all, [qcOrder.id]: { by: qcBy, at: `${today()} ${clock()}`, decision } })); log(`قرار ${decision} للباتش ${String(qcOrder.batch)} من ${qcBy}`); toast(decision === "مفرج عنه" ? "أُفرج عن الباتش للتوزيع" : decision === "محجوز" ? "حُجز الباتش في منطقة العزل" : "رُفض الباتش وحُول للإتلاف"); };
+    return <FullScreen title="مركز الفحص والجودة" subtitle={`فحص المنتج النهائي بعد خروجه من التصنيع · باتش ${String(qcOrder.batch)}`} onClose={() => setInspectId("")}>
+      <div className={f.sheet}>
+        <div className={f.side}>
+          <section className={f.block}><h3><ShieldCheck size={16} aria-hidden="true" />بيانات الباتش</h3>
+            <dl className={`${f.resp} ${f.respOne}`}>
+              <div><dt>المنتج</dt><dd>{String(qcOrder.product)}</dd><small>أمر <bdi>{String(qcOrder.no)}</bdi> · {String(qcOrder.line)}</small></div>
+              <div><dt>الكمية المنتجة</dt><dd><bdi>{n(Number(qcOrder.produced))}</bdi> {String(qcOrder.unit)}</dd><small>خرج من الخط <bdi>{String(qcOrder.date)} {stageTime(index, 9)}</bdi></small></div>
+              <div><dt>مشرف الخط</dt><dd>{String(qcOrder.supervisor)}</dd><small>نفذ فحوص المراحل</small></div>
+              <div><dt>مراقب الجودة على الخط</dt><dd>{String(qcOrder.inspector)}</dd><small>اعتمد المراحل ونقاط التحكم الحرجة</small></div>
+            </dl>
+            <button type="button" className={`${s.ghost} ${f.wide}`} onClick={() => { setInspectId(""); setLabelId(qcOrder.id); }}><Tag size={15} aria-hidden="true" />بطاقة البيان وسجل التحقق</button>
+          </section>
+        </div>
+        <div className={f.main}>
+          {live < 10 ? <section className={f.block}><p className={f.signed}>يفتح الفحص النهائي بعد خروج الباتش من خط الإنتاج وهو الآن في مرحلة {d.stages[live]}</p></section> : <section className={f.block}>
+            <div className={f.blockHead}><div><span>فحص المنتج النهائي قبل التوزيع</span><h2>{String(qcOrder.product)}</h2></div><Badge>{qc?.decision ?? "بانتظار فحص الجودة"}</Badge></div>
+            <div className={f.checks}>{QC_CHECKS.map((check, i) => { const done = !!qc || !!qcTicks[key(i)]; return <div key={i} className={`${f.check} ${done ? f.checkOn : ""}`}>
+              <div><strong>{check.label}</strong><span>الحد المطلوب: {check.limit}</span>{done && <small className={f.who}>نفذ الفحص {qc?.by ?? qcBy} مسؤول الجودة</small>}</div>
+              {check.sample !== undefined && <input aria-label={`قراءة ${check.label}`} dir="ltr" lang="en" disabled={!!qc} defaultValue={check.sample} />}
+              <button type="button" role="checkbox" aria-checked={done} aria-label={`تحقق من ${check.label}`} disabled={!!qc} className={f.tick} onClick={() => setQcTicks(all => ({ ...all, [key(i)]: !all[key(i)] }))}><Check size={16} aria-hidden="true" />{done ? "مطابق" : "تحقق"}</button>
+            </div>; })}</div>
+            {qc ? <p className={f.signed}><ClipboardCheck size={16} aria-hidden="true" />قرار {qc.decision} أصدره {qc.by} مسؤول الجودة <bdi>{qc.at}</bdi></p>
+              : <div className={f.actions}>
+                <label className={f.pick}>مسؤول الجودة المنفذ<select value={qcBy} onChange={event => setQcBy(event.target.value)}>{PEOPLE.map(name => <option key={name}>{name}</option>)}</select></label>
+                <button type="button" className={s.primary} disabled={!ready} onClick={() => decide("مفرج عنه")}>إفراج للتوزيع</button>
+                <button type="button" className={s.ghost} onClick={() => decide("محجوز")}><AlertTriangle size={15} aria-hidden="true" />حجز الباتش</button>
+                <button type="button" className={s.ghost} onClick={() => decide("مرفوض")}>رفض وإتلاف</button>
+                {!ready && <small>تحقق من كل البنود لتفعيل الإفراج</small>}
+              </div>}
+          </section>}
+          {honest}
+        </div>
+      </div>
+    </FullScreen>;
+  })();
+  const operator = <>{station}{labelSheet}{qcSheet}</>;
+
   if (section === "manufacturing-quality-reports") return <Register title="تقارير الجودة" def={{ action: "إصدار تقرير", kpis: [{ label: "تقارير الجودة", value: n(d.qualityReports.length) }, { label: "متوسط المطابقة", value: "97.8%", tone: "good" }, { label: "باتشات مرفوضة", value: n(d.qualityReports.reduce((total, row) => total + Number(row.rejected), 0)), tone: "bad" }, { label: "شكاوى العملاء", value: n(d.qualityReports.reduce((total, row) => total + Number(row.complaints), 0)), tone: "warn" }], rows: d.qualityReports, cols: [["no", "رقم التقرير", "code"], ["period", "الفترة"], ["batches", "الباتشات", "num"], ["checks", "الفحوصات", "num"], ["pass", "نسبة المطابقة"], ["rejected", "مرفوض", "num"], ["complaints", "شكاوى", "num"], ["issuedBy", "أعده"], ["status", "الحالة", "status"]] }} />;
 
   if (section === "manufacturing-quality") {
     const total = Object.keys(prp).length; const done = Object.values(prp).filter(Boolean).length;
     const ccpRows = orders.slice(0, 10).flatMap((order, index) => [4, 5, 8, 9].filter(stage => stage < liveOf(order)).slice(0, 2).map(stage => ({ id: `${order.id}:${stage}`, batch: String(order.batch), product: String(order.product), point: d.stages[stage], limit: String(STAGE_DEFS[stage].ccp), reading: STAGE_DEFS[stage].checks[0].sample ?? "مطابق", at: stageTime(index, stage), by: String(order.inspector) })));
     return <>
-      <Kpis items={[{ label: "بنود البرامج الأولية اليوم", value: `${done} / ${total}`, tone: done === total ? "good" : "warn" }, { label: "قراءات نقاط التحكم الحرجة", value: n(ccpRows.length), tone: "good" }, { label: "انحرافات مفتوحة", value: n(Object.keys(holds).length), tone: Object.keys(holds).length ? "bad" : "good" }, { label: "فحوصات مسجلة", value: n(d.quality.length) }]} />
+      <Kpis items={[{ label: "بنود البرامج الأولية اليوم", value: `${done} / ${total}`, tone: done === total ? "good" : "warn" }, { label: "قراءات نقاط التحكم الحرجة", value: n(ccpRows.length), tone: "good" }, { label: "انحرافات مفتوحة", value: n(Object.keys(holds).length), tone: Object.keys(holds).length ? "bad" : "good" }, { label: "باتشات بانتظار الفحص النهائي", value: n(waiting.length), tone: waiting.length ? "warn" : "good" }, { label: "فحوصات مسجلة", value: n(d.quality.length) }]} />
+      <section className={s.panel}><div className={s.panelHead}><h2>مركز الفحص والجودة بعد التصنيع</h2><span>كل باتش يخرج من الخط يفحصه مسؤول الجودة هنا قبل توزيعه</span></div><div className={s.tableWrap}><table className={s.table}><thead><tr><th>الباتش</th><th>المنتج</th><th>الخط</th><th>الكمية</th><th>مسؤول الفحص</th><th>وقت القرار</th><th>القرار</th><th /></tr></thead><tbody>{[...waiting, ...orders.filter(order => liveOf(order) >= 10 && qcOf(order))].map(order => { const qc = qcOf(order); return <tr key={order.id}><td><bdi className={s.code}>{String(order.batch)}</bdi></td><td><strong>{String(order.product)}</strong></td><td>{String(order.line)}</td><td><bdi className={s.num}>{n(Number(order.produced))}</bdi> {String(order.unit)}</td><td>{qc?.by ?? "لم يحدد بعد"}</td><td><bdi className={s.num}>{qc?.at ?? ""}</bdi></td><td><Badge>{marketOf(order)}</Badge></td><td>{rowButtons(order)}</td></tr>; })}</tbody></table></div></section>
       <section className={s.panel}><div className={s.panelHead}><h2>سجل البرامج الأولية اليومي</h2><span>اضغط البند لتسجيل تنفيذه باسم المسؤول ووقته</span></div><div className={s.panelBody}><div className={f.prp}>{PRP.map(([group, items], g) => <div key={group} className={f.prpGroup}><h3>{group}</h3>{items.map((item, i) => { const id = `${g}:${i}`; const at = prp[id]; return <button type="button" key={id} role="checkbox" aria-checked={!!at} className={`${f.prpItem} ${at ? f.prpOn : ""}`} onClick={() => { setPrp(all => ({ ...all, [id]: at ? "" : clock() })); if (!at) log(`تنفيذ بند ${item}`); toast(at ? "أُلغي تسجيل البند" : "سُجل تنفيذ البند"); }}><i><Check size={14} aria-hidden="true" /></i><span>{item}</span><small>{at ? <>{PEOPLE[(g + i) % PEOPLE.length]} · <bdi>{at}</bdi></> : "لم ينفذ بعد"}</small></button>; })}</div>)}</div></div></section>
       <section className={s.panel}><div className={s.panelHead}><h2>قراءات نقاط التحكم الحرجة</h2><span>تسجل تلقائيًا من واجهة التشغيل</span></div><div className={s.tableWrap}><table className={s.table}><thead><tr><th>الباتش</th><th>المنتج</th><th>نقطة التحكم</th><th>الحد الحرج</th><th>القراءة</th><th>الوقت</th><th>المراقب</th><th>النتيجة</th></tr></thead><tbody>{ccpRows.map(row => <tr key={row.id}><td><bdi className={s.code}>{row.batch}</bdi></td><td><strong>{row.product}</strong></td><td>{row.point}</td><td>{row.limit}</td><td><bdi className={s.num}>{row.reading}</bdi></td><td><bdi className={s.num}>{row.at}</bdi></td><td>{row.by}</td><td><Badge>مطابق</Badge></td></tr>)}</tbody></table></div></section>
       <section className={s.panel}><div className={s.panelHead}><h2>الانحرافات والإجراءات التصحيحية</h2><span>تفتح من واجهة التشغيل عند تجاوز أي حد</span></div><div className={s.tableWrap}><table className={s.table}><thead><tr><th>الباتش</th><th>المنتج</th><th>المرحلة</th><th>الإجراء التصحيحي</th><th>الحالة</th><th /></tr></thead><tbody>
@@ -181,10 +287,10 @@ export function DemoFactory({ section }: { section: string }) {
       const held = recalled[batch.id]; const remaining = flow.reduce((total, row) => total + row.remaining, 0);
       return <>
         <button type="button" className={s.back} onClick={() => setTraceId("")}><ArrowRight size={16} aria-hidden="true" />كل الباتشات</button>
-        <section className={f.traceHero}><div><span>تتبع الباتش</span><h2><bdi>{String(batch.batch)}</bdi></h2><p>{String(batch.product)} · أمر الإنتاج <bdi>{String(order.no)}</bdi> · {String(order.line)}</p></div><div className={f.traceStats}><div><span>الكمية المنتجة</span><strong><bdi>{n(qty)}</bdi> {String(batch.unit)}</strong></div><div><span>تاريخ الإنتاج</span><strong><bdi>{String(batch.produced)}</bdi></strong></div><div><span>تاريخ الانتهاء</span><strong><bdi>{String(batch.expiry)}</bdi></strong></div><div><span>الحالة</span><strong>{held ? "محجوز للسحب" : live >= 10 ? "مفرج عنه" : "قيد الإنتاج"}</strong></div></div></section>
+        <section className={f.traceHero}><div><span>تتبع الباتش</span><h2><bdi>{String(batch.batch)}</bdi></h2><p>{String(batch.product)} · أمر الإنتاج <bdi>{String(order.no)}</bdi> · {String(order.line)}</p></div><div className={f.traceStats}><div><span>الكمية المنتجة</span><strong><bdi>{n(qty)}</bdi> {String(batch.unit)}</strong></div><div><span>تاريخ الإنتاج</span><strong><bdi>{String(batch.produced)}</bdi></strong></div><div><span>تاريخ الانتهاء</span><strong><bdi>{String(batch.expiry)}</bdi></strong></div><div><span>الحالة</span><strong>{held ? "محجوز للسحب" : marketOf(order)}</strong></div></div></section>
         <div className={f.trace}>
           <section className={s.panel}><div className={s.panelHead}><h2>خطوة للخلف</h2><span>من أين جاءت المواد</span></div><div className={s.panelBody}><div className={f.cards}>{recipe.raw.map(([name, supplier], i) => <article key={name} className={f.rawCard}><strong>{name}</strong><span>{supplier}</span><dl><div><dt>تشغيلة المورد</dt><dd><bdi>RM-{String(batch.produced).slice(2).replaceAll("-", "")}-{pad(index + i + 3)}</bdi></dd></div><div><dt>تاريخ الاستلام</dt><dd><bdi>{d.day(-(index % 5) - i - 2)}</bdi></dd></div><div><dt>شهادة التحليل</dt><dd>مرفقة ومطابقة</dd></div><div><dt>حرارة الاستلام</dt><dd><bdi>{name.includes("قشطة") || name.includes("كريمة") || name.includes("زبدة") ? "3.6 م" : "محيط"}</bdi></dd></div></dl></article>)}</div></div></section>
-          <section className={s.panel}><div className={s.panelHead}><h2>مراحل التصنيع</h2><span>من اعتمد ومتى</span></div><div className={s.panelBody}><ol className={f.timeline}>{d.stages.map((name, i) => <li key={name} className={i < live ? f.tDone : i === live ? f.tNow : ""}><i>{i < live ? <Check size={12} aria-hidden="true" /> : <bdi>{i + 1}</bdi>}</i><div><strong>{name}{STAGE_DEFS[i].ccp && <em>نقطة تحكم حرجة</em>}</strong><span>{i < live ? <>{approvals[`${order.id}:${i}`]?.by ?? (i % 2 ? String(order.inspector) : String(order.supervisor))} · <bdi>{approvals[`${order.id}:${i}`]?.at ?? stageTime(index, i)}</bdi></> : i === live ? "جارية الآن" : "لم تبدأ"}</span></div></li>)}</ol><button type="button" className={s.ghost} style={{ marginTop: 12 }} onClick={() => open(order.id)}><Factory size={15} aria-hidden="true" />فتح واجهة التشغيل لهذا الباتش</button></div></section>
+          <section className={s.panel}><div className={s.panelHead}><h2>مراحل التصنيع</h2><span>من اعتمد ومتى</span></div><div className={s.panelBody}><ol className={f.timeline}>{d.stages.map((name, i) => <li key={name} className={i < live ? f.tDone : i === live ? f.tNow : ""}><i>{i < live ? <Check size={12} aria-hidden="true" /> : <bdi>{i + 1}</bdi>}</i><div><strong>{name}{STAGE_DEFS[i].ccp && <em>نقطة تحكم حرجة</em>}</strong><span>{i < live ? <>{approvals[`${order.id}:${i}`]?.by ?? (i % 2 ? String(order.inspector) : String(order.supervisor))} · <bdi>{approvals[`${order.id}:${i}`]?.at ?? stageTime(index, i)}</bdi></> : i === live ? "جارية الآن" : "لم تبدأ"}</span></div></li>)}</ol><button type="button" className={s.ghost} style={{ marginTop: 12 }} onClick={() => open(order.id)}><Factory size={15} aria-hidden="true" />فتح واجهة التشغيل لهذا الباتش</button><div style={{ marginTop: 10 }}>{rowButtons(order)}</div></div></section>
           <section className={s.panel}><div className={s.panelHead}><h2>خطوة للأمام</h2><span>إلى أين ذهب المنتج</span></div><div className={s.tableWrap}><table className={s.table}><thead><tr><th>الموقع</th><th>المرسل</th><th>المباع</th><th>المتبقي</th><th>الحالة</th></tr></thead><tbody>{flow.map(row => <tr key={row.place}><td><strong>{row.place}</strong></td><td><bdi className={s.num}>{n(row.sent)}</bdi></td><td><bdi className={s.num}>{n(row.sold)}</bdi></td><td><bdi className={s.num}>{n(row.remaining)}</bdi></td><td><Badge>{live < 10 ? "قيد الإنتاج" : held && row.remaining > 0 ? "محجوز" : row.remaining === 0 ? "مباعة" : "صالح"}</Badge></td></tr>)}</tbody></table></div>
             <p className={s.hint}>ميزان الكميات: المنتج <bdi>{n(qty)}</bdi> يساوي الموزع <bdi>{n(pool)}</bdi> مع العينة المرجعية <bdi>{sample}</bdi> والهدر <bdi>{waste}</bdi></p>
           </section>
@@ -198,14 +304,14 @@ export function DemoFactory({ section }: { section: string }) {
     }
     return <>
       <Kpis items={[{ label: "باتشات متتبعة", value: n(d.batches.length) }, { label: "مفرج عنها", value: n(orders.length - running.length), tone: "good" }, { label: "قيد الإنتاج", value: n(running.length), tone: "warn" }, { label: "محجوزة للسحب", value: n(Object.values(recalled).filter(Boolean).length), tone: Object.values(recalled).some(Boolean) ? "bad" : "good" }]} />
-      <section className={s.panel}><p className={s.hint}>اضغط أي باتش لفتح صفحة تتبعه من المواد الخام حتى الفرع الذي بيع فيه</p><div className={s.tableWrap}><table className={s.table}><thead><tr><th>الباتش</th><th>المنتج</th><th>تاريخ الإنتاج</th><th>الانتهاء</th><th>الكمية</th><th>الموقع الحالي</th><th>المباع</th><th>الحالة</th></tr></thead><tbody>{d.batches.map(row => { const order = orders.find(item => item.id === row.orderId); const live = order ? liveOf(order) : 10; return <tr key={row.id} tabIndex={0} className={s.rowLink} onClick={() => setTraceId(row.id)} onKeyDown={event => { if (event.key === "Enter") setTraceId(row.id); }}><td><bdi className={s.code}>{String(row.batch)}</bdi></td><td><strong>{String(row.product)}</strong></td><td><bdi className={s.num}>{String(row.produced)}</bdi></td><td><bdi className={s.num}>{String(row.expiry)}</bdi></td><td><bdi className={s.num}>{n(Number(row.qty))}</bdi> {String(row.unit)}</td><td>{live < 10 ? "خط الإنتاج" : String(row.location)}</td><td><bdi className={s.num}>{live < 10 ? "0%" : String(row.sold)}</bdi></td><td><Badge>{recalled[row.id] ? "محجوز" : live >= 10 ? "مفرج عنه" : "قيد الإنتاج"}</Badge></td></tr>; })}</tbody></table></div></section>
+      <section className={s.panel}><p className={s.hint}>اضغط أي باتش لفتح صفحة تتبعه من المواد الخام حتى الفرع الذي بيع فيه ولكل باتش زر لبطاقة البيان وزر لفحص الجودة</p><div className={s.tableWrap}><table className={s.table}><thead><tr><th>الباتش</th><th>المنتج</th><th>تاريخ الإنتاج</th><th>الانتهاء</th><th>الكمية</th><th>الموقع الحالي</th><th>المباع</th><th>الحالة</th><th /></tr></thead><tbody>{d.batches.map(row => { const order = orders.find(item => item.id === row.orderId); const live = order ? liveOf(order) : 10; return <tr key={row.id} tabIndex={0} className={s.rowLink} onClick={() => setTraceId(row.id)} onKeyDown={event => { if (event.key === "Enter") setTraceId(row.id); }}><td><bdi className={s.code}>{String(row.batch)}</bdi></td><td><strong>{String(row.product)}</strong></td><td><bdi className={s.num}>{String(row.produced)}</bdi></td><td><bdi className={s.num}>{String(row.expiry)}</bdi></td><td><bdi className={s.num}>{n(Number(row.qty))}</bdi> {String(row.unit)}</td><td>{live < 10 ? "خط الإنتاج" : String(row.location)}</td><td><bdi className={s.num}>{live < 10 ? "0%" : String(row.sold)}</bdi></td><td><Badge>{recalled[row.id] ? "محجوز" : order ? marketOf(order) : "مفرج عنه"}</Badge></td><td>{order && rowButtons(order)}</td></tr>; })}</tbody></table></div></section>
       {operator}
     </>;
   }
 
   if (section === "manufacturing-operations") return <>
     <Kpis items={kpis} />
-    <section className={s.panel}><p className={s.hint}>اضغط أي أمر إنتاج لفتح واجهة التشغيل واعتماد مراحله</p><div className={s.tableWrap}><table className={s.table}><thead><tr><th>أمر الإنتاج</th><th>التاريخ</th><th>المنتج</th><th>الباتش</th><th>الخط</th><th>المخطط</th><th>المرحلة الحالية</th><th>الإنجاز</th><th>المشرف</th><th>الحالة</th></tr></thead><tbody>{orders.map(order => <tr key={order.id} tabIndex={0} className={s.rowLink} onClick={() => open(order.id)} onKeyDown={event => { if (event.key === "Enter") open(order.id); }}><td><bdi className={s.code}>{String(order.no)}</bdi></td><td><bdi className={s.num}>{String(order.date)}</bdi></td><td><strong>{String(order.product)}</strong></td><td><bdi className={s.code}>{String(order.batch)}</bdi></td><td>{String(order.line)}</td><td><bdi className={s.num}>{n(Number(order.planned))}</bdi> {String(order.unit)}</td><td>{liveOf(order) >= 10 ? "اكتملت كل المراحل" : d.stages[liveOf(order)]}</td><td><bdi className={s.num}>{liveOf(order) * 10}%</bdi></td><td>{String(order.supervisor)}</td><td><Badge>{statusOf(order)}</Badge></td></tr>)}</tbody></table></div></section>
+    <section className={s.panel}><p className={s.hint}>اضغط أي أمر إنتاج لفتح واجهة التشغيل واعتماد مراحله</p><div className={s.tableWrap}><table className={s.table}><thead><tr><th>أمر الإنتاج</th><th>التاريخ</th><th>المنتج</th><th>الباتش</th><th>الخط</th><th>المخطط</th><th>المرحلة الحالية</th><th>الإنجاز</th><th>المشرف</th><th>الحالة</th><th /></tr></thead><tbody>{orders.map(order => <tr key={order.id} tabIndex={0} className={s.rowLink} onClick={() => open(order.id)} onKeyDown={event => { if (event.key === "Enter") open(order.id); }}><td><bdi className={s.code}>{String(order.no)}</bdi></td><td><bdi className={s.num}>{String(order.date)}</bdi></td><td><strong>{String(order.product)}</strong></td><td><bdi className={s.code}>{String(order.batch)}</bdi></td><td>{String(order.line)}</td><td><bdi className={s.num}>{n(Number(order.planned))}</bdi> {String(order.unit)}</td><td>{liveOf(order) >= 10 ? "اكتملت كل المراحل" : d.stages[liveOf(order)]}</td><td><bdi className={s.num}>{liveOf(order) * 10}%</bdi></td><td>{String(order.supervisor)}</td><td><Badge>{statusOf(order)}</Badge></td><td>{rowButtons(order)}</td></tr>)}</tbody></table></div></section>
     {honest}{operator}
   </>;
 
@@ -215,6 +321,7 @@ export function DemoFactory({ section }: { section: string }) {
       <header><div><strong>{String(order.product)}</strong><span><bdi>{String(order.no)}</bdi> · {String(order.line)} · باتش <bdi>{String(order.batch)}</bdi></span></div><Badge>{statusOf(order)}</Badge></header>
       <Rail live={live} held={!!holds[order.id]} />
       <footer><div><span>{live >= 10 ? "الحالة" : "المرحلة الحالية"}</span><b>{live >= 10 ? "اكتملت كل المراحل" : d.stages[live]}</b></div><div><span>الإنجاز</span><b><bdi>{live * 10}%</bdi></b></div><button type="button" className={s.primary} onClick={() => open(order.id)}><Factory size={16} aria-hidden="true" />فتح واجهة التشغيل</button></footer>
+      <div className={f.cardBtns}>{rowButtons(order)}</div>
     </article>; })}</div>
     {honest}{operator}
   </>;

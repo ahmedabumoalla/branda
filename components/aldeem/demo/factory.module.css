@@ -119,3 +119,27 @@
 .tDone::before{background:var(--good,#177a52)!important}
 .tNow i{border-color:var(--p,#a437a6);background:var(--p,#a437a6);color:#fff}
 @media(max-width:1180px){.op{grid-template-columns:1fr}.list{grid-auto-flow:column;grid-auto-columns:220px;max-height:none;overflow-x:auto}}
+
+/* label sheet, verification record and inspection centre */
+.sheet{display:grid;grid-template-columns:minmax(300px,400px) minmax(0,1fr);gap:18px;align-items:start;max-width:1280px;margin:0 auto}
+.who{display:block;margin:4px 0 0;font-size:11.5px;font-weight:600;color:#177a52}
+.wide{width:100%;justify-content:center;margin-top:10px}
+.rowBtns{display:flex;flex-wrap:nowrap;gap:6px}
+.rowBtns button{min-height:36px;padding:4px 12px;font-size:12px;white-space:nowrap}
+.cardBtns{margin-top:12px;padding-top:12px;border-top:1px solid #eee2eb}
+.resp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 16px}
+.respOne{grid-template-columns:1fr;margin-bottom:4px}
+.resp div{padding:12px 14px;border:1px solid #eee2eb;border-radius:14px;background:#fdf9fc}
+.resp dt{font-size:11px;color:#756775}
+.resp dd{margin:2px 0;font-size:14px;font-weight:700}
+.resp small{font-size:11.5px;color:#756775}
+.verify{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.verify li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border:1px solid #eee2eb;border-radius:12px;font-size:12.5px}
+.verify span{display:flex;align-items:center;gap:8px;font-weight:600}
+.verify i{display:grid;place-items:center;width:20px;height:20px;border:1px solid #d9cdd8;border-radius:50%;color:transparent}
+.verify small{font-size:11.5px;color:#756775}
+.verifyOn{border-color:#a8dcc3!important;background:#f1faf5}
+.verifyOn i{border-color:#177a52;background:#177a52;color:#fff}
+.pick{display:grid;gap:4px;font-size:11.5px;color:#756775}
+.pick select{min-height:40px;min-width:180px;padding:4px 10px;border:1px solid #d9cdd8;border-radius:10px;background:#fff;font:inherit;color:#3f3142}
+@media(max-width:980px){.sheet,.resp{grid-template-columns:1fr}}
