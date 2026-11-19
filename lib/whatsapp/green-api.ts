@@ -1,6 +1,7 @@
 import "server-only";
 import { cashierGuideFilename, cashierGuideUrl } from "@/lib/cashier/guide";
-import { ownerGuideFilename, ownerGuideUrl } from "@/lib/whatsapp/owner-guide";
+import { ownerGuideFilename, ownerGuideUrl, ownerCompanionGuides, type OwnerCompanionGuide } from "@/lib/whatsapp/owner-guide";
+import { queueOwnerCompanionGuides } from "@/lib/whatsapp/owner-guide-delivery";
 
 const DEFAULT_GREEN_API_TIMEOUT_MS = 10_000;
 
@@ -31,7 +32,7 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
     `الجوال: ${input.phone}`,
     `كلمة المرور: ${input.password}`,
     trialMessage,
-    "شاهد الفيديو المرفق لشرح إعداد حساب الولاء في برندة",
+    "١ من ٣ — إعداد حساب الولاء\nشاهد المقطع المرفق لتجهيز حسابك وسنرسل بعده شرح الكاشير وتحميل بطاقة العميل",
   ].join("\n"));
 }
 
@@ -43,11 +44,24 @@ export async function sendGreenApiOwnerSignupWelcome(input: { phone: string; bra
     "الدخول: https://barndaksa.com/login",
     `الجوال: ${input.phone}`,
     "استخدم كلمة المرور التي اخترتها عند التسجيل",
-    "شاهد الفيديو المرفق لشرح إعداد حساب الولاء في برندة",
+    "١ من ٣ — إعداد حساب الولاء\nشاهد المقطع المرفق لتجهيز حسابك وسنرسل بعده شرح الكاشير وتحميل بطاقة العميل",
   ].join("\n"));
 }
 
 async function sendOwnerWelcomeVideo(phone: string, caption: string) {
+  const sent = await sendOwnerVideo(phone, ownerGuideUrl, ownerGuideFilename, caption);
+  // A companion failure must never replay accepted login credentials or undo trial activation.
+  await queueOwnerCompanionGuides(phone, sent.providerMessageId);
+  return sent;
+}
+
+export async function sendGreenApiOwnerCompanionGuide(phone: string, guide: OwnerCompanionGuide) {
+  const clip = ownerCompanionGuides[guide];
+  if (!clip) throw new Error("OWNER_WELCOME_REJECTED");
+  return sendOwnerVideo(phone, clip.url, clip.filename, clip.caption);
+}
+
+async function sendOwnerVideo(phone: string, urlFile: string, fileName: string, caption: string) {
   if (!/^9665\d{8}$/.test(phone)) throw new Error("INVALID_OWNER_RECIPIENT");
   if (caption.length > 1024) throw new Error("OWNER_WELCOME_REJECTED");
   const primary = await requireDeliveryConfig("owner");
@@ -55,7 +69,7 @@ async function sendOwnerWelcomeVideo(phone: string, caption: string) {
   const send = (target: OtpSender) => fetch(otpEndpoint(target, "sendFileByUrl"), {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
     signal: AbortSignal.timeout(30_000),
-    body: JSON.stringify({ chatId: `${phone}@c.us`, urlFile: ownerGuideUrl, fileName: ownerGuideFilename, caption }),
+    body: JSON.stringify({ chatId: `${phone}@c.us`, urlFile, fileName, caption }),
   });
   let response: Response;
   try { response = await submitPlatformMessage(validateOtpSender(primary), backup, send); }

@@ -1,0 +1,11 @@
+# Three owner WhatsApp tutorials
+
+2026-11-19. Both successful self-signup and authorized admin owner handoff retain the setup video with login details as clip1. Each accepted welcome receipt idempotently queues cashier clip2 and customer card-download clip3 with Arabic explanations. Cashier caption instructs adding staff from cashier management before scanning/stamping.
+
+- Existing original setup/cashier files reused; supplied customer MP4 copied unchanged. All three source/public hashes matched. New clip H264/AAC stereo,65.3seconds, audible mean -18.2dB/max -2.4dB.
+- Private service-only durable companion queue, no passwords/captions stored. Worker protected by cron secret, every minute, sends up to10 quick jobs but stops claiming after20seconds. Existing three-primary/30second/fourth-backup contract preserved. Four-minute leases and uncertain terminal state prevent duplicate replay after ambiguous sends. Only confirmed rejections retry, max3 queue attempts,5minute delay.
+- Main welcome acknowledgement/trial activation remain authoritative. Companion queue persistence retries use the same receipt, never replay credentials; persistent queue storage failure emits a generic error. Self-signup first welcome retains its existing best-effort after callback. Provider acceptance is not a device delivery receipt. No historical resend or real test messages.
+- Verified31owner-welcome,80signup,41cashier,23queue/cron checks and full TypeScript. SQL rehearsal rolled back: ordering, duplicate enqueue, recipient guard, permissions, expired lease and ack idempotency. First SQL test assertion evaluated a snapshot before its volatile claim call; separated the steps and reran successfully.
+- Migration applied10:41:36Z and postapply rollback checks passed10:41:55Z. Pending publication, live media hashes/range requests and unauthorized worker401. Evidence output/owner-bundle-20261119 and output/fawasel-branches-20261118/owner-guides-*.json.
+
+- Migration application wrapper initially expanded dollar sequences in a JavaScript replacement string and failed parsing atomically; changed to a callback, applied successfully and verified. No partial schema or fixtures remained. Permanent known pre-send pause/configuration failures are retryable; ambiguous POSTs are not.

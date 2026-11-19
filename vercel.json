@@ -3,6 +3,10 @@
   "regions": ["icn1"],
   "crons": [
     {
+      "path": "/api/owner-guides/jobs",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/hospital/jobs",
       "schedule": "* * * * *"
     },
