@@ -30,30 +30,36 @@ const brand = (id, subscriptions = [], overrides = {}) => ({id,name:`علامة 
 let passed=0;
 async function test(label, body) {await body();passed++;console.log(`PASS ${label}`);}
 function cells(row) {return excel.exportSubscriptionCells(row,now);}
+const date = value => new Date(`${value}T00:00:00Z`);
 
 async function main() {
   await test('subscription status and remaining-day boundaries', () => {
+    const same=(state,text)=>[state,text,text,text];
     const cases = [
-      [null,['بدون اشتراك','لا يوجد اشتراك']],
-      [subscription({}),['اشتراك فعال',5]],
-      [subscription({expires_at:iso(now+1)}),['اشتراك فعال',1]],
-      [subscription({expires_at:iso(now+day+1)}),['اشتراك فعال',2]],
-      [subscription({status:'trialing'}),['فترة تجربة',5]],
-      [subscription({status:'trialing',activation_source:'admin_prepared_trial',started_at:null,expires_at:null}),['فترة تجربة لم تبدأ','تبدأ بعد إرسال بيانات الدخول']],
-      [subscription({status:'expired'}),['اشتراك منتهي',0]],
-      [subscription({expires_at:iso(now)}),['اشتراك منتهي',0]],
-      [subscription({status:'trialing',expires_at:iso(now-1)}),['فترة تجربة منتهية',0]],
-      [subscription({status:'cancelled'}),['اشتراك ملغي','غير متاح']],
-      [subscription({started_at:iso(now+day)}),['اشتراك لم يبدأ','لم يبدأ بعد']],
-      [subscription({status:'trialing',started_at:iso(now+day)}),['فترة تجربة لم تبدأ','لم يبدأ بعد']],
-      [subscription({expires_at:null}),['اشتراك فعال','بدون تاريخ انتهاء']],
-      [subscription({expires_at:'invalid-date'}),['اشتراك غير فعال','غير متاح']],
-      [subscription({started_at:'invalid-date'}),['اشتراك غير فعال','غير متاح']],
-      [subscription({platform_plans:{active:false}}),['اشتراك غير فعال','غير متاح']],
-      [subscription({platform_plans:null}),['اشتراك غير فعال','غير متاح']],
-      [subscription({status:'pending'}),['بانتظار التفعيل','لم يبدأ بعد']],
-      [subscription({status:'past_due'}),['بانتظار التفعيل','لم يبدأ بعد']],
-      [subscription({status:'unknown'}),['اشتراك غير فعال','غير متاح']],
+      [null,same('بدون اشتراك','لا يوجد')],
+      [subscription({}),['نشط',date('2026-11-05'),date('2026-11-11'),5]],
+      [subscription({expires_at:iso(now+1)}),['نشط',date('2026-11-05'),date('2026-11-06'),1]],
+      [subscription({expires_at:iso(now+day+1)}),['نشط',date('2026-11-05'),date('2026-11-07'),2]],
+      [subscription({started_at:'2026-10-20T21:00:00Z',expires_at:'2026-11-19T21:00:00Z'}),['نشط',date('2026-10-21'),date('2026-11-20'),14]],
+      [subscription({started_at:null}),['نشط','غير محدد',date('2026-11-11'),5]],
+      [subscription({status:'trialing'}),['في فترة تجربة',date('2026-11-05'),date('2026-11-11'),5]],
+      [subscription({status:'trialing',activation_source:'admin_prepared_trial',started_at:null,expires_at:null}),['جاهز ولم تبدأ التجربة','تبدأ بعد إرسال بيانات الدخول','لم تبدأ بعد','لم تبدأ بعد']],
+      [subscription({status:'trialing',activation_source:'admin_prepared_trial'}),['جاهز ولم تبدأ التجربة','تبدأ بعد إرسال بيانات الدخول','لم تبدأ بعد','لم تبدأ بعد']],
+      [subscription({status:'expired'}),['اشتراك منتهي',date('2026-11-05'),date('2026-11-11'),0]],
+      [subscription({status:'expired',started_at:null,expires_at:null}),['اشتراك منتهي','غير متاح','غير متاح',0]],
+      [subscription({expires_at:iso(now)}),['اشتراك منتهي',date('2026-11-05'),date('2026-11-06'),0]],
+      [subscription({status:'trialing',expires_at:iso(now-1)}),['فترة تجربة منتهية',date('2026-11-05'),date('2026-11-06'),0]],
+      [subscription({status:'cancelled'}),same('اشتراك ملغي','غير متاح')],
+      [subscription({started_at:iso(now+day)}),['اشتراك لم يبدأ',date('2026-11-07'),date('2026-11-11'),'لم تبدأ بعد']],
+      [subscription({status:'trialing',started_at:iso(now+day)}),['فترة تجربة لم تبدأ',date('2026-11-07'),date('2026-11-11'),'لم تبدأ بعد']],
+      [subscription({expires_at:null}),['نشط',date('2026-11-05'),'بدون تاريخ انتهاء','بدون تاريخ انتهاء']],
+      [subscription({expires_at:'invalid-date'}),same('اشتراك غير فعال','غير متاح')],
+      [subscription({started_at:'invalid-date'}),same('اشتراك غير فعال','غير متاح')],
+      [subscription({platform_plans:{active:false}}),same('اشتراك غير فعال','غير متاح')],
+      [subscription({platform_plans:null}),same('اشتراك غير فعال','غير متاح')],
+      [subscription({status:'pending'}),same('بانتظار التفعيل','لم تبدأ بعد')],
+      [subscription({status:'past_due'}),same('بانتظار التفعيل','لم تبدأ بعد')],
+      [subscription({status:'unknown'}),same('اشتراك غير فعال','غير متاح')],
     ];
     for(const [input,expected] of cases) assert.deepEqual(cells(input),expected,JSON.stringify(input));
   });
@@ -91,7 +97,10 @@ async function main() {
     ];
     for(const [rows,expected] of cases){
       const before=JSON.stringify(rows),result=excel.brandExportCells(brand('multi',rows),now);
-      assert.equal(result.length,5);assert.equal(result[3],'اشتراك فعال');assert.equal(result[4],expected);
+      assert.equal(result.length,8);assert.equal(result[2],'نشط');assert.equal(result[5],expected);
+      assert.deepEqual(result[3],date('2026-11-05'));
+      assert.deepEqual(result[4],typeof expected==='number'?date('2026-11-11'):expected);
+      assert.equal(result[6],null);assert.equal(result[7],null);
       assert.equal(JSON.stringify(rows),before);
     }
     for(const extra of [
@@ -100,7 +109,7 @@ async function main() {
       second({platform_plans:{active:false},expires_at:iso(now+day*9)}),
       second({expires_at:'invalid'}),
       second({status:'trialing',activation_source:'admin_prepared_trial',started_at:null,expires_at:null}),
-    ])assert.equal(excel.brandExportCells(brand('multi',[first,extra]),now)[4],5,'only actually current non-prepared rows can create mixed deadlines');
+    ])assert.equal(excel.brandExportCells(brand('multi',[first,extra]),now)[5],5,'only actually current non-prepared rows can create mixed deadlines');
   });
   await test('real XLSX preserves mixed-deadline text alongside sortable shared remaining days', async () => {
     const first=subscription({id:'menu',plan_id:'menu'});
@@ -110,9 +119,19 @@ async function main() {
       brand('mixed',[first,{...second,expires_at:iso(now+day*9)}]),brand('shared',[first,second]),
     ]}));
     const result=book.worksheets[0];
-    assert.equal(result.columnCount,5);assert.equal(result.getCell('E6').value,'مواعيد مختلفة');
-    assert.equal(result.getCell('E6').type,ExcelJS.ValueType.String);
-    assert.equal(result.getCell('E7').value,5);assert.equal(result.getCell('E7').type,ExcelJS.ValueType.Number);
+    assert.equal(result.columnCount,8);assert.equal(result.getCell('F6').value,'مواعيد مختلفة');
+    assert.equal(result.getCell('F6').type,ExcelJS.ValueType.String);assert.equal(result.getCell('E6').value,'مواعيد مختلفة');
+    assert.equal(result.getCell('F7').value,5);assert.equal(result.getCell('F7').type,ExcelJS.ValueType.Number);
+    assert.equal(result.getCell('E7').value.toISOString(),'2026-11-11T00:00:00.000Z');
+  });
+  await test('account state is one of active, trial or ready before the trial, and a suspended account says so', () => {
+    const prepared=subscription({id:'prepared',status:'trialing',activation_source:'admin_prepared_trial',started_at:null,expires_at:null});
+    assert.equal(excel.brandExportCells(brand('a',[subscription({})]),now)[2],'نشط');
+    assert.equal(excel.brandExportCells(brand('a',[subscription({status:'trialing'})]),now)[2],'في فترة تجربة');
+    assert.deepEqual(excel.brandExportCells(brand('a',[prepared]),now).slice(2),['جاهز ولم تبدأ التجربة','تبدأ بعد إرسال بيانات الدخول','لم تبدأ بعد','لم تبدأ بعد',null,null]);
+    assert.equal(excel.brandExportCells(brand('a',[prepared,subscription({id:'paid',created_at:'2026-10-01T00:00:00Z'})]),now)[2],'نشط');
+    assert.equal(excel.brandExportCells(brand('a'),now)[2],'بدون اشتراك');
+    assert.deepEqual(excel.brandExportCells(brand('a',[subscription({})],{accountStatus:'suspended'}),now).slice(2,6),['موقوف',date('2026-11-05'),date('2026-11-11'),5]);
   });
   await test('Riyadh calendar day and invalid joined date', () => {
     assert.equal(excel.brandExportCells(brand('a'),now)[1].toISOString(),'2026-11-06T00:00:00.000Z');
@@ -130,26 +149,39 @@ async function main() {
   const sheet=workbook.worksheets[0];
   const archive=await JSZip.loadAsync(bytes);
   const xml=Object.fromEntries(await Promise.all(Object.keys(archive.files).filter(n=>n.endsWith('.xml')).map(async n=>[n,await archive.file(n).async('string')])));
-  await test('real XLSX roundtrip keeps all 27 brands and exactly five visible columns', () => {
+  await test('real XLSX roundtrip keeps all 27 brands and exactly eight visible columns in the requested order', () => {
     assert(bytes instanceof Uint8Array);assert.equal(bytes[0],0x50);assert.equal(bytes[1],0x4b);
-    assert.equal(workbook.worksheets.length,1);assert.equal(sheet.columnCount,5);assert.equal(sheet.rowCount,32);
-    assert.deepEqual(sheet.getRow(5).values.slice(1),['العلامة التجارية','تاريخ الانضمام','حالة الحساب','حالة الاشتراك','المتبقي في الاشتراك بالأيام']);
+    assert.equal(workbook.worksheets.length,1);assert.equal(sheet.columnCount,8);assert.equal(sheet.rowCount,32);
+    assert.deepEqual(sheet.getRow(5).values.slice(1),['اسم العلامة التجارية','تاريخ الانضمام وإنشاء الحساب','حالة الحساب','تاريخ بداية الباقة الحالية','تاريخ نهاية الباقة الحالية','المدة المتبقية بالأيام','إجمالي مدفوعات العلامة','عدد التجديدات']);
+    assert.deepEqual(sheet.getRow(5).values.slice(1),excel.BRAND_EXCEL_COLUMNS);
     assert.equal(sheet.getCell('A32').value,'علامة مستقلة 26');
     assert(sheet.columns.every(c=>!c.hidden));
   });
   await test('actual OOXML table and filter cover all data rows', () => {
     const tables=Object.keys(xml).filter(n=>/^xl\/tables\/table\d+\.xml$/.test(n));assert.equal(tables.length,1);
-    const table=xml[tables[0]];assert.match(table,/ref="A5:E32"/);assert.match(table,/<autoFilter ref="A5:E32"/);
-    assert.equal((table.match(/<tableColumn\b/g)||[]).length,5);
+    const table=xml[tables[0]];assert.match(table,/ref="A5:H32"/);assert.match(table,/<autoFilter ref="A5:H32"/);
+    assert.equal((table.match(/<tableColumn\b/g)||[]).length,8);
     assert(!table.includes('hiddenButton="1"'));assert(!table.includes('showButton="0"'));
     assert.match(xml['xl/worksheets/sheet1.xml'],/<tableParts count="1">/);
   });
   await test('frozen headers RTL and real sortable date/numeric cells survive serialization', () => {
     assert.equal(sheet.views[0].state,'frozen');assert.equal(sheet.views[0].ySplit,5);assert.equal(sheet.views[0].rightToLeft,true);
     assert.equal(sheet.views[0].topLeftCell,'A6');assert.equal(sheet.getCell('B6').value.toISOString(),'2026-11-06T00:00:00.000Z');
-    assert.equal(sheet.getCell('B6').numFmt,'yyyy-mm-dd');assert.equal(sheet.getCell('E6').value,5);
-    assert.equal(sheet.getCell('E6').type,ExcelJS.ValueType.Number);assert.equal(sheet.getCell('A6').alignment.readingOrder,'rtl');
+    assert.equal(sheet.getCell('B6').numFmt,'yyyy-mm-dd');assert.equal(sheet.getCell('C6').value,'نشط');
+    assert.equal(sheet.getCell('D6').value.toISOString(),'2026-11-05T00:00:00.000Z');assert.equal(sheet.getCell('D6').numFmt,'yyyy-mm-dd');
+    assert.equal(sheet.getCell('E6').value.toISOString(),'2026-11-11T00:00:00.000Z');assert.equal(sheet.getCell('E6').numFmt,'yyyy-mm-dd');
+    assert.equal(sheet.getCell('F6').value,5);
+    assert.equal(sheet.getCell('F6').type,ExcelJS.ValueType.Number);assert.equal(sheet.getCell('A6').alignment.readingOrder,'rtl');
     assert.equal(sheet.pageSetup.orientation,'landscape');assert.match(sheet.getCell('A2').text,/27 علامة/);
+    assert.equal(sheet.pageSetup.printArea,'A1:H32');
+  });
+  await test('payments and renewals columns are present, styled and empty in every brand row', () => {
+    for(let row=6;row<=32;row++)for(const column of ['G','H']){
+      const cell=sheet.getCell(`${column}${row}`);
+      assert.equal(cell.value,null,cell.address);assert.equal(cell.type,ExcelJS.ValueType.Null,cell.address);
+    }
+    assert.equal(sheet.getCell('G6').numFmt,'#,##0.00');assert.equal(sheet.getCell('H6').numFmt,'0');
+    assert.match(xml['xl/worksheets/sheet1.xml'],/<c r="G6" s="\d+"\/>/);assert.match(xml['xl/worksheets/sheet1.xml'],/<c r="H32" s="\d+"\/>/);
   });
   await test('formula-like brand names remain literal strings, never formulas or external links', () => {
     for(let i=0;i<4;i++){const cell=sheet.getCell(i+6,1);assert.equal(cell.type,ExcelJS.ValueType.String);assert.equal(cell.value,names[i]);}
@@ -161,11 +193,11 @@ async function main() {
   await test('only requested fields are exported; no IDs contact tokens customers or financial values', () => {
     const all=Object.values(xml).join('\n');
     for(const needle of ['PRIVATE_OWNER_SENTINEL','PRIVATE_PHONE_SENTINEL','PRIVATE_TOKEN_SENTINEL','PRIVATE_CUSTOMER_SENTINEL','PRIVATE_PLAN_SENTINEL','brand-0','sub-0','subscription-base','plan-base','54321'])assert(!all.includes(needle),needle);
-    assert.equal(sheet.getRow(6).cellCount,5);
+    assert.equal(sheet.getRow(6).cellCount,8);
   });
-  await test('zero-brand workbook remains a usable five-column file', async () => {
+  await test('zero-brand workbook remains a usable eight-column file', async () => {
     const empty=new ExcelJS.Workbook();await empty.xlsx.load(await excel.buildBrandDirectoryExcel({exportedAt:iso(now),brands:[]}));
-    assert.equal(empty.worksheets[0].rowCount,5);assert.equal(empty.worksheets[0].columnCount,5);
+    assert.equal(empty.worksheets[0].rowCount,5);assert.equal(empty.worksheets[0].columnCount,8);
   });
   await test('invalid snapshot timestamp rejects rather than emitting inaccurate date', async () => {
     await assert.rejects(()=>excel.buildBrandDirectoryExcel({...snapshot,exportedAt:'invalid'}),/Invalid export timestamp/);
