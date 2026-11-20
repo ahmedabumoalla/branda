@@ -12,7 +12,7 @@ import { createWalletArtifactCache, walletArtifactKey } from "./artifact-cache";
 import { isMqas77Wallet, MQAS77_WALLET_VERSION, MQAS77_WALLET_NAME } from "./mqas77-design";
 import { mqas77Emblem } from "./mqas77-assets";
 import { APPLE_ICON_SIZE, APPLE_ICON_VERSION, appleIconBackground } from "./apple-icon";
-export { walletBrandLogo } from "./logo";
+export { walletBrandLogo, walletStampLogo } from "./logo";
 
 export { walletStampArtwork } from "./art";
 

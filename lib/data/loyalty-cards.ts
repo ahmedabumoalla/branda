@@ -180,7 +180,7 @@ export function mapLoyaltyProgramSnapshot(row: Record<string, unknown> | null | 
         ? String((product as { name?: string }).name ?? "")
         : "",
     rewardName: String(isSalon && (!row.reward_name || row.reward_name === defaultProgram.rewardName) ? defaults.rewardName : row.reward_name ?? defaults.rewardName),
-    stampStyle: isSalon && !["brand", "scissors", "comb"].includes(savedStyle) ? "scissors" : savedStyle,
+    stampStyle: isSalon && !["brand", "star", "check", "scissors", "comb"].includes(savedStyle) ? "scissors" : savedStyle,
     stampLabel: String(row.stamp_label ?? defaultProgram.stampLabel),
     terms: String(row.terms ?? defaultProgram.terms),
     ...brandColors,

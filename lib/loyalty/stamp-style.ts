@@ -1,12 +1,29 @@
-export const stampStyles = ["ceramic", "paper", "meal", "brand", "scissors", "comb", "plant", "shirt", "phone", "sim", "headphones", "tea"] as const;
+export const stampStyles = ["ceramic", "paper", "meal", "brand", "scissors", "comb", "plant", "shirt", "phone", "sim", "headphones", "tea", "star", "check"] as const;
 export type LoyaltyStampStyle = typeof stampStyles[number];
 
 export function loyaltyStampStyle(value: unknown): LoyaltyStampStyle {
   return stampStyles.includes(value as LoyaltyStampStyle) ? value as LoyaltyStampStyle : "ceramic";
 }
 
+/** Choices every brand may keep, whatever its own default stamp identity is. */
+export const universalStampStyles: readonly LoyaltyStampStyle[] = ["brand", "star", "check"];
+
+export function isUniversalStampStyle(style: LoyaltyStampStyle) {
+  return universalStampStyles.includes(style);
+}
+
+export const STAMP_LOGO_VERSION = "stamp-logo-v1";
+
+/** Square single-colour rendition of the saved brand or branch logo, sized for a stamp slot. */
+export function stampLogoUrl(slug: string, branchId?: string | null) {
+  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(slug)) return null;
+  return `/api/wallet/brand/${encodeURIComponent(slug)}/logo?shape=stamp&v=${STAMP_LOGO_VERSION}${branchId ? `&branch=${encodeURIComponent(branchId)}` : ""}`;
+}
+
 // Shared outlines keep the card preview and both native wallets consistent.
 export const stampPaths = {
+  star: "M12 2.6 14.7 8.9 21.5 9.5 16.4 14 17.9 20.7 12 17.2 6.1 20.7 7.6 14 2.5 9.5 9.3 8.9Z",
+  check: "M21.5 12a9.5 9.5 0 1 1-19 0 9.5 9.5 0 0 1 19 0ZM7.8 12.4l2.9 2.9 5.6-6.2",
   tea: "M6 8h12l-2 11H8L6 8Zm1 4h10M4 22h16M9 2c-2 2 2 2 0 4m5-4c-2 2 2 2 0 4",
   phone: "M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm3 3h4m-3 14h2",
   sim: "M9 2h7l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7l5-5Zm-1 9h8v7H8v-7Zm4 0v7m-4-3h8",

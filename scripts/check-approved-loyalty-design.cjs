@@ -35,13 +35,13 @@ const alpha = Uint8Array.from(pixels); clearLogoBackdrop(pixels, 7, 7); assert.d
 const uiStubs = { 'next/link': { __esModule: true, default: 'a' }, 'next/image': { __esModule: true, default: ({ unoptimized, priority, ...props }) => React.createElement('img', props) } };
 const { RastStampCard } = load('components/rast-loyalty/rast-stamp-card.tsx', uiStubs);
 const { loyaltyTheme } = load('components/rast-loyalty/loyalty-theme.ts');
-for (const stampStyle of ['ceramic', 'paper', 'meal', 'brand', 'scissors', 'comb', 'plant']) for (const stamps of [0, 2, 3]) {
+for (const stampStyle of ['ceramic', 'paper', 'meal', 'brand', 'scissors', 'comb', 'plant', 'star', 'check']) for (const stamps of [0, 2, 3]) {
   const markup = renderToStaticMarkup(React.createElement(RastStampCard, { identity: { slug: 'test-cafe', name: 'Brand', logoUrl: '/original.png', logoDisplayUrl: '/transparent.png', cardBackground: '#0a1f43' }, stampStyle, stamps, required: 3, rewardName: 'Reward', preview: true }));
   const stampRow = markup.match(/<ol[^>]*>([\s\S]*?)<\/ol>/)[1];
   assert(!stampRow.includes('lucide-gift'), 'The last visit is a stamp, never a gift');
   assert.equal((stampRow.match(/<li /g) || []).length, 3);
   assert.equal((stampRow.match(/stampCheck/g) || []).length, stamps);
-  if (stampStyle === 'brand') assert.equal((stampRow.match(/src="\/transparent.png"/g) || []).length, 3);
+  if (stampStyle === 'brand') assert.equal((stampRow.match(/data-stamp-logo=""[^>]*\/api\/wallet\/brand\/test-cafe\/logo\?shape=stamp/g) || []).length, 3, 'Logo stamps use the single-colour stamp rendition');
   assert(markup.includes('lucide-gift'), 'Reward keeps its separate gift icon');
 }
 const { HomeProductPreview } = load('components/marketing/home-product-preview.tsx', {

@@ -5,6 +5,8 @@ import sharp from "sharp";
 import { walletBaseUrl } from "./config";
 import type { WalletMember } from "./types";
 import { clearUniformLogoBackground } from "@/lib/cafe/logo-transparency";
+import { logoStencilMask } from "@/lib/cafe/logo-stencil";
+import { STAMP_LOGO_VERSION } from "@/lib/loyalty/stamp-style";
 import { createWalletArtifactCache, walletArtifactKey } from "./artifact-cache";
 
 const cachedLogo = createWalletArtifactCache(8 * 1024 * 1024, 128, 30_000);
@@ -24,7 +26,7 @@ async function brandAsset(member: Pick<WalletMember, "logoUrl" | "cafeName" | "p
   const baseUrl = walletBaseUrl();
   const source = member.logoUrl;
   if (source.startsWith("data:")) {
-    const match = /^data:image\/(?:png|jpeg|webp);base64,([a-zA-Z0-9+/=]+)$/.exec(source);
+    const match = /^data:image\/(?:png|jpe?g|webp|gif|avif|svg\+xml);base64,([a-zA-Z0-9+/=]+)$/.exec(source);
     if (!match || match[1].length > 7 * 1024 * 1024) throw new Error("wallet_invalid_asset");
     return Buffer.from(match[1], "base64");
   }
@@ -67,4 +69,53 @@ async function renderBrandLogo(member: Pick<WalletMember, "logoUrl" | "cafeName"
   data.set(pixels);
   return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).trim()
     .resize(640, 200, { fit: "contain", background: "#00000000" }).png().toBuffer();
+}
+
+const STAMP_LOGO_SIZE = 256;
+const STAMP_LOGO_MARGIN = 12;
+
+/** Square single-colour stencil of the logo for stamp slots. Whatever was
+ * uploaded keeps its inner details and takes the colour of the stamp it sits in. */
+export async function walletStampLogo(member: Pick<WalletMember, "logoUrl" | "cafeName" | "program">) {
+  const key = walletArtifactKey(JSON.stringify([STAMP_LOGO_VERSION, walletBaseUrl(), process.env.NEXT_PUBLIC_SUPABASE_URL, member.logoUrl, member.cafeName, member.program.cardBackground]));
+  return cachedLogo(key, () => renderStampLogo(member));
+}
+
+async function renderStampLogo(member: Pick<WalletMember, "logoUrl" | "cafeName" | "program">) {
+  const { data, info } = await sharp(await brandAsset(member), { limitInputPixels: 16_000_000 })
+    .resize(384, 384, { fit: "inside", withoutEnlargement: true }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height } = info;
+  const pixels = new Uint8ClampedArray(data);
+  clearUniformLogoBackground(pixels, width, height);
+  const mask = logoStencilMask(pixels, width, height);
+  let left = width, top = height, right = -1, bottom = -1;
+  for (let index = 0; index < mask.length; index++) {
+    if (mask[index] < 12) continue;
+    const x = index % width, y = (index - x) / width;
+    if (x < left) left = x;
+    if (x > right) right = x;
+    if (y < top) top = y;
+    if (y > bottom) bottom = y;
+  }
+  if (right < left || bottom < top) throw new Error("wallet_invalid_asset");
+  const stencil = Buffer.alloc(width * height * 4, 255);
+  for (let index = 0; index < mask.length; index++) stencil[index * 4 + 3] = mask[index];
+  const inner = STAMP_LOGO_SIZE - STAMP_LOGO_MARGIN * 2;
+  const transparent = { r: 255, g: 255, b: 255, alpha: 0 };
+  return sharp(stencil, { raw: { width, height, channels: 4 } })
+    .extract({ left, top, width: right - left + 1, height: bottom - top + 1 })
+    .resize(inner, inner, { fit: "contain", background: transparent })
+    .extend({ top: STAMP_LOGO_MARGIN, bottom: STAMP_LOGO_MARGIN, left: STAMP_LOGO_MARGIN, right: STAMP_LOGO_MARGIN, background: transparent })
+    .png().toBuffer();
+}
+
+/** The stencil filled with one stamp colour, for artwork that cannot tint it itself. */
+export async function walletStampLogoTint(member: Pick<WalletMember, "logoUrl" | "cafeName" | "program">, color: string, size = 132) {
+  if (!/^#[\da-f]{6}$/i.test(color)) throw new Error("wallet_invalid_asset");
+  const stencil = await walletStampLogo(member);
+  return cachedLogo(walletArtifactKey(JSON.stringify(["tint", walletArtifactKey(stencil), color.toLowerCase(), size])), async () => {
+    const alpha = await sharp(stencil).resize(size, size).extractChannel("alpha").raw().toBuffer();
+    return sharp({ create: { width: size, height: size, channels: 3, background: color } })
+      .joinChannel(alpha, { raw: { width: size, height: size, channels: 1 } }).png().toBuffer();
+  });
 }

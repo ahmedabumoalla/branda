@@ -1,7 +1,7 @@
 import "server-only";
-import { stampPaths } from "@/lib/loyalty/stamp-style";
+import { STAMP_LOGO_VERSION, stampPaths } from "@/lib/loyalty/stamp-style";
 import { brandStampStyle } from "@/lib/loyalty/brand-stamp-artwork";
-import { walletBrandLogo } from "./logo";
+import { walletStampLogoTint } from "./logo";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import sharp from "sharp";
 import { walletBaseUrl } from "./config";
@@ -30,13 +30,17 @@ export function verifyWalletArtToken(cardId: string, token: string) {
 
 export function walletArtUrl(member: WalletMember) {
   const appearance = walletArtifactKey(JSON.stringify([walletColors(member), member.program.purchasesRequired, member.logoUrl, member.cafeName, member.bannerUrl, ...((isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo) ? [MQAS77_WALLET_VERSION] : [])]));
-  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${brandStampStyle(member.cafeSlug, member.program.stampStyle)}:${member.card.updatedAt}:${appearance}`)}`;
+  const selected = brandStampStyle(member.cafeSlug, member.program.stampStyle);
+  // A logo stamp carries its rendition version so wallets fetch the improved artwork.
+  const style = selected === "brand" ? `brand:${STAMP_LOGO_VERSION}` : selected;
+  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${style}:${member.card.updatedAt}:${appearance}`)}`;
 }
 
 // The artwork supplements native, accessible balance fields. Never bake text or
 // a barcode into it: Wallet can crop strip images on smaller devices and watches.
 
-export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false, brandLogoDataUrl?: string) {
+/** brandLogo is one image for every slot, or one image per stamp colour. */
+export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false, brandLogo?: string | Record<string, string>) {
   const colors = walletColors(member);
   const required = Math.max(1, Math.min(100, Math.trunc(member.program.purchasesRequired) || 1));
   const earned = Math.max(0, Math.min(required, Math.trunc(member.card.stampsInCycle) || 0));
@@ -45,8 +49,9 @@ export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark 
   const icon = (content: string, x: number, y: number, size: number, color: string) => `<g transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="${color}" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${content}</g>`;
   const selected = brandStampStyle(member.cafeSlug, member.program.stampStyle);
   const stampIcon = `<path d="${stampPaths[selected === "brand" ? "ceramic" : selected]}"/>`;
-  const stampAt = (x: number, y: number, size: number, color: string) => selected === "brand" && brandLogoDataUrl
-    ? `<image x="${x}" y="${y}" width="${size}" height="${size}" href="${brandLogoDataUrl}"/>`
+  const logoFor = (color: string) => selected !== "brand" ? undefined : typeof brandLogo === "string" ? brandLogo : brandLogo?.[color];
+  const stampAt = (x: number, y: number, size: number, color: string) => logoFor(color)
+    ? `<image x="${x}" y="${y}" width="${size}" height="${size}" href="${logoFor(color)}"/>`
     : icon(stampIcon, x, y, size, color);
   let stamps: string;
 
@@ -87,8 +92,11 @@ export async function walletStampArtwork(member: WalletMember, scale: 1 | 2 | 3 
     const artwork = mqas77StampSvg(member, emblem, scale, dark);
     return cachedArtwork(walletArtifactKey(artwork), () => sharp(Buffer.from(artwork)).png().toBuffer());
   }
-  const logo = member.program.stampStyle === "brand" && member.logoUrl
-    ? `data:image/png;base64,${(await walletBrandLogo(member)).toString("base64")}` : undefined;
+  // Each slot colour gets its own tinted stencil, so the logo contrasts in filled and empty stamps alike.
+  const colors = walletColors(member);
+  const tints = brandStampStyle(member.cafeSlug, member.program.stampStyle) === "brand" && member.logoUrl ? [colors.background, colors.foreground] : [];
+  const logo = tints.length ? Object.fromEntries(await Promise.all(tints.map(async (color) =>
+    [color, `data:image/png;base64,${(await walletStampLogoTint(member, color)).toString("base64")}`] as const))) : undefined;
   const svg = walletStampSvg(member, scale, dark, logo);
   return cachedArtwork(walletArtifactKey(svg), () => sharp(Buffer.from(svg)).png().toBuffer());
 }

@@ -100,7 +100,8 @@ check("Together uses four drawn plant stamps with accessible earned states", () 
   assert(css.includes('svg[data-stamp-icon="plant"]'));
   const logoChoice = render(RastStampCard, { identity: { ...identity, slug: "brand-871ec6e243c0" }, stampStyle: "brand", stamps: 0, required: 4, rewardName: "خصم 10%" });
   assert(!logoChoice.includes('data-stamp-icon="plant"'));
-  assert.equal((logoChoice.match(/src="\/own-logo.png"/g) || []).length, 5);
+  assert.equal((logoChoice.match(/src="\/own-logo.png"/g) || []).length, 1);
+  assert.equal((logoChoice.match(/data-stamp-logo/g) || []).length, 4);
 });
 const { RastLoyaltyDashboard } = load("components/rast-loyalty/rast-dashboard.tsx", {
   "@/components/loyalty/customer-directory": { LoyaltyCustomerDirectory: () => null },

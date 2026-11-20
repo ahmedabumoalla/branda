@@ -1,5 +1,5 @@
 import { StampGlyph } from "./stamp-glyph";
-import type { LoyaltyStampStyle } from "@/lib/loyalty/stamp-style";
+import { stampLogoUrl, type LoyaltyStampStyle } from "@/lib/loyalty/stamp-style";
 import { Check, Gift } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
@@ -25,7 +25,9 @@ type Props = {
 };
 
 export function RastStampCard({ identity, customerName, stamps, required, rewardName, cardCode, displayNumber, stampStyle, preview = false, details }: Props) {
-  if (isFawaselStore(identity.slug)) return <FawaselLoyaltyCard background={identity.cardBackground} foreground={identity.cardForeground} accent={identity.cardAccent} brandStamp={stampStyle === "brand"} logoUrl={identity.logoDisplayUrl || identity.logoUrl} customerName={customerName} stamps={stamps} required={required} rewardName={rewardName} cardCode={cardCode} displayNumber={displayNumber} preview={preview} details={details} />;
+  const logoUrl = identity.logoDisplayUrl || identity.logoUrl;
+  const stampLogo = logoUrl ? stampLogoUrl(identity.slug, identity.branchId) : null;
+  if (isFawaselStore(identity.slug)) return <FawaselLoyaltyCard background={identity.cardBackground} foreground={identity.cardForeground} accent={identity.cardAccent} stampStyle={brandStampStyle(identity.slug, stampStyle)} stampLogo={stampLogo} logoUrl={logoUrl} customerName={customerName} stamps={stamps} required={required} rewardName={rewardName} cardCode={cardCode} displayNumber={displayNumber} preview={preview} details={details} />;
   const goal = Math.max(1, Math.min(100, Math.trunc(required)));
   const collected = Math.max(0, Math.min(goal, Math.trunc(stamps)));
   const selectedStyle = brandStampStyle(identity.slug, stampStyle);
@@ -37,7 +39,7 @@ export function RastStampCard({ identity, customerName, stamps, required, reward
     <div className={s.stampHeading}><span>رصيد الزيارات</span><strong dir="ltr"><b>{collected}</b><span> / {goal}</span></strong></div>
     <ol className={`${s.stamps} ${goal > 10 ? s.manyStamps : ""} ${balanced ? s.balancedStamps : ""}`} data-plant-stamps={selectedStyle === "plant" ? true : undefined} style={balanced ? { "--stamp-columns": columns } as CSSProperties : selectedStyle === "plant" && goal <= 5 ? { gridTemplateColumns: `repeat(${goal}, minmax(0, 1fr))` } : undefined} aria-label={`${collected} من ${goal} أختام مكتملة`}>
       {Array.from({ length: goal }, (_, index) => <li key={index} className={index < collected ? s.collected : ""} aria-label={`الختم ${index + 1}${index < collected ? " مكتمل" : " لم يكتمل"}`}>
-        <StampGlyph style={selectedStyle} logoUrl={identity.logoDisplayUrl || identity.logoUrl} />
+        <StampGlyph style={selectedStyle} logoUrl={logoUrl} stampLogo={stampLogo} />
         {index < collected && <Check className={s.stampCheck} aria-hidden="true" />}
       </li>)}
     </ol>
