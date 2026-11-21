@@ -19,7 +19,7 @@ export async function loadStaffScreenAction(screen: StaffScreen, expectedSession
     const data = await getCashierConsole({ recordEntry: false });
     if (!data) return { ok: false };
     const brand = data.cashier.loyaltyBranchId ? await getBranchLoyaltyBrand(data.cafe.slug, data.cashier.loyaltyBranchId) : await getLoyaltyBrand(data.cafe.slug);
-    return { ok: true, value: { screen, data, identity: brand?.identity } };
+    return { ok: true, value: { screen, data: { ...data, pointsProgram: brand?.program.pointsProgram }, identity: brand?.identity } };
   } catch {
     return { ok: false };
   }

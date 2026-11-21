@@ -10,6 +10,8 @@ import type { CashierConsole } from "@/lib/data/cashier";
 import type { CashierRewardPreview } from "@/lib/data/customer-rewards";
 import type { LocalRead } from "@/lib/loyalty/read-outbox";
 import { readDisplay } from "@/lib/loyalty/read-display";
+import { CashierInvoicePoints } from "./cashier-invoice-points";
+import { CashierPointsRedemption } from "./cashier-points-redemption";
 import { RastCameraScanner } from "./rast-camera-scanner";
 import { useReadOutbox } from "./use-read-outbox";
 import { useCustomerSummary } from "./use-customer-summary";
@@ -86,6 +88,8 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
   const { t, errorText, locale, dir } = useCashierLanguage();
   const identity = suppliedIdentity ?? { name: initialData.cafe.name, slug: initialData.cafe.slug, logoUrl: null };
   const [kind, setKind] = useState<"stamp" | "redeem">("stamp");
+  const [stampVoucher, setStampVoucher] = useState(false);
+  const points = initialData.pointsProgram?.mode === "points" ? initialData.pointsProgram : null;
   const confirmedFinanceFlow = initialData.cashier.financeLinked === true;
   const [value, setValue] = useState("");
   const [lookupMethod, setLookupMethod] = useState<"code" | "phone">("code");
@@ -206,15 +210,19 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
         <CashierLanguageSwitch />
             <form action={logoutCashierAction}><button disabled={pending} aria-label={t("تسجيل الخروج")} title={t("تسجيل الخروج")} className={layout.logout}><LogOut size={18} aria-hidden="true" /><span className={layout.logoutLabel}>{t("تسجيل الخروج")}</span></button></form>
         </div>
-      <div className={layout.greeting}><p>{t({ text: "أهلًا {name} هنا تسجّل الأختام وتصرف المكافآت", values: { name: initialData.cashier.fullName } })}</p><CashierGuideButton /></div>
+      <div className={layout.greeting}><p>{t({ text: points ? "أهلًا {name} هنا تسجّل نقاط الفواتير وتصرف المكافآت" : "أهلًا {name} هنا تسجّل الأختام وتصرف المكافآت", values: { name: initialData.cashier.fullName } })}</p><CashierGuideButton /></div>
       </header>}
       <div className={layout.body}>
         {embedded && <div className={layout.guideRow}><CashierGuideButton /></div>}
         <section aria-labelledby={preview ? "rast-scan-preview" : "scan-heading"} className={layout.scanPanel}>
           <div className={layout.tabs} role="group" aria-label={t("نوع العملية")}>
-            {([{ id: "stamp", title: t("تسجيل ختم"), icon: BadgeCheck }, { id: "redeem", title: t("صرف مكافأة"), icon: Gift }] as const).map((tab) => <button key={tab.id} type="button" aria-pressed={kind === tab.id} disabled={pending} onClick={() => { if (processing.current || session.busy) return; setKind(tab.id); updateCode(""); }} className={`flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-4 ${kind === tab.id ? "bg-[var(--cashier-ink)] text-[var(--cashier-button-text)]" : "border border-[var(--cashier-ink)]/20"}`}><tab.icon size={19} aria-hidden="true" />{tab.title}</button>)}
+            {([{ id: "stamp", title: t(points ? "تسجيل نقاط" : "تسجيل ختم"), icon: BadgeCheck }, { id: "redeem", title: t("صرف مكافأة"), icon: Gift }] as const).map((tab) => <button key={tab.id} type="button" aria-pressed={kind === tab.id} disabled={pending} onClick={() => { if (processing.current || session.busy) return; setKind(tab.id); setStampVoucher(false); updateCode(""); }} className={`flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-4 ${kind === tab.id ? "bg-[var(--cashier-ink)] text-[var(--cashier-button-text)]" : "border border-[var(--cashier-ink)]/20"}`}><tab.icon size={19} aria-hidden="true" />{tab.title}</button>)}
           </div>
-          {!preview && <><h2 id="scan-heading" className={layout.scanTitle}>{kind === "stamp" ? t("اقرأ بطاقة العميل") : t("افحص مكافأة العميل")}</h2>
+          {points && kind === "redeem" && <button type="button" className={layout.voucherSwitch} disabled={pending}
+            onClick={() => { if (processing.current || session.busy) return; updateCode(""); setStampVoucher(!stampVoucher); }}>{t(stampVoucher ? "العودة إلى استبدال النقاط" : "صرف قسيمة أختام سابقة")}</button>}
+          {points && kind === "stamp" ? <CashierInvoicePoints scope={{ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id }} program={points} displayName={displayName} />
+            : points && !stampVoucher ? <CashierPointsRedemption scope={{ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id }} displayName={displayName} />
+            : !preview && <><h2 id="scan-heading" className={layout.scanTitle}>{kind === "stamp" ? t("اقرأ بطاقة العميل") : t("افحص مكافأة العميل")}</h2>
           <p id="rast-scan-help" className={layout.scanHelp}>{confirmedFinanceFlow ? t("اقرأ بطاقة العميل أو ابحث بجواله ثم راجع بياناته وأكد العملية تنتظر العملية الموافقة إذا حدد المالك مسؤولًا لاعتمادها") : kind === "stamp" ? t("أدخل البطاقة أو رقم الجوال ثم اضغط تسجيل الختم تُحفظ القراءة فورًا ويبحث النظام عن العميل ويسجل الختم في الخلفية") : lookupMethod === "phone" ? t("ابحث برقم الجوال المسجل في بطاقة الولاء ثم راجع بيانات العميل قبل التأكيد") : t("اقرأ بطاقة العميل أو رمز المكافأة ستظهر المكافأة الأقرب لانتهاء الصلاحية؛ راجع اسم العميل وشروطها قبل تأكيد صرف مكافأة واحدة")}</p>
           <div className={layout.lookupMethods} role="group" aria-label={t("طريقة البحث عن العميل")}>
             {([{ id: "code", label: t("البطاقة أو الباركود"), icon: ScanLine }, { id: "phone", label: t("رقم الجوال"), icon: Phone }] as const).map(method => <button key={method.id} type="button" disabled={pending} aria-pressed={lookupMethod === method.id} onClick={() => { if (processing.current || session.busy) return; updateCode(""); setLookupMethod(method.id); }}><method.icon size={16} aria-hidden="true" />{method.label}</button>)}
@@ -238,13 +246,13 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
           {error && <p ref={errorElement} tabIndex={-1} role="alert" className="mt-5 rounded-xl bg-red-50 p-4 text-sm leading-7 text-red-900 focus-visible:outline-2 focus-visible:outline-offset-4">{errorText(error)}</p>}
           {message && <p role="status" className={layout.readFeedback} data-state={readFeedback?.state ?? "succeeded"}>{readFeedback ? <>{t(readFeedback.label)}<br />{errorText(readFeedback.detail)}</> : t(message)}</p>}
         </section>
-        {!preview && !confirmedFinanceFlow && <details className={layout.guide}><summary>{t("ببساطة وبثقة")}</summary><div className={layout.guideContent}><p>{t(kind === "stamp" ? "ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يحفظ طلب تسجيل ختم واحد" : "ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يفحص الرمز ويعرض بيانات العميل")} </p>{kind === "stamp" && <p>{t("الحفظ على الجهاز لا يعني اكتمال الختم تابع عدادات المزامنة ولا تمسح بيانات المتصفح قبل اكتمالها")}</p>}<p>{t("المكافأة تُصرف مرة واحدة وتظهر شروطها وصلاحيتها قبل التأكيد")} </p>{!embedded && <Link href={`/loyalty/${identity.slug}${identity.branchId ? `?branch=${encodeURIComponent(identity.branchId)}` : ""}`} className="inline-flex min-h-12 items-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4">{t("صفحة عضوية")} {locale === "en" ? identity.nameEn || identity.name : identity.name}</Link>}</div></details>}
+        {!points && !preview && !confirmedFinanceFlow && <details className={layout.guide}><summary>{t("ببساطة وبثقة")}</summary><div className={layout.guideContent}><p>{t(kind === "stamp" ? "ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يحفظ طلب تسجيل ختم واحد" : "ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يفحص الرمز ويعرض بيانات العميل")} </p>{kind === "stamp" && <p>{t("الحفظ على الجهاز لا يعني اكتمال الختم تابع عدادات المزامنة ولا تمسح بيانات المتصفح قبل اكتمالها")}</p>}<p>{t("المكافأة تُصرف مرة واحدة وتظهر شروطها وصلاحيتها قبل التأكيد")} </p>{!embedded && <Link href={`/loyalty/${identity.slug}${identity.branchId ? `?branch=${encodeURIComponent(identity.branchId)}` : ""}`} className="inline-flex min-h-12 items-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4">{t("صفحة عضوية")} {locale === "en" ? identity.nameEn || identity.name : identity.name}</Link>}</div></details>}
       </div>
-      <section className={layout.readStatus} aria-label={t("حالة المزامنة")}>
+      {(!points || reads.rows.length > 0) && <section className={layout.readStatus} aria-label={t("حالة المزامنة")}>
         <RastCashierReadSummary rows={reads.rows} />
         {reads.authPaused && <p role="alert" className={layout.readAlert}>{t("توقفت المزامنة تحقق من صلاحية الحساب والخدمة ثم سجّل الدخول بالحساب نفسه لاستكمال القراءات المحفوظة")} {!embedded && <Link href="/cashier/login">{t("تسجيل الدخول")}</Link>}</p>}
         {reads.storageError && <p role="alert" className={layout.readAlert}>{t("تخزين الجهاز غير متاح لا تغلق الصفحة قبل التأكد من حفظ القراءة")}</p>}
-      </section>
+      </section>}
       {!embedded && <AnalyticsCouponRedemption />}
     </div>
   </Container>;

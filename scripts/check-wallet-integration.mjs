@@ -108,6 +108,27 @@ try {
   const pass = JSON.parse(entries["pass.json"]);
   assert.equal(pass.logoText, member.cafeName, "Native identity remains visible independently of logo artwork");
   const sharp = requireDependency("sharp");
+  const tiers = [{ points: 200, reward: "قهوة" }, { points: 500, reward: "قهوة وحلا" }];
+  const memberWithPoints = balance => ({ ...member, cafeSlug: "test-cafe", logoUrl: null,
+    program: { ...member.program, pointsProgram: { mode: "points", rateSar: 1, rateQuantity: 1, milestones: tiers } },
+    card: { ...member.card, availableLoyaltyPoints: balance } });
+  let previousStrip;
+  for (const [balance, nextName, remaining] of [[0, "قهوة", 200], [211, "قهوة وحلا", 289], [11, "قهوة", 189], [500, undefined, null]]) {
+    const pointsMember = memberWithPoints(balance);
+    const signed = unpackStoredZip(await apple.issueApplePass(pointsMember));
+    const { storeCard, serialNumber } = JSON.parse(signed["pass.json"]);
+    assert.equal(serialNumber, member.card.cardCode);
+    assert.equal(storeCard.headerFields[0].key, "points");
+    assert.equal(storeCard.headerFields[0].value, balance);
+    assert.equal(storeCard.secondaryFields.find(field => field.key === "nextReward")?.value, nextName);
+    assert.equal(storeCard.secondaryFields.find(field => field.key === "availableReward")?.value, tiers.findLast(tier => tier.points <= balance)?.reward);
+    assert.equal(storeCard.auxiliaryFields.find(field => field.key === "pointsRemaining")?.value ?? null, remaining);
+    assert.match(storeCard.backFields.find(field => field.key === "rewardPath").value, /قهوة وحلا · 500 نقطة/);
+    assert.equal(payload.buildGoogleObject(pointsMember, "123456789").loyaltyPoints.balance.int, balance);
+    assert.notDeepEqual(signed["strip.png"], previousStrip, "Affordable stations must light and dim again after redemption");
+    previousStrip = signed["strip.png"];
+    assert((await sharp(signed["strip@3x.png"]).metadata()).width === 1125);
+  }
   const { walletBrandLogo } = load("lib/wallet/logo.ts");
   for (const [background, expected] of [["#151515", 255], ["#ffffff", 0]]) {
     const fallback = { ...member, cafeSlug: "fallback", cafeName: "Fallback brand", logoUrl: null,
@@ -182,6 +203,25 @@ try {
   assert(verify("RSA-SHA256", Buffer.from(`${savedJwt[0]}.${savedJwt[1]}`), publicKey, Buffer.from(savedJwt[2], "base64url")));
   assert(!Buffer.from(savedJwt[1], "base64url").toString().includes("private@example.test"));
   await google.updateGooglePass({ ...member, card: { ...member.card, stampsInCycle: 4 } });
+  let previousArt;
+  for (const [balance, status] of [[211, "متاحة للاستبدال"], [11, "باقي 189 نقطة"]]) {
+    const customer = memberWithPoints(balance);
+    await google.updateGooglePass(customer);
+    const [url, options] = calls.at(-1);
+    assert(url.endsWith("/loyaltyObject/" + payload.googleObjectId(process.env.GOOGLE_WALLET_ISSUER_ID, customer)));
+    assert.equal(options.method, "PATCH");
+    const updated = stored.get(url);
+    assert.equal(updated.loyaltyPoints.balance.int, balance);
+    assert(updated.textModulesData[0].body.includes("قهوة · 200 نقطة · " + status));
+    assert(updated.textModulesData[0].body.includes(`باقي ${500 - balance} نقطة`));
+    const artUri = updated.heroImage.sourceUri.uri;
+    assert.notEqual(artUri, previousArt, "The same Google loyalty object fetches fresh artwork after spending points");
+    previousArt = artUri;
+  }
+  const switched = memberWithPoints(11);
+  switched.program.pointsProgram.mode = "stamps";
+  await google.updateGooglePass(switched);
+  assert.deepEqual(stored.get(calls.at(-1)[0]).textModulesData, [], "Switching to stamps clears obsolete points availability");
   const patches = calls.filter(([, request]) => request.method === "PATCH");
   assert(patches.length >= 2);
   assert(patches.every(([url, request]) => url.includes("/loyaltyClass/") ? JSON.parse(request.body).reviewStatus === "UNDER_REVIEW" : !JSON.parse(request.body).reviewStatus));

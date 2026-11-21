@@ -12,6 +12,8 @@ import { WalletDownloadLink } from "./wallet-download-link";
 import { RastQrCode } from "./qr-code";
 import s from "./rast-loyalty.module.css";
 import { loyaltyCommunityName, loyaltyTheme } from "./loyalty-theme";
+import { PointsRewardPath } from "@/components/loyalty/points-reward-path";
+import { pointsProgressText } from "@/lib/loyalty/reward-path";
 
 export type RastWalletAvailability = { apple: boolean; google: boolean };
 export type RastMembership = CustomerLoyaltyCardView & { rewards: CustomerRewardInstance[] };
@@ -61,6 +63,8 @@ export function RastMemberCard({ identity, member, walletAvailability, loadedAt 
     return () => { window.clearInterval(timer); window.removeEventListener("focus", refreshVisible); document.removeEventListener("visibilitychange", refreshVisible); };
   }, [router, loadedAt]);
   const remaining = Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle);
+  const points = member.program.pointsProgram?.mode === "points" ? member.program.pointsProgram : null;
+  const balance = member.card.availableLoyaltyPoints ?? 0;
 
   return <main className={s.publicPage} style={loyaltyTheme(identity)} dir="rtl">
     <RastHeader identity={identity} />
@@ -68,7 +72,7 @@ export function RastMemberCard({ identity, member, walletAvailability, loadedAt 
       <div className={s.memberIntro}>
         <span className={s.eyebrow}>أنت من {loyaltyCommunityName(identity)}</span>
         <h1>يا هلا برجعتك <span className={s.memberName}><bdi>{member.card.customerName}</bdi></span></h1>
-        <p className={s.intro}>{member.rewards.length ? "لك مكافأة بانتظارك خلّ زيارتك الجاية أحلى" : remaining === 1 ? "باقي ختم واحد ومكافأتك تنتظرك" : `باقي ${remaining} أختام على مكافأتك نشوفك على خير`}</p>
+        <p className={s.intro}>{points ? pointsProgressText(points.milestones, balance) : member.rewards.length ? "لك مكافأة بانتظارك خلّ زيارتك الجاية أحلى" : remaining === 1 ? "باقي ختم واحد ومكافأتك تنتظرك" : `باقي ${remaining} أختام على مكافأتك نشوفك على خير`}</p>
         <div className={s.walletSection}>
           <h2>{identity.slug === "taza" ? "حمّل بطاقة الولاء من هنا" : "خلّ بطاقتك قريبة"}</h2><p>{identity.slug === "taza" ? "اضغط على محفظة جوالك بالأسفل ثم اختر إضافة لحفظ بطاقتك واعرضها عند الكاشير في كل زيارة" : "أضفها لمحفظة جوالك واعرضها عند الكاشير"}</p>
           <div className={s.walletButtons}>
@@ -76,18 +80,21 @@ export function RastMemberCard({ identity, member, walletAvailability, loadedAt 
           </div>
           {!walletAvailability.apple || !walletAvailability.google ? <p className={s.hint} id="wallet-unavailable">الإضافة للمحافظ غير المتاحة لم تُفعّل بعد تقدر تستخدم رمز بطاقتك من هذه الصفحة</p> : null}
         </div>
-        <button type="button" className={s.refreshButton} disabled={refreshing} onClick={() => startRefresh(() => router.refresh())}><RefreshCw className={refreshing ? s.spinner : ""} aria-hidden="true" />{refreshing ? "جار تحديث رصيد الأختام" : "تحديث رصيد الأختام"}</button>
+        <button type="button" className={s.refreshButton} disabled={refreshing} onClick={() => startRefresh(() => router.refresh())}><RefreshCw className={refreshing ? s.spinner : ""} aria-hidden="true" />{refreshing ? "جار تحديث" : "تحديث"} {points ? "رصيد النقاط" : "رصيد الأختام"}</button>
         {member.program.terms ? <details className={s.terms}><summary>تفاصيل البرنامج <ChevronDown aria-hidden="true" /></summary><p>{member.program.terms}</p></details> : null}
       </div>
       <div className={s.memberCardColumn}>
-        <RastStampCard identity={identity} customerName={member.card.customerName} stamps={member.card.stampsInCycle} required={member.program.purchasesRequired} rewardName={member.program.rewardName} cardCode={member.card.cardCode} displayNumber={member.card.displayNumber} stampStyle={member.program.stampStyle} />
-        <section className={s.rewards} aria-labelledby="rast-rewards-title">
-          <div className={s.rewardHeading}><h2 id="rast-rewards-title">مكافآتك</h2><span>{member.rewards.length} متاحة</span></div>
+        {points ? <>
+          <PointsRewardPath balance={balance} milestones={points.milestones} />
+          <div className={`${s.memberQr} ${s.pointsQr}`}><RastQrCode value={member.card.cardCode} label="رمز بطاقتك لجمع النقاط واستبدالها عند الكاشير" /><div><strong>اعرض بطاقتك للكاشير</strong><p>اجمع نقاط الفاتورة أو اختر مكافأة لخصم تكلفتها من رصيدك</p><span dir="ltr">{member.card.displayNumber || member.card.cardCode}</span></div></div>
+        </> : <RastStampCard identity={identity} customerName={member.card.customerName} stamps={member.card.stampsInCycle} required={member.program.purchasesRequired} rewardName={member.program.rewardName} cardCode={member.card.cardCode} displayNumber={member.card.displayNumber} stampStyle={member.program.stampStyle} />}
+        {(!points || member.rewards.length > 0) && <section className={s.rewards} aria-labelledby="rast-rewards-title">
+          <div className={s.rewardHeading}><h2 id="rast-rewards-title">{points ? "مكافآت الأختام السابقة" : "مكافآتك"}</h2><span>{member.rewards.length} متاحة</span></div>
           {member.rewards.length === 0 ? <div className={s.emptyRewards}><Gift aria-hidden="true" /><p>أول مكافأة تبدأ بأول زيارة<br /><span>اجمع أختامك وخلّ الباقي علينا</span></p></div> : member.rewards.map((reward) => <article key={reward.id} className={s.reward}>
             <button type="button" aria-expanded={openReward === reward.id} aria-controls={`reward-${reward.id}`} className={s.rewardToggle} onClick={() => setOpenReward((value) => value === reward.id ? null : reward.id)}><Gift aria-hidden="true" /><span><strong>{reward.rewardTitle}</strong><small><Clock3 aria-hidden="true" />{rewardExpiry(reward.expiresAt)}</small></span><ChevronDown aria-hidden="true" /></button>
             {openReward === reward.id ? <div id={`reward-${reward.id}`} className={s.rewardDetails}><RewardDetailsCopy reward={reward} /><RastQrCode value={reward.qrPayload || reward.rewardCode} label={`رمز استبدال ${reward.rewardTitle}`} /><strong dir="ltr">{reward.rewardCode}</strong><p>اعرض رمز المكافأة للكاشير لاستبدالها مرة واحدة</p></div> : null}
           </article>)}
-        </section>
+        </section>}
       </div>
     </div>
     <footer className={s.publicFooter}><span>{loyaltyCommunityName(identity)}</span><span>كل زيارة لها مكان</span></footer>

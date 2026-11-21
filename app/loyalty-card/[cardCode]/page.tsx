@@ -21,6 +21,8 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
   if (!view) notFound();
   // Static Rast card codes identify cards; they never authorize a public customer-data read.
   if (view.cafeSlug === "rast") redirect("/loyalty/rast");
+  // The points balance is shown through the authenticated membership page.
+  if (view.program.pointsProgram?.mode === "points") redirect(`/loyalty/${encodeURIComponent(view.cafeSlug)}${view.card.branchId ? `?branch=${encodeURIComponent(view.card.branchId)}` : ""}`);
 
   const { card, program, cafeSlug, cafeName, businessCategory } = view;
   const copy = getBusinessCopy(businessCategory);

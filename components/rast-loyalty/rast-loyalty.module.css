@@ -97,6 +97,7 @@
 .memberQr { display: flex; align-items: center; gap: 22px; padding-top: 25px; }
 .memberQr > svg { width: 132px; height: 132px; flex-shrink: 0; border: 5px solid white; border-radius: 8px; }
 .memberQr strong { display: block; font-size: 14px; font-weight: 600; }
+.memberQr.pointsQr { flex-wrap: wrap; padding: 1.25rem; border-radius: 1rem; background: var(--card-background); color: var(--card-foreground); }
 .memberQr p { font-size: 10px; color: var(--card-muted, #e2c9c9); margin-block: 6px; }
 .memberQr div > span { font-size: 10px; letter-spacing: 1px; overflow-wrap: anywhere; display: inline-block; }
 .publicFooter { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--border); padding-block: 24px max(24px, env(safe-area-inset-bottom)); color: var(--muted); font-size: 10px; }

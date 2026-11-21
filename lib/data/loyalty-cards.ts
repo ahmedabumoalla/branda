@@ -9,6 +9,7 @@ import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import type { LoyaltyCardDesign } from "@/lib/loyalty/types";
+import { POINTS_CAFE_ID, readPointsProgram, type PointsProgram } from "@/lib/loyalty/points-program";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { isGreenApiConfigured, sendGreenApiCashierWelcome } from "@/lib/whatsapp/green-api";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
@@ -16,6 +17,7 @@ import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
 
 export type LoyaltyCardProgram = {
+  pointsProgram?: PointsProgram;
   autoLogo?: boolean;
   stampStyle?: LoyaltyStampStyle;
   brandSlug?: string;
@@ -38,6 +40,7 @@ export type LoyaltyCardProgram = {
 };
 
 export type LoyaltyBrandCard = {
+  availableLoyaltyPoints?: number;
   branchId?: string | null;
   id: string;
   cafeId: string;
@@ -157,11 +160,11 @@ function mapCardDesign(value: unknown): LoyaltyCardDesign | null {
 }
 
 async function mapProgram(row: Record<string, unknown> | null | undefined, cafeId: string, slug: string): Promise<LoyaltyCardProgram> {
-  return mapLoyaltyProgramSnapshot(row, slug, await getLoyaltyBrandAppearance(cafeId, slug));
+  return mapLoyaltyProgramSnapshot(row, slug, await getLoyaltyBrandAppearance(cafeId, slug), cafeId);
 }
 
 /** Uses the same reviewed mapping for the fresh, server-only joined snapshot. */
-export function mapLoyaltyProgramSnapshot(row: Record<string, unknown> | null | undefined, slug: string, appearance: Awaited<ReturnType<typeof getLoyaltyBrandAppearance>>): LoyaltyCardProgram {
+export function mapLoyaltyProgramSnapshot(row: Record<string, unknown> | null | undefined, slug: string, appearance: Awaited<ReturnType<typeof getLoyaltyBrandAppearance>>, cafeId?: string): LoyaltyCardProgram {
   const { colors, businessCategory } = appearance;
   const isSalon = businessCategory === "hair_salons";
   const defaults = isSalon ? { ...defaultProgram, rewardName: "خدمة مجانية عند اكتمال البطاقة", stampStyle: "scissors" as const } : defaultProgram;
@@ -170,6 +173,9 @@ export function mapLoyaltyProgramSnapshot(row: Record<string, unknown> | null | 
   if (!row) return { ...defaults, ...brandColors };
   const product = Array.isArray(row.menu_products) ? row.menu_products[0] : row.menu_products;
   return {
+    ...(cafeId === POINTS_CAFE_ID && (row.points_mode === "stamps" || row.points_mode === "points") ? {
+      pointsProgram: readPointsProgram(row),
+    } : {}),
     enabled: Boolean(row.enabled ?? true),
     cardTitle: String(row.card_title ?? defaultProgram.cardTitle),
     cardSubtitle: safeCardSubtitle(row.card_subtitle ?? defaultProgram.cardSubtitle),
@@ -192,6 +198,7 @@ export function mapLoyaltyProgramSnapshot(row: Record<string, unknown> | null | 
 
 function mapCard(row: Record<string, unknown>): LoyaltyBrandCard {
   return {
+    ...(row.cafe_id === POINTS_CAFE_ID && row.available_loyalty_points != null ? { availableLoyaltyPoints: Number(row.available_loyalty_points) } : {}),
     branchId: row.loyalty_branch_id ? String(row.loyalty_branch_id) : null,
     id: String(row.id),
     cafeId: String(row.cafe_id ?? ""),

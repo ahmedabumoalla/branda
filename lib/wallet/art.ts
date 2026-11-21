@@ -10,6 +10,7 @@ import type { WalletMember } from "./types";
 import { createWalletArtifactCache, walletArtifactKey } from "./artifact-cache";
 import { isMqas77Wallet, MQAS77_WALLET_VERSION, mqas77StampSvg } from "./mqas77-design";
 import { mqas77Emblem } from "./mqas77-assets";
+import { walletPointsSvg } from "./points-art";
 
 const cachedArtwork = createWalletArtifactCache(12 * 1024 * 1024, 256, 300_000);
 
@@ -30,10 +31,12 @@ export function verifyWalletArtToken(cardId: string, token: string) {
 
 export function walletArtUrl(member: WalletMember) {
   const appearance = walletArtifactKey(JSON.stringify([walletColors(member), member.program.purchasesRequired, member.logoUrl, member.cafeName, member.bannerUrl, ...((isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo) ? [MQAS77_WALLET_VERSION] : [])]));
+  const points = member.program.pointsProgram;
+  const pointsVersion = points?.mode === "points" ? ":" + walletArtifactKey(JSON.stringify([member.card.availableLoyaltyPoints, points.milestones])) : "";
   const selected = brandStampStyle(member.cafeSlug, member.program.stampStyle);
   // A logo stamp carries its rendition version so wallets fetch the improved artwork.
   const style = selected === "brand" ? `brand:${STAMP_LOGO_VERSION}` : selected;
-  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${style}:${member.card.updatedAt}:${appearance}`)}`;
+  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${style}:${member.card.updatedAt}:${appearance}${pointsVersion}`)}`;
 }
 
 // The artwork supplements native, accessible balance fields. Never bake text or
@@ -84,6 +87,12 @@ export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark 
 }
 
 export async function walletStampArtwork(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false) {
+  const points = member.program.pointsProgram;
+  if (points?.mode === "points") {
+    const { background, foreground, accent } = walletColors(member);
+    const svg = walletPointsSvg(points.milestones, member.card.availableLoyaltyPoints ?? 0, dark ? background : foreground, dark ? foreground : background, accent, scale);
+    return cachedArtwork(walletArtifactKey(svg), () => sharp(Buffer.from(svg)).png().toBuffer());
+  }
   if (member.bannerUrl && /^data:image\/webp;base64,[a-zA-Z0-9+/=]+$/.test(member.bannerUrl) && member.bannerUrl.length <= 500_000) {
     return cachedArtwork(walletArtifactKey(member.bannerUrl + scale), () => sharp(Buffer.from(member.bannerUrl!.split(",")[1], "base64"), { limitInputPixels: 16_000_000 }).resize(375 * scale, 144 * scale, { fit: "cover" }).png().toBuffer());
   }

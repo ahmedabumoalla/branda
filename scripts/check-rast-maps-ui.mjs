@@ -19,7 +19,7 @@ function load(relative) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText;
   new Function("require", "exports", code)((name) => {
-    if (name === "@/app/actions/loyalty-experience") return {};
+    if (name.startsWith("@/app/actions/")) return {};
     if (name.endsWith(".module.css")) return { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) };
     if (name.startsWith("@/") || name.startsWith(".")) {
       const next = name.startsWith("@/") ? name.slice(2) : path.join(path.dirname(relative), name);

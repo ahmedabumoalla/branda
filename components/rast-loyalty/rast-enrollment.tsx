@@ -9,6 +9,7 @@ import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
 import type { LoyaltyCardProgram } from "@/lib/data/loyalty-cards";
 import { RastHeader } from "./rast-brand";
 import { RastStampCard } from "./rast-stamp-card";
+import { PointsRewardPath } from "@/components/loyalty/points-reward-path";
 import s from "./rast-loyalty.module.css";
 import { loyaltyCommunityName, loyaltyTheme } from "./loyalty-theme";
 import { MAQAS77_SLUG } from "@/lib/platform/maqas77";
@@ -73,7 +74,7 @@ export function RastEnrollment({ identity, program, authenticated = false }: { i
       <div className={s.enrollmentCopy}>
         <span className={s.eyebrow}>{loyaltyCommunityName(identity)} برنامج الولاء</span>
         <h1>زيارتك تسعدنا<br /><span>ولحظاتك معنا مكافأة</span></h1>
-        <p className={s.intro}>{identity.slug === "taza" ? "حمّل بطاقة ولاء تازا سجّل اسمك وجوالك ثم أضف البطاقة إلى محفظة جوالك" : "اجمع أختام زياراتك واستمتع بمكافأتك بطاقتك معك وكل زيارة تحسب لك"}</p>
+        <p className={s.intro}>{program.pointsProgram?.mode === "points" ? "اجمع نقاطًا من قيمة فواتيرك وتابع مكافأتك القادمة على بطاقتك" : identity.slug === "taza" ? "حمّل بطاقة ولاء تازا سجّل اسمك وجوالك ثم أضف البطاقة إلى محفظة جوالك" : "اجمع أختام زياراتك واستمتع بمكافأتك بطاقتك معك وكل زيارة تحسب لك"}</p>
         {stage === "done" ? <div className={s.welcome} role="status"><Check aria-hidden="true" /><h2>{returning ? `يا هلا برجعتك ${name.trim()}` : `يا هلا فيك يا ${name.trim()}`}</h2><p>بطاقتك تجمع لحظاتك الحلوة معنا</p><button type="button" className={s.primary} disabled={opening} aria-busy={opening} onClick={openCard}><span role="status">{opening ? "جار فتح بطاقتك" : "عرض بطاقتي"}</span>{opening ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <ArrowLeft aria-hidden="true" />}</button></div> : <form className={s.enrollmentForm} onSubmit={enroll} aria-busy={pending}>
           <div className={s.formHeading}><h2>انضم إلى {loyaltyCommunityName(identity)}</h2></div>
             <label className={s.field} htmlFor="rast-name"><span>اسمك</span><input id="rast-name" name="name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} placeholder="الاسم اللي نناديك فيه" required disabled={pending} /></label>
@@ -84,7 +85,7 @@ export function RastEnrollment({ identity, program, authenticated = false }: { i
           <button type="submit" className={s.primary} disabled={pending}><span role="status">{pending ? "جار فتح بطاقتك" : "افتح بطاقتي"}</span>{pending ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <ArrowLeft aria-hidden="true" />}</button>
         </form>}
       </div>
-      <details ref={previewRef} className={s.previewDisclosure}><summary>شاهد بطاقة الولاء ومكافأتك</summary><aside className={s.enrollmentPreview}><RastStampCard identity={identity} stamps={0} required={program.purchasesRequired} rewardName={program.rewardName} stampStyle={program.stampStyle} preview /><p>بطاقة واحدة زيارات أكثر لحظات أحلى</p></aside></details>
+      <details ref={previewRef} className={s.previewDisclosure}><summary>شاهد بطاقة الولاء ومكافأتك</summary><aside className={s.enrollmentPreview}>{program.pointsProgram?.mode === "points" ? <PointsRewardPath balance={0} milestones={program.pointsProgram.milestones} /> : <><RastStampCard identity={identity} stamps={0} required={program.purchasesRequired} rewardName={program.rewardName} stampStyle={program.stampStyle} preview /><p>بطاقة واحدة زيارات أكثر لحظات أحلى</p></>}</aside></details>
     </div>
     <footer className={s.publicFooter}><span>{loyaltyCommunityName(identity)}</span><span>{identity.slug === "rast" ? "القهوة تجمعنا والولاء يقرّبنا" : "زيارتك تسعدنا والولاء يقرّبنا"}</span></footer>
   </main>;

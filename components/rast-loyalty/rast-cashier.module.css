@@ -43,6 +43,14 @@
 .lookupMethods svg { flex-shrink: 0; }
 .scanForm { display: grid; gap: 8px; margin-block: 14px 10px; }
 .scanForm input { font-size: 16px; }
+.pointsCardInput { min-height: 44px; min-width: 0; width: 100%; padding-inline: 14px; border: 1px solid currentColor; border-radius: 12px; background: white; }
+.voucherSwitch { display: block; margin-inline-start: auto; min-height: 44px; text-decoration: underline; text-underline-offset: 3px; font-size: 13px; }
+.pointsChoices { display: grid; gap: 6px; }
+.pointsChoices legend { margin-block-end: 6px; font-weight: 700; }
+.pointsChoices label { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--cashier-ink) 30%, transparent); border-radius: 12px; cursor: pointer; }
+.pointsChoices label:has(:checked) { border-color: var(--cashier-ink); background: color-mix(in srgb, var(--cashier-ink) 6%, transparent); }
+.pointsChoices input { accent-color: var(--cashier-ink); }
+.pointsChoices strong { margin-inline-start: auto; }
 .scanForm button { font-size: 14px; }
 .preview { min-width: 0; border-radius: 12px; }
 .preview:focus-visible { outline: 2px solid var(--cashier-ink); outline-offset: 4px; }

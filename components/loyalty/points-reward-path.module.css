@@ -1,0 +1,27 @@
+.path {
+  padding: clamp(1rem, 4vw, 1.75rem);
+  border-radius: 1.25rem;
+  background: var(--card-background, #34291f);
+  color: var(--card-foreground, #fffaf4);
+  overflow-wrap: anywhere;
+}
+.balance { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: .25rem 1rem }
+.balance > span { font-weight: 650 }
+.balance strong { font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.2; font-variant-numeric: tabular-nums }
+.balance small { font-size: .85rem }
+.path ol { padding: 0; margin: .9rem 0 0; list-style: none }
+.path li { position: relative; display: grid; grid-template-columns: 2.6rem 1fr auto; align-items: center; gap: .8rem; padding-block: .65rem; min-width: 0 }
+.path li:not(:last-child)::before { content: ""; position: absolute; inset-inline-start: 1.25rem; inset-block-start: 50%; height: 100%; border-inline-start: 2px dotted currentColor; opacity: .5 }
+.path li[data-affordable="true"]:not(:last-child)::before { border-inline-start-style: solid }
+.icon { position: relative; display: flex; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem; border: 1px solid currentColor; border-radius: 50%; background: var(--card-background, #34291f) }
+.icon svg { width: 1.4rem; min-width: 0 }
+.icon svg:not(:only-child) { width: 1.1rem }
+.path li[data-affordable="true"] .icon { color: var(--card-background, #34291f); background: var(--card-foreground, #fffaf4) }
+.path li[aria-current="step"] .icon { outline: 1px dashed currentColor; outline-offset: 3px }
+.station { display: grid; min-width: 0; gap: .15rem }
+.station small, .state { font-size: .78rem; line-height: 1.5 }
+.state { max-width: 7rem }
+@media (max-width: 380px) {
+  .path li { grid-template-columns: 2.6rem minmax(0, 1fr); row-gap: 0 }
+  .state { grid-column: 2; max-width: none }
+}

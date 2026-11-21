@@ -20,5 +20,6 @@ export default async function LoyaltyScannerPage() {
   if (!cashier || !cafe) redirect("/loyalty/scan/login");
   const brand = await getLoyaltyBrand(String(cafe.slug));
   if (!brand || !brand.program.enabled) return <main dir="rtl" className="p-8"><p>برنامج الولاء غير فعّال لهذه العلامة.</p></main>;
+  if (brand.program.pointsProgram?.mode === "points") redirect("/cashier");
   return <LoyaltyScanner identity={brand.identity} employee={String(cashier.full_name)} />;
 }

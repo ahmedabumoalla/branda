@@ -136,6 +136,7 @@ globalThis.document = { visibilityState: "visible", addEventListener: (name, cb)
 now = 100_000; Date.now = () => now;
 try {
   const component = load("components/rast-loyalty/rast-member-card.tsx", {
+    "@/components/loyalty/points-reward-path": {},
     react: { useRef: () => initialBalanceRef, useState: value => [value, () => {}], useTransition: () => [false, cb => { manualTransitions++; cb(); }], useEffect: cb => { effect = cb; } },
     "react/jsx-runtime": { jsx: () => null, jsxs: () => null },
     "next/navigation": { useRouter: () => router }, "lucide-react": {}, "./rast-brand": {}, "./rast-stamp-card": {}, "./wallet-download-link": {}, "./qr-code": {}, "./rast-loyalty.module.css": {}, "./loyalty-theme": { loyaltyTheme: () => ({}), loyaltyCommunityName: () => "Fixture" },

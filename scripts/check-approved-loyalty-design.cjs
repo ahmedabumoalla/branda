@@ -35,6 +35,25 @@ const alpha = Uint8Array.from(pixels); clearLogoBackdrop(pixels, 7, 7); assert.d
 const uiStubs = { 'next/link': { __esModule: true, default: 'a' }, 'next/image': { __esModule: true, default: ({ unoptimized, priority, ...props }) => React.createElement('img', props) } };
 const { RastStampCard } = load('components/rast-loyalty/rast-stamp-card.tsx', uiStubs);
 const { loyaltyTheme } = load('components/rast-loyalty/loyalty-theme.ts');
+const { PointsRewardPath } = load('components/loyalty/points-reward-path.tsx');
+const milestones = [{ points: 200, reward: 'قهوة' }, { points: 500, reward: 'قهوة وحلا' }];
+const { RastMemberCard } = load('components/rast-loyalty/rast-member-card.tsx', { ...uiStubs, 'next/navigation': { useRouter: () => ({}) } });
+const memberPage = renderToStaticMarkup(React.createElement(RastMemberCard, {
+  identity: { slug: 'test-cafe', name: 'Coffee', logoUrl: null }, walletAvailability: { apple: true, google: true }, loadedAt: Date.now(),
+  member: { card: { cardCode: 'COFFEE-CARD', availableLoyaltyPoints: 11 }, program: { pointsProgram: { mode: 'points', milestones } },
+    rewards: [{ id: 'old-stamp', rewardTitle: 'مكافأة قديمة', rewardCode: 'OLD-VOUCHER', expiresAt: null }] },
+}));
+assert(memberPage.includes('/api/wallet/apple/COFFEE-CARD') && memberPage.includes('/api/wallet/google/COFFEE-CARD'));
+assert(memberPage.includes('مكافآت الأختام السابقة') && memberPage.includes('OLD-VOUCHER'));
+assert(memberPage.includes('باقي 189 نقطة') && !memberPage.includes('متاحة للاستبدال'));
+for (const [balance, affordable, remaining] of [[0, 0, 200], [211, 1, 289], [11, 0, 189], [625, 2, 0]]) {
+  const markup = renderToStaticMarkup(React.createElement(PointsRewardPath, { balance, milestones }));
+  assert(markup.includes(`<bdi>${balance}</bdi>`), 'The card shows the real balance, including zero or above its last threshold');
+  assert.equal((markup.match(/data-affordable="true"/g) || []).length, affordable);
+  assert.equal((markup.match(/متاحة للاستبدال/g) || []).length, affordable);
+  assert.equal((markup.match(/aria-current="step"/g) || []).length, remaining ? 1 : 0);
+  if (remaining) assert(markup.includes(`باقي ${remaining} نقطة`));
+}
 for (const stampStyle of ['ceramic', 'paper', 'meal', 'brand', 'scissors', 'comb', 'plant', 'star', 'check']) for (const stamps of [0, 2, 3]) {
   const markup = renderToStaticMarkup(React.createElement(RastStampCard, { identity: { slug: 'test-cafe', name: 'Brand', logoUrl: '/original.png', logoDisplayUrl: '/transparent.png', cardBackground: '#0a1f43' }, stampStyle, stamps, required: 3, rewardName: 'Reward', preview: true }));
   const stampRow = markup.match(/<ol[^>]*>([\s\S]*?)<\/ol>/)[1];

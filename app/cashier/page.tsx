@@ -31,5 +31,5 @@ export default async function CashierPage() {
   if (data.cafe.businessCategory === "hair_salons") return <><CashierSessionGuard /><RastCashier initialData={data} identity={brand?.identity} /></>;
   const token = await getCashierToken();
   if (!token) redirect("/cashier/login");
-  return <StaffWorkspace key={cashierWorkspaceKey(token)} sessionKey={cashierWorkspaceKey(token)} initial={{ screen: "loyalty", data, identity: brand?.identity }} />;
+  return <StaffWorkspace key={cashierWorkspaceKey(token)} sessionKey={cashierWorkspaceKey(token)} initial={{ screen: "loyalty", data: { ...data, pointsProgram: brand?.program.pointsProgram }, identity: brand?.identity }} />;
 }

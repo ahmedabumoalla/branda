@@ -42,6 +42,7 @@ const languageStub={useCashierLanguage:()=>({locale,dir:locale==='ar'?'rtl':'ltr
 const cache=new Map();
 let rewardLookups=0,commits=[],throwSummaryLookup=false;
 const stubs={react:hooks,
+  '@/app/actions/cashier-invoice-points':{},
   '@/lib/loyalty/customer-summary':{...summaryModule,createCustomerSummaryController(options){controller=summaryModule.createCustomerSummaryController({...options,timers:fakeTimers,fetch:(url,init)=>{const task=deferred();fetches.push({url,init,...task});return task.promise;}});const lookup=controller.lookup;controller.lookup=(...args)=>{if(throwSummaryLookup)throw new TypeError('Synthetic browser API failure');return lookup(...args);};return controller;}},
   './use-read-outbox':{useReadOutbox:()=>({rows,storageError:false,authPaused:false,save(method,value){const task=deferred();saved.push({method,value,...task});return task.promise;}})},
   '@/components/cashier/cashier-language':languageStub,
@@ -132,4 +133,78 @@ for(const selector of ['customerSummary','customerSummaryHeading','customerSumma
 check(/\.customerSummary\s*\{[^}]*min-width:\s*0[^}]*overflow-wrap:\s*anywhere/.test(css),'Long names wrap in constrained panels');
 check(/\.customerSummaryStats\s*\{[^}]*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(css),'Balance columns shrink on small screens');
 controller.clear();
+{
+  const stored = new Map(), invoiceWrites = [];
+  globalThis.sessionStorage = { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) };
+  const invoiceScope = { cafeId: 'test-cafe', cashierId: 'operator' };
+  const program = { mode: 'points', rateSar: 2, rateQuantity: 3, milestones: [] };
+  let responseLost = true;
+  const { CashierInvoicePoints } = load('components/rast-loyalty/cashier-invoice-points.tsx', {
+    ...stubs, react: { ...hooks, useId: () => 'checkout' },
+    '@/app/actions/cashier-invoice-points': {
+      inspectPointsCardAction: async () => ({ code: 'MEMBER456', customerName: 'Test member', pointsBalance:199, affordableRewards:[] }),
+      async addCashierInvoicePointsAction(value) {
+        invoiceWrites.push(value);
+        if (responseLost) throw new Error('Interrupted after commit');
+        return { ok: true, pointsAdded: 4, pointsBalance: 203, affordableRewards: [{ points: 200, reward: 'Coffee' }] };
+      },
+    },
+  });
+  locale = 'en';
+  function renderInvoice() { cursor = 0; tree = CashierInvoicePoints({ scope: invoiceScope, program, displayName: name => name }); }
+  function changeInvoice(id, value) { all().find(n => n.props?.id === id).props.onChange({ target: { value } }); renderInvoice(); }
+  async function sendInvoice() { await all().find(n => n.type === 'form').props.onSubmit({ preventDefault() {} }); renderInvoice(); }
+  function openInvoice() {
+    slots = []; renderInvoice();
+    changeInvoice('checkout-card', 'MEMBER456');
+    changeInvoice('checkout-amount', '٣٫٢٠');
+  }
+  openInvoice(); check(text(tree).includes('Points for this invoice: 4'), 'Arabic digits and fractional SAR round down');
+  await sendInvoice(); equal(invoiceWrites.length, 0, 'Review never grants points'); check(text(tree).includes('Test member'), 'Review identifies the member');
+  await sendInvoice(); equal(stored.size, 1, 'Uncertain request retained across reload'); check(![...stored].flat().join().includes('MEMBER456'), 'Stored retry contains no raw card');
+  openInvoice(); await sendInvoice(); check(text(tree).includes('Retry confirmation'), 'Reload resumes an uncertain invoice');
+  responseLost = false; await sendInvoice(); equal(invoiceWrites[0], invoiceWrites[1], 'Retry preserves request ID, invoice, cashier, card and rate');
+  equal(invoiceWrites[0].amountHalalas, 320, 'Server receives integer halalas'); equal(stored.size, 0, 'Confirmed operation clears retry');
+  check(text(tree).includes('203') && !text(tree).includes('Coffee'), 'Earning confirms points without promising an issued reward');
+  changeInvoice('checkout-amount', '1000000.01'); check(button('Review invoice').props.disabled, 'Over-limit amount refused');
+  changeInvoice('checkout-amount', '1.999'); check(button('Review invoice').props.disabled, 'Over-precision amount refused');
+}
+{
+  const scope = { cafeId: 'coffee', cashierId: 'shift' };
+  const writes = [], rewards = [{ points: 100, reward: 'Coffee' }, { points: 200, reward: 'Cake' }];
+  let balance = 250, outcome = 'uncertain';
+  const { CashierPointsRedemption } = load('components/rast-loyalty/cashier-points-redemption.tsx', {
+    ...stubs, react: { ...hooks, useId: () => 'member' },
+    '@/app/actions/cashier-invoice-points': {
+      inspectPointsCardAction: async () => ({ code: 'MEMBER', customerName: 'Sam', pointsBalance:balance, affordableRewards:rewards.filter(r=>r.points<=balance) }),
+      async redeemCashierPointsAction(input) {
+        writes.push(input);
+        if (outcome === 'uncertain') { balance = 50; throw Error('Lost response after commit'); }
+        if (outcome === 'stale') { balance = 120; return { ok:false, reason:'points_balance_changed' }; }
+        return { ok:true, pointsSpent:200, pointsBalance:50, reward:'Cake', replayed:true, affordableRewards:[] };
+      },
+    },
+  });
+  function renderSpend() { cursor=0; tree=CashierPointsRedemption({ scope, displayName: name => name }); }
+  async function search() {
+    slots=[]; renderSpend();
+    all().find(n=>n.type==='input').props.onChange({ target:{ value:'MEMBER' } }); renderSpend();
+    await all().find(n=>n.type==='form').props.onSubmit({preventDefault(){}}); renderSpend();
+  }
+  await search();
+  const radios=()=>all().filter(n=>n.type==='input'&&n.props.type==='radio');
+  equal(radios().length,2,'Customer search shows affordable reward choices without writing'); equal(writes.length,0,'Preview is read-only');
+  radios()[1].props.onChange(); renderSpend();
+  check(text(tree).includes('spend 200 points and leave 50 points'),'Confirmation shows cost and resulting balance');
+  await button('Confirm points deduction and redeem reward').props.onClick(); renderSpend();
+  await search();
+  check(text(tree).includes('Verify the redemption of Cake for 200 points'),'Reopening recovers pending choice even when balance already deducted');
+  outcome='replayed'; await button('Retry confirmation').props.onClick(); renderSpend();
+  equal(writes[0],writes[1],'Uncertain spend retries exactly the same ID, original balance and reward');
+  check(text(tree).includes('Already redeemed: Cake for 200 points Balance after redemption: 50'),'Replayed receipt shows a single deduction');
+  await search(); check(!radios().length && text(tree).includes('below the cost'),'Insufficient balance offers no confirmation');
+  balance=250; await search(); radios()[1].props.onChange(); renderSpend();
+  outcome='stale'; await button('Confirm points deduction and redeem reward').props.onClick(); renderSpend();
+  check(radios().length===1 && text(tree).includes('Coffee') && !text(tree).includes('Cake'),'Changed balance reloads options and clears old choice');
+}
 console.log(`PASS: ${checks} cashier summary UI assertions; real controller/hook and handlers, deferred storage/network, selected confirmation, stale-response isolation, zero/null/rollover, locales, redemption and CSS`);

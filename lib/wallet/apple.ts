@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import sharp from "sharp";
 import { PKPass, PassType } from "passkit-generator";
 import { createBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
+import { describePointsRewards, nextPointsReward } from "@/lib/loyalty/reward-path";
 import { appleConfig } from "./config";
 import { WALLET_ART_VERSION, walletStampArtwork } from "./art";
 import { walletColors, walletAppleLocations } from "./payload";
@@ -75,12 +76,30 @@ export async function issueApplePass(member: WalletMember) {
   });
   const style = new PassType("storeCard");
   pass.types.push(style);
-  style.headerFields.push({ key: "stamps", label: member.program.stampLabel, value: `${member.card.stampsInCycle} / ${member.program.purchasesRequired}`, changeMessage: "رصيد الأختام الآن %@" });
-  const remaining = { key: "remaining", label: "أختام للمكافأة", value: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) };
-  const rewards = { key: "rewards", label: "مكافآت جاهزة", value: member.card.availableRewards, changeMessage: "مكافآتك المتاحة %@" };
-  style.secondaryFields.push(mqas77 ? rewards : remaining);
-  style.auxiliaryFields.push(mqas77 ? remaining : rewards);
-  style.backFields.push({ key: "reward", label: "مكافأتك", value: member.program.rewardName }, { key: "terms", label: "الشروط", value: member.program.terms }, { key: "validity", label: "صلاحية المكافأة", value: `${member.experience.rewardValidityDays} يوماً من إصدار المكافأة` });
+  const points = member.program.pointsProgram;
+  if (points?.mode === "points") {
+    const balance = member.card.availableLoyaltyPoints ?? 0;
+    const next = nextPointsReward(points.milestones, balance);
+    const affordable = points.milestones.findLast(tier => tier.points <= balance);
+    style.headerFields.push({ key: "points", label: "رصيد النقاط", value: balance, changeMessage: "رصيد نقاطك الآن %@" });
+    if (affordable) {
+      style.secondaryFields.push({ key: "availableReward", label: "متاحة للاستبدال", value: affordable.reward });
+      style.auxiliaryFields.push({ key: "redemptionCost", label: "تكلفة الاستبدال", value: `${affordable.points} نقطة` });
+    }
+    if (next) style.secondaryFields.push({ key: "nextReward", label: "المكافأة القادمة", value: next.reward });
+    if (next) style.auxiliaryFields.push({ key: "pointsRemaining", label: "نقاط متبقية", value: next.points - balance });
+    style.backFields.push({ key: "rewardPath", label: "مسار المكافآت", value: describePointsRewards(points.milestones, balance) });
+    if (member.card.availableRewards > 0) style.backFields.push({ key: "vouchers", label: "قسائم المكافآت المتاحة", value: member.card.availableRewards });
+  } else {
+    style.headerFields.push({ key: "stamps", label: member.program.stampLabel, value: `${member.card.stampsInCycle} / ${member.program.purchasesRequired}`, changeMessage: "رصيد الأختام الآن %@" });
+    const remaining = { key: "remaining", label: "أختام للمكافأة", value: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) };
+    const rewards = { key: "rewards", label: "مكافآت جاهزة", value: member.card.availableRewards, changeMessage: "مكافآتك المتاحة %@" };
+    style.secondaryFields.push(mqas77 ? rewards : remaining);
+    style.auxiliaryFields.push(mqas77 ? remaining : rewards);
+    style.backFields.push({ key: "reward", label: "مكافأتك", value: member.program.rewardName });
+  }
+  style.backFields.push({ key: "terms", label: "الشروط", value: member.program.terms });
+  if (points?.mode !== "points") style.backFields.push({ key: "validity", label: "صلاحية المكافأة", value: `${member.experience.rewardValidityDays} يوماً من إصدار المكافأة` });
   style.backFields.push({ key: "offer", label: member.cafeName, value: [member.experience.offerTitle, member.experience.offerBody].filter(Boolean).join("\n"), changeMessage: "%@" });
   pass.setBarcodes({ format: "PKBarcodeFormatQR", message: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), messageEncoding: "iso-8859-1", altText: member.card.displayNumber || member.card.cardCode });
   // setLocations replaces the array; pass all branch locations in one call

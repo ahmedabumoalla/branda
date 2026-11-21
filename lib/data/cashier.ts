@@ -20,6 +20,7 @@ import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits } 
 export const cashierSessionCookie = "barndaksa_cashier_session";
 
 export type CashierConsole = {
+  pointsProgram?: import("@/lib/loyalty/points-program").PointsProgram;
   cafe: {
     id: string;
     name: string;

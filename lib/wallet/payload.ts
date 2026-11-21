@@ -3,6 +3,7 @@ import type { WalletMember } from "./types";
 import { walletArtifactKey } from "./artifact-cache";
 import { isMqas77Wallet, MQAS77_WALLET_COLORS, MQAS77_WALLET_VERSION, MQAS77_WALLET_NAME } from "./mqas77-design";
 import { normalizeWalletLocations, walletLocationText } from "./branch-locations";
+import { describePointsRewards, nextPointsReward } from "@/lib/loyalty/reward-path";
 
 export function googleClassId(issuerId: string, cafeId: string, branchId?: string) {
   if (branchId) return `${issuerId}.branda_${cafeId.replace(/-/g, "")}_branch_${branchId.replace(/-/g, "")}`;
@@ -42,6 +43,7 @@ export function walletAppleLocations(member: WalletMember) {
 
 export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl: string) {
   const mqas77 = (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo);
+  const points = member.program.pointsProgram;
   const logoVersion = mqas77 ? MQAS77_WALLET_VERSION : walletArtifactKey(JSON.stringify([member.cafeName, member.logoUrl, member.program.cardBackground]));
   return {
     id: googleClassId(issuerId, member.card.cafeId, member.branchId),
@@ -54,24 +56,35 @@ export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl
     multipleDevicesAndHoldersAllowedStatus: "ONE_USER_ALL_DEVICES",
     hexBackgroundColor: walletColors(member).background,
     merchantLocations: walletLocations(member),
-    textModulesData: [{ id: "reward", header: member.program.rewardName, body: member.program.terms }, { id: "nearby", header: member.cafeName, body: member.experience.nearbyMessage }],
+    textModulesData: [points?.mode === "points"
+      ? { id: "reward", header: "احتساب النقاط", body: `كل ${points.rateSar} ر.س تمنحك ${points.rateQuantity} نقطة` }
+      : { id: "reward", header: member.program.rewardName, body: member.program.terms }, { id: "nearby", header: member.cafeName, body: member.experience.nearbyMessage }],
     linksModuleData: { uris: [{ id: "brand", uri: `${baseUrl}/menu/${encodeURIComponent(member.cafeSlug)}`, description: member.cafeName }] },
   };
 }
 
 export function buildGoogleObject(member: WalletMember, issuerId: string, artworkUrl?: string) {
+  const points = member.program.pointsProgram?.mode === "points" ? member.program.pointsProgram : null;
+  const balance = member.card.availableLoyaltyPoints ?? 0;
+  const next = points && nextPointsReward(points.milestones, balance);
+  const affordable = points?.milestones.findLast(tier => tier.points <= balance);
   return {
     id: googleObjectId(issuerId, member), classId: googleClassId(issuerId, member.card.cafeId, member.branchId),
     state: member.program.enabled ? "ACTIVE" : "INACTIVE",
     barcode: { type: "QR_CODE", value: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), alternateText: member.card.displayNumber || member.card.cardCode },
-    loyaltyPoints: (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
+    loyaltyPoints: points ? { label: "رصيد النقاط", balance: { int: balance } } : (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
       ? { label: "مكافآت جاهزة", balance: { string: String(member.card.availableRewards) } }
       : { label: member.program.stampLabel, balance: { string: `${member.card.stampsInCycle} / ${member.program.purchasesRequired}` } },
-    secondaryLoyaltyPoints: (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
+    secondaryLoyaltyPoints: affordable ? { label: "متاحة للاستبدال", balance: { string: `${affordable.reward} · ${affordable.points} نقطة` } }
+      : next ? { label: next.reward, balance: { string: `باقي ${next.points - balance} نقطة` } } : (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
       ? { label: "أختام للمكافأة", balance: { int: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) } }
       : { label: "المكافآت المتاحة", balance: { int: member.card.availableRewards } },
+    // PATCH must clear this card's points-only module when the program returns to stamps.
+    ...(member.program.pointsProgram ? { textModulesData: points
+      ? [{ id: "pointsPath", header: "مسار المكافآت", body: describePointsRewards(points.milestones, balance) }]
+      : [] } : {}),
     merchantLocations: walletLocations(member),
     hexBackgroundColor: walletColors(member).background,
-    ...(artworkUrl ? { heroImage: { sourceUri: { uri: artworkUrl }, contentDescription: { defaultValue: { language: "ar", value: member.program.stampLabel } } } } : {}),
+    ...(artworkUrl ? { heroImage: { sourceUri: { uri: artworkUrl }, contentDescription: { defaultValue: { language: "ar", value: points ? "مسار مكافآت النقاط" : member.program.stampLabel } } } } : {}),
   };
 }
