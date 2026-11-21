@@ -50,6 +50,8 @@ The user named 0558891694 the notifications number, also the second standby numb
 - The real selection code was run against the provider with the local settings: 4 read-only requests, the right instance found, nothing sent
 - `scripts/check-notification-sender.cjs`: 17 checks. No test message was sent, and the production settings were not read, so that production holds the partner key is inferred from the brand connection feature using it there
 
+Production: commit `d879884d` on main, Vercel build pending 21:12:49Z, success 21:13:40Z on 2026-11-21 UTC, 51 seconds, deployment size guard check passed before the push, 100 recorded live answers identical before and after. Evidence from the provider's outgoing journals, read only and counted without reading any phone or text: the notifications number sent its first loyalty card link at 21:15:23Z with state sent; the first standby sent 7 card links, 5 verification codes and 2 owner logins in the 24 hours before the access-only switch and nothing after 20:27:25Z; the primary sent nothing in 24 hours
+
 Risk stated to the user: this is the same kind of message from another ordinary number through the same unofficial gateway, so this number can be restricted too. The lasting fix is Meta's official platform
 
 ## Manual card message
