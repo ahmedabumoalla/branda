@@ -34,7 +34,8 @@ const delivery = load('lib/auth/otp-delivery.ts', {
   '@/lib/barndaksa/env': { getSupabaseServiceRoleKey: () => key },
   '@/lib/whatsapp/customer-routing': {
     isBrandCustomerOtp: (cafeId,purpose) => cafeId === loco && ['customer_signup','customer_login'].includes(purpose),
-    selectBrandCustomerSender: async () => { selections++; return selectedSender; },
+    // Since 2026-11-22 the worker asks for the code sender, which adds the notifications number before the platform numbers
+    selectBrandOtpSender: async () => { selections++; return selectedSender; },
   },
   '@/lib/whatsapp/green-api': {
     greenApiProviderInstanceKey: () => 'isolated-provider',

@@ -2,6 +2,7 @@ import "server-only";
 import { cashierGuideFilename, cashierGuideUrl } from "@/lib/cashier/guide";
 import { ownerGuideFilename, ownerGuideUrl, ownerCompanionGuides, type OwnerCompanionGuide } from "@/lib/whatsapp/owner-guide";
 import { queueOwnerCompanionGuides } from "@/lib/whatsapp/owner-guide-delivery";
+import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
 
 const DEFAULT_GREEN_API_TIMEOUT_MS = 10_000;
 
@@ -430,6 +431,18 @@ async function submitPlatformMessage(primary: OtpSender, backup: OtpSender | nul
  */
 async function sendVerificationCode(phone: string, code: string, message: string, timeoutMs: number) {
   if (!/^9665\d{8}$/.test(phone) || !/^\d{6}$/.test(code)) throw new Error("OTP_INPUT_INVALID");
+  // Verification codes leave from the notifications number first (user decision 2026-11-22). Its state is read
+  // right before sending because the provider queues messages for a disconnected number. Branda's primary and
+  // first standby carry a code only when that number is not connected or refuses, so sign-in never depends on one number
+  const notify = await selectNotificationSender();
+  if (notify && await probeSenderReady(notify)) {
+    let outcome: Awaited<ReturnType<typeof sendGreenApiCustomerMessage>> | null = null;
+    // Everything this call can throw happens before any request, so falling back cannot duplicate a code
+    try { outcome = await sendGreenApiCustomerMessage(notify, { phone, message }, timeoutMs, "otp"); } catch { outcome = null; }
+    if (outcome?.status === "queued" && outcome.providerMessageId) return { providerMessageId: outcome.providerMessageId };
+    // An uncertain outcome may already be queued: the same code is never sent twice
+    if (outcome && outcome.status !== "rejected") throw new Error("OTP_SEND_OUTCOME_UNKNOWN");
+  }
   const primary = validateOtpSender(await requireDeliveryConfig("otp"));
   const backup = backupOtpSender(primary);
   let response: Response;

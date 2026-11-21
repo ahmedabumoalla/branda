@@ -54,6 +54,16 @@ Production: commit `d879884d` on main, Vercel build pending 21:12:49Z, success 2
 
 Risk stated to the user: this is the same kind of message from another ordinary number through the same unofficial gateway, so this number can be restricted too. The lasting fix is Meta's official platform
 
+## Verification codes from the notifications number, 2026-11-22
+
+The user said verification codes must also leave from the notifications number, and that the primary (when its restriction ends) or the first standby, the number that ends in 24401, carries only the login message an administrator sends when an account is created
+
+- `sendVerificationCode` in `lib/whatsapp/green-api.ts` asks for the notifications number first, reads its state right before sending because the provider queues messages for a disconnected number, and sends the code from it. This covers the staff, owner and customer codes that use `sendGreenApiOtp` and `sendGreenApiSupabaseOtp`
+- `selectBrandOtpSender` in `lib/whatsapp/customer-routing.ts` gives customer codes of a brand with a private connection this order: the brand's own number, the notifications number, then the primary and first standby. `lib/auth/otp-delivery.ts` uses it. Documents keep `selectBrandCustomerSender` and never reach the notifications number
+- Safety choice made by Claude and stated to the user: when the notifications number is not connected, or explicitly refuses a code, the code still goes through the primary and then the first standby, so sign-in never depends on one number. An uncertain outcome is never sent a second time. If the user wants no fallback at all, remove the lines after the notifications attempt in `sendVerificationCode` and the last line of `selectBrandOtpSender`
+- Side effect: while the primary is restricted a code no longer waits for three readiness attempts thirty seconds apart before the standby is used
+- `scripts/check-notification-sender.cjs`: 51 checks. `scripts/check-otp-delivery.cjs` stub renamed to the new selector, 15 checks. No test code was sent
+
 ## Manual card message
 
 The user asked for the customer's card message to be available for copying and sending by hand. In the brand dashboard, the customer file in the loyalty customers directory (`components/loyalty/customer-directory.tsx`) now has a block "رسالة البطاقة": the button builds the same message the platform sends after a stamp, with the customer's personal card link valid for 30 days, and offers copying it or opening WhatsApp on the customer's number with the text filled in. It is built only on request, after the directory's own authorisation for that brand and customer, and nothing is sent by the platform. New files: `lib/data/loyalty-customer-card-message.ts`, `app/actions/loyalty-customer-card-message.ts`, `components/loyalty/customer-card-message.tsx` and its CSS, `scripts/check-loyalty-customer-card-message.cjs` (16 checks). `scripts/check-loyalty-directory-ui.mjs` gained one stub line for the new component and still passes 26 checks

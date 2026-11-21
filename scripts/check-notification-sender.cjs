@@ -125,13 +125,123 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
     assert.deepEqual(z.sent, []); assert.deepEqual(z.claims, [], 'nothing is claimed when no sender is ready'); checks++;
   }
 
-  // The notifications number is not one of the two numbers held to access messages, and it never carries codes
+  // Verification codes (user decision 2026-11-22): the notifications number first, Branda's primary and first
+  // standby only when it is not connected or refuses, and never the same code twice
+  const env = {
+    GREEN_API_API_URL: 'https://1100.api.greenapi.com', GREEN_API_ID_INSTANCE: '111', GREEN_API_API_TOKEN_INSTANCE: 'primary-secret',
+    GREEN_API_OTP_BACKUP_API_URL: 'https://7700.api.greenapi.com', GREEN_API_OTP_BACKUP_ID_INSTANCE: '222', GREEN_API_OTP_BACKUP_API_TOKEN_INSTANCE: 'backup-secret',
+  };
+  const codeSender = { apiUrl: 'https://7700.api.greenapi.com', idInstance: '333', apiTokenInstance: 'notify-secret' };
+  function green({ notifySender = codeSender, notifyState = 'authorized', notifyPost = 'ok', primary = 'authorized', settings = env } = {}) {
+    const calls = [];
+    const load = file => {
+      const exports = {};
+      new Function('require', 'exports', 'process', 'fetch', 'setTimeout', transpile(file))(name => {
+        if (name === 'server-only') return {};
+        if (name === '@/lib/whatsapp/notification-sender') return { selectNotificationSender: async () => notifySender };
+        if (name.includes('owner-guide-delivery')) return { queueOwnerCompanionGuides: async () => {} };
+        if (name.startsWith('@/')) return load(`${name.slice(2)}.ts`);
+        return require(name);
+      }, exports, { env: settings }, async (url, init = {}) => {
+        const instance = /waInstance(\d+)/.exec(url)[1];
+        const post = (init.method ?? 'GET') === 'POST';
+        calls.push(`${post ? 'POST' : 'GET'} ${instance}`);
+        if (!post) return Response.json({ stateInstance: instance === '333' ? notifyState : instance === '111' ? primary : 'authorized' });
+        if (instance === '333') {
+          if (notifyPost === 'timeout') throw new Error('timeout with secret URL');
+          if (notifyPost === 'malformed') return Response.json({});
+          if (typeof notifyPost === 'number') return new Response('', { status: notifyPost });
+        }
+        return Response.json({ idMessage: `ack-${instance}` });
+      }, fn => { fn(); return 0; });
+      return exports;
+    };
+    return { module: load('lib/whatsapp/green-api.ts'), calls, posts: () => calls.filter(call => call.startsWith('POST')) };
+  }
+  const code = { phoneNormalized: '966500000001', code: '123456', brandName: 'Example' };
+  for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp']) {
+    for (const settings of [env, { ...env, BRANDA_ACCESS_MESSAGES_ONLY: 'true' }]) {
+      const x = green({ settings });
+      assert.deepEqual(await x.module[method](code), { providerMessageId: 'ack-333' });
+      assert.deepEqual(x.calls, ['GET 333', 'POST 333'], 'state read then one send; the primary is not even probed'); checks++;
+    }
+    // Not connected: nothing is posted to it, because the provider would queue the code for later
+    for (const notifyState of ['notAuthorized', 'yellowCard', 'blocked']) {
+      const x = green({ notifyState });
+      assert.deepEqual(await x.module[method](code), { providerMessageId: 'ack-111' });
+      assert.deepEqual(x.posts(), ['POST 111']); checks++;
+    }
+    // No notifications number at all: the earlier behaviour, primary then first standby
+    {
+      const x = green({ notifySender: null });
+      await x.module[method](code); assert.deepEqual(x.posts(), ['POST 111']);
+      const y = green({ notifySender: null, primary: 'blocked' });
+      assert.deepEqual(await y.module[method](code), { providerMessageId: 'ack-222' }); assert.deepEqual(y.posts(), ['POST 222']); checks++;
+    }
+    // A sender whose settings fail validation is refused before any request, so the code still goes out
+    {
+      const x = green({ notifySender: { apiUrl: 'https://7700.api.greenapi.com', idInstance: '333', apiTokenInstance: 'bad token with spaces' } });
+      assert.deepEqual(await x.module[method](code), { providerMessageId: 'ack-111' });
+      assert.deepEqual(x.posts(), ['POST 111']); checks++;
+    }
+    // An explicit refusal moves on to Branda's numbers; an uncertain outcome never sends the code a second time
+    for (const status of [401, 403, 429, 466]) {
+      const x = green({ notifyPost: status });
+      assert.deepEqual(await x.module[method](code), { providerMessageId: 'ack-111' });
+      assert.deepEqual(x.posts(), ['POST 333', 'POST 111']); checks++;
+    }
+    for (const notifyPost of [500, 502, 408, 'timeout', 'malformed']) {
+      const x = green({ notifyPost });
+      await assert.rejects(() => x.module[method](code), /OTP_SEND_OUTCOME_UNKNOWN/);
+      assert.deepEqual(x.posts(), ['POST 333'], `no second send after ${notifyPost}`); checks++;
+    }
+  }
+  // The administrator's owner login and every other message never use the notifications number here
   {
-    const green = fs.readFileSync('lib/whatsapp/green-api.ts', 'utf8');
-    assert.match(green, /\[process\.env\.GREEN_API_ID_INSTANCE\?\.trim\(\), process\.env\.GREEN_API_OTP_BACKUP_ID_INSTANCE\?\.trim\(\)\]\.includes\(sender\.idInstance\)/);
-    for (const file of ['lib/auth/otp-delivery.ts', 'lib/whatsapp/customer-routing.ts', 'lib/whatsapp/green-api.ts']) assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /notification-sender/, `${file} must not route through the notifications number`);
-    const users = ['lib/loyalty/read-card-links.ts'];
-    for (const file of users) assert.match(fs.readFileSync(file, 'utf8'), /selectNotificationSender\(\)/);
+    const x = green();
+    await x.module.sendGreenApiOwnerWelcome({ phone: '966500000001', brandName: 'Example', password: 'fixture-only', startsTrial: false });
+    await x.module.sendGreenApiPagerMessage({ phone: '966500000001', message: 'order ready' });
+    assert.ok(x.calls.every(call => !call.endsWith(' 333')), 'only codes and card links may use it'); assert.equal(x.posts().length, 2); checks++;
+  }
+  // Customer codes of a brand with a private connection: its own number, then the notifications number, then the platform
+  {
+    const route = ({ linked = null, notifySender = codeSender, notifyReady = true }) => {
+      const exports = {};
+      new Function('require', 'exports', transpile('lib/whatsapp/customer-routing.ts'))(name => ({
+        'server-only': {},
+        '@/lib/data/brand-whatsapp': { getLocoCustomerWhatsAppCredentials: async () => null, getBrandCustomerWhatsAppCredentials: async () => linked },
+        '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: 'loco', supportsPrivateWhatsApp: () => true },
+        '@/lib/whatsapp/green-api': { isGreenApiBackupOnly: () => false, getGreenApiCustomerPlatformSenders: () => ({ primary: { idInstance: '111' }, backup: { idInstance: '222' } }),
+          isGreenApiCustomerSenderReady: async sender => sender.idInstance === '333' ? notifyReady : true },
+        '@/lib/whatsapp/green-api-marketing': { getGreenApiMarketingAccount: async () => ({ phone: '966500000005' }) },
+        '@/lib/whatsapp/notification-sender': { selectNotificationSender: async () => notifySender },
+      })[name] ?? (() => { throw new Error(`Unmocked dependency ${name}`); })(), exports);
+      return exports;
+    };
+    const own = { idInstance: '444', expectedPhone: '966500000005' };
+    assert.equal((await route({ linked: own }).selectBrandOtpSender('brand')).idInstance, '444');
+    assert.equal((await route({}).selectBrandOtpSender('brand')).idInstance, '333');
+    assert.equal((await route({ notifyReady: false }).selectBrandOtpSender('brand')).idInstance, '111');
+    assert.equal((await route({ notifySender: null }).selectBrandOtpSender('brand')).idInstance, '111');
+    // Documents keep their own selection and never reach the notifications number
+    assert.equal((await route({}).selectBrandCustomerSender('brand')).idInstance, '111'); checks++;
+  }
+  {
+    const greenSource = fs.readFileSync('lib/whatsapp/green-api.ts', 'utf8');
+    assert.match(greenSource, /\[process\.env\.GREEN_API_ID_INSTANCE\?\.trim\(\), process\.env\.GREEN_API_OTP_BACKUP_ID_INSTANCE\?\.trim\(\)\]\.includes\(sender\.idInstance\)/);
+    assert.match(greenSource, /if \(notify && await probeSenderReady\(notify\)\) \{/, 'the state is read right before a code is sent');
+    assert.match(fs.readFileSync('lib/auth/otp-delivery.ts', 'utf8'), /await selectBrandOtpSender\(job\.cafe_id!\)/);
+    assert.match(fs.readFileSync('lib/whatsapp/company-document.ts', 'utf8'), /selectBrandCustomerSender\(cafeId\)/);
+    assert.match(fs.readFileSync('lib/loyalty/read-card-links.ts', 'utf8'), /selectNotificationSender\(\)/);
+    // Only verification codes and loyalty card links may be routed through the notifications number
+    const users = [];
+    const walk = directory => fs.readdirSync(directory, { withFileTypes: true }).forEach(entry => {
+      const file = `${directory}/${entry.name}`;
+      if (entry.isDirectory()) walk(file);
+      else if (/\.tsx?$/.test(entry.name) && /whatsapp\/notification-sender"/.test(fs.readFileSync(file, 'utf8'))) users.push(file);
+    });
+    ['app', 'lib', 'components'].forEach(walk);
+    assert.deepEqual(users.sort(), ['lib/loyalty/read-card-links.ts', 'lib/whatsapp/customer-routing.ts', 'lib/whatsapp/green-api.ts']);
     checks++;
   }
 

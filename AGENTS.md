@@ -55,10 +55,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 These are the names the user uses. Use the same names with the user and in the handoff
 
-- Primary number (الرقم الأساسي): settings `GREEN_API_*`. Verification codes and the login message an administrator sends to a brand owner
-- First standby (الرقم الاحتياطي): settings `GREEN_API_OTP_BACKUP_*`. Takes over those two when the primary is restricted
-- Notifications number, also called the second standby (رقم رسائل الإشعارات أو الرقم الاحتياطي الثاني): 0558891694. Named by the user on 2026-11-22. It carries the loyalty card link message for brands without their own sender. It is found by its phone on the partner account at run time in `lib/whatsapp/notification-sender.ts`, so it has no deployment setting. It never carries verification codes
-- While `BRANDA_ACCESS_MESSAGES_ONLY` is `"true"` in `next.config.ts`, the primary and the first standby send nothing but verification codes and the administrator's owner login. Do not turn it off, and do not move another message type onto any of the three numbers, without the user's word. `docs/BARNDAKSA_HANDOFF/WHATSAPP_ACCESS_ONLY_20261121.md`
+- Primary number (الرقم الأساسي): settings `GREEN_API_*`. The login message an administrator sends to a brand owner when an account is created. Since 2026-11-22 it carries a verification code only when the notifications number is not connected or refuses
+- First standby (الرقم الاحتياطي), the number that ends in 24401: settings `GREEN_API_OTP_BACKUP_*`. Takes over from the primary when it is restricted
+- Notifications number, also called the second standby (رقم رسائل الإشعارات أو الرقم الاحتياطي الثاني): 0558891694. Named by the user on 2026-11-22. It carries verification codes and the loyalty card link message for brands without their own sender. It is found by its phone on the partner account at run time in `lib/whatsapp/notification-sender.ts`, so it has no deployment setting
+- While `BRANDA_ACCESS_MESSAGES_ONLY` is `"true"` in `next.config.ts`, the primary and the first standby send nothing but the administrator's owner login, and a verification code only as the fallback described above. Do not turn it off, and do not move another message type onto any of the three numbers, without the user's word. `docs/BARNDAKSA_HANDOFF/WHATSAPP_ACCESS_ONLY_20261121.md`
 
 ## Deployment size
 
