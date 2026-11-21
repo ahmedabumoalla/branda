@@ -51,6 +51,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Keep punctuation only when it carries meaning, such as list separators, questions, decimal values, currency abbreviations, email addresses and URLs
 - Apply this rule to new and edited Arabic interface copy and shared system messages without rewriting customer-authored content
 
+## Deployment size
+
+- `public` is served by the CDN and stays out of server functions. `next.config.ts` excludes it from file tracing, and `scripts/verify-deployment-size.mjs` stops the production build when a function carries public files it never reads or passes its size limit
+- Do not add videos or other large media to `public`. Host them in storage and link them
+- Server code reads a public file only through a fixed path that is listed in `FIXED_PUBLIC_FILES` and in the `"/*"` includes of `next.config.ts`. The only variable path under `public` is the wallet logo reader in `lib/wallet/logo.ts`, served by the `/api/wallet/**` includes
+- Do not add `turbopackIgnore` to that reader. Measured on 2026-11-21 it packed the whole project into every function
+- Do not raise a limit or remove the guard to get a release out. Read `docs/BARNDAKSA_HANDOFF/DEPLOYMENT_SIZE_GUARD_20261121.md` first
+
 ## Communication Rules
 
 All assistant responses to the user must be in Arabic and rendered right-to-left using this wrapper:
