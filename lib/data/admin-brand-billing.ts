@@ -12,6 +12,7 @@ export type AdminBrandBillingRow = {
   current: boolean;
   /** Price recorded on the subscription itself */
   amount: number;
+  manualPrice: number | null;
   baseAmount: number | null;
   discount: number;
   listPrice: number | null;
@@ -56,18 +57,25 @@ export async function getAdminBrandBilling(cafeId: string): Promise<AdminBrandBi
   await requirePlatformAdmin();
   const id = z.string().uuid().parse(cafeId);
   const client = await createClient();
-  const { data, error } = await client.from("subscriptions").select(COLUMNS).eq("cafe_id", id)
+  const loadRows = (columns: string) => client.from("subscriptions").select(columns).eq("cafe_id", id)
     .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(40);
+  let result = await loadRows(COLUMNS + ",admin_subscription_prices(price_sar)");
+  if (process.env.NODE_ENV === "development" && result.error?.code === "PGRST200" && result.error.message.includes("admin_subscription_prices")) {
+    result = await loadRows(COLUMNS);
+  }
+  const { data, error } = result;
   if (error) throw new Error("تعذر تحميل أسعار اشتراك العلامة حاول مجددًا");
   const now = Date.now();
-  const rows = ((data ?? []) as Record<string, unknown>[]).map((row): AdminBrandBillingRow => {
+  const rows = ((data ?? []) as unknown as Record<string, unknown>[]).map((row): AdminBrandBillingRow => {
     const related = row.platform_plans as { active?: boolean | null; name?: string | null; price_sar?: number | string | null } | { active?: boolean | null; name?: string | null; price_sar?: number | string | null }[] | null;
     const plan = Array.isArray(related) ? related[0] ?? null : related;
     const [state, current] = rowState(row, plan, now);
+    const price = Array.isArray(row.admin_subscription_prices) ? row.admin_subscription_prices[0] : row.admin_subscription_prices as { price_sar: number | string } | null;
     const base = row.base_amount_sar === null || row.base_amount_sar === undefined ? null : Number(row.base_amount_sar);
     const list = plan?.price_sar === null || plan?.price_sar === undefined ? null : Number(plan.price_sar);
     return {
       id: String(row.id), planName: String(row.plan_name_snapshot ?? plan?.name ?? row.plan_id ?? ""), state, current,
+      manualPrice: price?.price_sar == null ? null : Number(price.price_sar),
       amount: Number(row.amount_sar) || 0, baseAmount: Number.isFinite(base) ? base : null, discount: Number(row.discount_amount_sar) || 0,
       listPrice: Number.isFinite(list) ? list : null, duration: durationLabel(row.duration_unit, row.duration_count),
       method: row.payment_method_label ? String(row.payment_method_label) : null, paidAt: row.paid_at ? String(row.paid_at) : null,
@@ -75,5 +83,18 @@ export async function getAdminBrandBilling(cafeId: string): Promise<AdminBrandBi
     };
   });
   const current = rows.filter(row => row.current);
-  return { rows, currentTotal: Math.round(current.reduce((sum, row) => sum + row.amount, 0) * 100) / 100, currentCount: current.length };
+  return { rows, currentTotal: Math.round(current.reduce((sum, row) => sum + (row.manualPrice ?? row.amount), 0) * 100) / 100, currentCount: current.length };
+}
+
+export async function setAdminSubscriptionPrice(cafeId: string, subscriptionId: string, price: string, expected: number | null) {
+  await requirePlatformAdmin();
+  if (typeof price !== "string" || !/^\d{1,8}(?:\.\d{1,2})?$/.test(price)) throw new Error("أدخل سعرًا صحيحًا بالريال وحتى منزلتين عشريتين");
+  const client = await createClient();
+  const { error } = await client.rpc("set_admin_subscription_price", {
+    p_cafe: z.string().uuid().parse(cafeId), p_subscription: z.string().uuid().parse(subscriptionId),
+    p_price: Number(price), p_expected: z.number().min(0).max(99999999.99).nullable().parse(expected),
+  });
+  if (error?.code === "40001" || error?.code === "P0002") throw new Error("تغير الاشتراك أو سعره أعد فتح ملف العلامة قبل التعديل");
+  if (error?.code === "PGRST202") throw new Error("يتطلب حفظ سعر الاشتراك تطبيق تحديث قاعدة البيانات");
+  if (error) throw new Error("تعذر حفظ سعر الاشتراك حاول مجددًا");
 }

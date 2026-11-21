@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAdminCafes } from "@/lib/data/admin";
 import { createAdminBrandAccountWithPlans, saveAdminBrandOwner, updateAdminBrandProfile } from "@/lib/data/admin-brand-account";
-import { getAdminBrandBilling } from "@/lib/data/admin-brand-billing";
+import { getAdminBrandBilling, setAdminSubscriptionPrice } from "@/lib/data/admin-brand-billing";
 import { sendBrandOwnerWelcome } from "@/lib/data/admin-brand-onboarding";
 import { actionResult } from "@/lib/platform/action-result";
 import type { AdminBrandAccountWithPlansInput, AdminBrandOwnerInput, AdminBrandProfileInput } from "@/lib/platform/brand-onboarding";
@@ -45,4 +45,8 @@ export async function updateAdminBrandProfileAction(input: AdminBrandProfileInpu
 }
 export async function fetchAdminBrandBillingAction(cafeId: string) {
   return actionResult(() => getAdminBrandBilling(cafeId), "تعذر تحميل أسعار اشتراك العلامة حاول مجددًا");
+}
+
+export async function saveAdminSubscriptionPriceAction(cafeId: string, subscriptionId: string, price: string, expected: number | null) {
+  return actionResult(() => setAdminSubscriptionPrice(cafeId, subscriptionId, price, expected), "تعذر حفظ سعر الاشتراك");
 }

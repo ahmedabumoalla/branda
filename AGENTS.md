@@ -62,6 +62,8 @@ These are the names the user uses. Use the same names with the user and in the h
 
 ## Deployment size
 
+- Permanent user instruction 2026-11-22: Preserve Claude's deployment guard, both build hooks, its GitHub workflow and its enforced limits in all future changes. Never remove, disable or bypass the guard.
+
 - `public` is served by the CDN and stays out of server functions. `next.config.ts` excludes it from file tracing, and `scripts/verify-deployment-size.mjs` stops the production build when a function carries public files it never reads or passes its size limit
 - Do not add videos or other large media to `public`. Host them in storage and link them
 - Server code reads a public file only through a fixed path that is listed in `FIXED_PUBLIC_FILES` and in the `"/*"` includes of `next.config.ts`. The only variable path under `public` is the wallet logo reader in `lib/wallet/logo.ts`, served by the `/api/wallet/**` includes

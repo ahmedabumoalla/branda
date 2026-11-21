@@ -155,14 +155,23 @@ const profileInput = { cafeId: cafe, brandName: "Brand", brandNameEn: "", slug: 
     { id: "3", plan_id: "menu", status: "active", activation_source: "legacy", amount_sar: 480, base_amount_sar: null, discount_amount_sar: 0, payment_method_label: null, paid_at: iso(-70), started_at: iso(-70), expires_at: iso(-40), plan_name_snapshot: "المنيو", duration_unit: "month", duration_count: 3, platform_plans: plan },
     { id: "4", plan_id: "menu", status: "cancelled", activation_source: "legacy", amount_sar: 10, base_amount_sar: 10, discount_amount_sar: 0, payment_method_label: null, paid_at: null, started_at: iso(-90), expires_at: null, plan_name_snapshot: "المنيو", duration_unit: "month", duration_count: 1, platform_plans: plan },
   ];
-  const billing = await load("lib/data/admin-brand-billing.ts", {
+  const priceService = load("lib/data/admin-brand-billing.ts", {
     "@/lib/data/cafes": { requirePlatformAdmin: async () => ({ id: "admin" }) },
     "@/lib/supabase/server": { createClient: async () => client([], { query: () => ({ data: rows, error: null }) }) },
-  }).getAdminBrandBilling(cafe);
+  });
+  const billing = await priceService.getAdminBrandBilling(cafe);
   assert.deepEqual(billing.rows.map(row => [row.state, row.current]), [["نشطة", true], ["جاهزة ولم تبدأ التجربة", true], ["منتهية", false], ["ملغاة", false]]);
   assert.equal(billing.currentTotal, 78); assert.equal(billing.currentCount, 2);
   assert.deepEqual([billing.rows[0].baseAmount, billing.rows[0].discount, billing.rows[0].listPrice, billing.rows[0].duration], [199, 121, 92, "شهر"]);
   assert.deepEqual([billing.rows[1].planName, billing.rows[1].duration, billing.rows[2].duration, billing.rows[2].baseAmount], ["Loyalty", "7 أيام", "3 أشهر", null]);
+  checks++;
+  rows[0].admin_subscription_prices = { price_sar: "0.00" };
+  rows[1].admin_subscription_prices = { price_sar: "75.25" };
+  rows[2].admin_subscription_prices = { price_sar: "450.00" };
+  const edited = await priceService.getAdminBrandBilling(cafe);
+  assert.equal(edited.currentTotal, 75.25);
+  assert.deepEqual(edited.rows.map(row => row.manualPrice), [0, 75.25, 450, null]);
+  assert.equal(edited.rows[0].amount, 78);
   checks++;
 
   console.log(`Admin brand account: ${checks} groups passed`);
