@@ -3,12 +3,20 @@ import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blo
 import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { LoyaltyGuidePreview } from "@/components/dashboard/loyalty-guide-preview";
+import { TutorialVideos } from "@/components/dashboard/tutorial-videos";
+import { redirect } from "next/navigation";
 
 const guideUrl = "/api/loyalty-guide#navpanes=0&view=FitH";
 
-export default async function LoyaltyGuidePage() {
+export default async function LoyaltyGuidePage(props?: { searchParams?: Promise<{ start?: string }> }) {
+  // A new owner is sent here right after registration (?start=1) to watch the tutorials instead of receiving them over WhatsApp
+  const welcome = (await props?.searchParams)?.start === "1";
   const features = await getOwnerFeatureCodes().catch(() => []);
-  if (!featureCodesAllow(features, "loyalty")) return <DashboardFeatureBlockedState title="دليل نظام الولاء" />;
+  if (!featureCodesAllow(features, "loyalty")) {
+    // An account registered without loyalty has nothing to watch here; it continues to its own first page
+    if (welcome) redirect("/dashboard");
+    return <DashboardFeatureBlockedState title="دليل نظام الولاء" />;
+  }
   return (
     <section dir="rtl" className="mx-auto w-full max-w-7xl space-y-5 px-4 py-6 sm:px-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
@@ -22,6 +30,7 @@ export default async function LoyaltyGuidePage() {
           <a href="/api/loyalty-guide?download=1" download="branda-loyalty-guide.pdf" className="inline-flex items-center gap-2 rounded-xl bg-[#713D2A] px-4 py-3 text-sm font-bold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#713D2A]"><Download size={17} aria-hidden="true" />تحميل الدليل</a>
         </div>
       </header>
+      <TutorialVideos welcome={welcome} />
       <div className="overflow-hidden rounded-2xl border border-[#E7D7C6] bg-white">
         <div className="flex flex-wrap justify-between gap-2 border-b border-[#E7D7C6] px-4 py-3 text-sm text-[#806A5E]"><span>من أول إعداد إلى أول مكافأة</span><span>١٦ صفحة</span></div>
         <LoyaltyGuidePreview src={guideUrl} />

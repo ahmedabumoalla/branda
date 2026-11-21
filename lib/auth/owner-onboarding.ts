@@ -137,15 +137,18 @@ export async function completeOwnerOnboarding(input: { password: string; confirm
       app_metadata: { owner_onboarding_id: proof.id, owner_onboarding_proof: proof.sessionHash },
     });
     if (created.error || !created.data.user) return { ok: false, message: "تعذر إنشاء الحساب قد يكون البريد أو الجوال مسجلًا مسبقًا؛ جرّب تسجيل الدخول" };
+    // User decision of 2026-11-22: while Branda's numbers carry access messages only, self-registration sends no
+    // WhatsApp welcome and no tutorial clips. The new owner lands on the guide page with the three tutorial videos
+    const tutorialsInApp = process.env.BRANDA_ACCESS_MESSAGES_ONLY?.trim() === "true";
     // The account is committed at this point. Media delivery must not delay login or turn
     // successful signup into a failure. No automatic retry of an ambiguous provider POST.
-    after(async () => {
+    if (!tutorialsInApp) after(async () => {
       try { await sendGreenApiOwnerSignupWelcome({ phone, brandName: draft.brandNameAr }); }
       catch { console.warn("[owner-onboarding] welcome video submission unconfirmed"); }
     });
     (await cookies()).delete(COOKIE);
     const signedIn = await (await createClient()).auth.signInWithPassword({ phone: `+${phone}`, password: password.data });
     if (signedIn.error || !signedIn.data.session) return { ok: true, message: "تم إنشاء حسابك وتفعيل تجربتك المجانية سجّل الدخول للمتابعة", redirectTo: "/login" };
-    return { ok: true, message: "حسابك جاهز وبدأت تجربتك المجانية", redirectTo: "/dashboard" };
+    return { ok: true, message: "حسابك جاهز وبدأت تجربتك المجانية", redirectTo: tutorialsInApp ? "/dashboard/loyalty/guide?start=1" : "/dashboard" };
   } catch { return unavailable(); }
 }

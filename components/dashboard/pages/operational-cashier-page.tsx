@@ -188,7 +188,9 @@ export function OperationalCashierPageClient({
       setEmployeeNumber("");
       setPhone("");
       setIsAdding(false);
-      setMessage(result.whatsappStatus === "queued"
+      setMessage(result.whatsappStatus === "code_only"
+        ? "تم إنشاء حساب الموظف شارك رابط الكاشير معه ويدخل برقم جواله ورمز التحقق الذي يصله على واتساب"
+        : result.whatsappStatus === "queued"
         ? "تم إنشاء حساب الموظف وجدولة رسالة واتساب برابط الدخول يدخل الموظف برمز تحقق على جواله"
         : result.whatsappStatus === "failed"
           ? "تم إنشاء حساب الموظف لكن تعذر إرسال رسالة الترحيب شارك رابط الدخول معه ليطلب رمز واتساب"

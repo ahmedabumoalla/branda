@@ -476,8 +476,11 @@ export async function createOwnerCashier(input: {
 
   // Do not return raw SQL/provider errors: they may include submitted credentials.
   if (error || typeof cashierId !== "string") throw new Error("تعذر إنشاء الموظف تحقق من البيانات وأن رقم واتساب غير مستخدم لحساب موظف جديد");
-  let whatsappStatus: "queued" | "failed" | "unavailable" = "unavailable";
-  if (isGreenApiConfigured()) {
+  let whatsappStatus: "queued" | "failed" | "unavailable" | "code_only" = "unavailable";
+  // User decision of 2026-11-22: while Branda's numbers carry access messages only, no welcome message is sent
+  // when a cashier is added. The employee signs in with a verification code
+  if (process.env.BRANDA_ACCESS_MESSAGES_ONLY?.trim() === "true") whatsappStatus = "code_only";
+  else if (isGreenApiConfigured()) {
     try {
       await sendGreenApiCashierWelcome({
         phone, fullName: parsed.fullName, brandName: cafe.name,

@@ -9,7 +9,9 @@ const nextConfig = {
   // queued card links are closed unsent. Set to "false" to resume. docs/BARNDAKSA_HANDOFF/WHATSAPP_ACCESS_ONLY_20261121.md
   // BRANDA_PLATFORM_CARD_LINKS "off" (user decision 2026-11-22): Branda's own numbers, the notifications number
   // included, never send the loyalty card link after a stamp. Brand-owned senders are not affected
-  env: { BRANDA_ACCESS_MESSAGES_ONLY: "true", BRANDA_PLATFORM_CARD_LINKS: "off" },
+  // BRANDA_REWARD_NOTICES "on": the one loyalty message Branda's numbers still send, from the notifications
+  // number, when a stamp completes the card. Set to "off" to stop it
+  env: { BRANDA_ACCESS_MESSAGES_ONLY: "true", BRANDA_PLATFORM_CARD_LINKS: "off", BRANDA_REWARD_NOTICES: "on" },
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   outputFileTracingIncludes: {
     "/api/loyalty-guide": ["./assets/guides/branda-loyalty-guide.pdf"],

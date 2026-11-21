@@ -62,11 +62,21 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
     await y.module.sendGreenApiOwnerWelcome(trial);
     assert.equal(y.posts().length, 1); assert.ok(y.posts()[0].url.includes('waInstance222')); checks++;
   }
+  // Since 2026-11-22 the two tutorial clips that follow that login message go out with it; self-registration queues none
+  for (const guide of ['cashier', 'customer']) {
+    const x = api(paused);
+    await x.module.sendGreenApiOwnerCompanionGuide(phone, guide);
+    assert.equal(x.posts().length, 1); assert.ok(x.posts()[0].url.includes('sendFileByUrl')); checks++;
+  }
+  {
+    const x = api(paused);
+    await assert.rejects(() => x.module.sendGreenApiOwnerCompanionGuide(phone, 'unknown'), /OWNER_WELCOME_REJECTED/);
+    assert.equal(x.calls.length, 0); checks++;
+  }
 
   // Everything else is refused before any request, so neither number is touched
   const refused = [
     ['sendGreenApiOwnerSignupWelcome', { phone, brandName: 'Example' }],
-    ['sendGreenApiOwnerCompanionGuide', phone, 'cashier'],
     ['sendGreenApiLoyaltyWelcome', { phone, message: 'card link' }],
     ['sendGreenApiFinanceShiftAlert', { phone, message: 'shift' }],
     ['sendGreenApiFinanceReceipt', { phone, message: 'receipt', pdf, invoiceNumber: 7 }],
@@ -81,8 +91,7 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
     for (const state of [{}, { primary: 'blocked' }]) {
       const x = api(paused, state);
       await assert.rejects(() => x.module[method](...args), error => {
-        // A guide name that does not exist is rejected for its own reason before any sender is chosen
-        assert.match(error.message, method === 'sendGreenApiOwnerCompanionGuide' ? /MESSAGING_TEMPORARILY_PAUSED|OWNER_WELCOME_REJECTED/ : /MESSAGING_TEMPORARILY_PAUSED/, method);
+        assert.match(error.message, /MESSAGING_TEMPORARILY_PAUSED/, method);
         return true;
       });
       assert.equal(x.calls.length, 0, `${method} must not contact any sender`); checks++;
@@ -139,8 +148,9 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
     assert.match(source, /p_primary_ready: claimPlatform/);
     // Since 2026-11-22 the notifications number carries these links; they are closed unsent only when it is unavailable
     assert.match(source, /const drain = platformOff \|\| \(paused && !notifySender\);/);
-    assert.match(source, /if \(drain && usesPlatformNumber\) \{ await finish\("skipped"\); continue; \}/);
-    assert.ok(source.indexOf('if (drain && usesPlatformNumber)') < source.indexOf('stampCardLinkMessage(job) }'), 'the skip happens before any message is built or sent');
+    // The one exception is a stamp that completes the card: scripts/check-minimal-platform-messages.cjs covers it
+    assert.match(source, /if \(drain && usesPlatformNumber && !earnedReward\) \{ await finish\("skipped"\); continue; \}/);
+    assert.ok(source.indexOf('if (drain && usesPlatformNumber && !earnedReward)') < source.indexOf('const input = { phone: job.phone'), 'the skip happens before any message is built or sent');
     assert.ok(source.indexOf(': notifySender ? await sendGreenApiCustomerMessage(notifySender, input)') < source.indexOf(': primaryReady ? await sendGreenApiLoyaltyWelcome(input)'), 'the notifications number is tried before Branda\'s primary');
     checks++;
   }

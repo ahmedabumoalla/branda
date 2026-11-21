@@ -35,6 +35,8 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
     `كلمة المرور: ${input.password}`,
     trialMessage,
     "١ من ٣ — إعداد حساب الولاء\nشاهد المقطع المرفق لتجهيز حسابك وسنرسل بعده شرح الكاشير وتحميل بطاقة العميل",
+    // A closing prompt invites a reply, so the number is not a one-way sender (user decision 2026-11-22)
+    "قدرت تدخل حسابك؟ رد علينا بكلمة تم",
   ].join("\n"), "owner_handoff");
 }
 
@@ -60,7 +62,9 @@ async function sendOwnerWelcomeVideo(phone: string, caption: string, kind: "owne
 export async function sendGreenApiOwnerCompanionGuide(phone: string, guide: OwnerCompanionGuide) {
   const clip = ownerCompanionGuides[guide];
   if (!clip) throw new Error("OWNER_WELCOME_REJECTED");
-  return sendOwnerVideo(phone, clip.url, clip.filename, clip.caption);
+  // These clips follow the login message an administrator sent, so they are allowed with it. Self-registration
+  // sends no welcome while Branda's numbers carry access messages only, so it queues none
+  return sendOwnerVideo(phone, clip.url, clip.filename, clip.caption, "owner_handoff");
 }
 
 async function sendOwnerVideo(phone: string, urlFile: string, fileName: string, caption: string, kind: "owner" | "owner_handoff" = "owner") {
