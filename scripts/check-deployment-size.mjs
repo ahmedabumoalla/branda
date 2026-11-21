@@ -54,6 +54,9 @@ try {
   // The guard must stay wired into the production build and the tracing fix must stay in place
   const build = JSON.parse(readFileSync(path.join(here, "../package.json"), "utf8")).scripts.build;
   assert.match(build, /next build && node scripts\/optimize-deployment-traces\.mjs && node scripts\/verify-deployment-size\.mjs$/);
+  // Second, independent wiring: an older package.json copied over this one must not silence the guard
+  const vercel = JSON.parse(readFileSync(path.join(here, "../vercel.json"), "utf8"));
+  assert.equal(vercel.buildCommand, "npm run build && node scripts/verify-deployment-size.mjs");
   const config = readFileSync(path.join(here, "../next.config.ts"), "utf8");
   assert.match(config, /outputFileTracingExcludes: \{\s*"\/\*": \["\.\/public\/\*\*\/\*"\],\s*\}/, "public stays out of every function");
   assert.match(config, /"\/api\/wallet\/\*\*": \[[^\]]*"\.\/public\/\*\*\/\*\.\{png,jpg,jpeg,webp,gif,avif,svg,ico\}"/, "wallet routes keep the public images");
