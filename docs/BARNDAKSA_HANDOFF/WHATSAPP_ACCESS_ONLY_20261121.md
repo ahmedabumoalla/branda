@@ -39,6 +39,19 @@ Not affected: senders that a brand connected itself (Loco, Wahed Masoub and bran
 - Pager jobs are closed as failed, salon jobs as uncertain, receipts and shift alerts as unknown, tutorial clips as rejected. These are final states in the existing code and are not retried
 - Birthday greetings and renewal reminders are not claimed while the switch is on. They are bound to their date or deadline
 
+## Notifications number, 2026-11-22
+
+The user named 0558891694 the notifications number, also the second standby number (رقم رسائل الإشعارات أو الرقم الاحتياطي الثاني), and asked that the loyalty card link message leave from it
+
+- Checked with the partner key, read only: the number is on a partner instance that is paid and authorised, and it is neither the primary nor the first standby. The record showed an expiry date of 2026-11-22 23:57, which may be the daily partner billing rolling forward; it was not expired at the check
+- `lib/whatsapp/notification-sender.ts` finds the instance by the phone WhatsApp reports, on the partner account, at run time. No instance key is in the code and no deployment setting is needed. The result is cached for three minutes, a miss for one
+- `lib/loyalty/read-card-links.ts` sends the card link of every brand without its own sender from this number. While the access-only switch is on and the number is unavailable, the jobs are closed as skipped. With the switch off, Branda's primary is only the fallback
+- The access-only switch is unchanged: the primary and first standby still send only verification codes and the administrator's owner login
+- The real selection code was run against the provider with the local settings: 4 read-only requests, the right instance found, nothing sent
+- `scripts/check-notification-sender.cjs`: 17 checks. No test message was sent, and the production settings were not read, so that production holds the partner key is inferred from the brand connection feature using it there
+
+Risk stated to the user: this is the same kind of message from another ordinary number through the same unofficial gateway, so this number can be restricted too. The lasting fix is Meta's official platform
+
 ## Manual card message
 
 The user asked for the customer's card message to be available for copying and sending by hand. In the brand dashboard, the customer file in the loyalty customers directory (`components/loyalty/customer-directory.tsx`) now has a block "رسالة البطاقة": the button builds the same message the platform sends after a stamp, with the customer's personal card link valid for 30 days, and offers copying it or opening WhatsApp on the customer's number with the text filled in. It is built only on request, after the directory's own authorisation for that brand and customer, and nothing is sent by the platform. New files: `lib/data/loyalty-customer-card-message.ts`, `app/actions/loyalty-customer-card-message.ts`, `components/loyalty/customer-card-message.tsx` and its CSS, `scripts/check-loyalty-customer-card-message.cjs` (16 checks). `scripts/check-loyalty-directory-ui.mjs` gained one stub line for the new component and still passes 26 checks

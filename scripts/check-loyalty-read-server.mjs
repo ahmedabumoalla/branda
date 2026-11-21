@@ -12,6 +12,8 @@ function load(file, mocks = {}) {
     if (name === "server-only") return {};
     if (name in mocks) return mocks[name];
     if (name === "@/lib/data/account-cancellation") return { brandAllowsNewWork: async () => true, brandSlugAllowsNewWork: async () => true };
+    // The notifications number has its own check; these scenarios cover the other senders
+    if (name === "@/lib/whatsapp/notification-sender") return { selectNotificationSender: async () => null };
     if (name.startsWith("@/")) return load(`${name.slice(2)}.ts`, mocks);
     return require(name);
   }, exports, process, Buffer);

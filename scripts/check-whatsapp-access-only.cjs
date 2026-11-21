@@ -137,8 +137,11 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
     const source = fs.readFileSync('lib/loyalty/read-card-links.ts', 'utf8');
     assert.match(source, /const paused = process\.env\.BRANDA_ACCESS_MESSAGES_ONLY\?\.trim\(\) === "true";/);
     assert.match(source, /p_primary_ready: claimPlatform/);
-    assert.match(source, /if \(paused && usesPlatformNumber\) \{ await finish\("skipped"\); continue; \}/);
-    assert.ok(source.indexOf('if (paused && usesPlatformNumber)') < source.indexOf('stampCardLinkMessage(job) }'), 'the skip happens before any message is built or sent');
+    // Since 2026-11-22 the notifications number carries these links; they are closed unsent only when it is unavailable
+    assert.match(source, /const drain = paused && !notifySender;/);
+    assert.match(source, /if \(drain && usesPlatformNumber\) \{ await finish\("skipped"\); continue; \}/);
+    assert.ok(source.indexOf('if (drain && usesPlatformNumber)') < source.indexOf('stampCardLinkMessage(job) }'), 'the skip happens before any message is built or sent');
+    assert.ok(source.indexOf(': notifySender ? await sendGreenApiCustomerMessage(notifySender, input)') < source.indexOf(': primaryReady ? await sendGreenApiLoyaltyWelcome(input)'), 'the notifications number is tried before Branda\'s primary');
     checks++;
   }
 

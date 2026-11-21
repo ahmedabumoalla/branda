@@ -5,6 +5,7 @@ import { createLoyaltySessionToken, loyaltyIdentityHash } from "@/lib/auth/loyal
 import { isGreenApiLoyaltyWelcomeReady, sendGreenApiCustomerMessage, sendGreenApiLoyaltyWelcome } from "@/lib/whatsapp/green-api";
 import { selectLocoLoyaltySender, selectBrandLoyaltySender } from "@/lib/whatsapp/customer-routing";
 import { LOCO_CAFE_ID, WAHED_MASOUB_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
+import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
 import { getGoogleWalletSaveState } from "@/lib/wallet/google";
 
 type CardLinkJob = { id: string; claimToken: string; cafeId: string; profileId: string; cardId: string; brandSlug: string; brandName: string; phone: string; cardCreated: boolean; googleIssued: boolean };
@@ -18,17 +19,20 @@ export function stampCardLinkMessage(job: CardLinkJob) {
 export async function dispatchStampCardLinks(limit = 2) {
   const startedAt = Date.now();
   const result = { processed: 0, queued: 0, rejected: 0, unknown: 0, skipped: 0, deferred: 0 };
-  const [primaryReady, locoSender, wahedSender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID), selectBrandLoyaltySender(WAHED_MASOUB_CAFE_ID)]);
-  // While Branda's numbers carry access messages only, their card link jobs are still claimed and closed as skipped,
-  // so nothing waits in the queue and goes out late when sending resumes. Brand-owned senders keep sending
+  const [primaryReady, locoSender, wahedSender, notifySender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID), selectBrandLoyaltySender(WAHED_MASOUB_CAFE_ID), selectNotificationSender()]);
+  // Card links of brands without their own sender leave from the notifications number (second standby). Branda's
+  // primary and first standby carry them only when that number is unavailable and the access-only switch is off.
+  // While the switch is on and the notifications number is unavailable, the jobs are still claimed and closed as
+  // skipped, so nothing waits in the queue and goes out late. Brand-owned senders keep sending
   // The same build-time switch that isPlatformAccessOnly reads in lib/whatsapp/green-api.ts
   const paused = process.env.BRANDA_ACCESS_MESSAGES_ONLY?.trim() === "true";
-  const claimPlatform = primaryReady || paused;
+  const drain = paused && !notifySender;
+  const claimPlatform = primaryReady || paused || Boolean(notifySender);
   if (!claimPlatform && !locoSender && !wahedSender) return result;
   const admin = createAdminClient();
   const sendBudget = Math.min(5, Math.max(1, limit));
   let sends = 0;
-  for (let index = 0; index < (paused ? 40 : sendBudget) && sends < sendBudget && (index === 0 || Date.now() - startedAt < 70_000); index++) {
+  for (let index = 0; index < (drain ? 40 : sendBudget) && sends < sendBudget && (index === 0 || Date.now() - startedAt < 70_000); index++) {
     const { data, error } = await admin.rpc("claim_stamp_card_link_v2", { p_primary_ready: claimPlatform, p_loco_ready: Boolean(locoSender), p_wahed_ready: Boolean(wahedSender) });
     if (error) throw new Error("stamp_card_link_claim_unavailable");
     if (!data) break;
@@ -39,7 +43,7 @@ export async function dispatchStampCardLinks(limit = 2) {
       result.processed++; result[status]++;
     };
     const usesPlatformNumber = job.cafeId !== LOCO_CAFE_ID && !(job.cafeId === WAHED_MASOUB_CAFE_ID && wahedSender);
-    if (paused && usesPlatformNumber) { await finish("skipped"); continue; }
+    if (drain && usesPlatformNumber) { await finish("skipped"); continue; }
     if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
     if (job.googleIssued) {
       let saved: boolean;
@@ -55,6 +59,7 @@ export async function dispatchStampCardLinks(limit = 2) {
       outcome = job.cafeId === LOCO_CAFE_ID
         ? locoSender ? await sendGreenApiCustomerMessage(locoSender, input) : { status: "rejected" }
         : job.cafeId === WAHED_MASOUB_CAFE_ID && wahedSender ? await sendGreenApiCustomerMessage(wahedSender, input)
+        : notifySender ? await sendGreenApiCustomerMessage(notifySender, input)
         : primaryReady ? await sendGreenApiLoyaltyWelcome(input) : { status: "rejected" };
     } catch { outcome = { status: "unknown" }; }
     await finish(outcome.status, outcome.providerMessageId);

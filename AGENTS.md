@@ -51,6 +51,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Keep punctuation only when it carries meaning, such as list separators, questions, decimal values, currency abbreviations, email addresses and URLs
 - Apply this rule to new and edited Arabic interface copy and shared system messages without rewriting customer-authored content
 
+## WhatsApp numbers
+
+These are the names the user uses. Use the same names with the user and in the handoff
+
+- Primary number (الرقم الأساسي): settings `GREEN_API_*`. Verification codes and the login message an administrator sends to a brand owner
+- First standby (الرقم الاحتياطي): settings `GREEN_API_OTP_BACKUP_*`. Takes over those two when the primary is restricted
+- Notifications number, also called the second standby (رقم رسائل الإشعارات أو الرقم الاحتياطي الثاني): 0558891694. Named by the user on 2026-11-22. It carries the loyalty card link message for brands without their own sender. It is found by its phone on the partner account at run time in `lib/whatsapp/notification-sender.ts`, so it has no deployment setting. It never carries verification codes
+- While `BRANDA_ACCESS_MESSAGES_ONLY` is `"true"` in `next.config.ts`, the primary and the first standby send nothing but verification codes and the administrator's owner login. Do not turn it off, and do not move another message type onto any of the three numbers, without the user's word. `docs/BARNDAKSA_HANDOFF/WHATSAPP_ACCESS_ONLY_20261121.md`
+
 ## Deployment size
 
 - `public` is served by the CDN and stays out of server functions. `next.config.ts` excludes it from file tracing, and `scripts/verify-deployment-size.mjs` stops the production build when a function carries public files it never reads or passes its size limit

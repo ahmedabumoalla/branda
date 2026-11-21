@@ -16,6 +16,7 @@ async function scenario(slow, cardLinks=false) {
     '@/lib/whatsapp/customer-routing':{selectLocoLoyaltySender:async()=>null,selectBrandLoyaltySender:async()=>null},
     '@/lib/whatsapp/brand-connection-types':{LOCO_CAFE_ID:'loco',WAHED_MASOUB_CAFE_ID:'wahed'},
     '@/lib/wallet/google':{getGoogleWalletSaveState:async()=>false},
+    '@/lib/whatsapp/notification-sender':{selectNotificationSender:async()=>null},
     '@/lib/whatsapp/green-api':{isGreenApiLoyaltyWelcomeReady:async()=>{now+=slow?100000:0;return true;},sendGreenApiLoyaltyWelcome:async()=>{now+=slow?110000:1;sent++;return{status:'queued'};}},
   };
   const result={};new Function('require','exports','Date',code)(n=>{if(n in stubs)return stubs[n];throw Error('Unmocked dependency '+n);},result,{now:()=>now});
