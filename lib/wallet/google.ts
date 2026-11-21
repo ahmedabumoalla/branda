@@ -58,14 +58,14 @@ export async function getGoogleWalletSaveState(identity: { cafeId: string; cardI
   return value.hasUsers;
 }
 
-async function upsert(resource: "loyaltyClass" | "loyaltyObject", body: { id: string } & Record<string, unknown>) {
+async function upsert(resource: "loyaltyClass" | "loyaltyObject", body: { id: string } & Record<string, unknown>, patchFields: Record<string, unknown> = {}) {
   const path = `${resource}/${encodeURIComponent(body.id)}`;
   // Google requires UNDER_REVIEW on every class write, including approved classes.
   // Omitting it preserves APPROVED in the merged resource and makes PATCH fail.
-  const updated = { ...body };
+  const updated = { ...body, ...patchFields };
   let response = await request(path, "PATCH", updated);
   if (response.status === 404) {
-    const inserted = await request(resource, "POST", updated);
+    const inserted = await request(resource, "POST", body);
     if (inserted.ok) return;
     if (inserted.status !== 409) throw new Error(`google_wallet_insert_${inserted.status}`);
     // Another issuer request can create the resource after our PATCH returned 404.
@@ -114,7 +114,18 @@ export async function updateGooglePass(member: WalletMember, notify = false) {
   if (!member.program.enabled || !member.program.googleWalletEnabled) throw new Error("wallet_disabled");
   const config = googleConfig();
   await ensureClass(member, config);
-  await upsert("loyaltyObject", { ...buildGoogleObject(member, config.issuerId, walletArtUrl(member)), ...(notify ? { notifyPreference: "NOTIFY_ON_UPDATE" } : {}) });
+  const object = buildGoogleObject(member, config.issuerId, walletArtUrl(member));
+  // Google recursively merges PATCH fields. Clear the previous balance type or
+  // an existing stamp string and the new points integer would coexist.
+  const patchFields = member.program.pointsProgram ? {
+    loyaltyPoints: withBalanceDeletes(object.loyaltyPoints),
+    secondaryLoyaltyPoints: withBalanceDeletes(object.secondaryLoyaltyPoints),
+  } : {};
+  await upsert("loyaltyObject", { ...object, ...(notify ? { notifyPreference: "NOTIFY_ON_UPDATE" } : {}) }, patchFields);
+}
+
+function withBalanceDeletes(field: { label: string; balance: Record<string, unknown> }) {
+  return { ...field, balance: { int: null, string: null, double: null, money: null, ...field.balance } };
 }
 
 export async function issueGoogleSaveUrl(member: WalletMember) {

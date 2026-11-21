@@ -212,6 +212,8 @@ try {
     assert.equal(options.method, "PATCH");
     const updated = stored.get(url);
     assert.equal(updated.loyaltyPoints.balance.int, balance);
+    assert.equal(updated.loyaltyPoints.balance.string, null, "PATCH clears the old stamp string");
+    assert.equal(updated.secondaryLoyaltyPoints.balance.int, null, "PATCH clears the old integer reward count");
     assert(updated.textModulesData[0].body.includes("قهوة · 200 نقطة · " + status));
     assert(updated.textModulesData[0].body.includes(`باقي ${500 - balance} نقطة`));
     const artUri = updated.heroImage.sourceUri.uri;
@@ -221,6 +223,9 @@ try {
   const switched = memberWithPoints(11);
   switched.program.pointsProgram.mode = "stamps";
   await google.updateGooglePass(switched);
+  const stampPatch = JSON.parse(calls.at(-1)[1].body);
+  assert.equal(stampPatch.loyaltyPoints.balance.int, null);
+  assert.equal(stampPatch.secondaryLoyaltyPoints.balance.string, null);
   assert.deepEqual(stored.get(calls.at(-1)[0]).textModulesData, [], "Switching to stamps clears obsolete points availability");
   const patches = calls.filter(([, request]) => request.method === "PATCH");
   assert(patches.length >= 2);
