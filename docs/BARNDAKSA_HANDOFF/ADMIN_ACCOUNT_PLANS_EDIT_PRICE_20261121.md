@@ -58,4 +58,6 @@ Modified: `app/actions/admin-brand-onboarding.ts`, `components/admin/brand-accou
 
 On the release branch before the push: `scripts/check-admin-brand-account.cjs` 36 groups, `scripts/check-brand-owner-welcome-server.mjs` 35 checks, text integrity, and the full production build with TypeScript all pass. Deployment size guard: `scripts/check-deployment-size.mjs` passes and the build reports 266 routes, 6598 MB, 0 problems
 
+Production: commit `b1d8a34c` on main, Vercel build pending 18:30:09Z, success 18:32:12Z, 2 minutes 3 seconds. The live site moved to deployment `dpl_F1n3Prx4F5homeZSDa5BBiFwSfA8`, and 100 recorded live answers (58 wallet logo images of 29 brands, pages, static files) were identical before and after. Deployment size guard: the wiring check passed on this commit before the push and the production build, whose command ends with the guard, succeeded
+
 Still for the user on the live site, because a real test leaves a real account: on `/admin/cafes` create one account with two packages and confirm the brand file shows both as ready, edit its name, and open الباقات والاشتراك for a paid brand to confirm the price
