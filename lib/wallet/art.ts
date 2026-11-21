@@ -93,7 +93,7 @@ export async function walletStampArtwork(member: WalletMember, scale: 1 | 2 | 3 
     const balance = member.card.availableLoyaltyPoints ?? 0;
     const key = walletArtifactKey(JSON.stringify([POINTS_MAP_VERSION, points.milestones, balance, background, foreground, accent, scale, dark]));
     return cachedArtwork(key, async () => {
-      const svg = await walletPointsSvg(points.milestones, balance, dark ? background : foreground, dark ? foreground : background, accent, scale);
+      const svg = await walletPointsSvg(points.milestones, balance, background, foreground, accent, scale);
       return sharp(Buffer.from(svg)).png().toBuffer();
     });
   }
