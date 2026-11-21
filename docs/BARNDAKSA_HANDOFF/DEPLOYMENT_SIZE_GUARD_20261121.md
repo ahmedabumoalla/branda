@@ -1,6 +1,6 @@
 # Deployment size fix and guard, 2026-11-21 (Claude)
 
-State: PREVIEW ONLY. Pushed on 2026-11-21 as branch `perf/function-size-20261121` (based on `0c55c668`) after the user asked for a test deployment and a build time measurement. Not merged to main, production untouched
+State: PUBLISHED to main on 2026-11-21 after the user wrote the publish word for production. Preview builds were measured first on branch `perf/function-size-20261121` (based on `0c55c668`)
 
 ## Why
 
@@ -54,6 +54,10 @@ Checks run: production build with the guard PASS, guard test PASS, existing `che
 Preview deployment of commit `a12c0eaf` on 2026-11-21: pending 17:28:37Z, success 17:29:31Z, 54 seconds. The last production build before the fix (`0c55c668`) took 23.1 minutes, and preview builds in mid November took 6 to 7 minutes, the same as production builds then. Every function changed in this build, so the time is not an unchanged-output shortcut
 
 Not seen: the Vercel build log. That the guard line `[deployment-size]` ran there follows from the build command in package.json and is not confirmed by reading the log. The preview address is behind the Vercel login, so pages, wallet cards and invoice PDFs on it are for the user to try
+
+## Preview finding: broken loyalty logo
+
+On the preview the user saw the brand logo broken on `/loyalty/<slug>` for DeliCake and LOCO while production showed it. That logo comes from `/api/wallet/brand/<slug>/logo`, which calls `walletBaseUrl()` first and returns 503 without `WALLET_PUBLIC_BASE_URL`. A throwaway preview build that exits 1 when that setting is missing failed in 11 seconds, and a control run on `NEXT_PUBLIC_SUPABASE_URL` passed, so the Preview environment has no wallet base address and the logo is broken on every preview with or without this change. Both brands store their logo in storage, not in `public`. Wallet cards cannot be tested on a preview for the same reason. The throwaway branches were never merged
 
 ## Two things tried and rejected
 
