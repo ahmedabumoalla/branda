@@ -104,10 +104,13 @@ export async function sendBrandOwnerWelcome(cafeId: string, retryUncertain = fal
   const claim = await admin.rpc("admin_claim_brand_welcome_v2", { p_actor: actor.id, p_cafe: cafeId, p_attempt: attemptId, p_retry_uncertain: retryUncertain === true });
   if (claim.error) accountError(claim.error.message);
   if (claim.data?.sent) return;
+  // The brand can be renamed after its draft was staged: greet the owner with the saved name
+  const saved = await admin.from("cafes").select("name").eq("id", cafeId).maybeSingle();
+  const brandName = typeof saved.data?.name === "string" && saved.data.name.trim() ? saved.data.name : String(claim.data.brandName);
   let messageId: string;
   try {
     const password = openWelcomePassword(String(claim.data.ciphertext), String(claim.data.requestId));
-    const sent = await sendGreenApiOwnerWelcome({ phone: String(claim.data.phone), brandName: String(claim.data.brandName), password, startsTrial: claim.data.startsTrial === true, trialTerms: claim.data.trialTerms });
+    const sent = await sendGreenApiOwnerWelcome({ phone: String(claim.data.phone), brandName, password, startsTrial: claim.data.startsTrial === true, trialTerms: claim.data.trialTerms });
     messageId = sent.providerMessageId;
   } catch (error) {
     const rejected = error instanceof Error && error.message === "OWNER_WELCOME_REJECTED";

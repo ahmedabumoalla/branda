@@ -90,6 +90,30 @@ export async function addAdminBrandPlans(input: unknown) {
   return summaryFromSubscriptionState(data);
 }
 
+/** Sets the starting packages of an account that still waits for its login handoff */
+export async function replacePreparedBrandPlans(cafeId: string, planIds: string[]) {
+  await requirePlatformAdmin();
+  const wanted = [...new Set(addPlansSchema.shape.planIds.parse(planIds))];
+  const id = brandId.parse(cafeId);
+  const client = await createClient();
+  const read = await client.rpc("admin_brand_subscription_state", { p_cafe_id: id });
+  if (read.error) subscriptionMutationError(read.error.message);
+  let state = subscriptionStateSchema.parse(read.data);
+  if (state.currentPlanIds.length === wanted.length && wanted.every(plan => state.currentPlanIds.includes(plan))) return;
+  // Packages whose clock already runs are managed from the brand file, never replaced here
+  if (!state.trialAwaitingDelivery) throw new Error("بدأت مدة باقات هذه العلامة عدّل الباقات من ملف العلامة");
+  const missing = wanted.filter(plan => !state.currentPlanIds.includes(plan));
+  if (missing.length) {
+    const added = await client.rpc("admin_add_brand_plans", { p_cafe_id: id, p_plan_ids: missing, p_expected_revision: state.revision });
+    if (added.error) subscriptionMutationError(added.error.message);
+    state = subscriptionStateSchema.parse(added.data);
+  }
+  const extra = state.currentPlanIds.filter(plan => !wanted.includes(plan));
+  if (!extra.length) return;
+  const removed = await client.rpc("admin_remove_brand_plans", { p_cafe_id: id, p_plan_ids: extra, p_expected_revision: state.revision });
+  if (removed.error) subscriptionMutationError(removed.error.message);
+}
+
 export async function removeAdminBrandPlans(input: unknown) {
   await requirePlatformAdmin();
   const parsed = addPlansSchema.safeParse(input);

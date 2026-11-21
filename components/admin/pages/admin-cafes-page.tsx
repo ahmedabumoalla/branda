@@ -231,7 +231,7 @@ export function AdminCafesPage({
       {deletionNotice && <p role="status" className="mb-4 text-sm text-[#e5bd76]">{deletionNotice}</p>}
       <PendingBrandDeletionCleanup jobs={deletionJobs} onCompleted={id => { setFinishedDeletionIds(previous => [...previous, id]); setDeletionNotice("اكتمل حذف ملفات العلامة نهائيًا"); router.refresh(); }} />
       <BrandDirectory cafes={cafes} plans={plans} onManage={setModalCafe} onCreate={() => setCreatingBrand(true)} configError={configError} />
-      {creatingBrand && <BrandAccountCreate close={() => setCreatingBrand(false)} onCreated={cafe => { setCafes(previous => [cafe, ...previous.filter(item => item.id !== cafe.id)]); setCreatingBrand(false); setModalCafe(cafe); setDeletionNotice("تم إنشاء حساب العلامة وصلاحيات التجربة جاهزة تبدأ مدة تجربة الباقات بعد إرسال تفاصيل الدخول"); router.refresh(); }} />}
+      {creatingBrand && <BrandAccountCreate plans={plans} close={() => setCreatingBrand(false)} onCreated={(cafe, plansApplied) => { setCafes(previous => [cafe, ...previous.filter(item => item.id !== cafe.id)]); setCreatingBrand(false); setModalCafe(cafe); setDeletionNotice(plansApplied ? "تم إنشاء حساب العلامة بالباقات المختارة تبدأ مدة تجربة الباقات بعد إرسال تفاصيل الدخول" : "تم إنشاء حساب العلامة بالباقة التجريبية الافتراضية وتعذر ضبط الباقات المختارة عدّلها من قسم الباقات والاشتراك في ملف العلامة"); router.refresh(); }} />}
 
       {modalCafe && (
         <BrandDetailsDialog

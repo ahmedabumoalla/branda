@@ -41,6 +41,7 @@ export type PlatformCafe = {
   id: string;
   slug: string;
   name: string;
+  nameEn?: string;
   ownerName: string;
   ownerEmail: string;
   ownerPhone: string;

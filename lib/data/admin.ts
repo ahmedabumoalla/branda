@@ -618,6 +618,7 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
         id: cafeId,
         slug,
         name: String(row.name ?? ""),
+        nameEn: String(row.name_en ?? ""),
         businessCategory: String(row.business_category ?? "cafes_coffee"),
         businessCategoryLabel: categoryLabel(row.business_category),
         ownerName: String(settings?.owner_name ?? ownerProfile?.full_name ?? ""),
