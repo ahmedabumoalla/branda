@@ -5,6 +5,7 @@ import { buildGoogleClass, buildGoogleObject, googleClassId, googleObjectId } fr
 import type { WalletMember } from "./types";
 import { walletArtUrl } from "./art";
 import { walletArtifactKey } from "./artifact-cache";
+import { POINTS_MAP_VERSION } from "@/lib/loyalty/reward-path";
 
 let cachedToken: { key: string; email: string; token: string; expires: number } | undefined;
 let pendingToken: { identity: string; request: Promise<string> } | undefined;
@@ -144,7 +145,7 @@ export function googleCoffeeSampleSaveUrl(member: WalletMember) {
   const config = googleConfig();
   if (!member.program.googleWalletEnabled || process.env.GOOGLE_WALLET_PUBLISHING_APPROVED !== "true") throw new Error("wallet_disabled");
   const sample = buildGoogleObject(member, config.issuerId);
-  const version = walletArtifactKey(JSON.stringify([sample, member.program.pointsProgram, member.program.purchasesRequired])).slice(0, 24);
+  const version = walletArtifactKey(JSON.stringify([sample, POINTS_MAP_VERSION, member.program.pointsProgram, member.program.purchasesRequired])).slice(0, 24);
   const object = { ...sample, id: `${config.issuerId}.coffee_sample_${version}`, heroImage: {
     sourceUri: { uri: `${config.baseUrl}/api/wallet/demo/coffee/path.png?v=${version}` },
     contentDescription: { defaultValue: { language: "ar", value: member.program.pointsProgram?.mode === "points" ? "مسار مكافآت النقاط" : member.program.stampLabel } },

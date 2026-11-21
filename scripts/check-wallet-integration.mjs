@@ -195,6 +195,16 @@ try {
   const demoMember = { ...memberWithPoints(211), card: { ...memberWithPoints(211).card, cardCode: "SAMPLE.COFFEE" } };
   const sampleApple = unpackStoredZip(await apple.issueApplePass(demoMember, { standaloneSample: true }));
   const sampleFields = JSON.parse(sampleApple["pass.json"]);
+  assert.equal(sampleFields.userInfo.artworkVersion, "coffee-atlas-v2");
+  const variedRewards = memberWithPoints(211);
+  variedRewards.program.pointsProgram.milestones = Array.from({ length: 20 }, (_, i) => ({
+    points: 20 * (i + 1), reward: i === 10 ? "قهوة <وحلا> & عصير مختار من القائمة" : "مكافأة " + i,
+  }));
+  const denseMap = await art.walletStampArtwork(variedRewards, 1, true);
+  assert.equal((await sharp(denseMap).metadata()).width, 375);
+  const renamed = structuredClone(variedRewards);
+  renamed.program.pointsProgram.milestones[10].reward = "فطور";
+  assert.notDeepEqual(denseMap, await art.walletStampArtwork(renamed, 1, true), "A custom reward rename must redraw its own map label");
   assert(sampleApple.signature.length && !sampleFields.webServiceURL && !sampleFields.authenticationToken);
   assert.equal(sampleFields.storeCard.headerFields[0].value, 211);
   const sampleCalls = calls.length;

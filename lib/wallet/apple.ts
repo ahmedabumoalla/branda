@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import sharp from "sharp";
 import { PKPass, PassType } from "passkit-generator";
 import { createBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
-import { describePointsRewards, nextPointsReward } from "@/lib/loyalty/reward-path";
+import { describePointsRewards, nextPointsReward, POINTS_MAP_VERSION } from "@/lib/loyalty/reward-path";
 import { appleConfig } from "./config";
 import { WALLET_ART_VERSION, walletStampArtwork } from "./art";
 import { walletColors, walletAppleLocations } from "./payload";
@@ -71,7 +71,7 @@ export async function issueApplePass(member: WalletMember, options: { standalone
     backgroundColor: rgb(colors.background), foregroundColor: rgb(colors.foreground), labelColor: rgb(colors.foreground), sharingProhibited: true, suppressStripShine: true,
     logoText: mqas77 ? MQAS77_WALLET_NAME : member.cafeName,
     ...(mqas77 ? { labelColor: rgb("#fff4df") } : {}),
-    userInfo: { artworkVersion: mqas77 ? MQAS77_WALLET_VERSION : `${WALLET_ART_VERSION}:apple-burgundy-v1`, iconVersion: APPLE_ICON_VERSION },
+    userInfo: { artworkVersion: member.program.pointsProgram?.mode === "points" ? POINTS_MAP_VERSION : mqas77 ? MQAS77_WALLET_VERSION : `${WALLET_ART_VERSION}:apple-burgundy-v1`, iconVersion: APPLE_ICON_VERSION },
     ...(options.standaloneSample ? {} : { webServiceURL: `${config.baseUrl}/api/wallet/apple`, authenticationToken: appleAuthToken(member.card.cardCode) }),
   });
   const style = new PassType("storeCard");
