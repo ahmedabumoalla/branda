@@ -192,6 +192,18 @@ try {
     return stored.has(uri) ? Response.json(stored.get(uri)) : new Response(null, { status: 404 });
   };
   const google = load("lib/wallet/google.ts");
+  const demoMember = { ...memberWithPoints(211), card: { ...memberWithPoints(211).card, cardCode: "SAMPLE.COFFEE" } };
+  const sampleApple = unpackStoredZip(await apple.issueApplePass(demoMember, { standaloneSample: true }));
+  const sampleFields = JSON.parse(sampleApple["pass.json"]);
+  assert(sampleApple.signature.length && !sampleFields.webServiceURL && !sampleFields.authenticationToken);
+  assert.equal(sampleFields.storeCard.headerFields[0].value, 211);
+  const sampleCalls = calls.length;
+  const sampleToken = google.googleCoffeeSampleSaveUrl(demoMember).split("/save/")[1].split(".");
+  assert(verify("RSA-SHA256", Buffer.from(sampleToken.slice(0, 2).join(".")), publicKey, Buffer.from(sampleToken[2], "base64url")));
+  const sampleObject = JSON.parse(Buffer.from(sampleToken[1], "base64url")).payload.loyaltyObjects[0];
+  assert(sampleObject.id.includes(".coffee_sample_") && sampleObject.heroImage.sourceUri.uri.includes("/demo/coffee/path.png"));
+  assert.equal(sampleObject.loyaltyPoints.balance.int, 211);
+  assert.equal(calls.length, sampleCalls, "Opening a sample makes no provider writes");
   process.env.GOOGLE_WALLET_PUBLISHING_APPROVED = "false";
   const callsBeforeApprovalCheck = calls.length;
   await assert.rejects(google.issueGoogleSaveUrl(member), /wallet_not_configured/);

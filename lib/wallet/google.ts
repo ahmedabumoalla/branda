@@ -138,6 +138,23 @@ export async function issueGoogleSaveUrl(member: WalletMember) {
   return `https://pay.google.com/gp/v/save/${token}`;
 }
 
+// Google creates this sample only when its recipient saves it. Never patch the
+// shared class or a member object when someone opens a demonstration link.
+export function googleCoffeeSampleSaveUrl(member: WalletMember) {
+  const config = googleConfig();
+  if (!member.program.googleWalletEnabled || process.env.GOOGLE_WALLET_PUBLISHING_APPROVED !== "true") throw new Error("wallet_disabled");
+  const sample = buildGoogleObject(member, config.issuerId);
+  const version = walletArtifactKey(JSON.stringify([sample, member.program.pointsProgram, member.program.purchasesRequired])).slice(0, 24);
+  const object = { ...sample, id: `${config.issuerId}.coffee_sample_${version}`, heroImage: {
+    sourceUri: { uri: `${config.baseUrl}/api/wallet/demo/coffee/path.png?v=${version}` },
+    contentDescription: { defaultValue: { language: "ar", value: member.program.pointsProgram?.mode === "points" ? "مسار مكافآت النقاط" : member.program.stampLabel } },
+  } };
+  const now = Math.floor(Date.now() / 1000);
+  const token = jwt({ iss: config.email, aud: "google", typ: "savetowallet", iat: now, exp: now + 3600,
+    origins: [new URL(config.baseUrl).host], payload: { loyaltyObjects: [object] } }, config.key);
+  return `https://pay.google.com/gp/v/save/${token}`;
+}
+
 export async function notifyGoogleBrand(cafeId: string, title: string, body: string, messageId: string, branchId?: string) {
   const config = googleConfig();
   const classPath = `loyaltyClass/${encodeURIComponent(googleClassId(config.issuerId, cafeId, branchId))}`;

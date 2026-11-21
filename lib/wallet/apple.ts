@@ -40,7 +40,7 @@ function rgb(hex: string) {
   return `rgb(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)})`;
 }
 
-export async function issueApplePass(member: WalletMember) {
+export async function issueApplePass(member: WalletMember, options: { standaloneSample?: boolean } = {}) {
   if (!member.program.enabled || !member.program.appleWalletEnabled) throw new Error("wallet_disabled");
   const config = appleConfig();
   const colors = walletColors(member);
@@ -72,7 +72,7 @@ export async function issueApplePass(member: WalletMember) {
     logoText: mqas77 ? MQAS77_WALLET_NAME : member.cafeName,
     ...(mqas77 ? { labelColor: rgb("#fff4df") } : {}),
     userInfo: { artworkVersion: mqas77 ? MQAS77_WALLET_VERSION : `${WALLET_ART_VERSION}:apple-burgundy-v1`, iconVersion: APPLE_ICON_VERSION },
-    webServiceURL: `${config.baseUrl}/api/wallet/apple`, authenticationToken: appleAuthToken(member.card.cardCode),
+    ...(options.standaloneSample ? {} : { webServiceURL: `${config.baseUrl}/api/wallet/apple`, authenticationToken: appleAuthToken(member.card.cardCode) }),
   });
   const style = new PassType("storeCard");
   pass.types.push(style);
