@@ -237,6 +237,25 @@ const pointsHtml = renderToStaticMarkup(React.createElement(RastCashier, { initi
   pointsProgram: { mode: "points", rateSar: 2, rateQuantity: 3, milestones: [] },
 } }));
 assert(pointsHtml.includes("قيمة الفاتورة بالريال") && pointsHtml.includes("صرف مكافأة") && !pointsHtml.includes('id="rast-scan-code"'), "Points mode uses the invoice input and retains redemption");
+assert(pointsHtml.includes("تسجيل نقاط الفاتورة") && !pointsHtml.includes("مراجعة الفاتورة"), "A single invoice submit records points without review");
+{
+  const apiCalls = [];
+  const { POST } = load("app/api/cashier/invoice-points/route.ts", {
+    "@/app/actions/cashier-invoice-points": {
+      resolveInvoiceCardAction: async (...input) => { apiCalls.push(input); return "MEMBER"; },
+      addCashierInvoicePointsAction: async input => { apiCalls.push(input); return { ok:true, pointsAdded:7, pointsBalance:17 }; },
+    },
+  });
+  const origin="https://demo.example", url=origin+"/api/cashier/invoice-points";
+  const scope={cafeId:"2e08901c-5aac-4bec-8c97-a135058e508b",cashierId:"124be05a-3bae-4d8b-9367-d70ca03cbd52"};
+  const request = (payload, from=origin) => new Request(url,{method:"POST",headers:{Origin:from,"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  const credit={scope,requestId:"797a1cde-c8b9-4736-bb9f-73033e5a5b8b",cardCode:"MEMBER",rateSar:1,rateQuantity:1,amountHalalas:700};
+  assert.equal((await POST(request({step:"credit", ...credit},"https://elsewhere.example"))).status,403);
+  assert.equal((await POST(request({step:"credit",...credit,amountHalalas:-1}))).status,400); assert.equal(apiCalls.length,0);
+  assert.deepEqual(await (await POST(request({step:"resolve",scope,identifier:"123"}))).json(),{ok:true,cardCode:"MEMBER"});
+  assert.deepEqual(await (await POST(request({step:"credit", ...credit}))).json(),{ok:true,pointsAdded:7,pointsBalance:17});
+  assert.deepEqual(apiCalls,[[scope,"123"],credit]);
+}
 {
   const { POINTS_CAFE_ID } = load("lib/loyalty/points-program.ts");
   const scope = { cafeId: POINTS_CAFE_ID, cashierId: "124be05a-3bae-4d8b-9367-d70ca03cbd52" };

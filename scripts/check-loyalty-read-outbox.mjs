@@ -170,4 +170,25 @@ await check("copied WhatsApp numbers with invisible direction marks resolve as p
   assert.equal(again.row.requestId, first.row.requestId);
   assert.equal(again.duplicate, true);
 });
+await check("invoice points resolve once, survive approval and keep their own cafe and cashier scope", async () => {
+  const { invoiceOutbox } = load("lib/loyalty/invoice-points-outbox.ts");
+  const store = memoryStore(), calls = [], resolutions = [];
+  const deps = { scope, now: () => now, store, online: () => true,
+    resolve: async input => { resolutions.push(input); return { ok:true, cardCode:"MEMBER-ORIGINAL" }; },
+    credit: async input => { calls.push(input); return calls.length === 1 ? { ok:false, reason:"approval_pending" } : { ok:true, pointsAdded:15, pointsBalance:46 }; } };
+  const first = invoiceOutbox(deps);
+  await first.save("0501234567", { amountHalalas:1500, rateSar:1, rateQuantity:1 });
+  const other = invoiceOutbox({ ...deps, scope:{ ...scope,cashierId:"another" } });
+  await other.sync(); assert.equal(calls.length,0);
+  await first.sync(); const pending = (await first.list())[0];
+  assert.equal(pending.reason,"approval_pending"); assert.equal(pending.identifier,undefined); assert.equal(pending.cardCode,"MEMBER-ORIGINAL");
+  const reopened = invoiceOutbox(deps);
+  await reopened.retry(); await reopened.sync();
+  assert.deepEqual(calls[1],calls[0]); assert.equal(resolutions.length,1); assert.equal((await reopened.list())[0].pointsBalance,46);
+  const rejected = invoiceOutbox({ ...deps, credit:async()=>({ok:false,reason:"points_rate_changed"}) });
+  await rejected.save("MEMBER-456",{amountHalalas:1500,rateSar:1,rateQuantity:1}); await rejected.sync();
+  const failure=(await rejected.list()).find(r=>r.reason==="points_rate_changed");
+  assert.equal(failure.state,"rejected"); assert.equal(failure.cardCode,undefined);
+  await rejected.retry(); await rejected.sync(); assert.equal((await rejected.list()).find(r=>r.requestId===failure.requestId).attempts,1);
+});
 console.log(`PASS ${checks} loyalty read outbox behavior checks (isolated store; no customer operations)`);

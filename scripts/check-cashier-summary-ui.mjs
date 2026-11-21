@@ -134,40 +134,45 @@ check(/\.customerSummary\s*\{[^}]*min-width:\s*0[^}]*overflow-wrap:\s*anywhere/.
 check(/\.customerSummaryStats\s*\{[^}]*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(css),'Balance columns shrink on small screens');
 controller.clear();
 {
-  const stored = new Map(), invoiceWrites = [];
+  const stored = new Map();
   globalThis.sessionStorage = { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) };
-  const invoiceScope = { cafeId: 'test-cafe', cashierId: 'operator' };
-  const program = { mode: 'points', rateSar: 2, rateQuantity: 3, milestones: [] };
-  let responseLost = true;
-  const { CashierInvoicePoints } = load('components/rast-loyalty/cashier-invoice-points.tsx', {
-    ...stubs, react: { ...hooks, useId: () => 'checkout' },
-    '@/app/actions/cashier-invoice-points': {
-      inspectPointsCardAction: async () => ({ code: 'MEMBER456', customerName: 'Test member', pointsBalance:199, affordableRewards:[] }),
-      async addCashierInvoicePointsAction(value) {
-        invoiceWrites.push(value);
-        if (responseLost) throw new Error('Interrupted after commit');
-        return { ok: true, pointsAdded: 4, pointsBalance: 203, affordableRewards: [{ points: 200, reward: 'Coffee' }] };
-      },
-    },
-  });
-  locale = 'en';
-  function renderInvoice() { cursor = 0; tree = CashierInvoicePoints({ scope: invoiceScope, program, displayName: name => name }); }
-  function changeInvoice(id, value) { all().find(n => n.props?.id === id).props.onChange({ target: { value } }); renderInvoice(); }
-  async function sendInvoice() { await all().find(n => n.type === 'form').props.onSubmit({ preventDefault() {} }); renderInvoice(); }
-  function openInvoice() {
-    slots = []; renderInvoice();
-    changeInvoice('checkout-card', 'MEMBER456');
-    changeInvoice('checkout-amount', '٣٫٢٠');
-  }
-  openInvoice(); check(text(tree).includes('Points for this invoice: 4'), 'Arabic digits and fractional SAR round down');
-  await sendInvoice(); equal(invoiceWrites.length, 0, 'Review never grants points'); check(text(tree).includes('Test member'), 'Review identifies the member');
-  await sendInvoice(); equal(stored.size, 1, 'Uncertain request retained across reload'); check(![...stored].flat().join().includes('MEMBER456'), 'Stored retry contains no raw card');
-  openInvoice(); await sendInvoice(); check(text(tree).includes('Retry confirmation'), 'Reload resumes an uncertain invoice');
-  responseLost = false; await sendInvoice(); equal(invoiceWrites[0], invoiceWrites[1], 'Retry preserves request ID, invoice, cashier, card and rate');
-  equal(invoiceWrites[0].amountHalalas, 320, 'Server receives integer halalas'); equal(stored.size, 0, 'Confirmed operation clears retry');
-  check(text(tree).includes('203') && !text(tree).includes('Coffee'), 'Earning confirms points without promising an issued reward');
-  changeInvoice('checkout-amount', '1000000.01'); check(button('Review invoice').props.disabled, 'Over-limit amount refused');
-  changeInvoice('checkout-amount', '1.999'); check(button('Review invoice').props.disabled, 'Over-precision amount refused');
+  const {invoiceOutbox} = load('lib/loyalty/invoice-points-outbox.ts');
+  const {CashierInvoicePoints} = load('components/rast-loyalty/cashier-invoice-points.tsx',{...stubs,react:{...hooks,useId:()=>'checkout'}});
+  const program={mode:'points',rateSar:2,rateQuantity:3,milestones:[]};
+  const disk = new Map(), requests=[], waiting=deferred(), sending=deferred();
+  let online=false, storageError=false;
+  const store={async change(key,fn) {
+    if (storageError) throw Error('storage');
+    const next=fn(structuredClone(disk.get(key)||[])); disk.set(key,structuredClone(next.rows)); return structuredClone(next.result);
+  }};
+  const options = {scope:{cafeId:'test',cashierId:'one'},store,online:()=>online,resolve:async()=>({ok:true,cardCode:'MEMBER456'}),
+    credit:async req=>{requests.push(req);if(requests.length===1){sending.resolve();return waiting.promise;}return {ok:true,pointsAdded:4,pointsBalance:203};}};
+  let queue=invoiceOutbox(options);
+  locale='en'; slots=[];
+  function renderInvoice(){cursor=0;tree=CashierInvoicePoints({queue,program});}
+  function inputInvoice(id,value){all().find(n=>n.props?.id===id).props.onChange({target:{value}});renderInvoice();}
+  async function submitInvoice(){await all().find(n=>n.type==='form').props.onSubmit({preventDefault(){}});renderInvoice();}
+  renderInvoice();inputInvoice('checkout-card','MEMBER456');inputInvoice('checkout-amount','٣٫٢٠');
+  check(text(tree).includes('Points for this invoice: 4'),'Fractional invoice preview');
+  await submitInvoice();
+  check(text(tree).includes('Invoice saved on this device')&&!text(tree).includes('Points credited'),'Immediate local receipt is distinct from confirmed credit');
+  check(all().filter(n=>n.type==='input').every(n=>n.props.value===''),'Both fields released after local persistence');
+  equal(requests.length,0,'Offline submit does not wait for lookup, review or server response');
+  const first=(await queue.list())[0];
+  online=true;const draining=queue.sync();await sending.promise;
+  inputInvoice('checkout-card','MEMBER456');inputInvoice('checkout-amount','3.20');await submitInvoice();
+  const both=await queue.list();equal(both.length,2,'Second identical bill is saved while first response is held');
+  check(both[0].requestId!==both[1].requestId,'Independent invoices have distinct immutable ids');
+  waiting.reject(Error('credit committed, acknowledgement lost'));await draining;
+  const reloaded=invoiceOutbox(options);await reloaded.retry();await reloaded.sync();
+  const retried=requests.filter(r=>r.requestId===first.requestId);
+  equal(retried.length,2,'Lost confirmation retries after reload');equal(retried[0],retried[1],'Card, amount, scope, rate and request ID are pinned');
+  equal((await reloaded.list()).filter(r=>r.state==='credited'&&!r.cardCode&&!r.identifier).length,2,'Both receipts confirmed and identifying input cleared');
+  inputInvoice('checkout-card','MEMBER777');inputInvoice('checkout-amount','4.00');storageError=true;await submitInvoice();
+  check(text(tree).includes('could not be saved')&&all().filter(n=>n.type==='input').every(n=>!!n.props.value),'Storage failure retains the form and reports failure');
+  storageError=false;
+  inputInvoice('checkout-amount','1000000.01');check(button('Record invoice points').props.disabled,'Over-limit amount refused');
+  inputInvoice('checkout-amount','1.999');check(button('Record invoice points').props.disabled,'Over-precision amount refused');
 }
 {
   const scope = { cafeId: 'coffee', cashierId: 'shift' };

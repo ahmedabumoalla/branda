@@ -10,7 +10,8 @@ import type { CashierConsole } from "@/lib/data/cashier";
 import type { CashierRewardPreview } from "@/lib/data/customer-rewards";
 import type { LocalRead } from "@/lib/loyalty/read-outbox";
 import { readDisplay } from "@/lib/loyalty/read-display";
-import { CashierInvoicePoints } from "./cashier-invoice-points";
+import { CashierInvoicePoints, InvoicePointsHistory } from "./cashier-invoice-points";
+import { useInvoicePointsOutbox } from "./use-invoice-points-outbox";
 import { CashierPointsRedemption } from "./cashier-points-redemption";
 import { RastCameraScanner } from "./rast-camera-scanner";
 import { useReadOutbox } from "./use-read-outbox";
@@ -107,6 +108,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
   const previewElement = useRef<HTMLElement>(null);
   const errorElement = useRef<HTMLParagraphElement>(null);
   const reads = useReadOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
+  const invoices = useInvoicePointsOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
   const [lastReadId, setLastReadId] = useState<string | null>(null);
   const lastRead = reads.rows.find(row => row.requestId === lastReadId);
   const readFeedback = lastRead ? readDisplay(lastRead) : null;
@@ -220,7 +222,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
           </div>
           {points && kind === "redeem" && <button type="button" className={layout.voucherSwitch} disabled={pending}
             onClick={() => { if (processing.current || session.busy) return; updateCode(""); setStampVoucher(!stampVoucher); }}>{t(stampVoucher ? "العودة إلى استبدال النقاط" : "صرف قسيمة أختام سابقة")}</button>}
-          {points && kind === "stamp" ? <CashierInvoicePoints scope={{ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id }} program={points} displayName={displayName} />
+          {points && kind === "stamp" ? <CashierInvoicePoints queue={invoices} program={points} />
             : points && !stampVoucher ? <CashierPointsRedemption scope={{ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id }} displayName={displayName} />
             : !preview && <><h2 id="scan-heading" className={layout.scanTitle}>{kind === "stamp" ? t("اقرأ بطاقة العميل") : t("افحص مكافأة العميل")}</h2>
           <p id="rast-scan-help" className={layout.scanHelp}>{confirmedFinanceFlow ? t("اقرأ بطاقة العميل أو ابحث بجواله ثم راجع بياناته وأكد العملية تنتظر العملية الموافقة إذا حدد المالك مسؤولًا لاعتمادها") : kind === "stamp" ? t("أدخل البطاقة أو رقم الجوال ثم اضغط تسجيل الختم تُحفظ القراءة فورًا ويبحث النظام عن العميل ويسجل الختم في الخلفية") : lookupMethod === "phone" ? t("ابحث برقم الجوال المسجل في بطاقة الولاء ثم راجع بيانات العميل قبل التأكيد") : t("اقرأ بطاقة العميل أو رمز المكافأة ستظهر المكافأة الأقرب لانتهاء الصلاحية؛ راجع اسم العميل وشروطها قبل تأكيد صرف مكافأة واحدة")}</p>
@@ -253,6 +255,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
         {reads.authPaused && <p role="alert" className={layout.readAlert}>{t("توقفت المزامنة تحقق من صلاحية الحساب والخدمة ثم سجّل الدخول بالحساب نفسه لاستكمال القراءات المحفوظة")} {!embedded && <Link href="/cashier/login">{t("تسجيل الدخول")}</Link>}</p>}
         {reads.storageError && <p role="alert" className={layout.readAlert}>{t("تخزين الجهاز غير متاح لا تغلق الصفحة قبل التأكد من حفظ القراءة")}</p>}
       </section>}
+      <InvoicePointsHistory queue={invoices} />
       {!embedded && <AnalyticsCouponRedemption />}
     </div>
   </Container>;

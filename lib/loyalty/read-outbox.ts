@@ -10,8 +10,9 @@ export type LocalRead = {
   leaseUntil: number; leaseOwner?: string; operation?: LoyaltyReadOperation;
   errorCode?: string; errorMessage?: string;
 };
-export interface ReadStore {
-  change<T>(scope: string, change: (rows: LocalRead[]) => { rows: LocalRead[]; result: T }): Promise<T>;
+export interface ReadStore<Row = LocalRead> {
+  read?(scope: string): Promise<Row[]>;
+  change<T>(scope: string, change: (rows: Row[]) => { rows: Row[]; result: T }): Promise<T>;
 }
 export const readScopeKey = (scope: ReadScope) => JSON.stringify([scope.cafeId, scope.cashierId]);
 const terminal = (row: LocalRead) => Boolean(row.errorCode?.startsWith("rejected:") || (row.operation && !["pending", "processing"].includes(row.operation.status)));
@@ -24,12 +25,12 @@ const keepRows = (rows: LocalRead[], now: number) => {
   let completed = 0;
   return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).filter(row => !terminal(row) || (++completed <= 100 && now - Date.parse(row.createdAt) < 7 * 86400_000));
 };
-export function createIndexedReadStore(): ReadStore {
+export function createIndexedReadStore<Row extends { requestId: string; scope: string } = LocalRead>(databaseName = "branda-loyalty-reads"): ReadStore<Row> {
   let database: Promise<IDBDatabase> | undefined;
   function open() {
     if (!database) database = new Promise<IDBDatabase>((resolve, reject) => {
       if (typeof indexedDB === "undefined") { reject(new Error("storage_unavailable")); return; }
-      const request = indexedDB.open("branda-loyalty-reads", 1);
+      const request = indexedDB.open(databaseName, 1);
       request.onupgradeneeded = () => request.result.createObjectStore("reads", { keyPath: "requestId" }).createIndex("scope", "scope");
       request.onsuccess = () => { request.result.onversionchange = () => request.result.close(); resolve(request.result); };
       request.onerror = () => reject(request.error ?? new Error("storage_unavailable"));
@@ -37,7 +38,16 @@ export function createIndexedReadStore(): ReadStore {
     });
     return database;
   }
-  return { async change<T>(scope: string, change: (rows: LocalRead[]) => { rows: LocalRead[]; result: T }) {
+  return {
+    async read(scope) {
+      const db = await open();
+      return new Promise<Row[]>((resolve, reject) => {
+        const request = db.transaction("reads", "readonly").objectStore("reads").index("scope").getAll(scope);
+        request.onsuccess = () => resolve(request.result as Row[]);
+        request.onerror = () => reject(request.error ?? new Error("storage_unavailable"));
+      });
+    },
+    async change<T>(scope: string, change: (rows: Row[]) => { rows: Row[]; result: T }) {
     const db = await open();
     return new Promise<T>((resolve, reject) => {
       const tx = db.transaction("reads", "readwrite", { durability: "strict" });
@@ -48,7 +58,7 @@ export function createIndexedReadStore(): ReadStore {
       tx.onabort = tx.onerror = () => reject(tx.error ?? new Error("storage_unavailable"));
       request.onsuccess = () => {
         try {
-          const previous = request.result as LocalRead[];
+          const previous = request.result as Row[];
           const next = change(previous);
           result = next.result;
           const ids = new Set(next.rows.map(row => row.requestId));

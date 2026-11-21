@@ -32,12 +32,22 @@ async function pointsSession(scope: Scope) {
   return session;
 }
 
-export async function inspectPointsCardAction(scope: Scope, identifier: string) {
-  const session = await pointsSession(scopeSchema.parse(scope));
+async function resolveIdentifier(cafeId: string, identifier: string) {
   const raw = normalizeLoyaltyDigits(z.string().trim().min(1).max(500).parse(identifier));
   const code = resolveReadMethod("code", raw) === "phone" ? await resolveCashierLoyaltyPhone(raw)
-    : await resolveCashierCardNumber(parseBarndaksaQrPayload(raw, "loyalty-card") ?? raw.toUpperCase(), session.cafeId);
+    : await resolveCashierCardNumber(parseBarndaksaQrPayload(raw, "loyalty-card") ?? raw.toUpperCase(), cafeId);
   if (!isCashierLoyaltyCode(code)) throw new Error("رمز البطاقة غير صالح");
+  return code;
+}
+
+export async function resolveInvoiceCardAction(scope: Scope, identifier: string) {
+  const session = await pointsSession(scopeSchema.parse(scope));
+  return resolveIdentifier(session.cafeId, identifier);
+}
+
+export async function inspectPointsCardAction(scope: Scope, identifier: string) {
+  const session = await pointsSession(scopeSchema.parse(scope));
+  const code = await resolveIdentifier(session.cafeId, identifier);
   const [card, options] = await Promise.all([
     lookupRastCashierCard(code),
     createAdminClient().rpc("get_loyalty_points_options", { p_session_token: session.token, p_card_code: code }),
@@ -65,6 +75,8 @@ export async function addCashierInvoicePointsAction(input: z.infer<typeof invoic
     p_session_token: session.token, p_card_code: parsed.cardCode, p_request_id: parsed.requestId,
     p_amount_sar: parsed.amountHalalas / 100, p_expected_rate_sar: parsed.rateSar, p_expected_rate_quantity: parsed.rateQuantity,
   });
+  if (error?.message?.includes("Scan request conflict")) return { ok: false as const, reason: "request_conflict" };
+  if (error?.code === "42501") return { ok: false as const, reason: "unauthorized" };
   if (error) throw new Error("تعذر تأكيد تسجيل النقاط");
   if (data?.ok === false || data?.status === "approval_pending" || data?.status === "approval_rejected") {
     return { ok: false as const, reason: String(data.errorCode ?? data.status) };
