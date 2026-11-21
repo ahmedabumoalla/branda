@@ -65,7 +65,7 @@ Not verified by me: Apple and Google wallet card downloads and finance invoice P
 
 ## Hardening after publication
 
-State: tested on a preview, branch `perf/deployment-guard-hardening-20261121` commit `8356edfa`, not on main, waiting for the user publish word
+State: PUBLISHED to main on 2026-11-21 after the user wrote the publish word for the hardening, pushed in the commit that carries this line. Tested first on previews of branch `perf/deployment-guard-hardening-20261121`
 
 The user asked for certainty that neither assistant ships a slow build again. Proofs run on Vercel with throwaway preview branches, all deleted afterwards:
 
