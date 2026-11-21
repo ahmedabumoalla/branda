@@ -67,6 +67,8 @@ Not verified by me: Apple and Google wallet card downloads and finance invoice P
 
 State: PUBLISHED to main on 2026-11-21 after the user wrote the publish word for the hardening, pushed in the commit that carries this line. Tested first on previews of branch `perf/deployment-guard-hardening-20261121`
 
+Production: commit `4690c27f` on main, Vercel build pending 19:18:56Z, success 19:19:33Z, 37 seconds. The GitHub check `Deployment guard stays wired` passed on that commit, the live site moved to deployment `dpl_J9f39UdQYqb3kJzwNptjanoMJUgs`, and 100 recorded live answers were identical before and after
+
 The user asked for certainty that neither assistant ships a slow build again. Proofs run on Vercel with throwaway preview branches, all deleted afterwards:
 
 | Build | Result on Vercel |
