@@ -59,7 +59,7 @@ try {
   assert.equal(vercel.buildCommand, "npm run build && node scripts/verify-deployment-size.mjs");
   const workflow = path.join(here, "../.github/workflows/deployment-guard.yml");
   // The workflow file is absent in the sparse checkout the workflow itself uses, so only check it when present
-  if (existsSync(workflow)) assert.match(readFileSync(workflow, "utf8"), /run: node scripts/check-deployment-size.mjs/);
+  if (existsSync(workflow)) assert.ok(readFileSync(workflow, "utf8").includes("run: node scripts/check-deployment-size.mjs"), "The GitHub check must run this test");
   const config = readFileSync(path.join(here, "../next.config.ts"), "utf8");
   assert.match(config, /outputFileTracingExcludes: \{\s*"\/\*": \["\.\/public\/\*\*\/\*"\],\s*\}/, "public stays out of every function");
   assert.match(config, /"\/api\/wallet\/\*\*": \[[^\]]*"\.\/public\/\*\*\/\*\.\{png,jpg,jpeg,webp,gif,avif,svg,ico\}"/, "wallet routes keep the public images");
