@@ -42,6 +42,8 @@ After cancelling the move to Meta the user stays on Green API and wants as littl
 - Text integrity, full production build with TypeScript, deployment size guard: pass
 - Not opened in a browser, no message sent
 
-## To publish
+## Production
 
-Commit the branch, push to main, measure the build, then confirm from the provider's outgoing journal that the first reward notice leaves from the notifications number and that no card link does
+Commit `d7369f36` on main, on top of `c981a1d8` from Codex, Vercel build pending 23:54:48Z, success 23:56:45Z on 2026-11-21 UTC, 1 minute 57 seconds. The build on Vercel is the TypeScript run for the final commit. Deployment size guard: the wiring check passed before the push and the GitHub check passed on the commit. 100 recorded live answers identical before and after, and the three tutorial videos are served
+
+Still to be seen in the provider's outgoing journal: the first real reward notice leaving from the notifications number. None had occurred at the time of this entry; at the measured rate there are about six in two weeks
