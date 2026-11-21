@@ -1,0 +1,27 @@
+name: Deployment guard stays wired
+# Independent of Vercel and of whoever pushes: runs on any branch when a file that carries the deployment
+# size fix or its guard changes, and fails if the fix or either wiring of the guard is gone.
+# See docs/BARNDAKSA_HANDOFF/DEPLOYMENT_SIZE_GUARD_20261121.md
+on:
+  workflow_dispatch:
+  push:
+    paths: ['package.json', 'vercel.json', 'next.config.ts', 'lib/wallet/logo.ts', 'scripts/verify-deployment-size.mjs', 'scripts/check-deployment-size.mjs', '.github/workflows/deployment-guard.yml']
+permissions:
+  contents: read
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            package.json
+            vercel.json
+            next.config.ts
+            lib/wallet/logo.ts
+            scripts/verify-deployment-size.mjs
+            scripts/check-deployment-size.mjs
+      - name: The fix and both wirings of the guard are in place
+        run: node scripts/check-deployment-size.mjs

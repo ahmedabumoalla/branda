@@ -57,7 +57,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Do not add videos or other large media to `public`. Host them in storage and link them
 - Server code reads a public file only through a fixed path that is listed in `FIXED_PUBLIC_FILES` and in the `"/*"` includes of `next.config.ts`. The only variable path under `public` is the wallet logo reader in `lib/wallet/logo.ts`, served by the `/api/wallet/**` includes
 - Do not add `turbopackIgnore` to that reader. Measured on 2026-11-21 it packed the whole project into every function
-- The guard is wired twice on purpose: at the end of the `build` script in `package.json` and in `buildCommand` in `vercel.json`. Keep both
+- The guard is wired twice on purpose: at the end of the `build` script in `package.json` and in `buildCommand` in `vercel.json`. Keep both. `.github/workflows/deployment-guard.yml` checks this on GitHub whenever one of these files changes, and a failed run is emailed to the account that pushed
+- Before every push to main run `node scripts/check-deployment-size.mjs`, and end every deployment report with two facts: the guard check passed, and the measured build time
 - Local development trees can hold older copies of `next.config.ts`, `package.json` and `vercel.json`. Never copy them over the versions on main. Merge only the lines you need
 - After every deployment measure the build time with `gh api repos/{owner}/{repo}/commits/<sha>/statuses` (last pending to success) and write it in the deployment report. The normal time is about one minute. Over three minutes, stop releasing and find the cause first
 - Do not raise a limit or remove the guard to get a release out. Read `docs/BARNDAKSA_HANDOFF/DEPLOYMENT_SIZE_GUARD_20261121.md` first

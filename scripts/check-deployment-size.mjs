@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -57,6 +57,9 @@ try {
   // Second, independent wiring: an older package.json copied over this one must not silence the guard
   const vercel = JSON.parse(readFileSync(path.join(here, "../vercel.json"), "utf8"));
   assert.equal(vercel.buildCommand, "npm run build && node scripts/verify-deployment-size.mjs");
+  const workflow = path.join(here, "../.github/workflows/deployment-guard.yml");
+  // The workflow file is absent in the sparse checkout the workflow itself uses, so only check it when present
+  if (existsSync(workflow)) assert.match(readFileSync(workflow, "utf8"), /run: node scripts/check-deployment-size.mjs/);
   const config = readFileSync(path.join(here, "../next.config.ts"), "utf8");
   assert.match(config, /outputFileTracingExcludes: \{\s*"\/\*": \["\.\/public\/\*\*\/\*"\],\s*\}/, "public stays out of every function");
   assert.match(config, /"\/api\/wallet\/\*\*": \[[^\]]*"\.\/public\/\*\*\/\*\.\{png,jpg,jpeg,webp,gif,avif,svg,ico\}"/, "wallet routes keep the public images");
