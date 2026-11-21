@@ -49,6 +49,12 @@ Wallet API routes lost only the non-image files of `public` (videos, scripts, an
 
 Checks run: production build with the guard PASS, guard test PASS, existing `check-deployment-traces.mjs` PASS, text integrity PASS, TypeScript PASS inside the build. A build of the unfixed config with the guard exits 1 with 240 problems, which shows the guard catches the original fault
 
+## Measured on Vercel
+
+Preview deployment of commit `a12c0eaf` on 2026-11-21: pending 17:28:37Z, success 17:29:31Z, 54 seconds. The last production build before the fix (`0c55c668`) took 23.1 minutes, and preview builds in mid November took 6 to 7 minutes, the same as production builds then. Every function changed in this build, so the time is not an unchanged-output shortcut
+
+Not seen: the Vercel build log. That the guard line `[deployment-size]` ran there follows from the build command in package.json and is not confirmed by reading the log. The preview address is behind the Vercel login, so pages, wallet cards and invoice PDFs on it are for the user to try
+
 ## Two things tried and rejected
 
 - `/* turbopackIgnore: true */` on the `process.cwd()` argument in `lib/wallet/logo.ts`: the tracer then packed the whole project, 1.2 GB per route, including `.codex-tmp`. Do not use it there
@@ -72,7 +78,7 @@ When it fails, the build stops and production keeps its current version. The mes
 
 ## Not done
 
-- No deployment. The effect on Vercel build time is expected and not yet measured. Measure it after the first deployment with `gh api repos/{owner}/{repo}/commits/<sha>/statuses`
+- No production deployment and no merge to main. To measure a build: `gh api repos/{owner}/{repo}/commits/<sha>/statuses`, last pending time to success time
 - The six videos stay in `public` because WhatsApp messages link to them. They no longer reach any function
 - Nine old project copies tracked under `.codex-tmp` (839 MB) only slow the clone. Removing them is a separate decision
 - Chromium is still packed into about 30 finance routes at 67 MB each. That is the next largest share and was not touched
