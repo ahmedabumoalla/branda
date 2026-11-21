@@ -4,6 +4,8 @@ import { KATH_IMAGE_ORIGIN, KATH_IMAGE_PATH, SHAHI_IMAGE_PATH, TAZA_IMAGE_PATH, 
 import { TOGETHER_IMAGE_PATH } from "./lib/menu/together-images";
 
 const nextConfig = {
+  // Throwaway preview test only, never merge: the preview environment has no wallet base address
+  env: { WALLET_PUBLIC_BASE_URL: process.env.WALLET_PUBLIC_BASE_URL || "https://barndaksa.com" },
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   outputFileTracingIncludes: {
     "/api/loyalty-guide": ["./assets/guides/branda-loyalty-guide.pdf"],
