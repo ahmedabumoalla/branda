@@ -195,7 +195,19 @@ try {
   const demoMember = { ...memberWithPoints(211), card: { ...memberWithPoints(211).card, cardCode: "SAMPLE.COFFEE" } };
   const sampleApple = unpackStoredZip(await apple.issueApplePass(demoMember, { standaloneSample: true }));
   const sampleFields = JSON.parse(sampleApple["pass.json"]);
-  assert.equal(sampleFields.userInfo.artworkVersion, "coffee-star-track-v3");
+  assert.equal(sampleFields.userInfo.artworkVersion, "coffee-curved-track-v4");
+  const { walletPointsSvg } = load("lib/wallet/points-art.ts");
+  const layoutAt = async balance => {
+    const svg = await walletPointsSvg(tiers, balance, "#18203a", "#fff8eb", "#d8b67a", 1);
+    return {
+      curves: [...svg.matchAll(/<path d="([^"]+)"[^>]+stroke-dasharray=/g)].map(match => match[1]),
+      stars: [...svg.matchAll(/<polygon points="([^"]+)"/g)].map(match => match[1]),
+    };
+  };
+  const emptyLayout = await layoutAt(0);
+  assert.equal(emptyLayout.curves.length, 2);
+  assert(emptyLayout.curves.every(curve => curve.includes("C")));
+  for (const balance of [100, 211, 500, 11]) assert.deepEqual(await layoutAt(balance), emptyLayout);
   const variedRewards = memberWithPoints(211);
   variedRewards.program.pointsProgram.milestones = Array.from({ length: 20 }, (_, i) => ({
     points: 20 * (i + 1), reward: i === 10 ? "قهوة <وحلا> & عصير مختار من القائمة" : "مكافأة " + i,

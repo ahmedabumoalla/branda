@@ -1,7 +1,7 @@
 import type { PointsMilestone } from "./points-program";
 import { stampPaths } from "./stamp-style";
 
-export const POINTS_MAP_VERSION = "coffee-star-track-v3";
+export const POINTS_MAP_VERSION = "coffee-curved-track-v4";
 
 export function nextPointsReward(milestones: PointsMilestone[], balance: number) {
   return milestones.find(tier => tier.points > balance);

@@ -32,11 +32,35 @@ function star(x: number, y: number, radius: number) {
   }).join(" ");
 }
 
+type Point = { x: number; y: number };
+function between(a: Point, b: Point, t: number): Point {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
+// Split the same cubic for every balance, so the illuminated stroke and its tip
+// stay exactly on the underlying route, including inside the bend.
+function trackSection(from: Point, to: Point, progress: number) {
+  const span = from.x - to.x;
+  const c1 = { x: from.x - span * .62, y: from.y };
+  const c2 = { x: to.x + span * .62, y: to.y };
+  const coord = (p: Point) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+  const curve = (a: Point, b: Point, end: Point) => `M${coord(from)}C${coord(a)} ${coord(b)} ${coord(end)}`;
+  const first = between(from, c1, progress);
+  const middle = between(c1, c2, progress);
+  const last = between(c2, to, progress);
+  const second = between(first, middle, progress);
+  const tip = between(second, between(middle, last, progress), progress);
+  return { base: curve(c1, c2, to), lit: curve(first, second, tip), tip };
+}
+
 export async function walletPointsSvg(milestones: PointsMilestone[], balance: number, surface: string, foreground: string, accent: string, scale: number) {
   const next = milestones.findIndex(tier => tier.points > balance);
-  const start = Math.max(0, Math.min(milestones.length - 3, (next < 0 ? milestones.length : next) - 1));
+  // A reward always occupies the same slot. Longer programs turn pages of three
+  // after the final reward on the current page becomes available.
+  const active = next < 0 ? Math.max(0, milestones.length - 1) : next;
+  const start = Math.floor(active / 3) * 3;
   const visible = milestones.slice(start, start + 3);
-  const cellWidth = 350 / Math.max(visible.length, 1);
+  const cellWidth = 350 / Math.max(1, Math.min(3, milestones.length));
   const surfaceLight = luminance(surface);
   const contrast = (candidate: string) => {
     const candidateLight = luminance(candidate);
@@ -44,40 +68,36 @@ export async function walletPointsSvg(milestones: PointsMilestone[], balance: nu
   };
   const ink = contrast(foreground) >= 4.5 ? foreground : surfaceLight > .18 ? "#101418" : "#ffffff";
   const highlight = contrast(accent) >= 3 ? accent : ink;
-  const trackY = 36;
-  const origin = 360;
-  let lastX = origin;
+  const origin = { x: 360, y: 64 };
+  let previous = origin;
   let lastPrice = start ? milestones[start - 1].points : 0;
   let track = "";
   const stops = [];
   for (const [index, tier] of visible.entries()) {
     const x = 362.5 - cellWidth * (index + .5);
+    const y = index % 2 ? 60 : 24;
     const reached = balance >= tier.points;
     const upcoming = start + index === next;
-    const right = lastX - (index ? 24 : 7);
-    const left = x + 24;
     const fraction = Math.min(1, Math.max(0, (balance - lastPrice) / (tier.points - lastPrice)));
-    const at = right + (left - right) * fraction;
-    if (right > left) {
-      track += `<path d="M${right} ${trackY}H${left}" stroke="${ink}" stroke-opacity=".55" stroke-width="1.4"/>`;
-      if (fraction > 0) track += `<path d="M${right} ${trackY}H${at}" stroke="${highlight}" stroke-width="3"/>`;
-      if (fraction > 0 && fraction < 1) track += `<circle cx="${at}" cy="${trackY}" r="3.4" fill="${highlight}"/>`;
-    }
+    const route = trackSection({ x: previous.x - (index ? 19 : 5), y: previous.y }, { x: x + 19, y }, fraction);
+    track += `<path d="${route.base}" stroke="${ink}" stroke-opacity=".63" stroke-width="1.9" stroke-dasharray="2.4 4.2"/>`;
+    if (fraction > 0) track += `<path d="${route.lit}" stroke="${highlight}" stroke-width="3"/>`;
+    if (fraction > 0 && fraction < 1) track += `<circle cx="${route.tip.x}" cy="${route.tip.y}" r="3.3" fill="${highlight}"/>`;
     const name = Array.from(tier.reward).length > 23 ? Array.from(tier.reward).slice(0, 22).join("") + "…" : tier.reward;
     const state = reached ? "متاحة للاستبدال" : upcoming ? `باقي ${digits.format(tier.points - balance)} نقطة` : "";
     stops.push(async () => {
       const [reward, price, status] = await Promise.all([
-        label(name, 19, ink, cellWidth - 10, x, 63),
-        label(`${digits.format(tier.points)} نقطة`, 14, ink, cellWidth - 12, x, 91),
-        state ? label(state, 12, reached && contrast(highlight) >= 4.5 ? highlight : ink, cellWidth - 10, x, 114) : "",
+        label(name, 18, ink, cellWidth - 14, x, y + 24),
+        label(`${digits.format(tier.points)} نقطة`, 14, ink, cellWidth - 14, x, y + 47),
+        state ? label(state, 12, reached && contrast(highlight) >= 4.5 ? highlight : ink, cellWidth - 14, x, y + 66) : "",
       ]);
-      return `<polygon points="${star(x, trackY, 18)}" fill="${reached ? highlight : "none"}" stroke="${reached ? highlight : ink}" stroke-width="${reached ? 1.3 : 1.9}" stroke-linejoin="round"/>
-        ${reached ? `<path d="m${x - 5} ${trackY} 3.2 3 6.5-6.5" fill="none" stroke="${surface}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>` : ""}
+      return `<polygon points="${star(x, y, 17)}" fill="${reached ? highlight : "none"}" stroke="${reached ? highlight : ink}" stroke-width="${reached ? 1.3 : 1.9}" stroke-linejoin="round"/>
+        ${reached ? `<path d="m${x - 5} ${y} 3.2 3 6.5-6.5" fill="none" stroke="${surface}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>` : ""}
         ${reward}${price}${status}`;
     });
     lastPrice = tier.points;
-    lastX = x;
+    previous = { x, y };
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${375 * scale}" height="${144 * scale}" viewBox="0 0 375 144">
-    <g stroke-linecap="round" fill="none">${track}</g><circle cx="${origin}" cy="${trackY}" r="2.7" fill="${highlight}"/>${(await Promise.all(stops.map(draw => draw()))).join("")}</svg>`;
+    <g stroke-linecap="round" fill="none">${track}</g><circle cx="${origin.x}" cy="${origin.y}" r="3" fill="${highlight}"/>${(await Promise.all(stops.map(draw => draw()))).join("")}</svg>`;
 }
