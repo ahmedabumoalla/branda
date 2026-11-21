@@ -54,10 +54,10 @@ async function run() {
     assert.equal((await saveCoffeePointsProgram(draft, stamps)).ok, false);
   }
   features = []; assert.equal((await saveCoffeePointsProgram(points, stamps)).ok, false);
-  features = ["loyalty"]; cafe = { id: "unrelated" }; assert.equal((await saveCoffeePointsProgram(points, stamps)).ok, false);
+  features = ["loyalty"];
   cafe = { id: config.POINTS_CAFE_ID, staff: true }; assert.equal((await saveCoffeePointsProgram(points, stamps)).ok, false);
   assert.equal(writes.length, 0);
-  cafe = { id: config.POINTS_CAFE_ID };
+  cafe = { id: "c6eb553e-2101-44fc-9b38-d0cf74f54018" };
   assert.deepEqual(await saveCoffeePointsProgram(points, stamps), { ok: true, program: points });
   assert.deepEqual(writes[0], { name: "save_loyalty_points_program", args: { p_cafe_id: cafe.id, p_mode: "points", p_rate_sar: 12.5,
     p_rate_quantity: 4, p_milestones: points.milestones, p_expected: stamps } });

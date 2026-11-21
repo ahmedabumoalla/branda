@@ -9,7 +9,6 @@ import { getWalletReadiness } from "@/lib/wallet";
 import type { LoyaltyDashboardView } from "@/components/rast-loyalty/rast-dashboard";
 import { getDashboardCafeContext } from "@/lib/data/cafes";
 import { getNearbySchedule } from "@/lib/data/nearby-schedule";
-import { POINTS_CAFE_ID } from "@/lib/loyalty/points-program";
 import { NEARBY_SCHEDULE_CAFE_ID } from "@/lib/loyalty/nearby-schedule";
 
 export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "customers" | "messages" } = {}) {
@@ -33,7 +32,7 @@ export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "cus
         : Promise.resolve(undefined),
     ]);
     if (brand) return <>{experience.error && <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{experience.error}</p>}<RastLoyaltyDashboard initialDashboard={{ program: dashboard.program }} identity={brand.identity}
-      pointsAvailable={dashboard.cafeId === POINTS_CAFE_ID} view={view} initialExperience={experience.settings} nearbySchedule={nearbySchedule} walletAvailability={getWalletReadiness()} products={products} staffMode={staffMode}
+      pointsAvailable view={view} initialExperience={experience.settings} nearbySchedule={nearbySchedule} walletAvailability={getWalletReadiness()} products={products} staffMode={staffMode}
       signupUrl={`${(process.env.NEXT_PUBLIC_APP_URL || "https://barndaksa.com").replace(/\/$/, "")}/loyalty/${encodeURIComponent(dashboard.cafeSlug)}?source=qr`} /></>;
     return <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">تعذر تحميل هوية برنامج الولاء حاول تحديث الصفحة</p>;
   }

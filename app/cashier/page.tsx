@@ -28,8 +28,9 @@ export default async function CashierPage() {
   }
 
   const brand = data.cashier.loyaltyBranchId ? await getBranchLoyaltyBrand(data.cafe.slug, data.cashier.loyaltyBranchId) : await getLoyaltyBrand(data.cafe.slug);
-  if (data.cafe.businessCategory === "hair_salons") return <><CashierSessionGuard /><RastCashier initialData={data} identity={brand?.identity} /></>;
+  const initialData = { ...data, pointsProgram: brand?.program.pointsProgram };
+  if (data.cafe.businessCategory === "hair_salons") return <><CashierSessionGuard /><RastCashier initialData={initialData} identity={brand?.identity} /></>;
   const token = await getCashierToken();
   if (!token) redirect("/cashier/login");
-  return <StaffWorkspace key={cashierWorkspaceKey(token)} sessionKey={cashierWorkspaceKey(token)} initial={{ screen: "loyalty", data: { ...data, pointsProgram: brand?.program.pointsProgram }, identity: brand?.identity }} />;
+  return <StaffWorkspace key={cashierWorkspaceKey(token)} sessionKey={cashierWorkspaceKey(token)} initial={{ screen: "loyalty", data: initialData, identity: brand?.identity }} />;
 }

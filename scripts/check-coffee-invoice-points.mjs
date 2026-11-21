@@ -8,7 +8,8 @@ import { pathToFileURL } from "node:url";
 const modulePath = process.env.PGLITE_MODULE ?? path.join(tmpdir(), "branda-loyalty-sql-tests/node_modules/@electric-sql/pglite/dist/index.js");
 const { PGlite } = await import(pathToFileURL(modulePath).href);
 const db = new PGlite();
-const demo = "2e08901c-5aac-4bec-8c97-a135058e508b";
+const demo = "00000000-0000-4000-8000-000000000011";
+const otherBrand = "00000000-0000-4000-8000-000000000012";
 const actor = "00000000-0000-4000-8000-000000000001";
 const cashier = "00000000-0000-4000-8000-000000000002";
 const card = "00000000-0000-4000-8000-000000000003";
@@ -25,8 +26,8 @@ try {
     create schema loyalty_read_private; create schema employee_access_private;
     create function auth.uid() returns uuid language sql as $$select nullif(current_setting('test.actor',true),'')::uuid$$;
     create function public.is_platform_admin() returns boolean language sql as $$select false$$;
-    create function public.is_cafe_owner(uuid) returns boolean language sql as $$select auth.uid()='${actor}'::uuid$$;
-    create function platform_access_private.service_enabled(uuid,text) returns boolean language sql as $$select true$$;
+    create function public.is_cafe_owner(uuid) returns boolean language sql as $$select auth.uid()='${actor}'::uuid and $1='${demo}'::uuid$$;
+    create function platform_access_private.service_enabled(uuid,text) returns boolean language sql as $$select current_setting('test.entitled',true) is distinct from 'no'$$;
     create table cafes(id uuid primary key,slug text,deleted_at timestamptz);
     create table cafe_loyalty_programs(cafe_id uuid primary key,enabled boolean default true,updated_at timestamptz,terms text default 'Terms',purchases_required integer default 7);
     create table cafe_loyalty_experience(cafe_id uuid,reward_validity_days integer,reward_kind text,reward_discount_percent numeric);
@@ -56,7 +57,7 @@ try {
     create function employee_access_private.loyalty_request(uuid,text,text,jsonb,uuid) returns jsonb language sql as $$
       select jsonb_build_object('status',current_setting('test.approval',true),'requestId',$5)$$;
     create function employee_access_private.assert_and_consume(uuid,text,text,jsonb,uuid) returns void language sql as $$select$$;
-    insert into cafes values('${demo}','test-cafe',null);
+    insert into cafes values('${demo}','first-brand',null),('${otherBrand}','second-brand',null);
     insert into cafe_loyalty_experience values('${demo}',12,'discount',50);
     insert into cafe_cashiers values('${cashier}','${demo}',true,true);
     insert into cafe_cashier_sessions values('session','${demo}','${cashier}',null,now()+interval '1 hour',null);
@@ -84,6 +85,7 @@ try {
     .replace(" AND slug = 'rast'", ""));
   await db.exec(await migration("20261111164314_loyalty_brand_read_snapshot.sql"));
   await db.exec(await migration("20261121221223_coffee_invoice_points.sql"));
+  await db.exec(await migration("20261121234500_universal_loyalty_points.sql"));
   await db.exec("set check_function_bodies=on");
   // Exercise the ledger guards even when an older environment grants direct writes.
   await db.exec("grant select,update on loyalty_cards,cafe_loyalty_programs to authenticated");
@@ -99,6 +101,10 @@ try {
   await db.exec("reset role; set role authenticated");
   await assert.rejects(() => save("points"), {code:"42501"});
   await db.exec(`set test.actor='${actor}'`);
+  await assert.rejects(() => save("points",2,1,tiers,null,otherBrand), {code:"42501"});
+  await db.exec("set test.entitled='no'");
+  await assert.rejects(() => save("points"), {code:"42501"});
+  await db.exec("set test.entitled='yes'");
   await assert.rejects(() => save("points",2,1,tiers,null,actor), {code:"42501"});
   await save("points",2,1,tiers,{mode:"stamps",rateSar:1,rateQuantity:1,milestones:[]});
   await assert.rejects(() => db.exec("update loyalty_cards set available_loyalty_points=50"), {code:"42501"});
@@ -113,6 +119,10 @@ try {
   assert.equal((await earn(1.99)).errorCode,"zero_points");
   assert.equal((await earn(11, request, "CARD", 1)).errorCode,"points_rate_changed");
   assert.equal((await earn(11, request, "MISSING")).errorCode,"card_unavailable");
+  await db.exec("reset role");
+  await db.query("insert into loyalty_cards(id,cafe_id,card_code,status,customer_profile_id) values($1,$2,'FOREIGNCARD','active',$3)", [randomUUID(),otherBrand,customer]);
+  await db.exec("set role service_role");
+  assert.equal((await earn(20, randomUUID(), "FOREIGNCARD")).errorCode,"card_unavailable");
   assert.deepEqual((await options()).affordableRewards,[]);
   const result = await earn(423.99);
   assert.equal(result.pointsAdded,211);
@@ -137,15 +147,15 @@ try {
   assert.equal(await scalar("select count(*)::int from customer_reward_redemptions"),1);
   assert.equal(await scalar("select count(*)::int from loyalty_card_events where event_type='redeem'"),1);
   assert.equal(await scalar("select status from customer_reward_instances where reward_code='STAMP-PREVIOUS'"),"available");
-  assert.equal(await scalar("select available_rewards from loyalty_cards"),1);
+  assert.equal(await scalar("select available_rewards from loyalty_cards where id=$1",[card]),1);
   assert.equal(await scalar("select metadata->'termsSnapshot'->>'rewardKind' from customer_reward_instances where status='redeemed'"),"custom");
-  assert.equal(await scalar("select stamps_in_cycle from loyalty_cards"),3);
+  assert.equal(await scalar("select stamps_in_cycle from loyalty_cards where id=$1",[card]),3);
   await db.exec(`insert into bf_documents values('${request}','${demo}','sale',120,null);
     insert into bf_sale_customers values('${request}','${demo}','000',null,'pending_enrollment');
     select brand_finance_private.stamp_sale_customer('${request}','${card}');`);
   assert.equal(await scalar("select loyalty_status from bf_sale_customers"),"unavailable");
   assert.equal(await scalar("select total::int from bf_documents"),120);
-  assert.equal(await scalar("select available_loyalty_points from loyalty_cards"),11);
+  assert.equal(await scalar("select available_loyalty_points from loyalty_cards where id=$1",[card]),11);
   await assert.rejects(() => db.query("insert into loyalty_card_events values ($1,1)",[demo]),/Invoice amount required/);
   await db.query("insert into loyalty_card_events values ($1,1)",[actor]);
   await save("stamps",null,null,null);
@@ -161,7 +171,7 @@ try {
   await assert.rejects(() => earn(6,later),{code:"42501"});
   await db.exec("set test.allows='yes'; set test.approval='pending'");
   assert.equal((await earn(1200,later)).status,"approval_pending");
-  assert.equal(await scalar("select available_loyalty_points from loyalty_cards"),11);
+  assert.equal(await scalar("select available_loyalty_points from loyalty_cards where id=$1",[card]),11);
   await db.exec("set test.approval='approved'");
   assert.equal((await earn(1200,later)).pointsBalance,611);
   assert.deepEqual((await options()).affordableRewards,tiers);
@@ -172,7 +182,7 @@ try {
   await db.exec("set test.denied=''; set test.approval='pending'");
   const nextSpend = randomUUID();
   assert.equal((await spend(200,"Coffee",nextSpend,611)).status,"approval_pending");
-  assert.equal(await scalar("select available_loyalty_points from loyalty_cards"),611);
+  assert.equal(await scalar("select available_loyalty_points from loyalty_cards where id=$1",[card]),611);
   await db.exec("set test.approval='approved'");
   const repeat = await spend(200,"Coffee",nextSpend,611);
   assert.equal(repeat.pointsBalance,411);

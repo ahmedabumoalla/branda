@@ -24,7 +24,7 @@ export async function loadPublicLoyaltyBrandSnapshot(slug: string) {
   const { cafe, settings } = snapshot;
   if (!cafe?.id || !cafe.slug) throw new Error("تعذر تحميل هوية برنامج الولاء");
   const appearance = mapLoyaltyBrandAppearance(cafe.slug, cafe.business_category, snapshot.appearance);
-  const program = mapLoyaltyProgramSnapshot(snapshot.program, cafe.slug, appearance, cafe.id);
+  const program = mapLoyaltyProgramSnapshot(snapshot.program, cafe.slug, appearance);
   const source = settings?.logo_storage_path || settings?.logo_url || appearance.logoPath || appearance.logoUrl;
   let logoUrl = standaloneLogoVariant(cafe.id, source);
   if (!logoUrl) {

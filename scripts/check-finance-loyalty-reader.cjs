@@ -4,14 +4,16 @@ let checks = 0, state, calls;
 const equal = (a, b, label) => { assert.deepEqual(a, b, label); checks++; };
 function reset() {
   calls = [];
-  state = { cafe: { id: 'mind', slug: 'mind-hospital', role: 'owner' }, owner: { id: 'mind', role: 'owner' }, features: ['finance', 'loyalty'], user: { id: 'actor' }, cashier: { owner_user_id: 'actor' }, session: { cafeId: 'mind', cafeSlug: 'mind-hospital', cashierId: 'cashier', token: 'PRIVATE_TOKEN' }, console: { cafe: { id: 'mind', slug: 'mind-hospital' }, cashier: { id: 'cashier', canUseLoyalty: true } }, brand: { cafeId: 'mind', identity: { name: 'Mind' } } };
+  state = { cafe: { id: 'mind', slug: 'mind-hospital', role: 'owner' }, owner: { id: 'mind', role: 'owner' }, features: ['finance', 'loyalty'], user: { id: 'actor' }, cashier: { owner_user_id: 'actor' }, session: { cafeId: 'mind', cafeSlug: 'mind-hospital', cashierId: 'cashier', token: 'PRIVATE_TOKEN' }, console: { cafe: { id: 'mind', slug: 'mind-hospital' }, cashier: { id: 'cashier', canUseLoyalty: true } }, brand: { cafeId: 'mind', program: {}, identity: { name: 'Mind' } } };
 }
 const mocks = {
+ 'zod': require('zod'),
+ '@/lib/loyalty/read-identifier': { normalizeLoyaltyDigits: value => value },
  '@/lib/data/brand-finance': { getBrandFinanceContext: async slug => { calls.push(['finance', slug]); if (state.financeError) throw Error('Forbidden'); return { client: {}, cafe: state.cafe }; } },
  '@/lib/data/cafes': { requireOwnerCafeContext: async () => { calls.push(['owner']); return state.owner; } },
  '@/lib/data/feature-entitlements': { getCafeFeatureCodes: async id => { calls.push(['features', id]); return state.features; } },
  '@/lib/platform/feature-gates': { featureCodesAllow: (features, code) => features.includes(code) },
- '@/lib/finance/permissions': { canFinance: (role, capability) => capability === 'pos' && ['owner', 'manager', 'cashier'].includes(role) },
+ '@/lib/finance/permissions': { canFinance: (role, capability) => capability === 'pos' && ['owner', 'manager', 'cashier'].includes(role), canEmployeeAction: (role, _permissions, _code, fallback) => role === 'owner' || fallback },
  '@/lib/auth/active-user': { getActiveUser: async () => state.user },
  '@/lib/data/cashier': {
   startOwnerCashierSession: async () => { calls.push(['start']); if (state.startError) throw Error('Unavailable'); },
@@ -27,7 +29,8 @@ new Function('require', 'exports', ts.transpileModule(fs.readFileSync(file, 'utf
 const open = confirm => exportsObject.openFinanceLoyaltyReaderAction('mind-hospital', confirm);
 (async () => {
  const startedAt = new Date().toISOString();
- reset();equal((await open()).data, { status: 'ready', console: state.console, identity: state.brand.identity }, 'owner receives original reader data');
+ reset();state.brand.program = { pointsProgram: { mode: 'points', rateSar: 5, rateQuantity: 1, milestones: [{ points: 20, reward: 'Tea' }] } };
+ equal((await open()).data, { status: 'ready', console: { ...state.console, pointsProgram: state.brand.program.pointsProgram }, identity: state.brand.identity, canIssue: true }, 'embedded reader receives its own brand points program');
  equal(calls.filter(call => call[0] === 'start').length, 1, 'only explicit opening starts existing owner session');
  equal(calls.find(call => call[0] === 'console'), ['console', { recordEntry: false, includeOrders: false }], 'reader loads no customer orders or duplicate console-entry logging');
  equal(calls.filter(call => call[0] === 'eq'), [['eq', 'id', 'cashier'], ['eq', 'cafe_id', 'mind'], ['eq', 'active', true]], 'cashier actor lookup scoped to active exact tenant');

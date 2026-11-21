@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { invoiceOutbox, type QueuedInvoice, type InvoiceTerms } from "@/lib/loyalty/invoice-points-outbox";
 import { createIndexedReadStore, readScopeKey, type ReadScope } from "@/lib/loyalty/read-outbox";
-import { POINTS_CAFE_ID } from "@/lib/loyalty/points-program";
 
 const wakeEvent = "branda-invoice-points-saved";
 async function post(body: Record<string, unknown>) {
@@ -16,7 +15,7 @@ async function post(body: Record<string, unknown>) {
   } finally { clearTimeout(timer); }
 }
 
-export function useInvoicePointsOutbox({ cafeId, cashierId }: ReadScope) {
+export function useInvoicePointsOutbox({ cafeId, cashierId }: ReadScope, pointsEnabled: boolean) {
   const scopeKey = readScopeKey({ cafeId, cashierId });
   const queue = useMemo(() => invoiceOutbox({ scope: { cafeId, cashierId },
     store: createIndexedReadStore<QueuedInvoice>("branda-loyalty-invoice-points"), online: () => navigator.onLine,
@@ -25,8 +24,8 @@ export function useInvoicePointsOutbox({ cafeId, cashierId }: ReadScope) {
   const [rows, setRows] = useState<QueuedInvoice[]>([]);
   const [errorScope, setErrorScope] = useState("");
   useEffect(() => {
-    if (cafeId !== POINTS_CAFE_ID) return;
     let active = true;
+    let timer: number | undefined;
     async function refresh() {
       const current = await queue.list();
       if (active) { setRows(current); setErrorScope(""); }
@@ -42,16 +41,22 @@ export function useInvoicePointsOutbox({ cafeId, cashierId }: ReadScope) {
       } catch { if (active) setErrorScope(scopeKey); }
     }
     function reconnect() { void queue.retry().then(wake).catch(() => setErrorScope(scopeKey)); }
-    void wake();
-    const timer = window.setInterval(wake, 8000);
-    window.addEventListener("online", reconnect);
-    window.addEventListener("pageshow", wake);
-    window.addEventListener(wakeEvent, wake);
+    async function start() {
+      // Finish previously saved invoices even if the owner switched back to stamps.
+      if (!pointsEnabled && !(await refresh()).some(row => row.state === "waiting")) return;
+      if (!active) return;
+      void wake();
+      timer = window.setInterval(wake, 8000);
+      window.addEventListener("online", reconnect);
+      window.addEventListener("pageshow", wake);
+      window.addEventListener(wakeEvent, wake);
+    }
+    void start().catch(() => { if (active && pointsEnabled) setErrorScope(scopeKey); });
     return () => { active = false; window.clearInterval(timer); window.removeEventListener("online", reconnect);
       window.removeEventListener("pageshow", wake); window.removeEventListener(wakeEvent, wake); };
-  }, [cafeId, queue, scopeKey]);
+  }, [pointsEnabled, queue, scopeKey]);
   async function save(identifier: string, terms: InvoiceTerms) {
-    if (cafeId !== POINTS_CAFE_ID) throw new Error("invalid_scope");
+    if (!pointsEnabled) throw new Error("points_mode_changed");
     const row = await queue.save(identifier, terms);
     setRows(current => [row, ...current.filter(r => r.requestId !== row.requestId)]);
     setErrorScope("");

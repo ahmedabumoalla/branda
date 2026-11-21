@@ -109,7 +109,7 @@ try {
   assert.equal(pass.logoText, member.cafeName, "Native identity remains visible independently of logo artwork");
   const sharp = requireDependency("sharp");
   const tiers = [{ points: 200, reward: "قهوة" }, { points: 500, reward: "قهوة وحلا" }];
-  const memberWithPoints = balance => ({ ...member, cafeSlug: "test-cafe", logoUrl: null,
+  const memberWithPoints = balance => ({ ...member, cafeSlug: "another-coffee-brand", logoUrl: null,
     program: { ...member.program, pointsProgram: { mode: "points", rateSar: 1, rateQuantity: 1, milestones: tiers } },
     card: { ...member.card, availableLoyaltyPoints: balance } });
   let previousStrip;

@@ -88,8 +88,8 @@ h=await harness({rows:[]});result=await h.api.getOwnerLoyaltyCustomers({page:3})
 h=await harness({customerError:true});await rejects(()=>h.api.getOwnerLoyaltyCustomers(),"list DB error is not empty success");
 h=await harness({clampError:true});await rejects(()=>h.api.getOwnerLoyaltyCustomers({page:9}),"clamp refetch error is not swallowed");
 h=await harness();let detail=await h.api.getOwnerLoyaltyCustomerDetail(customerId(1));
-equal(detail,{id:customerId(1),name:"Customer 1",phone:"private-phone-1"},"detail reveals one selected phone only");
-equal(h.customerRequests[0].select,"id,full_name,phone","detail never selects email or unrelated fields");
+equal(detail,{id:customerId(1),name:"Customer 1",phone:"private-phone-1",birthdayEnabled:false,birthDate:null},"detail returns the selected customer and birthday settings");
+equal(h.customerRequests[0].select,"id,full_name,phone,birth_date","detail never selects email or unrelated fields");
 equal(h.customerRequests[0].eq,[["cafe_id","brand-one"],["id",customerId(1)]],"detail requires both tenant and exact selected UUID");
 check(!JSON.stringify(detail).includes("email"),"detail never returns email");
 await rejects(()=>h.api.getOwnerLoyaltyCustomerDetail(customerId(3)),"known customer UUID in other cafe denied");
@@ -129,6 +129,9 @@ const jsx=(type,props)=>({type,props});
 let brandAvailable=true;
 let pageSlug="rast";
 const page=await load("components/loyalty/owner-loyalty-page.tsx",{
+  "@/lib/data/cafes":{getDashboardCafeContext:async()=>({staff:false})},
+  "@/lib/data/nearby-schedule":{getNearbySchedule:async()=>null},
+  "@/lib/loyalty/nearby-schedule":{NEARBY_SCHEDULE_CAFE_ID:"nearby-demo"},
   "next/navigation":{redirect:()=>{throw new Error("redirect");}},
   "react/jsx-runtime":{jsx,jsxs:jsx,Fragment:"Fragment"},
   "@/components/dashboard/pages/loyalty-dashboard-page":{LoyaltyDashboardPage:"GenericLoyalty"},
@@ -151,7 +154,7 @@ const rast=find(rendered);check(!!rast,"Rast owner receives intended client comp
 equal(rast.props.initialDashboard,{program:{enabled:true}},"server passes program only to Rast client");
 check(!JSON.stringify(rendered).includes("private-bulk-phone")&&!JSON.stringify(rendered).includes("private-bulk-email"),"rendered client props exclude bulk customer contacts");
 equal(rast.props.products,[{id:"product-one",name:"Tea"}],"product props also use explicit safe projection");
-for(const slug of ["basilico","test-cafe","new-brand"]){pageSlug=slug;const tree=await page.OwnerLoyaltyPage();const shared=find(tree);check(!!shared,"every entitled brand receives approved loyalty experience");check(shared.props.signupUrl.endsWith(`/loyalty/${slug}?source=qr`),"signup URL belongs to current brand");check(!JSON.stringify(tree).includes("private-bulk"),"all brands omit bulk contact props");}
+for(const slug of ["basilico","test-cafe","new-brand"]){pageSlug=slug;const tree=await page.OwnerLoyaltyPage();const shared=find(tree);check(!!shared,"every entitled brand receives approved loyalty experience");check(shared.props.pointsAvailable,"every entitled brand owner can configure points");check(shared.props.signupUrl.endsWith(`/loyalty/${slug}?source=qr`),"signup URL belongs to current brand");check(!JSON.stringify(tree).includes("private-bulk"),"all brands omit bulk contact props");}
 brandAvailable=false;
 const unavailable=await page.OwnerLoyaltyPage();
 equal(unavailable.props.role,"alert","missing brand fails closed with an alert");

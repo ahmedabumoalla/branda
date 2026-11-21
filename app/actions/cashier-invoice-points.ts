@@ -6,7 +6,6 @@ import { requireCashierPermission } from "@/lib/data/cashier";
 import { resolveCashierLoyaltyPhone } from "@/lib/data/cashier-loyalty-phone";
 import { lookupRastCashierCard, resolveCashierCardNumber } from "@/lib/data/loyalty-experience";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
-import { POINTS_CAFE_ID } from "@/lib/loyalty/points-program";
 import { isCashierLoyaltyCode, normalizeLoyaltyDigits, resolveReadMethod } from "@/lib/loyalty/read-identifier";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -25,7 +24,7 @@ function refreshWallet(code: string) {
 
 async function pointsSession(scope: Scope) {
   const session = await requireCashierPermission("loyalty");
-  if (session.cafeId !== POINTS_CAFE_ID || session.cafeId !== scope.cafeId || session.cashierId !== scope.cashierId) {
+  if (session.cafeId !== scope.cafeId || session.cashierId !== scope.cashierId) {
     throw new Error("تغيرت جلسة الكاشير افتح القارئ مجددًا");
   }
   await assertRastLoyaltyEntitlement(session.cafeId);

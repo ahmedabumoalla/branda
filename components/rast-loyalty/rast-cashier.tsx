@@ -108,7 +108,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
   const previewElement = useRef<HTMLElement>(null);
   const errorElement = useRef<HTMLParagraphElement>(null);
   const reads = useReadOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
-  const invoices = useInvoicePointsOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
+  const invoices = useInvoicePointsOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id }, Boolean(points));
   const [lastReadId, setLastReadId] = useState<string | null>(null);
   const lastRead = reads.rows.find(row => row.requestId === lastReadId);
   const readFeedback = lastRead ? readDisplay(lastRead) : null;

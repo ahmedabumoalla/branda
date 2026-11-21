@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
-import { POINTS_CAFE_ID, type PointsProgram } from "@/lib/loyalty/points-program";
+import type { PointsProgram } from "@/lib/loyalty/points-program";
 import { createClient } from "@/lib/supabase/server";
 
 const programSchema = z.object({
@@ -20,8 +20,8 @@ const programSchema = z.object({
 
 export async function saveCoffeePointsProgram(input: PointsProgram, expected: PointsProgram) {
   const cafe = await requireOwnerCafeContext();
-  if (cafe.id !== POINTS_CAFE_ID || cafe.staff || !featureCodesAllow(await getOwnerFeatureCodes(), "loyalty")) {
-    return { ok: false as const, message: "إعدادات برنامج النقاط متاحة لمالك حساب تجربة الكوفي" };
+  if (cafe.staff || !featureCodesAllow(await getOwnerFeatureCodes(), "loyalty")) {
+    return { ok: false as const, message: "إعدادات برنامج النقاط متاحة لمالك العلامة عند تفعيل خدمة الولاء" };
   }
   const parsed = programSchema.safeParse(input);
   const previous = programSchema.safeParse(expected);

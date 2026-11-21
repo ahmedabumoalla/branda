@@ -47,7 +47,7 @@ export async function openFinanceLoyaltyReaderAction(slug: string, confirmLoyalt
     if (!data || data.cafe.id !== cafe.id || data.cashier.id !== session.cashierId || !data.cashier.canUseLoyalty) throw new Error("تعذر فتح جلسة قارئ الولاء أعد المحاولة");
     const brand = await getLoyaltyBrand(slug);
     if (brand && brand.cafeId !== cafe.id) throw new Error("تعذر التحقق من هوية العلامة");
-    return { status: "ready", console: data, identity: brand?.identity, canIssue: canEmployeeAction(cafe.role, cafe.employeePermissions, "loyalty.issue", false) };
+    return { status: "ready", console: { ...data, pointsProgram: brand?.program.pointsProgram }, identity: brand?.identity, canIssue: canEmployeeAction(cafe.role, cafe.employeePermissions, "loyalty.issue", false) };
   }, "تعذر فتح قارئ الولاء تحقق من الاتصال والصلاحيات ثم أعد المحاولة");
 }
 
