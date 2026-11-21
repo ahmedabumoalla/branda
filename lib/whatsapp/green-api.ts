@@ -25,6 +25,7 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
       : month.length ? "تجربتك المجانية شهر كامل (٣٠ يومًا) من اليوم" : "تجربتك المجانية ٧ أيام من اليوم";
     if (trialMessage.length > 450) trialMessage = "تبدأ التجربة المجانية اليوم لمدة ٣٠ يومًا أو ٧ أيام حسب كل باقة راجع مدة كل باقة في لوحة التحكم";
   }
+  // The login message an administrator sends stays allowed while Branda's numbers carry access messages only
   return sendOwnerWelcomeVideo(input.phone, [
     `مرحبًا بك في برندة حساب ${input.brandName} جاهز`,
     "المنصة: https://barndaksa.com",
@@ -33,7 +34,7 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
     `كلمة المرور: ${input.password}`,
     trialMessage,
     "١ من ٣ — إعداد حساب الولاء\nشاهد المقطع المرفق لتجهيز حسابك وسنرسل بعده شرح الكاشير وتحميل بطاقة العميل",
-  ].join("\n"));
+  ].join("\n"), "owner_handoff");
 }
 
 /** Called only after verified self-registration commits successfully; never includes the chosen password. */
@@ -48,8 +49,8 @@ export async function sendGreenApiOwnerSignupWelcome(input: { phone: string; bra
   ].join("\n"));
 }
 
-async function sendOwnerWelcomeVideo(phone: string, caption: string) {
-  const sent = await sendOwnerVideo(phone, ownerGuideUrl, ownerGuideFilename, caption);
+async function sendOwnerWelcomeVideo(phone: string, caption: string, kind: "owner" | "owner_handoff" = "owner") {
+  const sent = await sendOwnerVideo(phone, ownerGuideUrl, ownerGuideFilename, caption, kind);
   // A companion failure must never replay accepted login credentials or undo trial activation.
   await queueOwnerCompanionGuides(phone, sent.providerMessageId);
   return sent;
@@ -61,10 +62,10 @@ export async function sendGreenApiOwnerCompanionGuide(phone: string, guide: Owne
   return sendOwnerVideo(phone, clip.url, clip.filename, clip.caption);
 }
 
-async function sendOwnerVideo(phone: string, urlFile: string, fileName: string, caption: string) {
+async function sendOwnerVideo(phone: string, urlFile: string, fileName: string, caption: string, kind: "owner" | "owner_handoff" = "owner") {
   if (!/^9665\d{8}$/.test(phone)) throw new Error("INVALID_OWNER_RECIPIENT");
   if (caption.length > 1024) throw new Error("OWNER_WELCOME_REJECTED");
-  const primary = await requireDeliveryConfig("owner");
+  const primary = await requireDeliveryConfig(kind);
   const backup = backupOtpSender(primary);
   const send = (target: OtpSender) => fetch(otpEndpoint(target, "sendFileByUrl"), {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
@@ -87,7 +88,7 @@ export function isGreenApiConfigured() {
 
 /** Live platform sender selection finishes before submitting any customer message. */
 export async function isGreenApiLoyaltyWelcomeReady() {
-  if (isGreenApiBackupOnly()) return false;
+  if (isGreenApiBackupOnly() || isPlatformAccessOnly()) return false;
   if (!isGreenApiConfigured()) return false;
   try { await requireDeliveryConfig("other"); return true; }
   catch { return false; }
@@ -346,6 +347,8 @@ export async function isGreenApiCustomerSenderReady(sender: GreenApiCustomerSend
 export async function sendGreenApiCustomerMessage(sender: GreenApiCustomerSender, input: { phone: string; message: string }, timeoutMs = 10_000, kind: "otp" | "other" = "other"): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
   if (!/^9665\d{8}$/.test(input.phone) || !input.message.trim() || input.message.length > 2000) throw new Error("INVALID_CUSTOMER_MESSAGE");
   if (isGreenApiBackupOnly() && kind === "other") throw new Error("MESSAGING_TEMPORARILY_PAUSED");
+  // A sender the brand connected itself keeps working; only Branda's own numbers are held to access messages
+  if (isPlatformAccessOnly() && kind === "other" && isGreenApiPlatformSender(sender)) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
   const config = validateOtpSender(sender);
   try {
     const response = await fetch(otpEndpoint(config, "sendMessage"), {
@@ -454,11 +457,24 @@ export function isGreenApiBackupOnly() {
   return process.env.GREEN_API_TEMPORARY_BACKUP_ONLY?.trim() === "true";
 }
 
-async function requireDeliveryConfig(kind: "otp" | "owner" | "pager" | "subscription_reminder" | "other") {
-  if (isGreenApiBackupOnly() && (kind === "other" || kind === "owner")) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
+/** Incident switch, set at build time in next.config.ts (BRANDA_ACCESS_MESSAGES_ONLY). While on, only verification
+ * codes and the login message an administrator sends to a brand owner leave Branda's own numbers, primary or
+ * standby. Every other message from those numbers is refused before any request. Brand-owned senders are not affected. */
+export function isPlatformAccessOnly() {
+  return process.env.BRANDA_ACCESS_MESSAGES_ONLY?.trim() === "true";
+}
+
+/** True for Branda's primary and standby numbers, false for a sender a brand connected itself. */
+export function isGreenApiPlatformSender(sender: { idInstance: string }) {
+  return [process.env.GREEN_API_ID_INSTANCE?.trim(), process.env.GREEN_API_OTP_BACKUP_ID_INSTANCE?.trim()].includes(sender.idInstance);
+}
+
+async function requireDeliveryConfig(kind: "otp" | "owner" | "owner_handoff" | "pager" | "subscription_reminder" | "other") {
+  if (isPlatformAccessOnly() && kind !== "otp" && kind !== "owner_handoff") throw new Error("MESSAGING_TEMPORARILY_PAUSED");
+  if (isGreenApiBackupOnly() && (kind === "other" || kind === "owner" || kind === "owner_handoff")) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
   const configured = requireGreenApiConfig();
   // Access sends share a single attempt budget across readiness and explicit refusals.
-  if (kind === "otp" || kind === "owner") return configured;
+  if (kind === "otp" || kind === "owner" || kind === "owner_handoff") return configured;
   const primary = validateOtpSender(configured);
   if (await otpSenderReady(primary)) return primary;
   const backup = backupOtpSender(primary);

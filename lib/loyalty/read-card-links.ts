@@ -19,10 +19,17 @@ export async function dispatchStampCardLinks(limit = 2) {
   const startedAt = Date.now();
   const result = { processed: 0, queued: 0, rejected: 0, unknown: 0, skipped: 0, deferred: 0 };
   const [primaryReady, locoSender, wahedSender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID), selectBrandLoyaltySender(WAHED_MASOUB_CAFE_ID)]);
-  if (!primaryReady && !locoSender && !wahedSender) return result;
+  // While Branda's numbers carry access messages only, their card link jobs are still claimed and closed as skipped,
+  // so nothing waits in the queue and goes out late when sending resumes. Brand-owned senders keep sending
+  // The same build-time switch that isPlatformAccessOnly reads in lib/whatsapp/green-api.ts
+  const paused = process.env.BRANDA_ACCESS_MESSAGES_ONLY?.trim() === "true";
+  const claimPlatform = primaryReady || paused;
+  if (!claimPlatform && !locoSender && !wahedSender) return result;
   const admin = createAdminClient();
-  for (let index = 0; index < Math.min(5, Math.max(1, limit)) && (index === 0 || Date.now() - startedAt < 70_000); index++) {
-    const { data, error } = await admin.rpc("claim_stamp_card_link_v2", { p_primary_ready: primaryReady, p_loco_ready: Boolean(locoSender), p_wahed_ready: Boolean(wahedSender) });
+  const sendBudget = Math.min(5, Math.max(1, limit));
+  let sends = 0;
+  for (let index = 0; index < (paused ? 40 : sendBudget) && sends < sendBudget && (index === 0 || Date.now() - startedAt < 70_000); index++) {
+    const { data, error } = await admin.rpc("claim_stamp_card_link_v2", { p_primary_ready: claimPlatform, p_loco_ready: Boolean(locoSender), p_wahed_ready: Boolean(wahedSender) });
     if (error) throw new Error("stamp_card_link_claim_unavailable");
     if (!data) break;
     const job = data as CardLinkJob;
@@ -31,6 +38,8 @@ export async function dispatchStampCardLinks(limit = 2) {
       if (saveError || !saved) throw new Error("stamp_card_link_result_unavailable");
       result.processed++; result[status]++;
     };
+    const usesPlatformNumber = job.cafeId !== LOCO_CAFE_ID && !(job.cafeId === WAHED_MASOUB_CAFE_ID && wahedSender);
+    if (paused && usesPlatformNumber) { await finish("skipped"); continue; }
     if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
     if (job.googleIssued) {
       let saved: boolean;
@@ -42,6 +51,7 @@ export async function dispatchStampCardLinks(limit = 2) {
     try {
       const input = { phone: job.phone, message: stampCardLinkMessage(job) };
       if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
+      sends++;
       outcome = job.cafeId === LOCO_CAFE_ID
         ? locoSender ? await sendGreenApiCustomerMessage(locoSender, input) : { status: "rejected" }
         : job.cafeId === WAHED_MASOUB_CAFE_ID && wahedSender ? await sendGreenApiCustomerMessage(wahedSender, input)

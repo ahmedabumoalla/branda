@@ -1,11 +1,16 @@
 import "server-only";
 import { selectBrandCustomerSender } from "./customer-routing";
 import { supportsPrivateWhatsApp } from "./brand-connection-types";
-import { isGreenApiBackupOnly, getGreenApiCustomerPlatformSenders, isGreenApiCustomerSenderReady, type GreenApiCustomerSender } from "./green-api";
+import { isGreenApiBackupOnly, isGreenApiPlatformSender, isPlatformAccessOnly, getGreenApiCustomerPlatformSenders, isGreenApiCustomerSenderReady, type GreenApiCustomerSender } from "./green-api";
 
 export async function selectCompanyDocumentSender(cafeId: string) {
   if (isGreenApiBackupOnly()) return null;
-  if (supportsPrivateWhatsApp(cafeId)) return selectBrandCustomerSender(cafeId);
+  if (supportsPrivateWhatsApp(cafeId)) {
+    const sender = await selectBrandCustomerSender(cafeId);
+    // Documents never leave Branda's own numbers while they carry access messages only
+    return sender && isPlatformAccessOnly() && isGreenApiPlatformSender(sender) ? null : sender;
+  }
+  if (isPlatformAccessOnly()) return null;
   const { primary, backup } = getGreenApiCustomerPlatformSenders();
   if (primary && await isGreenApiCustomerSenderReady(primary)) return primary;
   if (backup && await isGreenApiCustomerSenderReady(backup)) return backup;
@@ -14,7 +19,7 @@ export async function selectCompanyDocumentSender(cafeId: string) {
 
 /** One submission only, including when the provider acknowledgement is uncertain */
 export async function sendCompanyDocument(sender: GreenApiCustomerSender, input: { phone: string; pdf: Uint8Array; draftId: string }) {
-  if (isGreenApiBackupOnly()) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
+  if (isGreenApiBackupOnly() || (isPlatformAccessOnly() && isGreenApiPlatformSender(sender))) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
   if (!/^9665\d{8}$/.test(input.phone) || !/^[a-f0-9-]{36}$/i.test(input.draftId)
     || !input.pdf.length || input.pdf.length > 8_000_000 || new TextDecoder().decode(input.pdf.slice(0, 5)) !== "%PDF-") throw new Error("INVALID_COMPANY_DOCUMENT");
   const { primary } = getGreenApiCustomerPlatformSenders();

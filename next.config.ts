@@ -4,6 +4,10 @@ import { KATH_IMAGE_ORIGIN, KATH_IMAGE_PATH, SHAHI_IMAGE_PATH, TAZA_IMAGE_PATH, 
 import { TOGETHER_IMAGE_PATH } from "./lib/menu/together-images";
 
 const nextConfig = {
+  // INCIDENT SWITCH 2026-11-21: Branda's primary WhatsApp number is restricted. While "true", only verification
+  // codes and the login message an administrator sends to a brand owner leave Branda's own numbers, and their
+  // queued card links are closed unsent. Set to "false" to resume. docs/BARNDAKSA_HANDOFF/WHATSAPP_ACCESS_ONLY_20261121.md
+  env: { BRANDA_ACCESS_MESSAGES_ONLY: "true" },
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   outputFileTracingIncludes: {
     "/api/loyalty-guide": ["./assets/guides/branda-loyalty-guide.pdf"],
