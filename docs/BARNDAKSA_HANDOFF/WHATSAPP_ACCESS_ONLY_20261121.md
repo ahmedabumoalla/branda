@@ -63,6 +63,7 @@ The user said verification codes must also leave from the notifications number, 
 - Safety choice made by Claude and stated to the user: when the notifications number is not connected, or explicitly refuses a code, the code still goes through the primary and then the first standby, so sign-in never depends on one number. An uncertain outcome is never sent a second time. If the user wants no fallback at all, remove the lines after the notifications attempt in `sendVerificationCode` and the last line of `selectBrandOtpSender`
 - Side effect: while the primary is restricted a code no longer waits for three readiness attempts thirty seconds apart before the standby is used
 - `scripts/check-notification-sender.cjs`: 51 checks. `scripts/check-otp-delivery.cjs` stub renamed to the new selector, 15 checks. No test code was sent
+- Production: the user wrote the publish word for this change after the first attempt was held back. Commit `87005a24` on main, on top of `f0c728a8` from Codex, Vercel build pending 22:02:20Z, success 22:04:00Z on 2026-11-21 UTC, 1 minute 40 seconds, deployment size guard check passed before the push, 100 recorded live answers identical before and after, both login pages answer. No verification code had been requested by anyone in the minutes after the deployment, so the first real code leaving from the notifications number is still to be seen in the provider's journal
 
 ## Manual card message
 
