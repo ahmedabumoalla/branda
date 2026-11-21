@@ -55,6 +55,14 @@ Preview deployment of commit `a12c0eaf` on 2026-11-21: pending 17:28:37Z, succes
 
 Not seen: the Vercel build log. That the guard line `[deployment-size]` ran there follows from the build command in package.json and is not confirmed by reading the log. The preview address is behind the Vercel login, so pages, wallet cards and invoice PDFs on it are for the user to try
 
+## Production verification
+
+Commit `1dd9b40c` pushed to main on 2026-11-21. Production build: pending 17:54:50Z, success 17:56:05Z, 75 seconds, against 23.1 minutes for `0c55c668`. The live site moved from deployment `dpl_8p1qRw8t2wGpySHMfdpGoDjuWnXP` to `dpl_EnGpHnWSrjHEgi9iVwhbnEwtmqgj`
+
+Before the push, 100 answers of barndaksa.com were recorded twice and were stable: the wallet logo of 29 brands in both shapes (58 PNG images), seven pages, and five static files including both tutorial videos. After the deployment all 100 answers were the same, the 58 logo images byte for byte. The MQAS77 wallet logo, which is read from the fixed file `public/mqas77/wallet-emblem-v1.png` inside a wallet function, returned an image
+
+Not verified by me: Apple and Google wallet card downloads and finance invoice PDFs, which need a signed-in session. The user tries them on the live site. To undo, revert `a12c0eaf` on main, about two minutes with the current build time
+
 ## Preview finding: broken loyalty logo
 
 On the preview the user saw the brand logo broken on `/loyalty/<slug>` for DeliCake and LOCO while production showed it. That logo comes from `/api/wallet/brand/<slug>/logo`, which calls `walletBaseUrl()` first and returns 503 without `WALLET_PUBLIC_BASE_URL`. A throwaway preview build that exits 1 when that setting is missing failed in 11 seconds, and a control run on `NEXT_PUBLIC_SUPABASE_URL` passed, so the Preview environment has no wallet base address and the logo is broken on every preview with or without this change. Both brands store their logo in storage, not in `public`. Wallet cards cannot be tested on a preview for the same reason. The throwaway branches were never merged
@@ -82,7 +90,7 @@ When it fails, the build stops and production keeps its current version. The mes
 
 ## Not done
 
-- No production deployment and no merge to main. To measure a build: `gh api repos/{owner}/{repo}/commits/<sha>/statuses`, last pending time to success time
+- To measure a build: `gh api repos/{owner}/{repo}/commits/<sha>/statuses`, last pending time to success time
 - The six videos stay in `public` because WhatsApp messages link to them. They no longer reach any function
 - Nine old project copies tracked under `.codex-tmp` (839 MB) only slow the clone. Removing them is a separate decision
 - Chromium is still packed into about 30 finance routes at 67 MB each. That is the next largest share and was not touched
