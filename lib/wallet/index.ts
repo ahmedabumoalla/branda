@@ -97,7 +97,7 @@ async function pushRegistrations(cafeId: string, cardId?: string, promotionJobId
   return { status: failed ? "failed" as const : count ? "accepted" as const : "skipped" as const, count, registeredCount: tokens.length };
 }
 
-async function syncMember(member: WalletMember, previous?: WalletDeliveryResult): Promise<WalletDeliveryResult> {
+async function syncMember(member: WalletMember, previous?: WalletDeliveryResult, silent = false): Promise<WalletDeliveryResult> {
   if (!await brandAllowsNewWork(member.card.cafeId)) return skipped();
   const result = skipped();
   const readiness = getWalletReadiness();
@@ -110,7 +110,7 @@ async function syncMember(member: WalletMember, previous?: WalletDeliveryResult)
   // New scans can coalesce into an existing pending sync job. Provider success
   // from an older attempt is not evidence that Google has the current balance.
   if (readiness.google && hasGoogle) {
-    try { await updateGooglePass(member, previous?.google?.status !== "accepted"); result.google = { status: "accepted", count: 1 }; } catch (error) { result.google = providerFailed(error); }
+    try { await updateGooglePass(member, !silent && previous?.google?.status !== "accepted"); result.google = { status: "accepted", count: 1 }; } catch (error) { result.google = providerFailed(error); }
   }
   const applePass = passes?.find(pass => pass.provider === "apple");
   if (readiness.apple && hasApple) {
@@ -244,7 +244,8 @@ export async function retryWalletNotificationJobs(limit = 10, cardIds?: string[]
         if (cardError) throw new Error("wallet_card_unavailable");
         const member = card ? await loadWalletMemberByCode(card.card_code) : null;
         if (member && (member.card.id !== job.card_id || member.card.cafeId !== job.cafe_id)) throw new Error("wallet_card_scope_mismatch");
-        if (member) result = await syncMember(member, state);
+        // A stamp/reward change coalesced after a nearby refresh keeps its usual notification.
+        if (member) result = await syncMember(member, state, job.nearby_refresh === true && BigInt(appleUpdateTag(member.card.updatedAt)) <= BigInt(appleUpdateTag(job.created_at)));
       }
     } catch { result = { apple: { status: "failed", count: 0 }, google: { status: "failed", count: 0 } }; }
     await finishJob(job.id, result, Number(job.attempts));

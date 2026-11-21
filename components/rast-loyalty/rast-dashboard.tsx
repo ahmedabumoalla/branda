@@ -17,12 +17,14 @@ import s from "./rast-loyalty.module.css";
 import { loyaltyStampStyle } from "@/lib/loyalty/stamp-style";
 import { brandStampArtwork, brandStampStyle, isMobileRetailLoyalty } from "@/lib/loyalty/brand-stamp-artwork";
 import { loyaltyTheme } from "./loyalty-theme";
+import { NearbyScheduleEditor, type NearbyScheduleEditorState } from "@/components/loyalty/nearby-schedule-editor";
 
 export type LoyaltyDashboardView = "all" | "rewards" | "customers" | "messages";
 type Props = {
   view?: LoyaltyDashboardView;
   initialDashboard: Pick<LoyaltyCardsDashboard, "program">;
   initialExperience: LoyaltyExperienceSettings;
+  nearbySchedule?: NearbyScheduleEditorState;
   identity: LoyaltyIdentity;
   signupUrl: string;
   walletAvailability: RastWalletAvailability;
@@ -32,7 +34,7 @@ type Props = {
   staffMode?: boolean;
 };
 
-export function RastLoyaltyDashboard({ initialDashboard, initialExperience, identity, signupUrl, walletAvailability, products = [], activityLog, view = "all", staffMode = false }: Props) {
+export function RastLoyaltyDashboard({ initialDashboard, initialExperience, nearbySchedule, identity, signupUrl, walletAvailability, products = [], activityLog, view = "all", staffMode = false }: Props) {
   const router = useRouter();
   const [section, setSection] = useState<"settings" | "activity" | "customers">("settings");
   const showProgram = view === "rewards" || (view === "all" && section === "settings");
@@ -141,7 +143,7 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, iden
             <div className={s.settingsSection}><div className={s.settingsHeading}><div><MapPin aria-hidden="true" /><h2>إذا صار قريب ذكّره بـ {identity.name}</h2></div></div><p className={s.sectionDescription}>تذكير بالقرب من الفرع يظهر في المحافظ التي تدعم الموقع بحسب إعدادات جهاز العميل</p><div className={s.settingsGrid}>
               <label className={`${s.field} ${s.fullWidth}`}><span>رسالة الترحيب بالقرب من الفرع</span><textarea minLength={2} maxLength={240} required rows={2} value={experience.nearbyMessage} onChange={(event) => setExperience((value) => ({ ...value, nearbyMessage: event.target.value }))} /><small>تستخدمها أبل للقرب وتظهر في تفاصيل بطاقة قوقل أما نص تنبيه القرب في قوقل فتحدده المحفظة</small></label>
               <label className={`${s.field} ${s.fullWidth}`}><span>رابط قوقل ماب للفرع</span><input type="url" name="mapsUrl" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={2048} value={mapsUrl} onChange={(event) => setMapsUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." dir="ltr" aria-describedby="rast-maps-url-hint" /></label>
-            </div><p id="rast-maps-url-hint" className={s.hint}>الصق رابط الفرع من قوقل ماب؛ ندعم رابط المشاركة المختصر اترك الحقل فارغًا واحفظ لإلغاء تذكير القرب من الفرع</p><p className={s.hint}>المحفظة تتحكم بظهور تنبيه القرب جدولة أيام وساعات متكررة أو عدد مرات يومي غير متاحة في ربط بطاقات الولاء الحالي ولا نضمن إخفاء التنبيه وقت إغلاق الفرع</p></div>
+            </div><p id="rast-maps-url-hint" className={s.hint}>الصق رابط الفرع من قوقل ماب؛ ندعم رابط المشاركة المختصر اترك الحقل فارغًا واحفظ لإلغاء تذكير القرب من الفرع</p>{nearbySchedule ? <NearbyScheduleEditor initial={nearbySchedule} /> : <p className={s.hint}>المحفظة تتحكم بظهور تنبيه القرب جدولة أيام وساعات متكررة أو عدد مرات يومي غير متاحة في ربط بطاقات الولاء الحالي ولا نضمن إخفاء التنبيه وقت إغلاق الفرع</p>}</div>
             {!staffMode && <div className={s.settingsSection}>
               <div className={s.settingsHeading}><h2>إضافة البطاقة إلى المحافظ</h2></div>
               <p className={s.sectionDescription}>اختر المحافظ المتاحة لعملاء {identity.name} تظهر أزرار الإضافة بعد تفعيل البرنامج وحفظ الإعدادات وتسجيل العميل</p>

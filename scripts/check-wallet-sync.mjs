@@ -162,6 +162,22 @@ const googleWorker = load("lib/wallet/index.ts", { ...baseStubs,
 await googleWorker.retryWalletNotificationJobs(1);
 assert.equal(googleUpdates, 1, "Coalesced new card state must be sent even when the prior Google attempt was accepted");
 
+for (const newerStamp of [false, true]) {
+  let notified;
+  const nearbyMember = { ...googleMember, card: { ...googleMember.card, updatedAt: newerStamp ? later : timestamp } };
+  const nearbyWorker = load("lib/wallet/index.ts", { ...baseStubs,
+    "./config": { getWalletReadiness: () => ({ apple: false, google: true }) },
+    "@/lib/data/loyalty-experience": { loadWalletMemberByCode: async () => nearbyMember },
+    "./google": { updateGooglePass: async (_current, notify) => { notified = notify; } },
+    "@/lib/supabase/admin": { createAdminClient: () => ({
+      rpc: async () => ({ data: [{ id: "nearby", kind: "sync", cafe_id: member.card.cafeId, card_id: member.card.id, attempts: 1, nearby_refresh: true, created_at: timestamp }] }),
+      from: table => queryFor(state => state.update ? {} : { data: table === "wallet_passes" ? [{ provider: "google" }] : { card_code: member.card.cardCode } }),
+    }) },
+  });
+  await nearbyWorker.retryWalletNotificationJobs(1);
+  assert.equal(notified, newerStamp, "Nearby copy refresh is silent while a coalesced later stamp still notifies, even one microsecond later");
+}
+
 let download;
 const issue = load("lib/wallet/index.ts", { ...baseStubs, "./google": {}, "@/lib/supabase/admin": { createAdminClient: () => ({
   from: () => queryFor(() => ({})), rpc: async (name, args) => { download = { name, args }; return {}; },

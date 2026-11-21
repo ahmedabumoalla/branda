@@ -22,6 +22,8 @@ import { loadPublicLoyaltyBrandSnapshot } from "@/lib/data/loyalty-brand-snapsho
 import { resolvePublishedStoragePathToUrl, storageBucketForLogo } from "@/lib/storage/resolve-storage-url";
 import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits } from "@/lib/loyalty/read-identifier";
 import { loadWalletBranchLocations } from "@/lib/data/wallet-branch-locations";
+import { getNearbySchedule } from "@/lib/data/nearby-schedule";
+import { scheduledNearbyMessage } from "@/lib/loyalty/nearby-schedule";
 import { getLoyaltyBranch } from "@/lib/data/loyalty-branches";
 import { branchIdentity, branchProgram } from "@/lib/loyalty/branch-appearance";
 import { stampStyles } from "@/lib/loyalty/stamp-style";
@@ -93,25 +95,29 @@ export async function loadWalletMemberByCode(cardCode: string): Promise<WalletMe
 // Internal only: callers must obtain a fresh view and complete their access guard first.
 async function loadWalletMemberFromView(view: CustomerLoyaltyCardView): Promise<WalletMember | null> {
   if (!view || !view.program.enabled) return null;
-  const [brand, experience, branchLocations, { count, error }] = await Promise.all([
+  const [brand, experience, branchLocations, { count, error }, nearbySchedule] = await Promise.all([
     getLoyaltyBrand(view.cafeSlug),
     getLoyaltyExperience(view.card.cafeId),
     loadWalletBranchLocations(view.card.cafeId),
     createAdminClient().from("customer_reward_instances").select("id", { count: "exact", head: true })
       .eq("cafe_id", view.card.cafeId).eq("loyalty_card_id", view.card.id).eq("status", "available")
       .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
+    getNearbySchedule(view.card.cafeId),
   ]);
   if (!brand) return null;
   if (error) throw new Error("تعذر تحديث مكافآت البطاقة");
+  const periodMessage = scheduledNearbyMessage(nearbySchedule);
+  const scheduledLocations = periodMessage === null ? branchLocations : branchLocations?.map(location => ({ ...location, nearbyMessage: periodMessage }));
   if (view.card.branchId) {
     const branch = await getLoyaltyBranch(view.card.cafeId, view.card.branchId, true);
     if (!branch) return null;
     return { ...view, cafeName: branch.name, branchId: branch.id, bannerUrl: branch.banner, program: branchProgram(view.program, branch),
       card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: branch.logo || brand.identity.logoUrl,
-      experience: { ...experience, nearbyMessage: branch.nearbyMessage, latitude: branch.latitude, longitude: branch.longitude },
-      branchLocations };
+      experience: { ...experience, nearbyMessage: periodMessage ?? branch.nearbyMessage, latitude: branch.latitude, longitude: branch.longitude },
+      branchLocations: scheduledLocations };
   }
-  return { ...view, card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: brand.identity.logoUrl, experience, branchLocations };
+  return { ...view, card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: brand.identity.logoUrl,
+    experience: periodMessage === null ? experience : { ...experience, nearbyMessage: periodMessage }, branchLocations: scheduledLocations };
 }
 
 export async function getBranchLoyaltyBrand(slug: string, branchId?: string | null, issuedCard = false) {
