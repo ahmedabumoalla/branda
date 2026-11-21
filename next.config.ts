@@ -7,7 +7,9 @@ const nextConfig = {
   // INCIDENT SWITCH 2026-11-21: Branda's primary WhatsApp number is restricted. While "true", only verification
   // codes and the login message an administrator sends to a brand owner leave Branda's own numbers, and their
   // queued card links are closed unsent. Set to "false" to resume. docs/BARNDAKSA_HANDOFF/WHATSAPP_ACCESS_ONLY_20261121.md
-  env: { BRANDA_ACCESS_MESSAGES_ONLY: "true" },
+  // BRANDA_PLATFORM_CARD_LINKS "off" (user decision 2026-11-22): Branda's own numbers, the notifications number
+  // included, never send the loyalty card link after a stamp. Brand-owned senders are not affected
+  env: { BRANDA_ACCESS_MESSAGES_ONLY: "true", BRANDA_PLATFORM_CARD_LINKS: "off" },
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   outputFileTracingIncludes: {
     "/api/loyalty-guide": ["./assets/guides/branda-loyalty-guide.pdf"],

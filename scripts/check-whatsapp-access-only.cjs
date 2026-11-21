@@ -138,7 +138,7 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
     assert.match(source, /const paused = process\.env\.BRANDA_ACCESS_MESSAGES_ONLY\?\.trim\(\) === "true";/);
     assert.match(source, /p_primary_ready: claimPlatform/);
     // Since 2026-11-22 the notifications number carries these links; they are closed unsent only when it is unavailable
-    assert.match(source, /const drain = paused && !notifySender;/);
+    assert.match(source, /const drain = platformOff \|\| \(paused && !notifySender\);/);
     assert.match(source, /if \(drain && usesPlatformNumber\) \{ await finish\("skipped"\); continue; \}/);
     assert.ok(source.indexOf('if (drain && usesPlatformNumber)') < source.indexOf('stampCardLinkMessage(job) }'), 'the skip happens before any message is built or sent');
     assert.ok(source.indexOf(': notifySender ? await sendGreenApiCustomerMessage(notifySender, input)') < source.indexOf(': primaryReady ? await sendGreenApiLoyaltyWelcome(input)'), 'the notifications number is tried before Branda\'s primary');
@@ -146,7 +146,7 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
   }
 
   const config = fs.readFileSync('next.config.ts', 'utf8');
-  const state = /env: \{ BRANDA_ACCESS_MESSAGES_ONLY: "(true|false)" \}/.exec(config)?.[1];
+  const state = /env: \{ BRANDA_ACCESS_MESSAGES_ONLY: "(true|false)"[,} ]/.exec(config)?.[1];
   assert.ok(state, 'The incident switch must stay declared in next.config.ts as "true" or "false"');
   console.log(`WhatsApp access-only switch: ${checks} checks passed; switch in next.config.ts is ${state === 'true' ? 'ON (only codes and administrator owner login leave Branda numbers)' : 'OFF (normal sending)'}`);
 })().catch(error => { console.error(error); process.exit(1); });

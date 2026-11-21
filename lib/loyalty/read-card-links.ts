@@ -19,15 +19,20 @@ export function stampCardLinkMessage(job: CardLinkJob) {
 export async function dispatchStampCardLinks(limit = 2) {
   const startedAt = Date.now();
   const result = { processed: 0, queued: 0, rejected: 0, unknown: 0, skipped: 0, deferred: 0 };
-  const [primaryReady, locoSender, wahedSender, notifySender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID), selectBrandLoyaltySender(WAHED_MASOUB_CAFE_ID), selectNotificationSender()]);
+  const [primaryReady, locoSender, wahedSender, readyNotifySender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID), selectBrandLoyaltySender(WAHED_MASOUB_CAFE_ID), selectNotificationSender()]);
+  // User decision of 2026-11-22 (BRANDA_PLATFORM_CARD_LINKS "off" in next.config.ts): Branda's own numbers, the
+  // notifications number included, no longer send the card link after a stamp. Their jobs are claimed and closed
+  // as skipped so nothing waits. Brands with their own sender are not affected
+  const platformOff = process.env.BRANDA_PLATFORM_CARD_LINKS?.trim() === "off";
+  const notifySender = platformOff ? null : readyNotifySender;
   // Card links of brands without their own sender leave from the notifications number (second standby). Branda's
   // primary and first standby carry them only when that number is unavailable and the access-only switch is off.
   // While the switch is on and the notifications number is unavailable, the jobs are still claimed and closed as
   // skipped, so nothing waits in the queue and goes out late. Brand-owned senders keep sending
   // The same build-time switch that isPlatformAccessOnly reads in lib/whatsapp/green-api.ts
   const paused = process.env.BRANDA_ACCESS_MESSAGES_ONLY?.trim() === "true";
-  const drain = paused && !notifySender;
-  const claimPlatform = primaryReady || paused || Boolean(notifySender);
+  const drain = platformOff || (paused && !notifySender);
+  const claimPlatform = primaryReady || paused || Boolean(notifySender) || platformOff;
   if (!claimPlatform && !locoSender && !wahedSender) return result;
   const admin = createAdminClient();
   const sendBudget = Math.min(5, Math.max(1, limit));

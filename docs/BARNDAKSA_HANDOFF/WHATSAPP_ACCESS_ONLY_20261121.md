@@ -65,6 +65,19 @@ The user said verification codes must also leave from the notifications number, 
 - `scripts/check-notification-sender.cjs`: 51 checks. `scripts/check-otp-delivery.cjs` stub renamed to the new selector, 15 checks. No test code was sent
 - Production: the user wrote the publish word for this change after the first attempt was held back. Commit `87005a24` on main, on top of `f0c728a8` from Codex, Vercel build pending 22:02:20Z, success 22:04:00Z on 2026-11-21 UTC, 1 minute 40 seconds, deployment size guard check passed before the push, 100 recorded live answers identical before and after, both login pages answer. No verification code had been requested by anyone in the minutes after the deployment, so the first real code leaving from the notifications number is still to be seen in the provider's journal
 
+## Card link retired for Branda numbers, 2026-11-22
+
+The user cancelled the move to Meta, stayed on Green API, and set a plan to send as little as possible from Branda's numbers. First instruction, to apply at once: stop the card link message, including on the notifications number where it had been re-enabled the same night
+
+- `next.config.ts` sets `BRANDA_PLATFORM_CARD_LINKS` to `"off"`, baked in at build time like the access-only switch
+- `lib/loyalty/read-card-links.ts`: with the switch off, card link jobs of brands without their own sender are claimed and closed as skipped, whichever Branda number is connected and whatever the access-only switch says. Brands with their own sender are not affected
+- Verification codes stay on the notifications number
+- `scripts/check-notification-sender.cjs`: 56 checks
+
+The rest of the plan as the user stated it, not built at the time of this entry: a notice in the brand's name only when a customer of a stamp programme earns a reward, with the card link; no welcome message when a cashier is added, only the sign-in code; no tutorial clips over WhatsApp on self-registration, replaced by an in-app page with three tutorial videos; tutorial clips kept for accounts the administrator prepares and hands over; a closing rating or question in each message so that recipients write back
+
+Provider facts read the same night, three days of journals, counts only: 16 messages from the first standby and 4 from the notifications number, gaps of about a minute or more, nobody wrote back to any number, provider gap between messages 0 ms. So the cause is the kind of message, a one-way automated first contact with a link, not volume. The primary showed state notAuthorized and needs a new QR link in the provider console once its restriction ends
+
 ## Manual card message
 
 The user asked for the customer's card message to be available for copying and sending by hand. In the brand dashboard, the customer file in the loyalty customers directory (`components/loyalty/customer-directory.tsx`) now has a block "رسالة البطاقة": the button builds the same message the platform sends after a stamp, with the customer's personal card link valid for 30 days, and offers copying it or opening WhatsApp on the customer's number with the text filled in. It is built only on request, after the directory's own authorisation for that brand and customer, and nothing is sent by the platform. New files: `lib/data/loyalty-customer-card-message.ts`, `app/actions/loyalty-customer-card-message.ts`, `components/loyalty/customer-card-message.tsx` and its CSS, `scripts/check-loyalty-customer-card-message.cjs` (16 checks). `scripts/check-loyalty-directory-ui.mjs` gained one stub line for the new component and still passes 26 checks

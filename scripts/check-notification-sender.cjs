@@ -28,7 +28,7 @@ function selector({ rows, accounts, env = { GREEN_API_ID_INSTANCE: '111', GREEN_
 }
 const row = (id, extra = {}) => ({ idInstance: id, name: `Instance ${id}`, tariff: 'PARTNER', isPartner: true, deleted: false, isExpired: false, apiTokenInstance: `token-${id}-fixture`, apiUrl: 'https://7700.api.greenapi.com', ...extra });
 
-function worker({ paused, notify, primaryReady = false, jobs }) {
+function worker({ paused, notify, primaryReady = false, jobs, off = false, loco = null }) {
   const finished = [], sent = [], claims = [];
   const queue = [...jobs];
   const exports = {};
@@ -45,11 +45,11 @@ function worker({ paused, notify, primaryReady = false, jobs }) {
       sendGreenApiLoyaltyWelcome: async input => { sent.push(['platform', input.phone]); return { status: 'queued', providerMessageId: 'p' }; },
       sendGreenApiCustomerMessage: async (sender, input) => { sent.push([sender.idInstance, input.phone]); return { status: 'queued', providerMessageId: 'n' }; },
     },
-    '@/lib/whatsapp/customer-routing': { selectLocoLoyaltySender: async () => null, selectBrandLoyaltySender: async () => null },
+    '@/lib/whatsapp/customer-routing': { selectLocoLoyaltySender: async () => loco, selectBrandLoyaltySender: async () => null },
     '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: 'loco', WAHED_MASOUB_CAFE_ID: 'wahed' },
     '@/lib/whatsapp/notification-sender': { selectNotificationSender: async () => notify },
     '@/lib/wallet/google': { getGoogleWalletSaveState: async () => false },
-  })[name] ?? (() => { throw new Error(`Unmocked dependency ${name}`); })(), exports, { env: paused ? { BRANDA_ACCESS_MESSAGES_ONLY: 'true' } : {} });
+  })[name] ?? (() => { throw new Error(`Unmocked dependency ${name}`); })(), exports, { env: { ...(paused ? { BRANDA_ACCESS_MESSAGES_ONLY: 'true' } : {}), ...(off ? { BRANDA_PLATFORM_CARD_LINKS: 'off' } : {}) } });
   return { exports, finished, sent, claims };
 }
 const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardId: 'c', brandSlug: 'brand', brandName: 'Brand', phone: '966500000001', cardCreated: true, googleIssued: false });
@@ -111,6 +111,24 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
     const x = worker({ paused: true, notify: null, jobs: [job('a'), job('b'), job('c')] });
     const result = await x.exports.dispatchStampCardLinks(2);
     assert.deepEqual(x.sent, []); assert.deepEqual(x.finished, [['a', 'skipped'], ['b', 'skipped'], ['c', 'skipped']]); assert.equal(result.skipped, 3); checks++;
+  }
+  // User decision of 2026-11-22, BRANDA_PLATFORM_CARD_LINKS "off": no Branda number sends a card link, whatever is
+  // connected and whatever the access-only switch says; waiting jobs are closed unsent; a brand's own number still sends
+  for (const paused of [true, false]) {
+    const x = worker({ paused, off: true, notify, primaryReady: true, jobs: [job('a'), job('b'), job('c')] });
+    const result = await x.exports.dispatchStampCardLinks(2);
+    assert.deepEqual(x.sent, [], 'nothing leaves the notifications number or the primary');
+    assert.deepEqual(x.finished, [['a', 'skipped'], ['b', 'skipped'], ['c', 'skipped']]); assert.equal(result.skipped, 3); checks++;
+    const own = { idInstance: 'loco-own' };
+    const y = worker({ paused, off: true, notify, primaryReady: true, loco: own, jobs: [job('a'), { ...job('l'), cafeId: 'loco' }, job('b')] });
+    await y.exports.dispatchStampCardLinks(2);
+    assert.deepEqual(y.sent, [['loco-own', '966500000001']], 'the brand with its own sender is not affected');
+    assert.deepEqual(y.finished, [['a', 'skipped'], ['l', 'queued'], ['b', 'skipped']]); checks++;
+  }
+  {
+    const config = fs.readFileSync('next.config.ts', 'utf8');
+    assert.match(config, /BRANDA_PLATFORM_CARD_LINKS: "off"/, 'the card link from Branda numbers stays off until the user asks otherwise');
+    checks++;
   }
   // Switch off: the notifications number still carries card links; the primary is only the fallback
   {
