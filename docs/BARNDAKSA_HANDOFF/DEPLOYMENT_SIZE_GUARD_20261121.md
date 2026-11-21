@@ -77,7 +77,9 @@ The user asked for certainty that neither assistant ships a slow build again. Pr
 
 The hole it closes: the local development tree `C:/Projects/branda-platform` is 339 commits behind main and holds older copies of `next.config.ts`, `package.json` (build command `next build`) and `vercel.json`. Copying the first two over main would remove the fix and the guard together. `vercel.json` now runs the guard a second time through `buildCommand`, so that case stops the build
 
-What no check in the build can stop: all three files replaced by older copies at once, a deliberate removal of the guard, and a slow build from a different cause that keeps functions small. For those the rule in AGENTS.md applies: measure the build time after every deployment, about one minute is normal, over three minutes stop and find the cause. The same rules were added to the local AGENTS.md of `C:/Projects/branda-platform` and of the release worktree
+A third, independent check runs on GitHub: `.github/workflows/deployment-guard.yml` runs `scripts/check-deployment-size.mjs` on any branch when `package.json`, `vercel.json`, `next.config.ts`, `lib/wallet/logo.ts` or the guard scripts change. It needs no build and no secrets. A failed run marks the commit and is emailed to the account that pushed. It passed on the hardening branch, and it reported a failure on a commit whose test file was broken
+
+What no check in the build can stop: all three files replaced by older copies at once, a deliberate removal of the guard, and a slow build from a different cause that keeps functions small. For those the rule in AGENTS.md applies: measure the build time after every deployment and stop when it passes five minutes. Measured on 2026-11-21: 39 seconds for a docs commit and 2 minutes 3 seconds for the admin account feature (`b1d8a34c`). The same rules were added to the local AGENTS.md of `C:/Projects/branda-platform` and of the release worktree
 
 ## Preview finding: broken loyalty logo
 

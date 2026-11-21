@@ -60,7 +60,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - The guard is wired twice on purpose: at the end of the `build` script in `package.json` and in `buildCommand` in `vercel.json`. Keep both. `.github/workflows/deployment-guard.yml` checks this on GitHub whenever one of these files changes, and a failed run is emailed to the account that pushed
 - Before every push to main run `node scripts/check-deployment-size.mjs`, and end every deployment report with two facts: the guard check passed, and the measured build time
 - Local development trees can hold older copies of `next.config.ts`, `package.json` and `vercel.json`. Never copy them over the versions on main. Merge only the lines you need
-- After every deployment measure the build time with `gh api repos/{owner}/{repo}/commits/<sha>/statuses` (last pending to success) and write it in the deployment report. The normal time is about one minute. Over three minutes, stop releasing and find the cause first
+- After every deployment measure the build time with `gh api repos/{owner}/{repo}/commits/<sha>/statuses` (last pending to success) and write it in the deployment report. Measured on 2026-11-21: under one minute for a docs change and about two minutes for a code change. Over five minutes, stop releasing and find the cause first
 - Do not raise a limit or remove the guard to get a release out. Read `docs/BARNDAKSA_HANDOFF/DEPLOYMENT_SIZE_GUARD_20261121.md` first
 
 ## Communication Rules
