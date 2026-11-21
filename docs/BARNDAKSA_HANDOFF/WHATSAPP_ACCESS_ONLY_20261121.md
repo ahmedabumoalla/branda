@@ -39,6 +39,12 @@ Not affected: senders that a brand connected itself (Loco, Wahed Masoub and bran
 - Pager jobs are closed as failed, salon jobs as uncertain, receipts and shift alerts as unknown, tutorial clips as rejected. These are final states in the existing code and are not retried
 - Birthday greetings and renewal reminders are not claimed while the switch is on. They are bound to their date or deadline
 
+## Manual card message
+
+The user asked for the customer's card message to be available for copying and sending by hand. In the brand dashboard, the customer file in the loyalty customers directory (`components/loyalty/customer-directory.tsx`) now has a block "رسالة البطاقة": the button builds the same message the platform sends after a stamp, with the customer's personal card link valid for 30 days, and offers copying it or opening WhatsApp on the customer's number with the text filled in. It is built only on request, after the directory's own authorisation for that brand and customer, and nothing is sent by the platform. New files: `lib/data/loyalty-customer-card-message.ts`, `app/actions/loyalty-customer-card-message.ts`, `components/loyalty/customer-card-message.tsx` and its CSS, `scripts/check-loyalty-customer-card-message.cjs` (16 checks). `scripts/check-loyalty-directory-ui.mjs` gained one stub line for the new component and still passes 26 checks
+
+Not verified in a browser or against the live database. The wording is the new card wording when the card holds its first stamp and the stamp wording otherwise
+
 ## Before resuming
 
 - Card link jobs created in the last minutes before the switch is turned off may still be waiting. Leave the switch on until the worker has had a few minutes with no new stamps, or accept those few
@@ -59,6 +65,10 @@ Not affected: senders that a brand connected itself (Loco, Wahed Masoub and bran
 - The 16 related checks that passed before still pass. Ten related checks were already failing before this work and were left alone
 - Text integrity, full production build with TypeScript, deployment size guard: pass
 - The compiled server code contains the value baked in (`"true".trim()==="true"`) for both the sender module and the card link worker
+
+## Deployment
+
+Switch: commit `beffa199` on main, Vercel build pending 20:28:03Z, success 20:29:55Z, 1 minute 52 seconds. The GitHub guard check passed, the live site moved to deployment `dpl_EgXvfiz1iMCs2PZs5qqUtrey8rGT`, and 100 recorded live answers were identical before and after. Deployment size guard check passed on the commit before the push
 
 ## Not verified
 

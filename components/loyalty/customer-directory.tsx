@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, Cake, ChevronLeft, ChevronRight, Phone, Search, UsersRound, X } from "lucide-react";
 import { loadLoyaltyCustomerDetailAction, loadLoyaltyCustomersAction } from "@/app/actions/loyalty-customers";
 import type { LoyaltyCustomerDetail, LoyaltyCustomerPage, LoyaltyCustomerRow } from "@/lib/loyalty/customer-directory-types";
+import { CustomerCardMessage } from "./customer-card-message";
 import styles from "./customer-directory.module.css";
 
 const number = new Intl.NumberFormat("ar-SA");
@@ -72,6 +73,7 @@ export function LoyaltyCustomerDetailDialog({ customer, onClose, downloadedOnly 
             : detail ? <dl><dt><Phone size={18} aria-hidden="true" /> رقم الجوال</dt><dd>{detail.phone ? <bdi dir="ltr">{detail.phone}</bdi> : <span className={styles.missingPhone}>رقم الجوال غير متوفر</span>}</dd>{detail.birthdayEnabled ? <><dt className={styles.nextTerm}><Cake size={18} aria-hidden="true" /> تاريخ الميلاد</dt><dd>{detail.birthDate ? <span className={styles.birthDate}>{birthDateLabel(detail.birthDate)}</span> : <span className={styles.missingPhone}>لم يسجل تاريخ الميلاد</span>}</dd></> : null}</dl>
               : <div className={styles.detailLoading} role="status"><span className={styles.skeletonLine} aria-hidden="true" /> جار تحميل بيانات العميل</div>}
         </div>
+        {detail?.phone && <CustomerCardMessage customerId={customer.id} downloadedOnly={downloadedOnly} />}
         <footer className={styles.detailFooter}><button type="button" onClick={onClose}>إغلاق الملف</button></footer>
       </div>
     </dialog>

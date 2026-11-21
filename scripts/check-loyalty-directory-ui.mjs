@@ -41,6 +41,8 @@ function harness(exportName = 'LoyaltyCustomerDirectory', props = {}, overrides 
   new Function('require', 'exports', compiled)(name => {
     if (name === 'react') return hooks;
     if (name === '@/app/actions/loyalty-customers') return actions;
+    // The manual card message has its own module and action; this check covers the directory itself
+    if (name === './customer-card-message') return { CustomerCardMessage: function CustomerCardMessage() { return null; } };
     if (name.endsWith('.css')) return { __esModule: true, default: new Proxy({}, { get: (_, key) => key }) };
     return require(name);
   }, exports);
