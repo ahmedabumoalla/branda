@@ -4,6 +4,7 @@ import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { CustomersWorkspace } from "@/components/erp/customers/workspace";
 import { MindCustomerTabs } from "@/components/erp/customers/mind-customer-tabs";
 import { OwnerLoyaltyPage } from "@/components/loyalty/owner-loyalty-page";
+import { isMindSalesSimplified } from "@/lib/finance/sales-features";
 
 export default async function Page({ params, searchParams }: {
   params: Promise<{ segments?: string[] }>;
@@ -13,7 +14,7 @@ export default async function Page({ params, searchParams }: {
   if (segments.length > 2) notFound();
   const { cafe } = await getBrandFinanceContext();
   const mind = cafe.slug === "mind-hospital";
-  if (mind && ["appointments", "contacts", "crm", "settings"].includes(segments[0])) redirect("/dashboard/system/customers");
+  if (isMindSalesSimplified(cafe.slug) && ["appointments", "contacts", "crm", "settings"].includes(segments[0])) redirect("/dashboard/system/customers");
   if (segments[0] === "loyalty") {
     if (!mind || segments.length !== 1) notFound();
     return <><MindCustomerTabs active="loyalty" /><OwnerLoyaltyPage requestedView="customers" /></>;

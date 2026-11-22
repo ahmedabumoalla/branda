@@ -6,6 +6,7 @@ import { isAldeemCafe } from "@/lib/platform/aldeem";
 import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 import { usesExistingBranchWorkflow } from "@/lib/loyalty/branch-access";
 import { isMindSalesSimplified, isSalesViewVisible } from "@/lib/finance/sales-features";
+import { isHospitalStore } from "@/lib/commerce/hospital-profile";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { aldeemSystemGroups } from "./aldeem-navigation";
 
@@ -90,11 +91,14 @@ export function integratedSystemGroupsForBrand(cafeSlug: string): SystemGroup[] 
     { id: "users", label: "إدارة المستخدمين والصلاحيات", icon: UserRoundCog, items: [{ label: "المستخدمون وكلمات المرور", section: "cashiers" }, { label: "تغيير كلمة مرور المالك", href: "/dashboard/settings" }] },
   ];
   if (isAldeemCafe({ slug: cafeSlug })) return aldeemSystemGroups(groups);
+  // Two entries belong to the hospital account alone: its loyalty registry sits under customers, and its POS
+  // settings hold the WhatsApp invoice switch. Another brand shown the MIND options keeps the standard entries
+  const hospital = isHospitalStore(cafeSlug);
   if (isMindSalesSimplified(cafeSlug)) return groups.filter(group => !mindHiddenGroups.has(group.id)).map(group => {
     if (group.id === "customers") return { ...group, items: group.items.filter(item => ["/dashboard/system/customers", "/dashboard/system/customers/new"].includes(item.href ?? "")) };
-    if (group.id === "loyalty") return { ...group, items: group.items.filter(item => item.href !== "/dashboard/loyalty/customers") };
+    if (group.id === "loyalty") return hospital ? { ...group, items: group.items.filter(item => item.href !== "/dashboard/loyalty/customers") } : group;
     if (group.id === "sales") return { ...group, items: group.items.filter(item => isSalesViewVisible(cafeSlug, item.view)) };
-    if (group.id === "pos") return { ...group, items: [...group.items, { label: "إعدادات نقاط البيع", section: "pos-settings" as const }] };
+    if (group.id === "pos") return hospital ? { ...group, items: [...group.items, { label: "إعدادات نقاط البيع", section: "pos-settings" as const }] } : group;
     // User request 2026-11-15: MIND reports list only the families of sections present in its sidebar.
     if (group.id === "reports") return { ...group, items: group.items.filter(item => item.href === "/dashboard/system/reports" || mindReportFamilies.has(item.href?.split("/").at(-1) ?? "")) };
     // User request 2026-11-15: MIND finance menu drops settlement types, bank reconciliation and finance settings.

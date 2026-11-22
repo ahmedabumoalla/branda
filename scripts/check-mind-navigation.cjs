@@ -93,6 +93,15 @@ async function main() {
   check(groups.find(group => group.id === 'sales').items.map(item => item.id), ['sales', 'sales-returns', 'sales-payments'], 'MIND simplified sales');
   check(groups.find(group => group.id === 'pos').items.filter(item => item.section === 'pos-settings').length, 1, 'POS settings appears once');
   check(nav.integratedSystemGroupsForBrand('another-brand').length, nav.integratedSystemGroups.length, 'Other brands retain all groups');
+  // User decision 2026-11-22: ال كافيه is shown the options open for MIND, without the two hospital entries
+  const second = nav.integratedSystemGroupsForBrand('l-cafe-59cfdc54');
+  check(second.map(group => group.id), groups.map(group => group.id), 'Second brand shows the same sections as MIND');
+  for (const group of groups.filter(group => !['pos', 'loyalty'].includes(group.id))) check(second.find(item => item.id === group.id).items.map(item => item.label), group.items.map(item => item.label), 'Second brand shows the same entries: ' + group.id);
+  check(second.flatMap(group => group.items).some(item => item.section === 'pos-settings'), false, 'POS settings with the WhatsApp invoice switch stay with the hospital account');
+  check(second.find(group => group.id === 'pos').items.map(item => item.label), nav.integratedSystemGroups.find(group => group.id === 'pos').items.map(item => item.label), 'Second brand keeps the standard POS entries');
+  check(second.find(group => group.id === 'loyalty').items.some(item => item.href === '/dashboard/loyalty/customers'), true, 'Second brand keeps its loyalty registry link');
+  check(second.find(group => group.id === 'sales').items.map(item => item.id), ['sales', 'sales-returns', 'sales-payments'], 'Second brand has the MIND sales entries');
+  for (const item of second.flatMap(group => group.items)) { const url = nav.systemItemHref(item, { cafeSlug: 'l-cafe-59cfdc54', enabledFeatures: ['finance', 'menu', 'loyalty', 'settings'], isSalon: false, isGifts: false }); check(Boolean(url && resolve(url)), true, 'Second brand entry opens a real page: ' + item.label); }
 
   const cashier = groups.find(group => group.id === 'loyalty').items.find(item => item.href === '/dashboard/cashier');
   const featureCases = [
