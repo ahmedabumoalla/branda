@@ -1,0 +1,73 @@
+import { readFile } from "node:fs/promises";
+
+// Run in the existing disposable finance/gift fixture, with its real order pricing,
+// authorization, idempotency, stock and posting routines.
+const source = await readFile("scripts/check-gift-commerce-db.mjs", "utf8");
+const anchor = " console.log('Gift commerce SQL: '+checks+' checks passed including accounting baseline');";
+if (!source.includes(anchor)) throw new Error("Gift commerce fixture changed");
+const suite = String.raw`
+ {
+ const meram='98fd33d5-522d-46e7-adeb-34b04a665f4f',meramSlug='brand-5fbb1397e4c4',flower=crypto.randomUUID(),generation=crypto.randomUUID();
+ const budget=async()=>scalar('SELECT count(*) FROM bf_documents WHERE cafe_id=$1',[meram]);
+ await db.query("INSERT INTO cafes(id,slug,name,owner_user_id,business_category) VALUES($1,$2,'Meram',$3,'gifts_flowers')",[meram,meramSlug,owner]);
+ await db.query("INSERT INTO menu_products(id,cafe_id,name,price,commerce_details) VALUES($1,$2,'Bouquet',60,$3)",[flower,meram,{stock:4}]);
+ await db.exec("CREATE TABLE public.brand_marketing_connections(cafe_id uuid,status text,generation uuid,requested_phone text,verified_phone text,instance_id text,transactional_requested_at timestamptz,CONSTRAINT brand_marketing_transactional_supported_brand CHECK (transactional_requested_at IS NULL));");
+ await db.exec("CREATE FUNCTION public.loco_whatsapp_actor_allowed(uuid,uuid) RETURNS boolean LANGUAGE sql STABLE AS 'SELECT $1 IN (''321fd305-1883-48df-ab69-829cf7d1bc48''::uuid,''8dbf85ba-df8f-4218-bc6f-9d2b39e937ef''::uuid)'");
+ await db.exec("CREATE FUNCTION public.brand_account_not_cancelled(uuid) RETURNS boolean LANGUAGE sql AS 'SELECT true'");
+ await db.exec(await readFile('supabase/migrations/20261123020000_meram_order_workflow.sql','utf8'));
+ eq((await scalar('SELECT gift_store_config($1)',[meramSlug])).enabled,true,'Meram checkout active');
+ const payload=(quantity)=>body([item(flower,quantity,[])],quantity*60,{paymentMethod:'bank_transfer',city:'Riyadh',address:'https://maps.app.goo.gl/Example',giftMessage:'With love',notes:'No ribbon'});
+ const place=(p,k=crypto.randomUUID())=>scalar('SELECT gift_order_submit($1,$2,$3,$4)',[meramSlug,k,p,'e'.repeat(64)]);
+ const manage=(id,action,note={},k=crypto.randomUUID())=>scalar('SELECT gift_order_manage($1,$2,$3,$4,$5)',[meram,id,k,action,note]);
+ const receipt=(token)=>scalar('SELECT gift_order_track($1,$2)',[meramSlug,token]);
+ const stock=()=>scalar("SELECT (commerce_details->>'stock')::integer FROM menu_products WHERE id=$1",[flower]);
+ const original=payload(2),key=crypto.randomUUID(),order=await place(original,key);
+ eq((await place(original,key)).id,order.id,'retried checkout one order');
+ await fail(()=>manage(order.id,'complete'),'delivery needs accepted order');
+ await login(outsider);await fail(()=>manage(order.id,'cancel',{note:'Denied'}),'other tenant cannot reject');await login(owner);
+ await manage(order.id,'accept');await fail(()=>manage(order.id,'cancel',{note:'Too late'}),'approved orders cannot be rejected');
+ const delivery=crypto.randomUUID();await manage(order.id,'complete',{},delivery);await manage(order.id,'complete',{},delivery);
+ eq((await receipt(order.trackingToken)).status,'completed','manual order delivered');eq(await stock(),2,'catalog deducted once');
+ eq(await budget(),0,'delivery never fabricates a payment');eq((await receipt(order.trackingToken)).paymentStatus,'unpaid','payment separate');
+ const next=await place(payload(2));await fail(()=>manage(next.id,'cancel',{note:' '}),'rejection requires reason');
+ const reason={note:'Flowers unavailable'},rejectKey=crypto.randomUUID();await manage(next.id,'cancel',reason,rejectKey);await manage(next.id,'cancel',reason,rejectKey);
+ eq((await receipt(next.trackingToken)).rejectionReason,reason.note,'buyer tracks private rejection reason');
+ eq(await scalar("SELECT gift_order_track('gifts-test',$1)",[next.trackingToken]),null,'wrong tenant tracking rejected');
+ eq(await scalar("SELECT gift_order_track($1,$2)",[meramSlug,crypto.randomUUID()]),null,'wrong token rejected');
+ eq(await scalar('SELECT meram_order_notice_due()'),true,'event durably queued');
+ eq(await scalar("SELECT meram_order_notice_claim($1,'966500001234','101')",[generation]),null,'no borrowed sender');
+ await db.query("INSERT INTO public.brand_marketing_connections VALUES($1,'connected',$2,'966500001234','966500001234','101',now())",[meram,generation]);
+ eq(await scalar("SELECT meram_order_notice_claim($1,'966500001234','101')",[crypto.randomUUID()]),null,'invalid connection generation');
+ const job=await scalar("SELECT meram_order_notice_claim($1,'966500001234','101')",[generation]);eq(job.reason,reason.note,'claim retains original reason');
+ eq(await scalar("SELECT meram_order_notice_claim($1,'966500001234','101')",[generation]),null,'parallel/retry never sends twice');
+ eq(await scalar("SELECT meram_order_notice_finish($1,$2,'sent')",[job.id,crypto.randomUUID()]),false,'wrong attempt cannot confirm');
+ eq(await scalar("SELECT meram_order_notice_finish($1,$2,'unknown')",[job.id,job.attempt]),true,'ambiguous provider result persisted');
+ eq(await scalar('SELECT meram_order_notice_due()'),false,'unknown delivery not automatically replayed');
+ const abandoned=await place(payload(1));await manage(abandoned.id,'cancel',{note:'Another flower unavailable'});
+ const abandonedJob=await scalar("SELECT meram_order_notice_claim($1,'966500001234','101')",[generation]);
+ await db.query("UPDATE gift_orders SET rejection_notice_started=now()-interval '11 minutes' WHERE id=$1",[abandonedJob.id]);
+ eq(await scalar('SELECT meram_order_notice_due()'),false,'stale handoff not reopened');
+ eq(await scalar("SELECT rejection_notice_status FROM gift_orders WHERE id=$1",[abandonedJob.id]),'unknown','stale attempt persistently marked for review');
+ eq(await scalar("SELECT has_function_privilege('authenticated','public.meram_order_notice_claim(uuid,text,text)','EXECUTE')"),false,'owner cannot dispatch arbitrary payloads');
+ const finances=await scalar('SELECT brand_finance_snapshot($1)',[meram]);
+ const bank=finances.accounts.find(a=>a.kind==='bank').id,warehouse=finances.warehouses[0].id;
+ await manage(order.id,'confirm_payment',{amount:120,accountId:bank,warehouseId:warehouse});
+ eq(await stock(),2,'subsequent actual receipt does not consume catalog stock twice');eq(await budget(),1,'one actual payment posted');
+ await db.exec("ALTER TABLE menu_categories ADD COLUMN IF NOT EXISTS sort_order integer DEFAULT 0; ALTER TABLE menu_products ADD COLUMN IF NOT EXISTS description text DEFAULT ''");
+ await db.exec("CREATE TABLE IF NOT EXISTS offers(id uuid PRIMARY KEY,cafe_id uuid,title text,description text,offer_type text,status text,placement text,visible_in_cafe boolean,target_type text,offer_rules jsonb)");
+ const opening=await readFile('supabase/migrations/20261123033000_meram_opening_catalog.sql','utf8');
+ const editorial=await readFile('supabase/migrations/20261123033100_meram_first_editorial_card.sql','utf8');
+ await db.exec(opening);await db.exec(editorial);
+ eq(Number(await scalar("SELECT count(*) FROM menu_products WHERE cafe_id=$1 AND commerce_details ? 'sourceUrl'",[meram])),25,'25 source products imported');
+ eq(Number(await scalar("SELECT count(*) FROM menu_categories WHERE cafe_id=$1",[meram])),5,'five Meram-only categories');
+ const feature=await scalar("SELECT bool_and(p.id IS NOT NULL AND p.cafe_id=o.cafe_id AND p.available) FROM offers o LEFT JOIN menu_products p ON p.id::text=o.offer_rules->'selectedProductIds'->>0 WHERE o.cafe_id=$1 AND o.offer_rules->>'rastKind'='announcement'",[meram]);
+ eq(feature,true,'editorial CTA points to a published Meram product');
+ await db.query("UPDATE menu_products SET price=123.45 WHERE cafe_id=$1 AND name='باقة نود'",[meram]);
+ await db.exec(opening);await db.exec(editorial);
+ eq(Number(await scalar("SELECT price FROM menu_products WHERE cafe_id=$1 AND name='باقة نود'",[meram])),123.45,'replay preserves merchant edits');
+ eq(Number(await scalar("SELECT count(*) FROM offers WHERE cafe_id=$1",[meram])),1,'editorial replay creates no duplicate');
+ console.log('Meram checkout and rejection SQL: all cases passed');
+ }
+`;
+const patched=source.replace(anchor,()=>suite+anchor);
+await import("data:text/javascript;base64,"+Buffer.from(patched).toString("base64"));

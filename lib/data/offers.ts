@@ -7,6 +7,7 @@ import { getPublicCafeBySlugAdmin, requireOwnerCafeContext } from "@/lib/data/ca
 import { mapDbOfferToCafeOffer } from "@/lib/data/mappers";
 import type { CafeOffer } from "@/lib/mock/offers";
 import { clearServerMemoryCache } from "@/lib/performance/server-memory-cache";
+import { isMeramStore } from "@/lib/commerce/meram-profile";
 import { rastCampaignSchema } from "@/lib/offers/rast-offers";
 import { isOwnedMenuAsset } from "@/lib/menu/standalone-menu";
 import { assertOwnerServiceEnabled } from "@/lib/data/owner-service-access";
@@ -166,7 +167,10 @@ export async function upsertOffer(input: z.infer<typeof offerSchema>) {
     Object.assign(parsed, validated.data);
     const rules = validated.data.offerRules;
     const ids = [...new Set(rules.selectedProductIds)];
-    if (rules.rastKind === "products") {
+    const announcement = rules.rastKind === "announcement";
+    if (announcement && !isMeramStore(cafe.slug)) throw new Error("نوع الإعلان غير متاح لهذا المتجر");
+    const promotion = rules.rastKind === "products" || rules.rastKind === "general";
+    if ((rules.rastKind === "products" || announcement) && ids.length) {
       const { data: owned, error } = await supabase.from("menu_products").select("id")
         .eq("cafe_id", cafe.id).is("deleted_at", null).in("id", ids);
       if (error) throw error;
@@ -177,12 +181,12 @@ export async function upsertOffer(input: z.infer<typeof offerSchema>) {
         throw new Error("الصورة لا تخص هذا العرض");
       }
     }
-    parsed.offerRules = { ...rules, selectedProductIds: rules.rastKind === "products" ? ids : [], appliesToAllProducts: rules.rastKind === "general" };
-    parsed.type = rules.rastKind === "event" ? "عرض مخصص" : "خصم";
+    parsed.offerRules = { ...rules, selectedProductIds: rules.rastKind === "products" || announcement ? ids : [], appliesToAllProducts: rules.rastKind === "general" };
+    parsed.type = promotion ? "خصم" : "عرض مخصص";
     parsed.targetType = rules.rastKind === "event" ? "experience_campaign" : "products";
     parsed.linkedProductId = rules.rastKind === "products" ? ids[0] : null;
-    parsed.discountPercent = rules.rastKind === "event" ? null : parsed.discountPercent;
-    parsed.code = rules.rastKind === "event" ? null : parsed.code;
+    parsed.discountPercent = promotion ? parsed.discountPercent : null;
+    parsed.code = promotion ? parsed.code : null;
     parsed.placement = "بانر الكوفي";
     if (parsed.status === "متوقف") parsed.status = "inactive";
   }

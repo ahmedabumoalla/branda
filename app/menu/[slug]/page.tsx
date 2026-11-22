@@ -10,6 +10,8 @@ import { isLocoMenu } from "@/lib/menu/loco-brand";
 import { PublicPageAnalytics } from "@/components/analytics/public-page-analytics";
 import { MenuAutoRefresh } from "@/components/menu/menu-auto-refresh";
 import { isPublicHomeMenuSlug } from "@/lib/data/public-home-catalog";
+import { isMeramStore } from "@/lib/commerce/meram-profile";
+import { MeramStore } from "@/components/store/meram-store";
 import { TogetherStore } from "@/components/store/together-store";
 import { getGiftStoreSettings } from "@/lib/data/gift-orders";
 import { getPublicLoyaltyLanding } from "@/lib/data/loyalty-landing";
@@ -35,7 +37,7 @@ type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<Record<
 
 export async function generateViewport({ params }: Props): Promise<Viewport> {
   const { slug } = await params;
-  return { themeColor: slug === WAHED_MASOUB_SLUG ? WAHED_MASOUB_COLOR : isAldeemStore(slug) ? "#6b347e" : isFawaselStore(slug) ? "#ff8500" : slug === JAMILA_SLUG ? "#5c5c5c" : "#102019", width: "device-width", initialScale: 1 };
+  return { themeColor: isMeramStore(slug) ? "#e2dcd7" : slug === WAHED_MASOUB_SLUG ? WAHED_MASOUB_COLOR : isAldeemStore(slug) ? "#6b347e" : isFawaselStore(slug) ? "#ff8500" : slug === JAMILA_SLUG ? "#5c5c5c" : "#102019", width: "device-width", initialScale: 1 };
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
@@ -49,6 +51,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (loyaltyBrand) return { title: `${loyaltyBrand.identity.name} | الولاء والمكافآت`, description: `انضم إلى برنامج ولاء ${loyaltyBrand.identity.name} واجمع أختامك`, alternates: { canonical: `/loyalty/${loyaltyBrand.identity.slug}/qr` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
+  if (isMeramStore(menu.slug)) return { title: "ميرام | ورود وهدايا", description: "اختر هديتك من ميرام وأضف كلمات الإهداء وحدد موقع التسليم", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (isAldeemStore(menu.slug)) return { title: "خيال الديم | حلا يكمّل حلو أيامك", description: "اكتشف تشكيلة سلسلة خيال الديم للحلويات من الكيك والتشيز والحلا واختَر ما يناسب لحظتك", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (isFawaselStore(menu.slug)) return { title: "فواصل | ستايلك كل يوم", description: "تسوّق أزياء وأحذية وإكسسوارات فواصل واختر تفاصيل إطلالتك وانضم إلى نادي فواصل", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (menu.slug === JAMILA_SLUG && menu.products.length === 0) return {
@@ -82,7 +85,8 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   if (menu.businessCategory === "hair_salons") redirect(`/salon/${menu.slug}`);
   const fawasel = isFawaselStore(menu.slug);
   const aldeem = isAldeemStore(menu.slug);
-  const giftStore = menu.businessCategory === "gifts_flowers" || fawasel || aldeem;
+  const meram = isMeramStore(menu.slug);
+  const giftStore = meram || menu.businessCategory === "gifts_flowers" || fawasel || aldeem;
   const teaBakery = menu.slug === "brand-9010051467ed";
   const jamila = menu.slug === JAMILA_SLUG && menu.products.length === 0;
   const signature = signatureBrand(menu.slug, menu.branch?.slug) || defaultSignatureBrand(menu);
@@ -91,6 +95,12 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;
   // Gallery frames are genuine public menus, without visitor/customer tracking or interactions.
   const storeSettings = giftStore ? await getGiftStoreSettings(menu.slug).catch(() => null) : null;
+  if (meram) {
+    const trackingToken = typeof query?.order === "string" && /^[a-zA-Z0-9_-]{32,150}$/.test(query.order) ? query.order : "";
+    const storefront = <MeramStore menu={menu} settings={storeSettings} loyaltyEnabled={Boolean(program?.enabled)} initialTracking={trackingToken} />;
+    if (showcase) return <div inert>{storefront}</div>;
+    return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{storefront}</>;
+  }
   if (aldeem) {
     const storefront = <AldeemStore menu={menu} settings={storeSettings} loyalty={loyalty} />;
     if (showcase) return <div inert>{storefront}</div>;

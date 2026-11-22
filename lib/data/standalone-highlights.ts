@@ -1,5 +1,6 @@
 import "server-only";
 
+import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isOwnedMenuAsset, type StandaloneHighlight, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { matchesLegacyOfferPromo } from "@/lib/offers/published-offers";
@@ -53,6 +54,7 @@ export async function getStandaloneHighlights(cafeId: string, products: Standalo
   // Hidden, deleted, unavailable or foreign linked products must never be promoted.
   const rows = (data ?? []).filter((row) => {
     const rules = row.offer_rules ?? {};
+    if (rules.rastKind === "announcement" && cafeId !== MERAM_CAFE_ID) return false;
     if (rules.buyProductId && !publishedProducts.has(rules.buyProductId)) return false;
     if (rules.freeProductId && !publishedProducts.has(rules.freeProductId)) return false;
     const ids = linkedIds(row);
@@ -71,9 +73,9 @@ export async function getStandaloneHighlights(cafeId: string, products: Standalo
   }
   const items: StandaloneHighlight[] = rows.flatMap((row, index) => {
     const rules = row.offer_rules ?? {};
-    const kind = rules.rastKind === "event" || row.target_type === "experience_campaign" ? "event"
+    const kind = rules.rastKind === "announcement" ? "announcement" : rules.rastKind === "event" || row.target_type === "experience_campaign" ? "event"
       : rules.appliesToAllProducts || rules.rastKind === "general" || (!linkedIds(row).length && row.offer_type === "خصم") ? "general" : "products";
-    const productIds = kind === "products" ? linkedIds(row).filter((id) => publishedProducts.has(id)) : [];
+    const productIds = kind === "products" || kind === "announcement" ? linkedIds(row).filter((id) => publishedProducts.has(id)) : [];
     if (kind === "products" && linkedIds(row).length && !productIds.length) return [];
     const eventDate = kind === "event" && typeof rules.eventDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rules.eventDate) ? rules.eventDate : undefined;
     const expiryDate = [row.end_date, eventDate].filter(Boolean).sort()[0];
@@ -89,8 +91,8 @@ export async function getStandaloneHighlights(cafeId: string, products: Standalo
       title: row.title, description: row.description || (typeof rules.packageDescription === "string" ? rules.packageDescription : ""),
       productName: productId ? publishedProducts.get(productId)?.name : undefined,
       imageUrl: (productIds.length > 1 && productId ? publishedProducts.get(productId)?.images[0]?.url : null) || (paths[index] ? signed.get(paths[index]!) : null) || publishedProducts.get(productId ?? "")?.images[0]?.url || null,
-      productId, code: kind === "event" ? null : row.code,
-      discountPercent: kind !== "event" && row.offer_type === "خصم" && Number(row.discount_percent) > 0 && Number(row.discount_percent) <= 100 ? Number(row.discount_percent) : null,
+      productId, code: kind === "event" || kind === "announcement" ? null : row.code,
+      discountPercent: (kind === "products" || kind === "general") && row.offer_type === "خصم" && Number(row.discount_percent) > 0 && Number(row.discount_percent) <= 100 ? Number(row.discount_percent) : null,
       expiresAt: expiryDate ? new Date(`${expiryDate}T23:59:59.999+03:00`).getTime() : null,
       eventDate, eventTime: kind === "event" && typeof rules.eventTime === "string" ? rules.eventTime : undefined,
       eventLocation: kind === "event" && typeof rules.eventLocation === "string" ? rules.eventLocation.slice(0, 160) : undefined,

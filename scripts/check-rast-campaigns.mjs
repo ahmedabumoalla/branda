@@ -42,6 +42,9 @@ async function run() {
   assert(rastCampaignSchema.safeParse({ ...valid, offerRules: { rastKind: "general" } }).success);
   assert(rastCampaignSchema.safeParse({ ...valid, discountPercent: null, offerRules: { rastKind: "event", eventDate: "2026-10-10", eventTime: "19:30", eventLocation: "Rast" } }).success);
 
+  const announcement = { ...valid, code: "IGNORED", offerRules: { rastKind: "announcement", selectedProductIds: [productId] } };
+  assert(rastCampaignSchema.safeParse({ ...announcement, discountPercent:null, offerRules:{rastKind:"announcement"} }).success);
+  assert(!rastCampaignSchema.safeParse({ ...announcement, offerRules:{rastKind:"announcement",selectedProductIds:[productId,foreignId]} }).success);
   const writes = [], filters = [], invalidations = [];
   let slug = "rast", failAuth = false, allowed = true, role = "owner", missing = false;
   const db = { from(table) {
@@ -160,6 +163,16 @@ async function run() {
   } finally { cleanups.forEach((cleanup) => cleanup?.()); global.setInterval = realSet; global.clearInterval = realClear; global.document = realDocument; }
 
   const { RastOffersPage } = load("components/dashboard/pages/rast-offers-page.tsx", { "@/app/actions/offers": {} });
+  const previousSlug = slug;
+  await assert.rejects(()=>data.upsertOffer(announcement));
+  slug="brand-5fbb1397e4c4";
+  await assert.rejects(()=>data.upsertOffer({...announcement, offerRules:{rastKind:"announcement",selectedProductIds:[foreignId]}}));
+  const banner = await data.upsertOffer(announcement);
+  assert.equal(banner.type,"عرض مخصص");
+  assert.equal(banner.discountPercent,null);
+  assert.equal(banner.code,null);
+  assert.deepEqual(banner.offerRules.selectedProductIds,[productId]);
+  slug=previousSlug;
   const html = renderToStaticMarkup(React.createElement(RastOffersPage, { initialOffers: [], products: [], brandName: "Basilico", slug: "basilico" }));
   for (const text of ["العروض والخصومات", "خصم على منتجات", "خصم على الكل", "إعلان فعالية", "حفظ البطاقة", "معاينة المحتوى"]) assert(html.includes(text));
   assert(html.includes("/menu/basilico") && html.includes("Basilico") && !html.includes("/menu/rast"));

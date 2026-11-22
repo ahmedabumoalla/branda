@@ -1,4 +1,5 @@
 import "server-only";
+import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -7,7 +8,7 @@ import { readMaintenanceSessionCookie } from "@/lib/platform/maintenance";
 import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { marketingConfigured } from "@/lib/marketing/crypto";
 import { MarketingError as BrandWhatsAppError, readMarketingConnection, marketingConnectionCredentials, refreshMarketingConnection, runMarketingConnectionAction } from "@/lib/data/marketing";
-import { LOCO_CAFE_ID, supportsPrivateWhatsApp, type BrandWhatsAppDashboard, type BrandWhatsAppResult } from "@/lib/whatsapp/brand-connection-types";
+import { LOCO_CAFE_ID, supportsBrandPhoneManagement, type BrandWhatsAppDashboard, type BrandWhatsAppResult } from "@/lib/whatsapp/brand-connection-types";
 import type { GreenApiMarketingCredentials } from "@/lib/whatsapp/green-api-marketing";
 
 export { BrandWhatsAppError };
@@ -34,7 +35,7 @@ async function requireBrandWhatsAppContext() {
     try { cafeId = (await requireOwnerCafeContext()).id; }
     catch { throw new BrandWhatsAppError("هذا الحساب غير مخول لربط رقم العلامة", 403); }
   }
-  if (!supportsPrivateWhatsApp(cafeId)) throw new BrandWhatsAppError("ربط رقم العلامة غير متاح لهذا الحساب", 403);
+  if (!supportsBrandPhoneManagement(cafeId)) throw new BrandWhatsAppError("ربط رقم العلامة غير متاح لهذا الحساب", 403);
   const db = createAdminClient();
   const { data: cafe, error: cafeError } = await db.from("cafes").select("id,name,owner_user_id,status,phone_country").eq("id", cafeId).is("deleted_at", null).maybeSingle();
   if (cafeError || !cafe || !["active", "published"].includes(cafe.status)) throw new BrandWhatsAppError("العلامة غير متاحة", 403);
@@ -51,7 +52,8 @@ async function dashboard(context: Context): Promise<BrandWhatsAppDashboard> {
   return {
     phoneCountry: context.phoneCountry, brandName: context.brandName,
     configured: marketingConfigured(),
-    platformFallback: context.cafeId !== LOCO_CAFE_ID,
+    platformFallback: context.cafeId !== LOCO_CAFE_ID && context.cafeId !== MERAM_CAFE_ID,
+    ...(context.cafeId === MERAM_CAFE_ID ? { orderRejectionsOnly: true } : {}),
     transactionalEnabled: Boolean(row?.transactional_requested_at) && !["disconnected", "disconnecting"].includes(row!.status),
     connection: row ? {
       status: row.status, phone: row.requested_phone, verifiedPhone: row.verified_phone,
@@ -90,7 +92,7 @@ export async function runBrandWhatsAppAction(raw: unknown): Promise<BrandWhatsAp
 
 /** Internal routing only: the caller supplies a cafe ID derived from a persisted customer operation. */
 export async function getBrandCustomerWhatsAppCredentials(cafeId: string | null | undefined): Promise<(GreenApiMarketingCredentials & { expectedPhone: string; generation: string }) | null> {
-  if (!cafeId || !supportsPrivateWhatsApp(cafeId)) return null;
+  if (!cafeId || !supportsBrandPhoneManagement(cafeId)) return null;
   try {
     const db = createAdminClient();
     const { data: cafe, error } = await db.from("cafes").select("id,status").eq("id", cafeId).is("deleted_at", null).maybeSingle();

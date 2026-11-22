@@ -1,5 +1,6 @@
 import { getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
 import "server-only";
+import { isMeramStore } from "@/lib/commerce/meram-profile";
 import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -37,13 +38,22 @@ export async function trackGiftOrder(input: unknown): Promise<GiftOrderTracking 
 export async function getOwnerGiftOrders(page = 1) {
   const { cafe, client } = await ownerContext();
   const safePage = z.number().int().min(1).max(100000).parse(page);
+  const columns = "id,number,customer_name,phone,fulfillment,city,address,gift_message,notes,payment_method,status,payment_status,subtotal,delivery_fee,tax,total,vat_rate,tax_inclusive,finance_document_id,created_at,updated_at,gift_order_lines(id,product_id,name,catalog_kind,option_id,selections,quantity,unit_price,line_total)";
+  const ordersTable = client.from("gift_orders");
+  const query = isMeramStore(cafe.slug)
+    ? ordersTable.select(`${columns},rejection_reason,rejection_notice_status`)
+    : ordersTable.select(columns);
   const [{ data, error }, settings] = await Promise.all([
-    client.from("gift_orders").select("id,number,customer_name,phone,fulfillment,city,address,gift_message,notes,payment_method,status,payment_status,subtotal,delivery_fee,tax,total,vat_rate,tax_inclusive,finance_document_id,created_at,updated_at,gift_order_lines(id,product_id,name,catalog_kind,option_id,selections,quantity,unit_price,line_total)").eq("cafe_id", cafe.id).order("created_at", { ascending: false }).order("id").range((safePage - 1) * 50, safePage * 50),
+    query.eq("cafe_id", cafe.id).order("created_at", { ascending: false }).order("id").range((safePage - 1) * 50, safePage * 50),
     getGiftStoreSettings(cafe.slug),
   ]);
   if (error) throw failure(error, "تعذر تحميل طلبات المتجر");
   const orders: GiftOrder[] = (data ?? []).slice(0, 50).map(row => ({
     id: row.id, number: Number(row.number), customerName: row.customer_name, phone: row.phone, fulfillment: row.fulfillment,
+    ...("rejection_reason" in row && "rejection_notice_status" in row ? {
+      rejectionReason: row.rejection_reason as string | null,
+      notificationStatus: (row.rejection_notice_status === "dispatching" ? "pending" : row.rejection_notice_status) as GiftOrder["notificationStatus"],
+    } : {}),
     city: row.city, address: row.address, giftMessage: row.gift_message, notes: row.notes, paymentMethod: row.payment_method,
     status: row.status, paymentStatus: row.payment_status, subtotal: Number(row.subtotal), deliveryFee: Number(row.delivery_fee), tax: Number(row.tax), total: Number(row.total),
     vatRate: Number(row.vat_rate), taxInclusive: row.tax_inclusive, financeDocumentId: row.finance_document_id, createdAt: row.created_at, updatedAt: row.updated_at,

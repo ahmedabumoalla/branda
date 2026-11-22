@@ -71,3 +71,9 @@
 @media (max-width: 1100px) { .workspace { grid-template-columns: minmax(0, 1fr); } .library { display: flex; flex-wrap: wrap; gap: 10px; } .libraryHeading, .library > .hint { width: 100%; } .libraryItem { width: min(230px, 100%); margin: 0; } .menuLink { margin-inline-start: auto; } }
 @media (max-width: 600px) { .header { align-items: start; flex-direction: column; gap: 12px; } .kinds { grid-template-columns: 1fr; gap: 8px; } .kinds button { display: grid; grid-template-columns: 24px 1fr; gap: 6px 12px; padding: 12px; } .kinds svg { grid-row: span 2; } .kinds small { grid-column: 2; } .formGrid, .productList { grid-template-columns: 1fr; } .libraryItem { width: 100%; } .page { padding-inline: 14px; } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+.meramPreview { overflow: hidden; border: 1px solid #ddc7c4; border-radius: 18px; background: #fbf7f4; color: #472e33; }
+.meramPreview img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.meramPreview > div { padding: 24px; }
+.meramPreview span, .meramPreview small { display: block; color: #81494c; font-weight: 650; }
+.meramPreview h3 { margin: 9px 0; font-size: 1.5rem; }
+.meramPreview p { margin: 9px 0; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }

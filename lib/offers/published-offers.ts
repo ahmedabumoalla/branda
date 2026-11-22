@@ -23,7 +23,7 @@ export function matchesLegacyOfferPromo(product: StandaloneMenuProduct, offer: L
 /** Product cards share the same eligibility window as published price offers. */
 export function getProductOffers(product: StandaloneMenuProduct, highlights: PublishedOffers | undefined, now = Date.now()) {
   if (!product.available) return [];
-  return (highlights?.items ?? []).filter((item) => item.kind !== "event"
+  return (highlights?.items ?? []).filter((item) => item.kind !== "event" && item.kind !== "announcement"
     && (item.kind === "general" || item.productId === product.id)
     && (item.expiresAt == null || item.expiresAt >= now));
 }

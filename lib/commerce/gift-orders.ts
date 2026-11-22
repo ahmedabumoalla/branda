@@ -1,4 +1,6 @@
 import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { isMeramStore } from "@/lib/commerce/meram-profile";
+import { meramMapLink } from "@/lib/commerce/meram-location";
 import { z } from "zod";
 
 export const giftStoreSettingsSchema = z.object({
@@ -10,7 +12,7 @@ export const giftStoreSettingsSchema = z.object({
 }).refine(v => v.deliveryEnabled || v.pickupEnabled, "فعّل التوصيل أو الاستلام من المحل");
 export type GiftStoreSettings = z.infer<typeof giftStoreSettingsSchema> & { vatRate: number; taxInclusive: boolean };
 const identifier = z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/);
-export const giftOrderInputFor = (country: BrandPhoneCountry) => z.object({
+const giftInput = (country: BrandPhoneCountry) => z.object({
   slug: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/), requestId: z.uuid(),
   customerName: z.string().trim().min(2).max(120), phone: z.string().max(30).transform(value => normalizeBrandPhone(value, country)).pipe(z.string()),
   fulfillment: z.enum(["delivery", "pickup"]), city: z.string().trim().max(100).default(""), address: z.string().trim().max(1000).default(""),
@@ -18,19 +20,29 @@ export const giftOrderInputFor = (country: BrandPhoneCountry) => z.object({
   expectedTotal: z.number().finite().min(0).max(100_000_000),
   items: z.array(z.object({ productId: z.uuid(), optionId: identifier.optional(), quantity: z.number().int().min(1).max(99), selections: z.array(z.object({ groupId: identifier, choiceIds: z.array(identifier).max(50).optional(), text: z.string().trim().max(1000).optional(), attachmentToken: z.uuid().optional() })).max(20).default([]) })).min(1).max(30),
 });
-export const giftOrderInputSchema = giftOrderInputFor("SA");
+function validateMeramLocation(order: { slug: string; fulfillment: string; city: string; address: string }, ctx: z.RefinementCtx) {
+  if (!isMeramStore(order.slug)) return;
+  if (order.fulfillment !== "delivery" || !order.city.trim() || !meramMapLink(order.address)) {
+    ctx.addIssue({ code: "custom", path: ["address"], message: "أدخل المدينة ورابط موقع التسليم على الخريطة" });
+  }
+}
+export const giftOrderInputFor = (country: BrandPhoneCountry) => giftInput(country).superRefine(validateMeramLocation);
+export const giftOrderInputSchema = giftInput("SA");
+export const giftOrderDraftSchema = giftOrderInputSchema.omit({ requestId: true }).superRefine(validateMeramLocation);
 export type GiftOrderInput = z.input<typeof giftOrderInputSchema>;
 export type GiftOrderStatus = "pending" | "quote_requested" | "accepted" | "preparing" | "ready" | "completed" | "cancelled" | "refunded";
 export type GiftPaymentStatus = "unpaid" | "paid" | "partially_refunded" | "refunded";
 export type GiftOrderReceipt = { id: string; number: number; trackingToken: string; total: number; status: GiftOrderStatus; paymentStatus: GiftPaymentStatus; duplicate?: boolean };
 export type GiftOrderLine = { id: string; productId: string; name: string; catalogKind: "product" | "service"; optionId: string | null; selections: { label: string; value: string; priceDelta: number; attachmentId?: string }[]; quantity: number; unitPrice: number; lineTotal: number };
+export type GiftNoticeStatus = "pending" | "sent" | "unknown" | "failed";
 export type GiftOrder = {
+  rejectionReason?: string | null; notificationStatus?: GiftNoticeStatus | null;
   id: string; number: number; customerName: string; phone: string; fulfillment: "delivery" | "pickup"; city: string; address: string;
   giftMessage: string; notes: string; paymentMethod: "cod" | "bank_transfer"; status: GiftOrderStatus; paymentStatus: GiftPaymentStatus;
   subtotal: number; deliveryFee: number; tax: number; total: number; vatRate: number; taxInclusive: boolean;
   financeDocumentId: string | null; createdAt: string; updatedAt: string; items: GiftOrderLine[];
 };
-export type GiftOrderTracking = Pick<GiftOrder, "id" | "number" | "status" | "paymentStatus" | "subtotal" | "deliveryFee" | "tax" | "total" | "createdAt" | "updatedAt"> & { items: Pick<GiftOrderLine, "name" | "quantity" | "unitPrice" | "lineTotal">[] };
+export type GiftOrderTracking = Pick<GiftOrder, "id" | "number" | "status" | "paymentStatus" | "subtotal" | "deliveryFee" | "tax" | "total" | "createdAt" | "updatedAt"> & { rejectionReason?: string | null; items: Pick<GiftOrderLine, "name" | "quantity" | "unitPrice" | "lineTotal">[] };
 export const giftOrderCommandSchema = z.object({
   id: z.uuid(), requestId: z.uuid(), action: z.enum(["accept", "prepare", "ready", "complete", "cancel", "quote", "confirm_payment"]),
   amount: z.number().finite().min(0).max(100_000_000).optional(), accountId: z.uuid().optional(), warehouseId: z.uuid().optional(), shiftId: z.uuid().optional(), note: z.string().trim().max(1000).optional(),

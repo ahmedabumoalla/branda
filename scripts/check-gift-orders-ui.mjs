@@ -7,8 +7,9 @@ import ts from 'typescript';
 import {transform} from 'lightningcss';
 const require=createRequire(import.meta.url);
 const source=fs.readFileSync('components/dashboard/pages/gift-orders-page.tsx','utf8');
+const workflowSource=fs.readFileSync('components/dashboard/pages/meram-order-workflow.tsx','utf8');
 const css=transform({filename:'gift-orders-page.module.css',code:fs.readFileSync('components/dashboard/pages/gift-orders-page.module.css'),cssModules:true});
-for(const [,key] of source.matchAll(/styles\.(\w+)/g))assert(css.exports[key],key);
+for(const [,key] of (source+workflowSource).matchAll(/styles\.(\w+)/g))assert(css.exports[key],key);
 const compile=s=>ts.transpileModule(s,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
 function loadModule(path) {
   const exports = {};
@@ -16,7 +17,13 @@ function loadModule(path) {
   return exports;
 }
 const types=loadModule('lib/commerce/gift-orders.ts');
-function harness(component,props,actions={}){let cursor=0;const state=[],exports={};const stubs={react:{...React,useState(initial){const i=cursor++;if(!(i in state))state[i]=initial;return[state[i],next=>{state[i]=typeof next==='function'?next(state[i]):next}];},useRef(initial){const i=cursor++;if(!(i in state))state[i]={current:initial};return state[i];}},'next/link':{__esModule:true,default:'a'},'next/navigation':{useRouter:()=>({refresh(){}})},'@/app/actions/gift-orders':actions,'@/lib/commerce/gift-orders':types,'@/components/dashboard/ui/modal':{Modal:({open,children})=>open?children:null},'./gift-orders-page.module.css':{__esModule:true,default:new Proxy({},{get:(_,key)=>key})}};new Function('require','exports',compile(source)+';exports.OrderDetails=OrderDetails;exports.SettingsForm=SettingsForm;')(name=>stubs[name]??(name.startsWith('@/lib/') ? loadModule(name.slice(2)+'.ts') : require(name)),exports);return{render(){cursor=0;return exports[component](props);}}}
+function harness(component,props,actions={}){let cursor=0;const state=[],exports={};const stubs={react:{...React,useState(initial){const i=cursor++;if(!(i in state))state[i]=initial;return[state[i],next=>{state[i]=typeof next==='function'?next(state[i]):next}];},useRef(initial){const i=cursor++;if(!(i in state))state[i]={current:initial};return state[i];}},'next/link':{__esModule:true,default:'a'},'next/navigation':{useRouter:()=>({refresh(){}})},'@/app/actions/gift-orders':actions,'@/lib/commerce/gift-orders':types,'@/components/dashboard/ui/modal':{Modal:({open,children})=>open?children:null},'./gift-orders-page.module.css':{__esModule:true,default:new Proxy({},{get:(_,key)=>key})}};
+  const dependency = name => stubs[name]??(name.startsWith('@/lib/') ? loadModule(name.slice(2)+'.ts') : require(name));
+  const workflow = {};
+  new Function('require','exports',compile(workflowSource))(dependency,workflow);
+  stubs['./meram-order-workflow'] = workflow;
+  new Function('require','exports',compile(source)+';exports.OrderDetails=OrderDetails;exports.SettingsForm=SettingsForm;')(dependency,exports);
+  Object.assign(exports,workflow);return{render(){cursor=0;return exports[component](props);}}}
 function nodes(t){return !t||typeof t!=='object'?[]:Array.isArray(t)?t.flatMap(nodes):[t,...nodes(t.props?.children)]}
 function text(t){return t==null||typeof t==='boolean'?'':Array.isArray(t)?t.map(text).join(''):typeof t==='object'?text(t.props?.children):String(t)}
 const button=(t,label)=>nodes(t).find(n=>n.type==='button'&&text(n)===label);
@@ -55,4 +62,41 @@ h=harness('GiftOrdersPage',{initialOrders:[],initialSettings:settings,initialHas
 check(()=>{assert(!nodes(h.render()).some(n=>typeof n.type==='function'&&n.type.name==='SettingsForm'));button(h.render(),'إعداد التوصيل والدفع').props.onClick();assert(nodes(h.render()).some(n=>typeof n.type==='function'&&n.type.name==='SettingsForm'))});
 h=harness('SettingsForm',{initial:{...settings,enabled:false},busy:false,onSave:async()=>{throw Error('must not save automatically')}});
 check(()=>{const card=nodes(h.render()).find(n=>n.props?.className==='gatewayPlaceholder');assert(card);assert(text(card).includes('غير مربوط'));assert(!nodes(card).some(n=>['input','button'].includes(n.type)));assert.equal(nodes(h.render()).find(n=>n.type==='input'&&n.props.type==='checkbox').props.checked,false)});
+const meramOrder={...order,deliveryFee:0,address:"24.7136,46.6753"};
+const props={order:meramOrder,busy:false,command:async()=>true};
+let destinations=[];
+globalThis.window={location:{assign:href=>destinations.push(href)}};
+h=harness('MeramOrderWorkflow', {...props,command:async()=>false});
+await button(h.render(),'تأكيد وتواصل').props.onClick();
+check(()=>assert.deepEqual(destinations,[]));
+let finish, accepts=0;
+h=harness('MeramOrderWorkflow',{...props,command:async req=>{assert.deepEqual(req,{id:order.id,action:'accept'});accepts++;return new Promise(resolve=>{finish=resolve})}});
+const attempt=button(h.render(),'تأكيد وتواصل').props.onClick();
+await button(h.render(),'تأكيد وتواصل').props.onClick();
+check(()=>{assert.equal(accepts,1);assert.deepEqual(destinations,[])});
+finish(true);await attempt;
+check(()=>{const url=new URL(destinations[0]);assert.equal(url.origin,'https://wa.me');assert.equal(url.pathname,'/'+order.phone);assert(url.searchParams.get('text').includes(String(order.number)))});
+delete globalThis.window;
+const commands=[];
+h=harness('MeramOrderWorkflow',{...props,command:async value=>{commands.push(value);return true}});
+button(h.render(),'رفض الطلب').props.onClick();
+const reason=()=>nodes(h.render()).find(n=>n.type==='textarea');
+reason().props.onChange({target:{value:'   '}});
+await nodes(h.render()).find(n=>n.type==='form').props.onSubmit({preventDefault(){}});
+check(()=>{assert(button(h.render(),'رفض وإشعار العميل').props.disabled);assert.equal(commands.length,0)});
+reason().props.onChange({target:{value:'  الصنف غير متوفر  '}});
+await nodes(h.render()).find(n=>n.type==='form').props.onSubmit({preventDefault(){}});
+check(()=>assert.deepEqual(commands,[{id:order.id,action:'cancel',note:'الصنف غير متوفر'}]));
+h=harness('MeramOrderWorkflow',{...props,order:{...meramOrder,status:'accepted'},command:async value=>{commands.push(value);return true}});
+await button(h.render(),'تم التسليم').props.onClick();
+check(()=>{assert(!button(h.render(),'رفض الطلب'));assert.deepEqual(commands.at(-1),{id:order.id,action:'complete'});assert(nodes(h.render()).some(n=>n.type==='a'&&n.props.href.startsWith('https://wa.me/')))});
+h=harness('MeramOrderWorkflow',{...props,order:{...meramOrder,status:'cancelled',rejectionReason:'الورد غير متوفر',notificationStatus:'pending'}});
+check(()=>{assert(text(h.render()).includes('الورد غير متوفر'));assert(text(h.render()).includes('بانتظار الإرسال'));assert(!button(h.render(),'تم التسليم'))});
+h=harness('OrderDetails',{...props,meram:true,finance:null});
+check(()=>{const t=h.render();assert(nodes(t).some(n=>n.type==='a'&&n.props.href?.includes('google.com/maps')));assert(text(t).includes('الإجمالي قبل رسوم التوصيل'));assert(!button(t,'قبول الطلب'));assert(!button(t,'إلغاء الطلب'));assert.equal(nodes(t).filter(n=>n.type?.name==='MeramOrderWorkflow').length,1)});
+let savedSettings;
+h=harness('SettingsForm',{meram:true,initial:{...settings,deliveryFee:0,deliveryEnabled:false,pickupEnabled:true,paymentMethods:['cod']},busy:false,onSave:async next=>{savedSettings=next}});
+check(()=>{const t=h.render();assert(text(t).includes('حسب موقعه'));assert(!text(t).includes('استلام من المحل'));assert(!text(t).includes('الدفع عند الاستلام'))});
+await h.render().props.onSubmit({preventDefault(){}});
+check(()=>{assert(savedSettings.deliveryEnabled);assert(!savedSettings.pickupEnabled);assert.deepEqual(savedSettings.paymentMethods,['bank_transfer'])});
 console.log(`Gift owner UI: ${checks} behavior/CSS/route checks passed`);

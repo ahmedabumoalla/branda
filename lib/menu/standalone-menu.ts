@@ -61,7 +61,7 @@ export type StandaloneHighlight = {
   rewardQuantity?: number;
   showInSpotlight?: boolean;
   offerType?: string;
-  kind?: "products" | "general" | "event";
+  kind?: "products" | "general" | "event" | "announcement";
   productName?: string;
   eventDate?: string;
   eventTime?: string;

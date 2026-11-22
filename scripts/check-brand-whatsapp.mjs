@@ -81,6 +81,19 @@ try {
     for(const secret of ['7103999999','private-test-token','encrypted_credentials','secret-provider-value','webhook_token_hash'])assert(!JSON.stringify(d).includes(secret));
     assert.equal(h.counts().stateReads,0);assert.equal(h.counts().provisions,0);assert(!h.calls.some(x=>x.rpc));
   });
+  await test('Meram owner may opt in only for its order sender; managers cannot provision it',async()=>{
+    const meram='98fd33d5-522d-46e7-adeb-34b04a665f4f';
+    const h=harness({contextCafe:meram});
+    const dashboard=await h.getBrandWhatsAppDashboard();
+    assert.equal(dashboard.orderRejectionsOnly,true);
+    assert.equal(dashboard.platformFallback,false);
+    assert.equal(h.counts().provisions,0);
+    await h.runBrandWhatsAppAction({action:'connect',phone:'0500000001'});
+    assert.equal(h.row().cafe_id,meram);
+    const manager=harness({contextCafe:meram,owner:id(99),member:'manager'});
+    await assert.rejects(()=>manager.runBrandWhatsAppAction({action:'connect',phone:'0500000001'}),e=>e.status===403);
+    assert.equal(manager.counts().provisions,0);
+  });
   await test('Wahed connection is optional, scoped and never provisioned on read',async()=>{
     const h=harness({contextCafe:WAHED});
     const d=await h.getBrandWhatsAppDashboard();assert.equal(d.platformFallback,true);assert.equal(d.connection,null);assert.equal(h.counts().provisions,0);

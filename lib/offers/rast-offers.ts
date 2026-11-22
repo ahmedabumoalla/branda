@@ -7,7 +7,7 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
 }, "أدخل تاريخًا صحيحًا");
 
 export const rastRulesSchema = z.object({
-  rastKind: z.enum(["products", "general", "event"]),
+  rastKind: z.enum(["products", "general", "event", "announcement"]),
   selectedProductIds: z.array(z.string().uuid()).max(24).default([]),
   appliesToAllProducts: z.boolean().default(false),
   eventDate: date.optional(),
@@ -28,8 +28,9 @@ export const rastCampaignSchema = z.object({
   const issue = (message: string) => context.addIssue({ code: "custom", message });
   if (value.startDate && value.endDate && value.endDate < value.startDate) issue("تاريخ النهاية يجب ألا يسبق البداية");
   if (value.status === "مجدول" && !value.startDate) issue("حدد تاريخ بداية العرض المجدول");
-  if (value.offerRules.rastKind !== "event" && !(Number(value.discountPercent) > 0)) issue("أدخل نسبة خصم أكبر من صفر وحتى ١٠٠٪");
+  if ((value.offerRules.rastKind === "products" || value.offerRules.rastKind === "general") && !(Number(value.discountPercent) > 0)) issue("أدخل نسبة خصم أكبر من صفر وحتى ١٠٠٪");
   if (value.offerRules.rastKind === "products" && !value.offerRules.selectedProductIds.length) issue("اختر منتجًا واحدًا على الأقل");
+  if (value.offerRules.rastKind === "announcement" && value.offerRules.selectedProductIds.length > 1) issue("اختر منتجًا واحدًا لزر الإعلان");
   if (value.offerRules.rastKind === "event") {
     if (!value.offerRules.eventDate || !value.offerRules.eventTime || !value.offerRules.eventLocation) issue("حدد تاريخ الفعالية ووقتها ومكانها");
     if (value.offerRules.eventDate && value.startDate && value.offerRules.eventDate < value.startDate) issue("يجب أن يبدأ الإعلان قبل الفعالية أو في يومها");

@@ -1,13 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CalendarDays, ImagePlus, Loader2, Plus, Tag, Ticket, Trash2 } from "lucide-react";
+import { CalendarDays, ImagePlus, Loader2, Megaphone, Plus, Tag, Ticket, Trash2 } from "lucide-react";
 import { deleteOfferAction, fetchOwnerOffersAction, saveOfferAction, uploadOfferBannerAction } from "@/app/actions/offers";
 import { RastSpotlight } from "@/components/menu/rast-spotlight";
 import { rastCampaignSchema, rastOfferKind } from "@/lib/offers/rast-offers";
 import type { CafeOffer, OfferRules, OfferStatus } from "@/lib/mock/offers";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { StandaloneHighlight, StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
+import { isMeramStore } from "@/lib/commerce/meram-profile";
 import s from "./rast-offers-page.module.css";
 
 const kinds = [
@@ -16,6 +17,7 @@ const kinds = [
   { id: "event", title: "إعلان فعالية", detail: "دعوة لموعد يستاهل الزيارة", icon: CalendarDays },
 ] as const;
 
+const announcementKind = { id: "announcement", title: "إعلان", detail: "رسالة من ميرام بصورة وزر منتج اختياري", icon: Megaphone } as const;
 function newDraft(): CafeOffer {
   return { id: "new", title: "", description: "", type: "خصم", status: "مسودة", visibleInCafe: true, placement: "بانر الكوفي", discountPercent: 15,
     offerRules: { rastKind: "products", selectedProductIds: [], appliesToAllProducts: false } };
@@ -38,7 +40,9 @@ export function RastOffersPage({ initialOffers, products, brandName, slug, salon
   const dialog = useRef<HTMLDialogElement>(null);
   const mutationPending = useRef(false);
   const kind = rastOfferKind(draft);
-  const displayKinds = salon ? kinds.filter(k => k.id !== "event").map(k => ({ ...k, title: k.id === "products" ? "خصم على خدمات محددة" : "خصم على الكل", detail: k.id === "products" ? "حدد الخدمات أو المنتجات المشمولة" : "قسيمة تشمل خدمات الصالون ومنتجاته" })) : kinds;
+  const meram = isMeramStore(slug);
+  const displayKinds = salon ? kinds.filter(k => k.id !== "event").map(k => ({ ...k, title: k.id === "products" ? "خصم على خدمات محددة" : "خصم على الكل", detail: k.id === "products" ? "حدد الخدمات أو المنتجات المشمولة" : "قسيمة تشمل خدمات الصالون ومنتجاته" })) : meram ? [announcementKind, ...kinds.map(k => k.id === "general" ? { ...k, detail: "قسيمة تشمل منتجات المتجر" } : k)] : kinds;
+  const isOffer = kind === "products" || kind === "general";
   const rules = draft.offerRules ?? {};
   const selected = rules.selectedProductIds ?? [];
   const persisted = /^[0-9a-f-]{36}$/i.test(draft.id);
@@ -59,7 +63,7 @@ export function RastOffersPage({ initialOffers, products, brandName, slug, salon
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "راجع بيانات البطاقة"); return; }
     mutationPending.current = true; setBusy(true); setError(""); setMessage("");
     try {
-      const saved = await saveOfferAction({ ...draft, type: kind === "event" ? "عرض مخصص" : "خصم", targetType: kind === "event" ? "experience_campaign" : "products", linkedProductId: kind === "products" ? selected[0] : undefined });
+      const saved = await saveOfferAction({ ...draft, type: isOffer ? "خصم" : "عرض مخصص", targetType: kind === "event" ? "experience_campaign" : "products", linkedProductId: kind === "products" ? selected[0] : undefined });
       remember({ ...saved, bannerImageUrl: draft.bannerImageUrl });
       setMessage(salon ? "تم حفظ عرض الصالون وفق حالة النشر المحددة" : saved.status === "مسودة" ? "حُفظت المسودة اختر نشط ثم احفظ لنشر البطاقة" : saved.visibleInCafe && ["نشط", "مجدول"].includes(saved.status) ? "تم حفظ البطاقة تظهر في المنيو ضمن مواعيد النشر المحددة" : "تم حفظ البطاقة وإخفاؤها من المنيو");
     } catch (caught) { setError(caught instanceof Error ? caught.message : "تعذر الحفظ بقيت تعديلاتك كما هي"); }
@@ -97,13 +101,13 @@ export function RastOffersPage({ initialOffers, products, brandName, slug, salon
     const product = products.find((value) => value.id === id);
     return { id: `${draft.id}-${index}`, kind, title: draft.title, description: draft.description,
       productId: id, productName: product?.name, imageUrl: (selected.length > 1 ? product?.imageDataUrl : draft.bannerImageUrl || product?.imageDataUrl) ?? null,
-      discountPercent: kind === "event" ? null : draft.discountPercent ?? null, code: kind === "event" ? null : draft.code ?? null, expiresAt: null,
+      discountPercent: isOffer ? draft.discountPercent ?? null : null, code: isOffer ? draft.code ?? null : null, expiresAt: null,
       eventDate: rules.eventDate, eventTime: rules.eventTime, eventLocation: rules.eventLocation };
   });
 
   return <div className={s.page}>
     <header className={s.header}>
-      <div><span className={s.eyebrow}>{brandName}</span><h1>العروض والخصومات</h1><p>{salon ? "خصومات الصالون في بطاقات واضحة لعملائك" : "عروض علامتك وفعالياتها في بطاقات تظهر على المنيو المستقل"}</p></div>
+      <div><span className={s.eyebrow}>{brandName}</span><h1>{meram ? "العروض والإعلانات" : "العروض والخصومات"}</h1><p>{meram ? "أنشئ عرضًا على الهدايا أو أعلن عن مناسبة في واجهة متجر ميرام" : salon ? "خصومات الصالون في بطاقات واضحة لعملائك" : "عروض علامتك وفعالياتها في بطاقات تظهر على المنيو المستقل"}</p></div>
       <button className={s.primary} type="button" disabled={busy} onClick={() => changeDraft(newDraft())}><Plus aria-hidden="true" />بطاقة جديدة</button>
     </header>
     {error && <p className={s.error} role="alert">{error}</p>}
@@ -111,9 +115,9 @@ export function RastOffersPage({ initialOffers, products, brandName, slug, salon
     <div className={s.workspace}>
       <aside className={s.library} aria-label="بطاقات العروض">
         <div className={s.libraryHeading}><h2>بطاقاتك</h2><span>{offers.length}</span></div>
-        <p className={s.hint}>{salon ? "تظهر البطاقات المنشورة في قسم عروض الصالون" : "تظهر البطاقات المنشورة ضمن عروض المنيو بتصميم علامتك"}</p>
+        <p className={s.hint}>{meram ? "تظهر البطاقات النشطة في متجر ميرام خلال المدة المحددة" : salon ? "تظهر البطاقات المنشورة في قسم عروض الصالون" : "تظهر البطاقات المنشورة ضمن عروض المنيو بتصميم علامتك"}</p>
         {offers.map((offer) => <button key={offer.id} disabled={busy} type="button" className={s.libraryItem} aria-pressed={offer.id === draft.id} onClick={() => changeDraft(editable(offer))}>
-          <span>{kinds.find((item) => item.id === rastOfferKind(offer))?.title}</span><strong>{offer.title}</strong>
+          <span>{displayKinds.find((item) => item.id === rastOfferKind(offer))?.title}</span><strong>{offer.title}</strong>
           <small>{offer.visibleInCafe ? (offer.status as string) === "غير نشط" ? "متوقف" : offer.status : "مخفي"}</small>
         </button>)}
         {!offers.length && <p className={s.empty}>ابدأ بأول عرض أو فعالية<br />احفظ البطاقة كمسودة حتى تكون جاهزة للنشر</p>}
@@ -124,11 +128,12 @@ export function RastOffersPage({ initialOffers, products, brandName, slug, salon
           <fieldset disabled={busy} className={s.fields}>
             <legend className={s.srOnly}>محرر بطاقة العرض</legend>
             <div className={s.editorHeading}><h2>{persisted ? "تعديل البطاقة" : "عرض جديد لعلامتك"}</h2><span>{dirty ? "تعديلات غير محفوظة" : salon ? "عرض للصالون" : "بطاقة تستاهل التجربة"}</span></div>
-            <div className={s.kinds} role="group" aria-label="نوع البطاقة">{displayKinds.map((item) => <button type="button" key={item.id} aria-pressed={kind === item.id} onClick={() => updateRules({ rastKind: item.id, appliesToAllProducts: item.id === "general" })}><item.icon aria-hidden="true" /><strong>{item.title}</strong><small>{item.detail}</small></button>)}</div>
+            <div className={s.kinds} role="group" aria-label="نوع البطاقة">{displayKinds.map((item) => <button type="button" key={item.id} aria-pressed={kind === item.id} onClick={() => updateRules({ rastKind: item.id, appliesToAllProducts: item.id === "general", ...(item.id === "announcement" ? { selectedProductIds: selected.slice(0, 1) } : {}) })}><item.icon aria-hidden="true" /><strong>{item.title}</strong><small>{item.detail}</small></button>)}</div>
             <div className={s.formGrid}>
-              <label className={s.full}>عنوان البطاقة<input required maxLength={100} value={draft.title} onChange={(e) => update({ title: e.target.value })} placeholder={kind === "event" ? "ليلة مختلفة تستحق الزيارة" : "اختيارك اليوم له عرض"} /></label>
+              <label className={s.full}>عنوان البطاقة<input required maxLength={100} value={draft.title} onChange={(e) => update({ title: e.target.value })} placeholder={kind === "announcement" ? "عنوان الإعلان" : kind === "event" ? "ليلة مختلفة تستحق الزيارة" : "اختيارك اليوم له عرض"} /></label>
               <label className={s.full}>التفاصيل<textarea required maxLength={700} rows={3} value={draft.description} onChange={(e) => update({ description: e.target.value })} placeholder="اكتب التفاصيل والشروط التي يحتاجها الزائر" /></label>
-              {kind !== "event" && <><label>نسبة الخصم ٪<input required type="number" min="0.01" max="100" step="0.01" value={draft.discountPercent ?? ""} onChange={(e) => update({ discountPercent: e.target.value === "" ? undefined : Number(e.target.value) })} /></label><label>كود العرض <small>اختياري</small><input dir="ltr" maxLength={40} value={draft.code ?? ""} onChange={(e) => update({ code: e.target.value })} placeholder="WELCOME20" /></label></>}
+              {kind === "announcement" && <label className={s.full}>المنتج المرتبط بالإعلان <small>اختياري</small><select value={selected[0] ?? ""} onChange={event => updateRules({ selectedProductIds: event.target.value ? [event.target.value] : [] })}><option value="">إعلان بدون زر منتج</option>{products.filter(product => product.available || product.id === selected[0]).map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>}
+              {isOffer && <><label>نسبة الخصم ٪<input required type="number" min="0.01" max="100" step="0.01" value={draft.discountPercent ?? ""} onChange={(e) => update({ discountPercent: e.target.value === "" ? undefined : Number(e.target.value) })} /></label><label>كود العرض <small>اختياري</small><input dir="ltr" maxLength={40} value={draft.code ?? ""} onChange={(e) => update({ code: e.target.value })} placeholder="WELCOME20" /></label></>}
               {kind === "event" && <><label>تاريخ الفعالية<input required type="date" value={rules.eventDate ?? ""} onChange={(e) => updateRules({ eventDate: e.target.value || undefined })} /></label><label>وقت الفعالية <small>بتوقيت السعودية</small><input required type="time" value={rules.eventTime ?? ""} onChange={(e) => updateRules({ eventTime: e.target.value || undefined })} /></label><label className={s.full}>مكان الفعالية<input required maxLength={160} value={rules.eventLocation ?? ""} onChange={(e) => updateRules({ eventLocation: e.target.value })} placeholder="اسم الفرع أو الموقع" /></label></>}
             </div>
             {kind === "products" && <fieldset className={s.products}><legend>{salon ? "الخدمات والمنتجات المشمولة" : "المنتجات المشمولة"} <span>({selected.length} / 24)</span></legend>
@@ -143,7 +148,7 @@ export function RastOffersPage({ initialOffers, products, brandName, slug, salon
             {kind === "general" && <p className={s.note}>ستظهر نسبة الخصم بتصميم قسيمة مميزة مع عبارة «على المنيو كاملًا»</p>}
             <fieldset className={s.schedule}><legend>متى تظهر البطاقة؟</legend><div className={s.formGrid}>
               <label>الحالة<select value={draft.status} onChange={(e) => update({ status: e.target.value as OfferStatus })}>{["مسودة", "نشط", "مجدول", "متوقف", "منتهي"].map((status) => <option key={status}>{status}</option>)}</select></label>
-              <label className={s.visibility}><input type="checkbox" checked={draft.visibleInCafe} onChange={(e) => update({ visibleInCafe: e.target.checked })} />إظهار في المنيو</label>
+              <label className={s.visibility}><input type="checkbox" checked={draft.visibleInCafe} onChange={(e) => update({ visibleInCafe: e.target.checked })} />{meram ? "إظهار في متجر ميرام" : "إظهار في المنيو"}</label>
               <label>بداية الإعلان <small>اختياري</small><input type="date" value={draft.startDate ?? ""} onChange={(e) => update({ startDate: e.target.value || undefined })} /></label>
               <label>نهاية الإعلان <small>اختياري</small><input type="date" min={draft.startDate} value={draft.endDate ?? ""} onChange={(e) => update({ endDate: e.target.value || undefined })} /></label>
             </div><p className={s.hint}>التواريخ بتوقيت السعودية وتشمل يوم النهاية كاملًا{kind === "event" ? " ويختفي إعلان الفعالية بعد يوم إقامتها" : ""}</p></fieldset>
@@ -153,8 +158,14 @@ export function RastOffersPage({ initialOffers, products, brandName, slug, salon
             <div className={s.saveBar}><button className={s.primary} type="submit">{busy && <Loader2 className={s.spinner} aria-hidden="true" />}حفظ البطاقة</button>{persisted && <button className={s.delete} type="button" onClick={() => dialog.current?.showModal()}><Trash2 aria-hidden="true" />حذف</button>}</div>
           </fieldset>
         </form>
-        <section className={s.preview} aria-label="معاينة البطاقة"><div className={s.previewHeading}><h2>قبل ما يشوفها الكل</h2><span>{salon ? "معاينة إعلان الصالون قبل نشره" : "معاينة المحتوى قبل الحفظ ويظهر بتصميم المنيو الخاص بعلامتك"}</span></div>
-          {salon ? <div className="rounded-2xl border border-[#BCA477]/30 p-6"><h3 className="text-xl font-bold">{draft.title || "عنوان عرض الصالون"}</h3><p className="mt-3 text-sm leading-7">{draft.description}</p>{draft.discountPercent != null && <p className="mt-4 font-bold">خصم {draft.discountPercent}%</p>}{draft.code && <p className="mt-2">رمز العرض: {draft.code}</p>}</div> : <RastSpotlight preview menu={{ name: brandName, slug, logoUrl: null, description: null, products: previewProducts, categories: [], contacts: { feedbackEnabled: false, instagramUrl: null, location: null }, highlights: { asOf: 0, items: previewItems } }} onSelect={() => {}} />}
+        <section className={s.preview} aria-label="معاينة البطاقة"><div className={s.previewHeading}><h2>قبل ما يشوفها الكل</h2><span>{meram ? "معاينة محتوى بطاقة ميرام" : salon ? "معاينة إعلان الصالون قبل نشره" : "معاينة المحتوى قبل الحفظ ويظهر بتصميم المنيو الخاص بعلامتك"}</span></div>
+          {meram ? <article className={s.meramPreview}>
+            {draft.bannerImageUrl && <img src={draft.bannerImageUrl} alt="" />}
+            <div><span>{displayKinds.find(item => item.id === kind)?.title}</span><h3>{draft.title || "عنوان البطاقة"}</h3><p>{draft.description}</p>
+            {isOffer && draft.discountPercent != null && <strong>خصم {draft.discountPercent}%</strong>}
+            {kind === "announcement" && selected[0] && <small>{products.find(product => product.id === selected[0])?.name}</small>}
+            </div>
+          </article> : salon ? <div className="rounded-2xl border border-[#BCA477]/30 p-6"><h3 className="text-xl font-bold">{draft.title || "عنوان عرض الصالون"}</h3><p className="mt-3 text-sm leading-7">{draft.description}</p>{draft.discountPercent != null && <p className="mt-4 font-bold">خصم {draft.discountPercent}%</p>}{draft.code && <p className="mt-2">رمز العرض: {draft.code}</p>}</div> : <RastSpotlight preview menu={{ name: brandName, slug, logoUrl: null, description: null, products: previewProducts, categories: [], contacts: { feedbackEnabled: false, instagramUrl: null, location: null }, highlights: { asOf: 0, items: previewItems } }} onSelect={() => {}} />}
         </section>
       </div>
     </div>

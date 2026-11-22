@@ -30,7 +30,7 @@ function load(relative) {
 async function run() {
   const today = new Date(Date.now() + 10800000).toISOString().slice(0, 10);
   const product = { id: "p1", name: "Real coffee", price: 20, categoryId: "coffee", category: "Coffee", description: "Real description", available: true, ingredients: [], images: [{ url: "https://example.com/coffee.webp", alt: "Coffee" }], videos: [] };
-  const base = { cafe_id: "rast", title: "Featured coffee", description: "Details", offer_type: "خصم", discount_percent: 20, code: "COFFEE", linked_product_id: "p1", visible_in_cafe: true, is_archived: false, deleted_at: null, status: "active", placement: "both", start_date: today, end_date: today, private_field: "MUST_NOT_LEAK" };
+  const base = { branch_id: null, cafe_id: "rast", title: "Featured coffee", description: "Details", offer_type: "خصم", discount_percent: 20, code: "COFFEE", linked_product_id: "p1", visible_in_cafe: true, is_archived: false, deleted_at: null, status: "active", placement: "both", start_date: today, end_date: today, private_field: "MUST_NOT_LEAK" };
   const rows = [
     { ...base, id: "o1", banner_storage_path: "rast/o1/photo.webp" },
     { ...base, id: "o2", card_storage_path: "other/o2/private.webp", banner_storage_path: "rast/o1/private.webp" },
@@ -88,6 +88,12 @@ async function run() {
   assert.equal(event.eventLocation, "Rast branch");
   rows.push({ ...base, id: "old-event", linked_product_id: null, offer_type: "عرض مخصص", offer_rules: { rastKind: "event", eventDate: "2020-01-01" } });
   assert(!(await getStandaloneHighlights("rast", [product])).items.some((item) => item.id === "old-event"));
+  const { MERAM_CAFE_ID } = load("lib/commerce/meram-profile.ts");
+  const announcement = { ...base, id: "announcement", cafe_id: MERAM_CAFE_ID, linked_product_id: null, offer_type: "عرض مخصص", offer_rules: { rastKind: "announcement", selectedProductIds: ["p1"] } };
+  rows.push(announcement, { ...announcement, id: "wrong-brand", cafe_id: "rast" });
+  const [banner] = (await getStandaloneHighlights(MERAM_CAFE_ID, [product])).items;
+  assert.deepEqual([banner.kind, banner.productId, banner.discountPercent, banner.code], ["announcement","p1",null,null]);
+  assert(!(await getStandaloneHighlights("rast", [product])).items.some(item => item.id === "wrong-brand"));
   const legacyPromo = { kind: "خصم", discountMode: "percent", discountPercent: 20, customText: base.title, startDate: today, endDate: today };
   const withLegacy = { ...product, promo: legacyPromo };
   const signedBeforeDisabled = signedPaths.length;

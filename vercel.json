@@ -4,6 +4,10 @@
   "regions": ["icn1"],
   "crons": [
     {
+      "path": "/api/meram/order-notices",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/owner-guides/jobs",
       "schedule": "* * * * *"
     },

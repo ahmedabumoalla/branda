@@ -15,3 +15,32 @@
 .root .gatewayPlaceholder h3{margin:0;font-size:15px}
 .root .gatewayPlaceholder p{margin:5px 0 0;font-size:12px;line-height:1.8;color:var(--g-muted)}
 .root .gatewayStatus{padding:6px 12px;border:1px solid var(--g-line);border-radius:20px;font-size:12px;background:var(--g-white);white-space:nowrap}
+
+.root[data-meram] {
+  --g-ink: #482c32;
+  --g-green: #81494c;
+  --g-line: #e2d5d3;
+  --g-soft: #f7f0ed;
+  --g-muted: #715e60;
+}
+.root[data-meram] .hero {
+  background: linear-gradient(115deg, #462c31, #693c42 70%, #794c50);
+  border: 1px solid #75454a;
+}
+.root[data-meram] .hero h1 { font-size: clamp(2.2rem, 4vw, 3.8rem); line-height: 1.35; }
+.root[data-meram] .hero .eyebrow, .root[data-meram] .heroMark { color: #f1ded8; }
+.root[data-meram] .heroMark { background: #ffffff0d; border: 1px solid #e2dcd74a; }
+.root[data-meram] .tabs { flex-wrap: wrap; align-items: center; gap: 4px 20px; }
+.meramNavLink {
+  display: inline-flex; align-items: center; min-height: 44px; color: var(--g-green);
+  font-size: 13px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px;
+}
+.root[data-meram] .actionBox { background: #fbf7f5; }
+.root[data-meram] .actionRow a { display: inline-flex; text-decoration: none; }
+.root[data-meram] .infoGrid .mapLink {
+  display: inline-flex; align-items: center; gap: 8px; color: var(--g-green);
+  min-height: 44px; text-decoration: underline; text-underline-offset: 4px;
+}
+.root[data-meram] :is(button, a, input, select, textarea):focus-visible {
+  outline-color: #ac6a68;
+}
