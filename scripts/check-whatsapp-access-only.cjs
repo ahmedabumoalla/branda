@@ -148,9 +148,10 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
     assert.match(source, /p_primary_ready: claimPlatform/);
     // Since 2026-11-22 the notifications number carries these links; they are closed unsent only when it is unavailable
     assert.match(source, /const drain = platformOff \|\| \(paused && !notifySender\);/);
-    // The one exception is a stamp that completes the card: scripts/check-minimal-platform-messages.cjs covers it
-    assert.match(source, /if \(drain && usesPlatformNumber && !earnedReward\) \{ await finish\("skipped"\); continue; \}/);
-    assert.ok(source.indexOf('if (drain && usesPlatformNumber && !earnedReward)') < source.indexOf('const input = { phone: job.phone'), 'the skip happens before any message is built or sent');
+    // The exceptions are a stamp that completes the card and the one brand the user named on 2026-11-22:
+    // scripts/check-minimal-platform-messages.cjs covers both
+    assert.match(source, /if \(drain && usesPlatformNumber && !earnedReward && !namedLink\) \{ await finish\("skipped"\); continue; \}/);
+    assert.ok(source.indexOf('if (drain && usesPlatformNumber && !earnedReward && !namedLink)') < source.indexOf('const input = { phone: job.phone'), 'the skip happens before any message is built or sent');
     assert.ok(source.indexOf(': notifySender ? await sendGreenApiCustomerMessage(notifySender, input)') < source.indexOf(': primaryReady ? await sendGreenApiLoyaltyWelcome(input)'), 'the notifications number is tried before Branda\'s primary');
     checks++;
   }

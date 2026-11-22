@@ -86,6 +86,59 @@ const live = { BRANDA_ACCESS_MESSAGES_ONLY: 'true', BRANDA_PLATFORM_CARD_LINKS: 
     assert.equal(x.sent.length, 2); checks++;
   }
 
+  // User decision of 2026-11-22: Bolingo alone gets its card link back, from the notifications number, closing
+  // with a rating. Every other brand on Branda's numbers is still closed unsent
+  const bolingo = 'dbe942ba-dfa4-422b-a9f6-9527c3b27cc9';
+  {
+    const x = worker({ env: live, notify, jobs: [job('other'), job('known', { cafeId: bolingo, brandName: 'بولينقو' }), job('new', { cafeId: bolingo, brandName: 'بولينقو', cardCreated: true }), job('other2', { cardCreated: true })] });
+    assert.deepEqual([...x.exports.PLATFORM_CARD_LINK_CAFE_IDS], [bolingo], 'one named brand only');
+    const result = await x.exports.dispatchStampCardLinks(5);
+    assert.deepEqual(x.finished, [['other', 'skipped'], ['known', 'queued'], ['new', 'queued'], ['other2', 'skipped']]);
+    assert.deepEqual(x.sent.map(([sender]) => sender), ['notify', 'notify']); assert.equal(result.queued, 2);
+    assert.deepEqual(x.sent[0][1].split('\n\n'), [
+      'يا هلا فيك في بولينقو',
+      'تم تحديث رصيدك في بطاقة الولاء',
+      'افتح الرابط لعرض بطاقتك وتحميلها إلى المحفظة',
+      'https://barndaksa.com/loyalty/example/access?token=fixture-token',
+      'قيّم تجربتك مع بولينقو من 1 إلى 5 بالرد برقم',
+    ]);
+    assert.equal(x.sent[1][1].split('\n\n')[1], 'بطاقة الولاء جاهزة باسمك');
+    for (const [, message] of x.sent) {
+      assert.equal((message.match(/https?:\/\//g) ?? []).length, 1, 'one link only, the customer card');
+      for (const line of message.split('\n\n')) assert.doesNotMatch(line, /[.،,]$/, 'no trailing punctuation');
+    }
+    checks++;
+  }
+  // A card on points shows zero stamps: the named brand still gets the card link, never a false reward notice
+  {
+    const x = worker({ env: live, notify, jobs: [job('zero', { cafeId: bolingo, stampsInCycle: 0 })] });
+    await x.exports.dispatchStampCardLinks(2);
+    assert.equal(x.sent.length, 1); assert.doesNotMatch(x.sent[0][1], /مبروك|مكافأ/); assert.match(x.sent[0][1], /تم تحديث رصيدك/); checks++;
+  }
+  // The named brand is not sent to when the notifications number is unavailable (never from the primary or the
+  // first standby) or when the customer already keeps the card in a wallet, and the send budget still applies
+  for (const [label, options, extra] of [
+    ['notifications number unavailable', { env: live, notify: null }, {}],
+    ['card already in a wallet', { env: live, notify, saved: true }, { googleIssued: true }],
+  ]) {
+    const x = worker({ ...options, jobs: [job('b', { cafeId: bolingo, ...extra })] });
+    await x.exports.dispatchStampCardLinks(2);
+    assert.deepEqual(x.sent, [], label); assert.deepEqual(x.finished, [['b', 'skipped']], label); checks++;
+  }
+  {
+    const x = worker({ env: live, notify, jobs: ['a', 'b', 'c', 'd'].map(id => job(id, { cafeId: bolingo })) });
+    await x.exports.dispatchStampCardLinks(2);
+    assert.equal(x.sent.length, 2, 'send budget'); checks++;
+  }
+  // Brands with their own sender keep the original text, with no rating line
+  {
+    const { stampCardLinkMessage } = worker({ env: live, notify, jobs: [] }).exports;
+    const lines = stampCardLinkMessage(job('own')).split('\n\n');
+    assert.equal(lines.length, 5); assert.equal(lines[1], 'تم تسجيل ختمك في بطاقة الولاء'); assert.equal(lines[4], 'في زيارتك القادمة اعرض بطاقتك للكاشير لتسجيل ختمك');
+    assert.throws(() => stampCardLinkMessage(job('x', { phone: '0500000001' }), { rating: true }), /invalid_card_link_job/);
+    checks++;
+  }
+
   // Cashier added: no welcome message while the switch is on, the owner is told to share the link
   {
     const source = read('lib/data/loyalty-cards.ts');

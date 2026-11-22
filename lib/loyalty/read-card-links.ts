@@ -9,11 +9,18 @@ import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
 import { getGoogleWalletSaveState } from "@/lib/wallet/google";
 
 type CardLinkJob = { id: string; claimToken: string; cafeId: string; profileId: string; cardId: string; brandSlug: string; brandName: string; phone: string; cardCreated: boolean; googleIssued: boolean; stampsInCycle?: number | null; purchasesRequired?: number | null; rewardName?: string | null };
-export function stampCardLinkMessage(job: CardLinkJob) {
+/** User decision of 2026-11-22: these brands alone get the card link back from the notifications number while
+ * BRANDA_PLATFORM_CARD_LINKS is "off", closing with a rating. Today that is Bolingo only. Every other brand on
+ * Branda's numbers stays off. Add a brand here only on the user's word */
+export const PLATFORM_CARD_LINK_CAFE_IDS: ReadonlySet<string> = new Set(["dbe942ba-dfa4-422b-a9f6-9527c3b27cc9"]);
+/** `rating` is the text for a brand named above: it suits stamps and points alike and closes with a rating that
+ * invites a reply. Brands with their own sender keep the original text */
+export function stampCardLinkMessage(job: CardLinkJob, options: { rating?: boolean } = {}) {
   if (!/^[a-z0-9-]{1,80}$/.test(job.brandSlug) || !/^9665\d{8}$/.test(job.phone)) throw new Error("invalid_card_link_job");
   const token = createLoyaltySessionToken({ slug: job.brandSlug, cafeId: job.cafeId, profileId: job.profileId, phoneHash: loyaltyIdentityHash(job.phone) });
   const link = `https://barndaksa.com/loyalty/${job.brandSlug}/access?token=${encodeURIComponent(token)}`;
   const name = job.brandName.replace(/[\r\n\u0000-\u001f]/g, " ").trim().slice(0, 180);
+  if (options.rating) return [ `يا هلا فيك في ${name}`, job.cardCreated ? "بطاقة الولاء جاهزة باسمك" : "تم تحديث رصيدك في بطاقة الولاء", "افتح الرابط لعرض بطاقتك وتحميلها إلى المحفظة", link, `قيّم تجربتك مع ${name} من 1 إلى 5 بالرد برقم` ].join("\n\n");
   return [ `يا هلا فيك في ${name}`, job.cardCreated ? "بطاقة الولاء جاهزة وسجّلنا فيها أول ختم لك" : "تم تسجيل ختمك في بطاقة الولاء", "افتح الرابط لعرض بطاقتك وتحميلها إلى المحفظة", link, "في زيارتك القادمة اعرض بطاقتك للكاشير لتسجيل ختمك" ].join("\n\n");
 }
 /** The only loyalty message Branda's own numbers send since 2026-11-22: a stamp completed the card and a reward
@@ -62,8 +69,12 @@ export async function dispatchStampCardLinks(limit = 2) {
     };
     const usesPlatformNumber = job.cafeId !== LOCO_CAFE_ID && !(job.cafeId === WAHED_MASOUB_CAFE_ID && wahedSender);
     // A stamp that completes the card sets the count back to zero, so zero right after a stamp means a reward was earned
-    const earnedReward = Boolean(drain && usesPlatformNumber && rewardSender) && Number(job.stampsInCycle) === 0 && Number(job.purchasesRequired) >= 1;
-    if (drain && usesPlatformNumber && !earnedReward) { await finish("skipped"); continue; }
+    // A brand the user named keeps its card link while the platform switch is off, from the notifications number
+    // only and never from the primary or the first standby. It gets the link on every job, not the reward notice:
+    // a card on points always shows zero stamps, which the notice would misread as a completed card
+    const namedLink = Boolean(platformOff && usesPlatformNumber && readyNotifySender) && PLATFORM_CARD_LINK_CAFE_IDS.has(job.cafeId);
+    const earnedReward = !namedLink && Boolean(drain && usesPlatformNumber && rewardSender) && Number(job.stampsInCycle) === 0 && Number(job.purchasesRequired) >= 1;
+    if (drain && usesPlatformNumber && !earnedReward && !namedLink) { await finish("skipped"); continue; }
     if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
     if (job.googleIssued) {
       let saved: boolean;
@@ -73,10 +84,11 @@ export async function dispatchStampCardLinks(limit = 2) {
     }
     let outcome: Awaited<ReturnType<typeof sendGreenApiLoyaltyWelcome>>;
     try {
-      const input = { phone: job.phone, message: earnedReward ? rewardNoticeMessage(job) : stampCardLinkMessage(job) };
+      const input = { phone: job.phone, message: earnedReward ? rewardNoticeMessage(job) : stampCardLinkMessage(job, { rating: namedLink }) };
       if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
       sends++;
       outcome = earnedReward ? await sendGreenApiCustomerMessage(rewardSender!, input)
+        : namedLink ? await sendGreenApiCustomerMessage(readyNotifySender!, input)
         : job.cafeId === LOCO_CAFE_ID
         ? locoSender ? await sendGreenApiCustomerMessage(locoSender, input) : { status: "rejected" }
         : job.cafeId === WAHED_MASOUB_CAFE_ID && wahedSender ? await sendGreenApiCustomerMessage(wahedSender, input)
