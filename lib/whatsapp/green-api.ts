@@ -4,6 +4,7 @@ import { ownerGuideFilename, ownerGuideUrl, ownerCompanionGuides, type OwnerComp
 import { queueOwnerCompanionGuides } from "@/lib/whatsapp/owner-guide-delivery";
 import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
 
+const ownerMobile = /^(?:9665\d{8}|9705[69]\d{7})$/;
 const DEFAULT_GREEN_API_TIMEOUT_MS = 10_000;
 
 type GreenApiSendResponse = {
@@ -68,7 +69,7 @@ export async function sendGreenApiOwnerCompanionGuide(phone: string, guide: Owne
 }
 
 async function sendOwnerVideo(phone: string, urlFile: string, fileName: string, caption: string, kind: "owner" | "owner_handoff" = "owner") {
-  if (!/^9665\d{8}$/.test(phone)) throw new Error("INVALID_OWNER_RECIPIENT");
+  if (!ownerMobile.test(phone)) throw new Error("INVALID_OWNER_RECIPIENT");
   if (caption.length > 1024) throw new Error("OWNER_WELCOME_REJECTED");
   const primary = await requireDeliveryConfig(kind);
   const backup = backupOtpSender(primary);
@@ -350,7 +351,8 @@ export async function isGreenApiCustomerSenderReady(sender: GreenApiCustomerSend
 
 /** Exactly one POST. Selection/failover must finish before calling this function. */
 export async function sendGreenApiCustomerMessage(sender: GreenApiCustomerSender, input: { phone: string; message: string }, timeoutMs = 10_000, kind: "otp" | "other" = "other"): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
-  if (!/^9665\d{8}$/.test(input.phone) || !input.message.trim() || input.message.length > 2000) throw new Error("INVALID_CUSTOMER_MESSAGE");
+  const validPhone = kind === "otp" ? ownerMobile.test(input.phone) : /^9665\d{8}$/.test(input.phone);
+  if (!validPhone || !input.message.trim() || input.message.length > 2000) throw new Error("INVALID_CUSTOMER_MESSAGE");
   if (isGreenApiBackupOnly() && kind === "other") throw new Error("MESSAGING_TEMPORARILY_PAUSED");
   // A sender the brand connected itself keeps working; only Branda's own numbers are held to access messages
   if (isPlatformAccessOnly() && kind === "other" && isGreenApiPlatformSender(sender)) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
@@ -434,7 +436,7 @@ async function submitPlatformMessage(primary: OtpSender, backup: OtpSender | nul
  * Never repeat a POST after timeout/5xx/malformed acknowledgement: it may be queued.
  */
 async function sendVerificationCode(phone: string, code: string, message: string, timeoutMs: number) {
-  if (!/^9665\d{8}$/.test(phone) || !/^\d{6}$/.test(code)) throw new Error("OTP_INPUT_INVALID");
+  if (!ownerMobile.test(phone) || !/^\d{6}$/.test(code)) throw new Error("OTP_INPUT_INVALID");
   // Verification codes leave from the notifications number first (user decision 2026-11-22). Its state is read
   // right before sending because the provider queues messages for a disconnected number. Branda's primary and
   // first standby carry a code only when that number is not connected or refuses, so sign-in never depends on one number

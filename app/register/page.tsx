@@ -8,6 +8,8 @@ import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import styles from "./register.module.css";
 import { normalizeInputDigits } from "@/lib/auth/input-digits";
 
+import { normalizeOwnerPhone, type OwnerPhoneCountry } from "@/lib/auth/owner-phone";
+
 const steps = ["بيانات العلامة", "تحقق واتساب", "كلمة المرور"];
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className={styles.field}><span>{label}</span>{children}</label>;
@@ -17,6 +19,8 @@ export default function RegisterPage() {
   const [step, setStep] = useState(0);
   const [planChoice, setPlanChoice] = useState<"loyalty" | "menu_loyalty">("menu_loyalty");
   const [draft, setDraft] = useState({ brandNameAr: "", brandNameEn: "", ownerName: "", email: "", phone: "", couponCode: "" });
+  const [phoneCountry, setPhoneCountry] = useState<OwnerPhoneCountry>("966");
+  const normalizedPhone = normalizeOwnerPhone(draft.phone, phoneCountry);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -27,7 +31,8 @@ export default function RegisterPage() {
   const [resendAt, setResendAt] = useState(0);
   const update = (field: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [field]: value }));
   async function sendCode() {
-    const result = await requestOwnerRegistrationOtpAction({ ...draft, planChoice });
+    if (!normalizedPhone) { setMessage("تحقق من رقم الجوال ومفتاح الدولة"); return; }
+    const result = await requestOwnerRegistrationOtpAction({ ...draft, phone: normalizedPhone, planChoice });
     setMessage(result.message);
     if (result.retryAfterSeconds) setResendAt(Date.now() + result.retryAfterSeconds * 1000);
     if (result.ok) { setCode(""); setStep(1); }
@@ -79,7 +84,7 @@ export default function RegisterPage() {
         <div className={styles.topline}><Link href="/" aria-label="برندة الرئيسية"><BarndaksaLogo variant="brown" width={100} height={42} /></Link><span>لديك حساب؟ <Link href="/login">تسجيل الدخول <ArrowLeft size={15} aria-hidden="true" /></Link></span></div>
         <div className={styles.formCard}>
         <ol className={styles.steps} aria-label="خطوات التسجيل">{steps.map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={step >= index ? styles.current : ""}><span>{step > index ? <Check size={16} aria-hidden="true" /> : index + 1}</span><b>{label}</b></li>)}</ol>
-        <header className={styles.heading}><span className={styles.kicker}>خطوتك الأولى مع برندة</span><h2>{step === 0 ? "أهلًا بعلامتك" : step === 1 ? "رسالة واحدة ونكمل" : "باقي خطوة وتبدأ"}</h2><p>{step === 0 ? "اختر خدماتك وعرّفنا بعلامتك لتبدأ تجربتك" : step === 1 ? `أرسلنا رمز التحقق إلى واتساب ${draft.phone} أدخله لإكمال التسجيل` : "احمِ حسابك بكلمة مرور ثم انتقل إلى لوحة تحكم علامتك"}</p></header>
+        <header className={styles.heading}><span className={styles.kicker}>خطوتك الأولى مع برندة</span><h2>{step === 0 ? "أهلًا بعلامتك" : step === 1 ? "رسالة واحدة ونكمل" : "باقي خطوة وتبدأ"}</h2><p>{step === 0 ? "اختر خدماتك وعرّفنا بعلامتك لتبدأ تجربتك" : step === 1 ? `أرسلنا رمز التحقق إلى واتساب +${normalizedPhone} أدخله لإكمال التسجيل` : "احمِ حسابك بكلمة مرور ثم انتقل إلى لوحة تحكم علامتك"}</p></header>
         <div className={styles.trial}><span className={styles.trialIcon}><Sparkles size={21} aria-hidden="true" /></span><div><b>{planChoice === "loyalty" ? "باقة الولاء" : "باقة الولاء والمنيو التجريبية"}</b><span>شهر مجاني يبدأ بعد إنشاء الحساب بدون بطاقة دفع</span></div><span className={styles.free}>٣٠ يومًا</span></div>
         {message ? <p className={styles.message} role="status" aria-live="polite">{message}</p> : null}
         <form onSubmit={submit} aria-busy={pending}><fieldset disabled={pending} className={styles.fields}>
@@ -98,7 +103,16 @@ export default function RegisterPage() {
             <Field label="اسم المسؤول"><input placeholder="الاسم الكامل" value={draft.ownerName} onChange={event => update("ownerName", event.target.value)} required minLength={2} maxLength={120} autoComplete="name" /></Field>
             <div className={styles.columns}>
               <Field label="البريد الإلكتروني (اختياري)"><input type="email" placeholder="name@example.com" value={draft.email} onChange={event => update("email", event.target.value)} maxLength={254} autoComplete="email" dir="ltr" /></Field>
-              <Field label="رقم الجوال المرتبط بواتساب"><input type="tel" placeholder="05xxxxxxxx" value={draft.phone} onChange={event => update("phone", event.target.value)} required maxLength={64} autoComplete="tel" dir="ltr" /></Field>
+              <Field label="مفتاح دولة الجوال"><select value={phoneCountry} onChange={event => {
+                if (normalizedPhone) update("phone", "0" + normalizedPhone.slice(3));
+                setPhoneCountry(event.target.value === "970" ? "970" : "966");
+              }}><option value="966">السعودية (+966)</option><option value="970">فلسطين (+970)</option></select></Field>
+              <Field label="رقم الجوال المرتبط بواتساب"><input type="tel" placeholder={phoneCountry === "970" ? "059xxxxxxx" : "05xxxxxxxx"} value={draft.phone} onChange={event => {
+                const value = event.target.value;
+                update("phone", value);
+                const prefix = /^(?:\+|00)?(966|970)/.exec(normalizeInputDigits(value).trim());
+                if (prefix) setPhoneCountry(prefix[1] === "970" ? "970" : "966");
+              }} required maxLength={64} autoComplete="tel" dir="ltr" /></Field>
             </div>
             <p className={styles.hint}><ShieldCheck size={15} aria-hidden="true" /> سنرسل رمز التحقق إلى رقم واتساب هذا</p></div>
             <details className={styles.coupon}><summary><TicketPercent size={18} aria-hidden="true" /> لديك كوبون خصم؟ <span>اختياري</span></summary><Field label="كوبون الخصم"><input placeholder="أدخل رمز الكوبون" value={draft.couponCode} onChange={event => update("couponCode", event.target.value)} maxLength={30} dir="ltr" autoCapitalize="characters" /></Field></details>

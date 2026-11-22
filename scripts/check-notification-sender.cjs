@@ -177,6 +177,9 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
     return { module: load('lib/whatsapp/green-api.ts'), calls, posts: () => calls.filter(call => call.startsWith('POST')) };
   }
   const code = { phoneNormalized: '966500000001', code: '123456', brandName: 'Example' };
+  const palestinian = green({ settings: env });
+  assert.deepEqual(await palestinian.module.sendGreenApiOtp({ ...code, phoneNormalized: '970591234567' }), { providerMessageId: 'ack-333' });
+  assert.deepEqual(palestinian.calls, ['GET 333', 'POST 333']); checks++;
   for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp']) {
     for (const settings of [env, { ...env, BRANDA_ACCESS_MESSAGES_ONLY: 'true' }]) {
       const x = green({ settings });

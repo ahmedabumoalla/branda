@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { after } from "next/server";
 import { z } from "zod";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { normalizeInputDigits } from "@/lib/auth/input-digits";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -28,7 +28,7 @@ export const ownerOnboardingSchema = z.object({
   ownerName: z.string().trim().min(2).max(120),
   email: z.string().trim().pipe(z.union([z.literal(""), z.string().email().max(254)]))
     .nullish().transform(value => value?.toLowerCase() || null),
-  phone: z.string().trim().max(64).transform(normalizeSaudiPhone).refine(value => Boolean(value), "أدخل رقم جوال سعودي صحيحًا"),
+  phone: z.string().trim().max(64).transform(value => normalizeOwnerPhone(value)).refine(value => Boolean(value), "أدخل رقم جوال سعودي أو فلسطيني صحيح"),
   mapsUrl: z.string().trim().pipe(z.union([z.literal(""), mapsUrl]))
     .nullish().transform(value => value || null),
   couponCode: z.string().trim().max(30).optional().transform(value => value?.toUpperCase() || ""),
@@ -59,7 +59,7 @@ export async function requestOwnerOnboarding(input: OwnerOnboardingInput): Promi
       brandNameAr: "اكتب اسم العلامة بالعربية من حرفين إلى ١٢٠ حرفًا",
       brandNameEn: "اكتب اسم العلامة بالإنجليزية من حرفين إلى ١٢٠ حرفًا دون رموز خاصة",
       ownerName: "اكتب اسم المسؤول من حرفين إلى ١٢٠ حرفًا",
-      phone: "أدخل رقم جوال سعودي من ١٠ أرقام يبدأ بـ 05 أو اكتبه مع مفتاح +966",
+      phone: "أدخل رقم جوال سعودي أو فلسطيني صحيح مع مفتاح الدولة",
       email: "البريد الإلكتروني غير صحيح صححه أو اتركه فارغًا فهو اختياري",
       mapsUrl: "أدخل رابطًا صحيحًا من خرائط Google أو اتركه فارغًا",
       couponCode: "كوبون الخصم يجب ألا يتجاوز ٣٠ حرفًا",

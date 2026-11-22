@@ -43,6 +43,13 @@ try {
   `);
   const configuredMigration=(await readdir('supabase/migrations')).find(file=>file.endsWith('_configured_default_trial.sql'));
   await db.exec(await readFile(`supabase/migrations/${configuredMigration}`,'utf8'));
+  await db.exec(await readFile("supabase/migrations/20261123001000_palestinian_owner_signup_phone.sql","utf8"));
+  await db.exec("BEGIN");
+  await q("INSERT INTO profiles(id,phone,role,status) VALUES($1,'0591111111','cafe_owner','active')",[id(270)]);
+  check((await begin(271,"966591111111")).reason==="registered","legacy Saudi local owner still matched");
+  check((await begin(272,"970591111111")).ok,"Palestinian owner with same national digits is distinct");
+  check(!(await begin(273,"970551111111")).ok,"invalid Palestinian mobile prefix denied");
+  await db.exec("ROLLBACK");
   // Exercise the deployed trigger's public registration path; no admin drafts exist in this fixture
   await db.exec('CREATE SCHEMA brand_onboarding_private; CREATE TABLE brand_onboarding_private.accounts(id uuid,state text,cafe_id uuid,proof text);');
   await db.exec(await readFile('supabase/migrations/20261014004927_admin_brand_auth_identity_order.sql','utf8'));
@@ -138,7 +145,7 @@ try {
     check(await v("SELECT s.status='trialing' AND s.amount_sar=0 AND s.expires_at-s.started_at=interval '30 days' FROM subscriptions s JOIN cafes c ON c.id=s.cafe_id WHERE c.owner_user_id=$1",[id(challenge+100)]),'new account receives actual free thirty days');
   }
   await db.exec(await readFile('supabase/migrations/20261118000400_verified_owner_auth_metadata_order.sql','utf8'));
-  const orderedPhone='966599888777';
+  const orderedPhone='970561234567';
   check((await begin(70,orderedPhone,{...draft,email:null,mapsUrl:null,slug:'ordered-owner'},'7'.repeat(64))).ok,'ordered registration begins');
   await q('SELECT public.mark_owner_onboarding_sent($1,$2,true)',[id(70),proof]);
   check((await verify(70)).ok,'ordered registration verified');

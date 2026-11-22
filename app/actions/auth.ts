@@ -39,6 +39,7 @@ import {
   requestCustomerPhoneOtp,
   type CustomerPhoneOtpPurpose,
 } from "@/lib/auth/phone-otp";
+import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { linkCustomerAfterSupabasePhoneOtp } from "@/lib/auth/customer-phone-auth";
 import { recordNewCustomerRegistration, type RegistrationSource } from "@/lib/analytics/registration-attribution";
 
@@ -154,7 +155,7 @@ export async function loginOwnerAction(
   try {
     const supabase = await createClient();
     const normalizedEmail = email.trim().toLowerCase();
-    const phoneLogin = normalizedEmail.includes("@") ? null : normalizeSaudiPhone(normalizedEmail);
+    const phoneLogin = normalizedEmail.includes("@") ? null : normalizeOwnerPhone(normalizedEmail);
     const authEmail = !phoneLogin && !normalizedEmail.includes("@")
       ? ownerLoginAliasEmail(normalizedEmail) ?? normalizedEmail
       : normalizedEmail;
@@ -179,7 +180,8 @@ export async function loginOwnerAction(
       if (owner.data?.id) {
         const account = await admin.auth.admin.getUserById(String(owner.data.id));
         const user = account.data.user;
-        if (user?.app_metadata?.owner_onboarding_id && user.phone_confirmed_at && user.phone && !user.email && normalizeSaudiPhone(user.phone) === normalizeSaudiPhone(String(owner.data.phone ?? ""))) {
+        const verifiedPhone = user?.phone ? normalizeOwnerPhone(user.phone) : null;
+        if (user?.app_metadata?.owner_onboarding_id && user.phone_confirmed_at && user.phone && !user.email && verifiedPhone && verifiedPhone === normalizeOwnerPhone(String(owner.data.phone ?? ""))) {
           const result = await supabase.auth.signInWithPassword({ phone: user.phone, password });
           if (result.data.user?.id === owner.data.id) {
             authData = result.data;

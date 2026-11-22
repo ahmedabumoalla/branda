@@ -24,13 +24,17 @@ for(const input of ["0511111111", "511111111", "+966 51 111 1111", "00966 51 111
   await test(()=>assert.equal(phoneUtils.normalizeSaudiPhone(input),"966511111111"));
 for(const input of ["", "+971501111111", "+447700900123", "051111", "٠٥١١١١١١١١١", "12345"])
   await test(()=>assert.equal(phoneUtils.normalizeSaudiPhone(input),null));
+const { normalizeOwnerPhone }=load("lib/auth/owner-phone.ts");
+for (const phone of ["+970 59 123 4567", "00970591234567", "٠٥٩١٢٣٤٥٦٧", "۰۵۹۱۲۳۴۵۶۷"]) await test(()=>assert.equal(normalizeOwnerPhone(phone,"970"),"970591234567"));
+await test(()=>assert.equal(normalizeOwnerPhone("0591234567"),"966591234567"));
+for (const phone of ["+970551234567","+97059123","+972591234567"]) await test(()=>assert.equal(normalizeOwnerPhone(phone),null));
 const valid={brandNameAr:"علامة الاختبار",brandNameEn:"Test Brand",ownerName:"Test Owner",email:"owner@example.invalid",phone:"0511111111",mapsUrl:"https://google.com/maps?q=24,46",couponCode:""};
 function context(options={}) {
   const events=[], jar=new Map(), deferred=[]; let capturedCode="";
   const rpc=async(name,args)=>{events.push({name,args});
     if(name==="begin_owner_onboarding")return {data:{ok:!options.limited},error:null};
     if(name==="verify_owner_onboarding")return {data:{ok:!options.badCode},error:null};
-    if(name==="get_verified_owner_onboarding")return {data:options.unverified?null:{draft:options.draft??valid,phone:"966511111111"},error:null};
+    if(name==="get_verified_owner_onboarding")return {data:options.unverified?null:{draft:options.draft??valid,phone:options.verifiedPhone??"966511111111"},error:null};
     return {data:true,error:null};
   };
   const stubs={
@@ -68,6 +72,7 @@ await test(async()=>{
   assert.equal(c.events.filter(e=>e.name==='welcome').length,1);assert.equal(logs.length,1);
   assert(!JSON.stringify(logs).includes('private-provider-error'));assert(!JSON.stringify(logs).includes('966511111111'));
 });
+await test(async()=>{const phone="970561234567", c=context({verifiedPhone:phone}); assert((await c.api.requestOwnerOnboarding({...valid,phone:"+٩٧٠ ٥٦ ١٢٣ ٤٥٦٧"})).ok);assert.equal(c.events.find(e=>e.name==="begin_owner_onboarding").args.p_phone,phone);assert((await c.api.verifyOwnerOnboarding(c.code)).ok);assert((await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"})).ok);assert.equal(c.events.find(e=>e.name==="createUser").input.phone,"+"+phone);});
 for(const [field,value,expected] of [["brandNameAr","Test","بالعربية"],["brandNameEn","علامة","بالإنجليزية"],["ownerName","x","المسؤول"],["email","invalid","البريد الإلكتروني"],["phone","05111","رقم جوال سعودي"]])
   await test(async()=>{const c=context();const result=await c.api.requestOwnerOnboarding({...valid,[field]:value});assert(!result.ok);assert(result.message.includes(expected));if(field!=="phone")assert(!result.message.includes("سعودي"));assert.equal(c.events.length,0);});
 for(const phone of ["٠٥١١١١١١١١", "\u2066+۹۶۶ ۵۱ ۱۱۱ ۱۱۱۱\u2069", "+966 (0)51 111 1111"])
@@ -111,6 +116,7 @@ function loginContext(options={}) {
   const user={id:"owner",phone:"+966511111111",email:options.attachedEmail?"unverified@example.invalid":undefined,phone_confirmed_at:options.unconfirmed?null:"2026-10-09",app_metadata:options.noMarker?{}:{owner_onboarding_id:"verified"},user_metadata:{}};
   Object.assign(stubs,{
     "next/headers":{},"next/navigation":{},
+    "@/lib/auth/owner-phone":{normalizeOwnerPhone},
     "@/lib/auth/phone-otp":{normalizeSaudiPhone:raw=>raw.replace(/\D/g,"").replace(/^05/,"9665")},
     "@/lib/supabase/server":{createClient:async()=>({auth:{signInWithPassword:async input=>{calls.push(input);if(options.serviceError)return {data:{user:null,session:null},error:options.serviceError};return input.phone&&!options.badPassword?{data:{user:{...user,id:options.foreignUser?"foreign":"owner"},session:{}},error:null}:{data:{user:null,session:null},error:{code:"invalid_credentials"}};},signOut:async()=>{calls.push("signOut");}},from:table=>chain(table==="profiles"?{id:"owner",full_name:"Owner",email:valid.email,role:"cafe_owner",status:"active"}:{cafe_id:"cafe",cafes:{id:"cafe",business_category:"cafes_coffee"}})})},
     "@/lib/supabase/admin":{createAdminClient:()=>({from:()=>chain({id:"owner",phone:options.phoneMismatch?"966522222222":"966511111111"}),auth:{admin:{getUserById:async()=>({data:{user}})}}})},
@@ -123,6 +129,7 @@ function loginContext(options={}) {
 }
 await test(async()=>{const c=loginContext();const result=await c.api.loginOwnerAction(valid.email,"password");assert(result.ok);assert.equal(c.calls.length,2);assert.equal(c.calls[1].phone,"+966511111111");});
 await test(async()=>{const c=loginContext();const result=await c.api.loginOwnerAction("0511111111","password");assert(result.ok);assert.equal(c.calls.length,1);assert.equal(c.calls[0].phone,"+966511111111");});
+await test(async()=>{const c=loginContext();assert((await c.api.loginOwnerAction("+970591234567","password")).ok);assert.equal(c.calls[0].phone,"+970591234567");});
 for(const options of [{noMarker:true},{unconfirmed:true},{phoneMismatch:true},{attachedEmail:true},{badPassword:true},{foreignUser:true}])await test(async()=>{const c=loginContext(options);const result=await c.api.loginOwnerAction(valid.email,"password");assert(!result.ok);assert.equal(result.message,"بيانات الدخول غير صحيحة");if(options.foreignUser)assert(c.calls.includes("signOut"));});
 
 for(const serviceError of [{status:402},{status:503},{name:"AuthRetryableFetchError"},{status:429}])await test(async()=>{const c=loginContext({serviceError});const result=await c.api.loginOwnerAction(valid.email,"password");assert(!result.ok);assert.equal(result.redirectTo,null);assert.equal(c.calls.length,1,"Service failure must not retry other login identities");assert.notEqual(result.message,"invalid_credentials");assert(result.message.includes(serviceError.status===429?String.fromCodePoint(1603,1579,1610,1585,1577):String.fromCodePoint(1594,1610,1585,32,1605,1578,1575,1581,1577)));});
