@@ -86,6 +86,7 @@ try {
   await db.exec(await migration("20261111164314_loyalty_brand_read_snapshot.sql"));
   await db.exec(await migration("20261121221223_coffee_invoice_points.sql"));
   await db.exec(await migration("20261121234500_universal_loyalty_points.sql"));
+  await db.exec(await migration("20261122100400_loyalty_points_settings_conflict.sql"));
   await db.exec("set check_function_bodies=on");
   // Exercise the ledger guards even when an older environment grants direct writes.
   await db.exec("grant select,update on loyalty_cards,cafe_loyalty_programs to authenticated");
@@ -109,7 +110,19 @@ try {
   await save("points",2,1,tiers,{mode:"stamps",rateSar:1,rateQuantity:1,milestones:[]});
   await assert.rejects(() => db.exec("update loyalty_cards set available_loyalty_points=50"), {code:"42501"});
   await assert.rejects(() => db.exec("update cafe_loyalty_programs set points_mode='stamps'"), {code:"42501"});
-  await assert.rejects(() => save("points",2,1,tiers,{mode:"stamps"}), {code:"40001"});
+  const saved = {mode:"points",rateSar:2,rateQuantity:1,milestones:tiers};
+  const bolingoTiers = ["سناك مجاني 🍫","مشروب او قهوة مجانيه ❤️","اي لعبة الكترونية مجانيه😉","قيم لشخصين بولينقو😍"]
+    .map((reward, index) => ({points:[200,300,500,700][index], reward}));
+  await assert.rejects(() => save("points",10,1,bolingoTiers,{mode:"stamps"}), error => {
+    assert.equal(error.code,"PT409");
+    assert.deepEqual(JSON.parse(error.detail), saved);
+    return true;
+  });
+  await save("points",10,1,bolingoTiers,saved);
+  const updated = await scalar("select updated_at::text from cafe_loyalty_programs where cafe_id=$1", [demo]);
+  await save("points",10,1,bolingoTiers,saved);
+  assert.equal(await scalar("select updated_at::text from cafe_loyalty_programs where cafe_id=$1", [demo]),updated);
+  await save("points",2,1,tiers,{mode:"points",rateSar:10,rateQuantity:1,milestones:bolingoTiers});
   await assert.rejects(() => save("points",2,1,[tiers[0],tiers[0]]), {code:"22023"});
   await assert.rejects(() => save("points",0), {code:"22023"});
   await assert.rejects(() => earn(11), {code:"42501"});

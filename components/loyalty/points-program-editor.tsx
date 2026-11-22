@@ -15,6 +15,7 @@ export function PointsProgramEditor({ saved, draft, onChange, onSaved }: Props) 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [latest, setLatest] = useState<PointsProgram | null>(null);
 
   function change(patch: Partial<PointsProgram>) {
     setError(""); setNotice("");
@@ -28,8 +29,14 @@ export function PointsProgramEditor({ saved, draft, onChange, onSaved }: Props) 
     if (busy) return;
     setBusy(true); setError(""); setNotice("");
     try {
-      const result = await saveCoffeePointsProgram(draft.mode === "stamps" ? { ...saved, mode: "stamps" } : draft, saved);
-      if (!result.ok) { setError(result.message); return; }
+      const baseline = latest ?? saved;
+      const result = await saveCoffeePointsProgram(draft.mode === "stamps" ? { ...baseline, mode: "stamps" } : draft, baseline);
+      if (!result.ok) {
+        if (result.latest) setLatest(result.latest);
+        setError(result.message);
+        return;
+      }
+      setLatest(null);
       onSaved(result.program);
       setNotice(result.program.mode === "points" ? "تم حفظ تسعيرة النقاط ومسار المكافآت" : "تم حفظ نظام الأختام");
       router.refresh();
@@ -68,7 +75,13 @@ export function PointsProgramEditor({ saved, draft, onChange, onSaved }: Props) 
         {draft.milestones.length < 20 && <button type="button" className={s.secondary} onClick={() => change({ milestones: [...draft.milestones, { points: 0, reward: "" }] })}><Plus aria-hidden="true" />إضافة مرحلة</button>}
       </>}
 
-      <div className={styles.save}><button className={s.primary} type="submit" disabled={busy}><Save aria-hidden="true" />{busy ? "جارٍ الحفظ" : "حفظ نظام البطاقة"}</button></div>
+      {latest && <section aria-label="الإعدادات المحفوظة">
+        <h3 className={styles.title}>الإعدادات المحفوظة حاليًا</h3>
+        {latest.mode === "points" ? <><p>كل {latest.rateSar} ريال تمنح {latest.rateQuantity} نقطة</p>
+          <ul>{latest.milestones.map(tier => <li key={tier.points}>{tier.points} نقطة — {tier.reward}</li>)}</ul></> : <p>نظام الأختام</p>}
+        <button className={s.secondary} type="button" onClick={() => { onSaved(latest); setLatest(null); setError(""); }}>استخدام النسخة المحفوظة</button>
+      </section>}
+      <div className={styles.save}><button className={s.primary} type="submit" disabled={busy}><Save aria-hidden="true" />{busy ? "جارٍ الحفظ" : latest ? "تأكيد حفظ تعديلاتي" : "حفظ نظام البطاقة"}</button></div>
       {error && <p className={s.error} role="alert">{error}</p>}
       {notice && <p className={s.success} role="status">{notice}</p>}
     </fieldset>

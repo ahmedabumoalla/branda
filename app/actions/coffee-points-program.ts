@@ -39,6 +39,17 @@ export async function saveCoffeePointsProgram(input: PointsProgram, expected: Po
   if (error?.code === "PGRST202" || error?.code === "42883") {
     return { ok: false as const, message: "حفظ نظام البطاقة يحتاج إلى تطبيق تحديث النقاط في قاعدة البيانات" };
   }
+  if (error?.code === "PT409") {
+    let latest: PointsProgram | undefined;
+    try {
+      const conflict = programSchema.safeParse(JSON.parse(error.details));
+      if (conflict.success) latest = conflict.data;
+    } catch { /* Older database versions may omit the conflicting snapshot */ }
+    return { ok: false as const, latest, message: latest
+      ? "تغيّرت الإعدادات منذ فتح الصفحة راجع النسخة المحفوظة ثم أكّد تعديلاتك"
+      : "تغيّرت إعدادات البرنامج حدّث الصفحة قبل الحفظ" };
+  }
+  if (error?.code === "42501") return { ok: false as const, message: "يتطلب الحفظ حساب مالك العلامة وصلاحية الولاء" };
   if (error) return { ok: false as const, message: error.code === "40001"
     ? "تغيّرت إعدادات البرنامج من جلسة أخرى حدّث الصفحة قبل الحفظ" : "تعذر حفظ نظام البطاقة حاول مرة أخرى" };
   revalidatePath("/dashboard/loyalty");

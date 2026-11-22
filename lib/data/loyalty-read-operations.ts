@@ -23,6 +23,12 @@ const operationSchema = z.object({
   errorCode: z.string().nullable().default(null), retryable: z.boolean().default(false), attempts: z.number().int().nonnegative(),
   createdAt: z.string(), completedAt: z.string().nullable().default(null), cardCreated: z.boolean().optional(), invitationStatus: z.string().nullable().optional(),
 });
+const historyItem = operationSchema.extend({
+  kind: z.enum(["stamp", "points"]).default("stamp"),
+  attempts: operationSchema.shape.attempts.nullable(),
+  invoiceAmountSar: z.number().positive().nullable().default(null),
+  pointsAdded: z.number().int().positive().nullable().default(null),
+}).transform(row => ({ ...row, errorMessage: row.errorCode ? loyaltyReadErrorMessage(row.errorCode) : null }));
 export function loyaltyReadErrorMessage(code: string): string {
   const messages: Record<string, string> = {
     finance_confirmation_required: "استخدم قارئ الولاء المؤكد من نقطة البيع لتنفيذ الختم وفق صلاحيات الموظف والموافقة المطلوبة",
@@ -96,7 +102,7 @@ export async function getOwnerLoyaltyReads(input: LoyaltyReadFilters = {}): Prom
   const { data, error } = await (await createClient()).rpc("get_owner_loyalty_reads", { p_cafe_id: cafe.id, p_page: filters.page, p_status: filters.status === "all" ? null : filters.status });
   if (error) throw new LoyaltyReadError("unavailable", true);
   const response = result(data), summary = result(response.summary ?? {});
-  return { items: z.array(z.unknown()).parse(response.operations).map(operation), total: z.number().parse(response.total), page: filters.page, pageSize: 25,
+  return { items: z.array(historyItem).parse(response.operations), total: z.number().parse(response.total), page: filters.page, pageSize: 25,
     counts: { pending: Number(summary.pending ?? 0), processing: Number(summary.processing ?? 0), succeeded: Number(summary.succeeded ?? 0), failed: Number(summary.failed ?? 0), needs_review: Number(summary.needs_review ?? 0), duplicate: Number(summary.duplicate ?? 0), retryable: Number(summary.retryable ?? 0) } };
 }
 export async function retryOwnerLoyaltyReads(requestIds?: string[]) {

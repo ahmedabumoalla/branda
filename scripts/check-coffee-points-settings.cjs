@@ -62,9 +62,42 @@ async function run() {
   assert.deepEqual(writes[0], { name: "save_loyalty_points_program", args: { p_cafe_id: cafe.id, p_mode: "points", p_rate_sar: 12.5,
     p_rate_quantity: 4, p_milestones: points.milestones, p_expected: stamps } });
   databaseError = { code: "40001" }; assert.match((await saveCoffeePointsProgram(points, stamps)).message, /جلسة أخرى/);
+  databaseError = { code: "PT409", details: JSON.stringify(stamps) };
+  assert.deepEqual((await saveCoffeePointsProgram(points, stamps)).latest, stamps);
+  databaseError = { code: "PT409", details: "unavailable" };
+  assert.equal((await saveCoffeePointsProgram(points, stamps)).latest, undefined);
   databaseError = { code: "PGRST202" }; assert.match((await saveCoffeePointsProgram(points, stamps)).message, /تحديث النقاط في قاعدة البيانات/);
   databaseError = null;
   assert.deepEqual((await saveCoffeePointsProgram({ ...points, mode: "stamps" }, points)).program, { ...points, mode: "stamps" });
+  // The conflict snapshot replaces the expected revision only after the owner sees it.
+  const state = [];
+  const submissions = [];
+  let index = 0, savedResult;
+  const latest = { ...points, rateQuantity: 3 };
+  const { PointsProgramEditor: InteractiveEditor } = load("components/loyalty/points-program-editor.tsx", {
+    react: { ...React, useState(initial) {
+      const key = index++;
+      if (!(key in state)) state[key] = initial;
+      return [state[key], value => { state[key] = value; }];
+    } },
+    "next/navigation": { useRouter: () => ({ refresh() {} }) },
+    "@/app/actions/coffee-points-program": { saveCoffeePointsProgram: async (draft, expected) => {
+      submissions.push({ draft, expected });
+      return submissions.length === 1 ? { ok: false, latest, message: "تغيّرت الإعدادات" } : { ok: true, program: draft };
+    } },
+  });
+  function view() {
+    index = 0;
+    return InteractiveEditor({ saved: stamps, draft: points, onSaved: program => { savedResult = program; } });
+  }
+  await view().props.onSubmit({ preventDefault() {} });
+  assert.equal(submissions.length, 1);
+  const reviewView = view();
+  assert.match(renderToStaticMarkup(reviewView), /تأكيد حفظ تعديلاتي/);
+  await reviewView.props.onSubmit({ preventDefault() {} });
+  assert.deepEqual(submissions, [{ draft: points, expected: stamps }, { draft: points, expected: latest }]);
+  assert.deepEqual(savedResult, points);
+  assert.doesNotMatch(renderToStaticMarkup(view()), /تأكيد حفظ تعديلاتي/);
   console.log("Coffee points owner settings passed: modes, prices, milestones, scope, revisions and stamp fallback");
 }
 run().catch(error => { console.error(error); process.exitCode = 1; });

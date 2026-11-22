@@ -36,6 +36,11 @@
 .table th span { float: left; font-weight: 400; }
 .table td { padding: 0; border-bottom: 1px solid var(--directory-line); }
 .table tr:last-child td { border-bottom: 0; }
+.balances { margin: 0 var(--directory-space) 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 115px), 1fr)); gap: 12px; }
+.balances > div { border-inline-start: 2px solid var(--directory-line); padding-inline-start: 10px; }
+.balances dt, .noCard { font-size: 12px; line-height: 1.6; color: var(--directory-muted); }
+.balances dd { margin: 2px 0 0; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.noCard { margin: 0 var(--directory-space) 18px; }
 .customer { width: 100%; min-height: 84px; padding: 16px var(--directory-space); display: flex; align-items: center; gap: 16px; border: 0; background: transparent; color: var(--directory-wine); text-align: start; font: inherit; cursor: pointer; transition: background 160ms ease, box-shadow 160ms ease; }
 .customer:hover { background: var(--directory-blush); box-shadow: inset -3px 0 0 var(--directory-red); }
 .avatar { display: grid; place-items: center; width: 45px; height: 45px; flex-shrink: 0; border-radius: 15px; background: var(--directory-blush); border: 1px solid var(--directory-line); color: var(--directory-red); font-size: 14px; font-weight: 700; }

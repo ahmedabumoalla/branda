@@ -32,7 +32,7 @@ const data = {
 let render = harness(data);
 let tree = render();
 assert.equal(nodes(tree).filter(node => node.type === "tbody")[0].props.children.length, 6);
-assert(text(tree).includes("عملية مكررة لم يُضف ختم"));
+assert(text(tree).includes("عملية مكررة"));
 assert(text(tree).includes("لم يتأكد تسجيل الختم بعد"));
 assert(text(tree).includes("****1234"));
 assert(nodes(tree).some(node => node.props?.role === "region" && node.props.tabIndex === 0));
@@ -54,6 +54,16 @@ render = harness({ ...data, items: [{ ...data.items[2], cardCreated: true, invit
 assert(text(render()).includes("أُنشئت بطاقة ولاء جديدة"));
 assert(text(render()).includes("رابط البطاقة: تعذر الإرسال ولا يؤثر ذلك على نتيجة الختم"));
 assert(text(render()).includes("تم حفظ الختم في بطاقة العميل"));
+
+const receipt = { ...data.items[2], kind: "points", invoiceAmountSar: 29.75, pointsAdded: 2, attempts: null };
+render = harness({ ...data, items: [receipt, data.items[2]] });
+const [pointsRow, stampRow] = nodes(render()).find(node => node.type === "tbody").props.children;
+assert.match(text(pointsRow), /تم تسجيل النقاط/);
+assert.match(text(pointsRow), /مبلغ الفاتورة/);
+assert(text(pointsRow).includes(new Intl.NumberFormat("ar-SA").format(29.75)));
+assert(text(pointsRow).includes("النقاط المكتسبة " + new Intl.NumberFormat("ar-SA").format(2)));
+assert(!text(pointsRow).includes("ختم"));
+assert(text(stampRow).includes("تم تسجيل الختم"));
 
 let retries = 0, releaseRetry;
 render = harness(data, {

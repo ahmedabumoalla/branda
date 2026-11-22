@@ -10,11 +10,11 @@ type ReadData = Awaited<ReturnType<typeof getOwnerLoyaltyReads>>;
 type ReadStatus = ReadData["items"][number]["status"];
 const statusLabels: Record<ReadStatus, string> = {
   pending: "بانتظار المزامنة",
-  processing: "جاري تسجيل الختم",
-  succeeded: "تم تسجيل الختم",
+  processing: "قيد التسجيل",
+  succeeded: "تم التسجيل",
   failed: "تعذرت المزامنة",
   needs_review: "تحتاج مراجعة",
-  duplicate: "عملية مكررة لم يُضف ختم",
+  duplicate: "عملية مكررة",
 };
 const statusOrder: ReadStatus[] = ["pending", "processing", "succeeded", "failed", "needs_review", "duplicate"];
 const invitationLabels: Record<string, string> = {
@@ -23,6 +23,7 @@ const invitationLabels: Record<string, string> = {
   unknown: "لم يتأكد الإرسال", skipped: "البطاقة محفوظة في المحفظة",
 };
 const dateFormat = new Intl.DateTimeFormat("ar-SA", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Riyadh" });
+const amountFormat = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
 
 function formatDate(value: string | null) {
   if (!value || !Number.isFinite(Date.parse(value))) return "—";
@@ -108,7 +109,7 @@ export function ReadOperationsPage({ initialData, initialError = "" }: { initial
   return <section dir="rtl" className={styles.workspace} aria-labelledby="read-operations-title">
     <header className={styles.header}>
       <div><span className={styles.eyebrow}>الولاء والمكافآت</span><h1 id="read-operations-title">سجل قراءات الكاشير</h1>
-        <p>وقت القراءة والكاشير والعميل ونتيجة تسجيل الختم أو سبب عدم تسجيله</p>
+        <p>يعرض السجل الأختام المسجلة ومبالغ الفواتير والنقاط المكتسبة</p>
         <p>القراءات التي لم تصل للنظام تظهر في سجل الجهاز داخل صفحة الكاشير</p></div>
       <button type="button" className={styles.secondary} disabled={busy} onClick={() => void refresh(page, status)}><RefreshCw size={17} aria-hidden="true" />{busy ? "جاري التحديث" : "تحديث السجل"}</button>
     </header>
@@ -118,7 +119,7 @@ export function ReadOperationsPage({ initialData, initialError = "" }: { initial
     </dl>
 
     <div className={styles.retryPanel}>
-      <div><h2>استكمال العمليات الفاشلة</h2><p>تعاد محاولة الأخطاء القابلة للمزامنة بنفس العملية لمنع تكرار الختم</p>
+      <div><h2>استكمال العمليات الفاشلة</h2><p>تعاد محاولة الأخطاء القابلة للمزامنة بنفس رقم العملية</p>
         <small>تُستثنى العمليات الناجحة والمكررة والبيانات غير الصحيحة أو المحظورة والعمليات التي تحتاج مراجعة</small></div>
       <button type="button" className={styles.primary} disabled={busy || !data || data.counts.retryable === 0} onClick={() => void retryFailed()}><RotateCcw size={17} aria-hidden="true" />مزامنة العمليات الفاشلة</button>
     </div>
@@ -135,18 +136,21 @@ export function ReadOperationsPage({ initialData, initialError = "" }: { initial
       {!data ? <div className={styles.empty}><ClipboardList aria-hidden="true" /><h2>السجل غير متاح الآن</h2><p>اضغط تحديث السجل لإعادة تحميل العمليات</p></div>
         : data.items.length === 0 ? <div className={styles.empty}><ClipboardList aria-hidden="true" /><h2>{status ? "لا توجد عمليات بهذه الحالة" : "لم تصل عمليات قراءة بعد"}</h2><p>تظهر العمليات بعد تسجيلها من الكاشير ووصولها إلى النظام</p></div>
           : <div className={styles.tableScroll} role="region" aria-label="تفاصيل عمليات القراءة" tabIndex={0}><table>
-            <caption className={styles.srOnly}>عمليات تسجيل الختم وحالة المزامنة</caption>
+            <caption className={styles.srOnly}>عمليات تسجيل الأختام ونقاط الفواتير وحالة المزامنة</caption>
             <thead><tr><th scope="col">الوقت والكاشير</th><th scope="col">العميل والقراءة</th><th scope="col">الحالة</th><th scope="col">التفاصيل</th><th scope="col">المحاولات</th></tr></thead>
-            <tbody>{data.items.map((item) => <tr key={item.requestId}>
+            <tbody>{data.items.map((item) => <tr key={`${item.kind}-${item.requestId}`}>
               <td><time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time><small>{item.cashierName || "غير متاح"}</small></td>
               <td><strong>{item.customerName || "لم يُحدد العميل بعد"}</strong><small><bdi dir="ltr">{item.identifierHint}</bdi></small></td>
-              <td><span className={styles.badge} data-status={item.status}>{statusLabels[item.status]}</span>{item.completedAt && <small>آخر معالجة {formatDate(item.completedAt)}</small>}</td>
-              <td><p>{item.errorMessage || (item.status === "succeeded" ? "تم حفظ الختم في بطاقة العميل" : item.status === "duplicate" ? "لم يُسجل ختم إضافي لهذه القراءة" : item.status === "pending" || item.status === "processing" ? "لم يتأكد تسجيل الختم بعد" : "راجع بيانات العملية قبل المحاولة مجددًا")}</p>
+              <td><span className={styles.badge} data-status={item.status}>{item.status === "succeeded" ? (item.kind === "points" ? "تم تسجيل النقاط" : "تم تسجيل الختم") : statusLabels[item.status]}</span>{item.completedAt && <small>آخر معالجة {formatDate(item.completedAt)}</small>}</td>
+              <td>{item.kind === "points" ? <>
+                <p>مبلغ الفاتورة <strong>{item.invoiceAmountSar == null ? "—" : amountFormat.format(item.invoiceAmountSar)} ريال</strong></p>
+                <p>النقاط المكتسبة <strong>{item.pointsAdded == null ? "—" : amountFormat.format(item.pointsAdded)}</strong></p>
+              </> : <p>{item.errorMessage || (item.status === "succeeded" ? "تم حفظ الختم في بطاقة العميل" : item.status === "duplicate" ? "لم يُسجل ختم إضافي لهذه القراءة" : item.status === "pending" || item.status === "processing" ? "لم يتأكد تسجيل الختم بعد" : "راجع بيانات العملية قبل المحاولة مجددًا")}</p>}
                 {item.status === "failed" && <small>{item.retryable ? "قابلة لإعادة المزامنة" : "لا تعاد تلقائيًا وتحتاج مراجعة"}</small>}
                 {item.cardCreated && <small>أُنشئت بطاقة ولاء جديدة</small>}
                 {item.invitationStatus && <small>رابط البطاقة: {invitationLabels[item.invitationStatus] ?? "قيد التحقق"}{["failed", "rejected", "unknown", "expired"].includes(item.invitationStatus) ? " ولا يؤثر ذلك على نتيجة الختم" : ""}</small>}
                 {(item.rewardIssued || (item.availableRewards ?? 0) > 0) && <span className={styles.reward}>{item.rewardIssued ? "صدرت مكافأة مع هذه العملية" : `مكافآت متاحة عند المعالجة: ${item.availableRewards}`}</span>}</td>
-              <td className={styles.attempts}>{item.attempts}</td>
+              <td className={styles.attempts}>{item.attempts ?? "—"}</td>
             </tr>)}</tbody>
           </table></div>}
       <footer className={styles.pagination}>

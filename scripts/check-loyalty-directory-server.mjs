@@ -25,7 +25,8 @@ const fixture=(n,cafe="brand-one")=>({id:customerId(n),cafe_id:cafe,full_name:`C
 async function harness(options={}){
   const calls=[],customerRequests=[],rpcCalls=[];let contextCalls=0,featureCalls=0,dbCalls=0;
   const rows=options.rows??[fixture(1),fixture(2),fixture(3,"brand-two")];
-  const db={rpc:async(name,args)=>{rpcCalls.push({name,args});return options.rpcError?{data:null,error:{message:"denied"}}:{data:options.rpcData,error:null};},auth:{getUser:async()=>({data:{user:options.user===false?null:{id:"owner-id"}}})},from:table=>{
+  const defaultPage={rows:[],total:2,page:0,pageSize:20};
+  const db={rpc:async(name,args)=>{rpcCalls.push({name,args});return options.rpcError?{data:null,error:{message:"denied"}}:{data:options.rpcData??(name==="loyalty_customer_directory_page"?defaultPage:null),error:null};},auth:{getUser:async()=>({data:{user:options.user===false?null:{id:"owner-id"}}})},from:table=>{
     const entry={table,select:null,selectOptions:null,eq:[],is:[],orders:[],range:null,ilike:null,single:false};calls.push(entry);
     const chain={
       select:(fields,settings)=>{entry.select=fields;entry.selectOptions=settings;return chain;},
@@ -70,23 +71,11 @@ for(const input of [{page:-1},{page:1.1},{page:100001},{page:"1"},{query:"x".rep
   h=await harness();await rejects(()=>h.api.getOwnerLoyaltyCustomers(input),"invalid filter rejected");equal(h.counters().contextCalls,0,"invalid filters rejected before DB access");
 }
 for(const input of ["wrong",null,12,"00000000-0000-4000-8000-000000000001,phone"]){h=await harness();await rejects(()=>h.api.getOwnerLoyaltyCustomerDetail(input),"invalid customer UUID rejected");equal(h.calls.length,0,"invalid identity never reaches DB");}
-h=await harness();let result=await h.api.getOwnerLoyaltyCustomers();
-equal(result,{rows:[{id:customerId(1),name:"Customer 1",joinedAt:"2026-10-10T12:00:00Z"},{id:customerId(2),name:"Customer 2",joinedAt:"2026-10-10T12:00:00Z"}],total:2,page:0,pageSize:20},"list serializes names and join times only");
-check(!JSON.stringify(result).includes("private"),"no phone or email leaks even when mocked DB returns extra fields");
-equal(h.customerRequests[0].select,"id,full_name,created_at","list requests only safe fields");equal(h.customerRequests[0].selectOptions,{count:"exact"},"server gets exact pagination count");
-equal(h.customerRequests[0].eq,[["cafe_id","brand-one"]],"list tenant filter is mandatory");
-equal(h.customerRequests[0].range,[0,19],"list fetch bounded at twenty");
-equal(h.customerRequests[0].orders,[["created_at",{ascending:false}],["id",{ascending:false}]],"stable pagination ordering");
+h=await harness();await h.api.getOwnerLoyaltyCustomers({page:3,query:"  A%_  "});
+equal(h.rpcCalls,[{name:"loyalty_customer_directory_page",args:{p_cafe:"brand-one",p_query:"A%_",p_page:3,p_members_only:false}}],"general view passes bounded input and server-derived tenant for a single consistent query");
 equal(h.calls.find(x=>x.table==="profiles").eq,[["id","owner-id"]],"status check uses authenticated user");
 equal(h.calls.find(x=>x.table==="cafes").is,[["deleted_at",null]],"deleted cafe excluded");
-h=await harness();await h.api.getOwnerLoyaltyCustomers({query:"  A%_\\B  "});
-equal(h.customerRequests[0].ilike,["full_name","%A\\%\\_\\\\B%"],"search trims edges and escapes wildcard and backslash literals");
-h=await harness({rows:Array.from({length:25},(_,i)=>fixture(i+1))});result=await h.api.getOwnerLoyaltyCustomers({page:50});
-equal(result.page,1,"out-of-range page clamps to last available page");equal(result.rows.length,5,"clamped page refetched");
-equal(h.customerRequests.map(x=>x.range),[[1000,1019],[20,39]],"clamp uses fresh bounded query");
-h=await harness({rows:[]});result=await h.api.getOwnerLoyaltyCustomers({page:3});equal(result.page,0,"empty directory clamps to first page");equal(result.total,0,"empty directory count honest");
-h=await harness({customerError:true});await rejects(()=>h.api.getOwnerLoyaltyCustomers(),"list DB error is not empty success");
-h=await harness({clampError:true});await rejects(()=>h.api.getOwnerLoyaltyCustomers({page:9}),"clamp refetch error is not swallowed");
+h=await harness({rpcError:true});await rejects(()=>h.api.getOwnerLoyaltyCustomers(),"list DB error is not empty success");
 h=await harness();let detail=await h.api.getOwnerLoyaltyCustomerDetail(customerId(1));
 equal(detail,{id:customerId(1),name:"Customer 1",phone:"private-phone-1",birthdayEnabled:false,birthDate:null},"detail returns the selected customer and birthday settings");
 equal(h.customerRequests[0].select,"id,full_name,phone,birth_date","detail never selects email or unrelated fields");
@@ -101,7 +90,7 @@ h=await harness({customerError:true});await rejects(()=>h.api.getOwnerLoyaltyCus
 const downloadedPage={rows:[{id:customerId(1),name:"Wallet customer",joinedAt:"2026-11-14T00:00:00Z"}],total:1,page:0,pageSize:20};
 h=await harness({rpcData:downloadedPage});
 equal(await h.api.getOwnerLoyaltyCustomers({downloadedOnly:true,page:2,query:"  Wallet  "}),downloadedPage,"downloaded directory uses bounded authorized RPC result");
-equal(h.rpcCalls,[{name:"finance_loyalty_customers_read",args:{p_cafe:"brand-one",p_page:2,p_query:"Wallet"}}],"downloaded RPC uses server-resolved tenant and parsed filters");
+equal(h.rpcCalls,[{name:"loyalty_customer_directory_page",args:{p_cafe:"brand-one",p_page:2,p_query:"Wallet",p_members_only:true}}],"downloaded RPC uses server-resolved tenant and parsed filters");
 equal(h.customerRequests.length,0,"downloaded directory never falls back to all profiles");
 const downloadedDetail={id:customerId(1),name:"Wallet customer",phone:"selected-phone"};
 h=await harness({rpcData:downloadedDetail});

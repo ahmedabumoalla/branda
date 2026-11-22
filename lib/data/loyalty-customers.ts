@@ -25,23 +25,11 @@ async function directoryContext() {
 export async function getOwnerLoyaltyCustomers(input: unknown = {}): Promise<LoyaltyCustomerPage> {
   const { page, query, downloadedOnly } = filterSchema.parse(input);
   const { db, cafeId } = await directoryContext();
-  if (downloadedOnly) {
-    const { data, error } = await db.rpc("finance_loyalty_customers_read", { p_cafe: cafeId, p_page: page, p_query: query });
-    if (error || !data) throw new Error("Customer directory unavailable");
-    return data as LoyaltyCustomerPage;
-  }
-  const pageSize = 20;
-  const fetchPage = (index: number) => {
-    let request = db.from("customer_profiles").select("id,full_name,created_at", { count: "exact" }).eq("cafe_id", cafeId);
-    if (query) request = request.ilike("full_name", `%${query.replace(/[\\%_]/g, "\\$&")}%`);
-    return request.order("created_at", { ascending: false }).order("id", { ascending: false }).range(index * pageSize, (index + 1) * pageSize - 1);
-  };
-  let result = await fetchPage(page);
-  if (result.error) throw new Error("Customer directory unavailable");
-  const actualPage = Math.min(page, Math.max(0, Math.ceil((result.count ?? 0) / pageSize) - 1));
-  if (actualPage !== page) result = await fetchPage(actualPage);
-  if (result.error) throw new Error("Customer directory unavailable");
-  return { rows: (result.data ?? []).map(row => ({ id: String(row.id), name: String(row.full_name || "عميل بدون اسم"), joinedAt: String(row.created_at) })), total: result.count ?? 0, page: actualPage, pageSize };
+  const { data, error } = await db.rpc("loyalty_customer_directory_page", {
+    p_cafe: cafeId, p_page: page, p_query: query, p_members_only: downloadedOnly,
+  });
+  if (error || !data) throw new Error("Customer directory unavailable");
+  return data as LoyaltyCustomerPage;
 }
 
 /** Contact details are returned for one selected customer after fresh authorization */

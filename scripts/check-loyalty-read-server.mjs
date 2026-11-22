@@ -100,6 +100,15 @@ await check("owner role and entitlement checked before authenticated retry", asy
   entitlement = true; rpcResult = { data: { retried: 3 } };
   assert.deepEqual(await dal.retryOwnerLoyaltyReads(), { retried: 3, cafeId });
 });
+await check("owner reads retain historical invoice amounts, earned points and legacy stamp kind", async () => {
+  rpcResult = { data: { operations: [op, { ...op, kind: "points", status: "succeeded", invoiceAmountSar: 29.75, pointsAdded: 2, attempts: null }],
+    total: 2, summary: { succeeded: 1, pending: 1 } } };
+  const history = await dal.getOwnerLoyaltyReads();
+  assert.equal(history.items[0].kind, "stamp");
+  const { kind, invoiceAmountSar, pointsAdded, attempts } = history.items[1];
+  assert.deepEqual([kind, invoiceAmountSar, pointsAdded, attempts], ["points", 29.75, 2, null]);
+  assert.deepEqual(calls.at(-1), { name: "get_owner_loyalty_reads", input: { p_cafe_id: cafeId, p_page: 1, p_status: null } });
+});
 const deferred = [], processed = [], walletCalls = []; let dispatches = 0;
 const actions = load("app/actions/loyalty-read-operations.ts", {
   "next/server": { after: fn => deferred.push(fn) },

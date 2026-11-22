@@ -14,7 +14,7 @@ const check = (label, fn) => { fn(); checks++; console.log(`PASS ${label}`); };
 const nodes = tree => !tree || typeof tree !== 'object' ? [] : Array.isArray(tree) ? tree.flatMap(nodes) : [tree, ...nodes(tree.props?.children)];
 const text = tree => tree == null || typeof tree === 'boolean' ? '' : Array.isArray(tree) ? tree.map(text).join('') : typeof tree === 'object' ? text(tree.props?.children) : String(tree);
 const settle = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
-const row = { id: 'customer-a', name: 'عميل الاختبار', joinedAt: '2026-10-11T01:00:00Z' };
+const row = { id: 'customer-a', name: 'عميل الاختبار', loyalty: {stampsCollected: 8, rewardsRedeemed: 2, availableStampRewards: 1, pointsBalance: 11, affordablePointRewards: 0}, joinedAt: '2026-10-11T01:00:00Z' };
 const page = { rows: [row], page: 0, pageSize: 20, total: 21 };
 const detail = { id: row.id, name: row.name, phone: '+966500000001' };
 const timers = new Map(); let timerId = 0;
@@ -63,6 +63,12 @@ check('initial state announces loading and sends no detail query', () => { asser
 h.effects(); runTimers(); await settle();
 check('directory requests one bounded name page only on mount', () => { assert.deepEqual(h.calls, [['list', { page: 0, query: '', downloadedOnly: false }]]); });
 check('semantic table displays names without phone or hidden contact data', () => { const value = html(h); assert.match(value, /<table/); assert.match(value, /scope="col"/); assert.match(value, /عميل الاختبار/); assert.ok(!value.includes(detail.phone)); assert.ok(!value.includes('رقم الجوال')); });
+check('directory shows separately labeled totals and spendable balance', () => {
+  const value = html(h);
+  for (const [label, amount] of [['إجمالي الأختام',8], ['المكافآت المصروفة',2], ['مكافآت الأختام المتاحة',1], ['رصيد النقاط',11], ['خيارات الاستبدال بالنقاط',0]]) {
+    assert.ok(value.includes('<dt>'+label+'</dt><dd>'+new Intl.NumberFormat('ar-SA').format(amount)+'</dd>'));
+  }
+});
 check('name is a keyboard accessible button that opens an individual dialog', () => { const target = button(h, `عرض ملف ${row.name}`); assert.equal(target.props['aria-haspopup'], 'dialog'); target.props.onClick(); const child = element(h, node => typeof node.type === 'function' && node.type.name === 'LoyaltyCustomerDetailDialog'); assert.equal(child.props.customer.id, row.id); assert.equal(h.calls.length, 1); child.props.onClose(); assert.ok(!element(h, node => typeof node.type === 'function' && node.type.name === 'LoyaltyCustomerDetailDialog')); });
 button(h, 'الصفحة التالية').props.onClick(); h.render(); h.effects(); runTimers(); await settle();
 check('next page calls server with zero-based index', () => assert.equal(h.calls.at(-1)[1].page, 1));
@@ -94,9 +100,9 @@ const denial = await boot(harness(undefined, {}, { loadLoyaltyCustomersAction: a
 check('server authorization error is shown without stale names or counts', () => { assert.match(html(denial), /غير مصرح/); assert.ok(!html(denial).includes(row.name)); }); denial.cleanup();
 
 const downloaded = await boot(harness(undefined, { downloadedOnly: true }));
-check('finance directory requests downloaded membership only', () => assert.deepEqual(downloaded.calls[0], ['list', { page: 0, query: '', downloadedOnly: true }]));
+check('dedicated directory requests loyalty card membership', () => assert.deepEqual(downloaded.calls[0], ['list', { page: 0, query: '', downloadedOnly: true }]));
 button(downloaded, `عرض ملف ${row.name}`).props.onClick();
-check('selected finance customer preserves download membership for the phone dialog', () => {
+check('selected finance customer preserves card membership for the phone dialog', () => {
   const child = element(downloaded, node => typeof node.type === 'function' && node.type.name === 'LoyaltyCustomerDetailDialog');
   assert.equal(child.props.downloadedOnly, true);
 });

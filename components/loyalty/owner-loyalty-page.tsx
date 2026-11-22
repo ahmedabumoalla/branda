@@ -31,7 +31,7 @@ export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "cus
         ? getNearbySchedule(dashboard.cafeId).then(schedule => ({ schedule })).catch(() => ({ schedule: null, error: "تعذر تحميل فترات رسائل القرب حدّث الصفحة قبل تعديلها" }))
         : Promise.resolve(undefined),
     ]);
-    if (brand) return <>{experience.error && <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{experience.error}</p>}<RastLoyaltyDashboard initialDashboard={{ program: dashboard.program }} identity={brand.identity}
+    if (brand) return <>{experience.error && <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{experience.error}</p>}<RastLoyaltyDashboard key={dashboard.cafeId} initialDashboard={{ program: dashboard.program }} identity={brand.identity}
       pointsAvailable view={view} initialExperience={experience.settings} nearbySchedule={nearbySchedule} walletAvailability={getWalletReadiness()} products={products} staffMode={staffMode}
       signupUrl={`${(process.env.NEXT_PUBLIC_APP_URL || "https://barndaksa.com").replace(/\/$/, "")}/loyalty/${encodeURIComponent(dashboard.cafeSlug)}?source=qr`} /></>;
     return <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">تعذر تحميل هوية برنامج الولاء حاول تحديث الصفحة</p>;

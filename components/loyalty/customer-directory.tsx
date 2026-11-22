@@ -89,7 +89,7 @@ export function LoyaltyCustomerDirectory({ downloadedOnly = false }: { downloade
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
-  const [selected, setSelected] = useState<LoyaltyCustomerRow | null>(null);
+  const [selected, setSelected] = useState<Pick<LoyaltyCustomerRow, "id" | "name"> | null>(null);
   const closeDetail = useCallback(() => setSelected(null), []);
 
   useEffect(() => {
@@ -140,8 +140,21 @@ export function LoyaltyCustomerDirectory({ downloadedOnly = false }: { downloade
             : !data?.rows.length ? <div className={styles.empty}><UsersRound size={34} strokeWidth={1.4} aria-hidden="true" /><h3>{query.trim() ? "لم نجد هذا الاسم" : "هنا تبدأ معرفة عملائك"}</h3><p>{query.trim() ? "جرّب اسمًا آخر أو امسح البحث لعرض جميع العملاء" : "تظهر أسماء العملاء هنا بعد تسجيلهم في برنامج الولاء"}</p>{query && <button className={styles.retry} type="button" onClick={() => { setQuery(""); setPage(0); }}>عرض جميع العملاء</button>}</div>
               : <table className={styles.table}>
                 <caption className={styles.srOnly}>أسماء عملاء برنامج الولاء اختر اسمًا لفتح ملفه</caption>
-                <thead><tr><th scope="col">اسم العميل <span>عرض الملف</span></th></tr></thead>
-                <tbody>{data.rows.map((customer) => <tr key={customer.id}><td><button type="button" className={styles.customer} onClick={() => setSelected(customer)} aria-haspopup="dialog" aria-label={`عرض ملف ${customer.name}`}><span className={styles.avatar} aria-hidden="true">{initials(customer.name)}</span><span className={styles.customerName}>{customer.name}</span><span className={styles.openProfile} aria-hidden="true"><span>عرض الملف</span><ArrowLeft size={18} /></span></button></td></tr>)}</tbody>
+                <thead><tr><th scope="col">العميل ورصيد الولاء</th></tr></thead>
+                <tbody>{data.rows.map(({ loyalty, ...customer }) => <tr key={customer.id}><td>
+                  <button type="button" className={styles.customer} onClick={() => setSelected(customer)} aria-haspopup="dialog" aria-label={`عرض ملف ${customer.name}`}>
+                    <span className={styles.avatar} aria-hidden="true">{initials(customer.name)}</span>
+                    <span className={styles.customerName}>{customer.name}</span>
+                    <span className={styles.openProfile} aria-hidden="true"><span>عرض الملف</span><ArrowLeft size={18} /></span>
+                  </button>
+                  {loyalty ? <dl className={styles.balances} aria-label={`رصيد الولاء للعميل ${customer.name}`}>
+                    <div><dt>إجمالي الأختام</dt><dd>{number.format(loyalty.stampsCollected)}</dd></div>
+                    <div><dt>المكافآت المصروفة</dt><dd>{number.format(loyalty.rewardsRedeemed)}</dd></div>
+                    <div><dt>مكافآت الأختام المتاحة</dt><dd>{number.format(loyalty.availableStampRewards)}</dd></div>
+                    {(loyalty.affordablePointRewards !== null || loyalty.pointsBalance > 0) && <div><dt>رصيد النقاط</dt><dd>{number.format(loyalty.pointsBalance)}</dd></div>}
+                    {loyalty.affordablePointRewards !== null && <div><dt>خيارات الاستبدال بالنقاط</dt><dd>{number.format(loyalty.affordablePointRewards)}</dd></div>}
+                  </dl> : <p className={styles.noCard}>لم تُصدر بطاقة ولاء لهذا العميل</p>}
+                </td></tr>)}</tbody>
               </table>}
       </div>
 
