@@ -79,7 +79,7 @@ async function sendOwnerVideo(phone: string, urlFile: string, fileName: string, 
     body: JSON.stringify({ chatId: `${phone}@c.us`, urlFile, fileName, caption }),
   });
   let response: Response;
-  try { response = await submitPlatformMessage(validateOtpSender(primary), backup, send); }
+  try { response = await submitPlatformMessage(validateOtpSender(primary), backup, send, OWNER_LOGIN_PACING); }
   catch (error) { throw new Error(error instanceof Error && error.message === "PLATFORM_SENDERS_UNAVAILABLE" ? "OWNER_WELCOME_REJECTED" : "OWNER_WELCOME_UNCERTAIN"); }
   if (!response.ok) throw new Error(response.status < 500 && response.status !== 408 ? "OWNER_WELCOME_REJECTED" : "OWNER_WELCOME_UNCERTAIN");
   let data: GreenApiSendResponse;
@@ -398,7 +398,12 @@ function otpEndpoint(sender: OtpSender, method: "getStateInstance" | "sendMessag
 }
 
 const PRIMARY_RETRY_DELAY_MS = 30_000;
-const waitForPrimaryRetry = () => new Promise<void>(resolve => setTimeout(resolve, PRIMARY_RETRY_DELAY_MS));
+/** User decision of 2026-11-23 for the login message an administrator sends and the clips that follow it: the
+ * primary is tried three times, one minute apart, and the first standby sends only after the third refusal */
+const OWNER_LOGIN_PACING = { delayMs: 60_000, waitBeforeStandby: false };
+/** The claims behind these sends hold a four-minute lease, so no request starts later than this */
+const PLATFORM_SEND_BUDGET_MS = 200_000;
+const waitForPrimaryRetry = (delayMs = PRIMARY_RETRY_DELAY_MS) => new Promise<void>(resolve => setTimeout(resolve, delayMs));
 
 async function probeSenderReady(sender: OtpSender) {
   try {
@@ -419,11 +424,14 @@ async function otpSenderReady(sender: OtpSender) {
   return false;
 }
 
-async function submitPlatformMessage(primary: OtpSender, backup: OtpSender | null, send: (sender: OtpSender) => Promise<Response>) {
+async function submitPlatformMessage(primary: OtpSender, backup: OtpSender | null, send: (sender: OtpSender) => Promise<Response>, pacing = { delayMs: PRIMARY_RETRY_DELAY_MS, waitBeforeStandby: true }) {
+  const startedAt = Date.now();
   for (let attempt = 0; attempt < (backup ? 4 : 3); attempt++) {
-    if (attempt) await waitForPrimaryRetry();
+    if (attempt && (attempt < 3 || pacing.waitBeforeStandby)) await waitForPrimaryRetry(pacing.delayMs);
     const sender = attempt < 3 ? primary : backup!;
     if (!await probeSenderReady(sender)) continue;
+    // Past the budget nothing is sent: the claim's lease may have passed to another worker
+    if (Date.now() - startedAt > PLATFORM_SEND_BUDGET_MS) break;
     // Transport errors and ambiguous acknowledgements are not permission to duplicate a message.
     const response = await send(sender);
     if (response.ok || ![401, 403, 429, 466].includes(response.status) || attempt === (backup ? 3 : 2)) return response;

@@ -47,7 +47,7 @@ function context(options = {}) {
       assert.match(c.sends()[0].url,/waInstance111/);
       assert.ok(c.calls.every(call=>!call.url.includes('waInstance222')),'temporary primary failure must not touch backup');
       assert.equal(c.calls.filter(call=>call.url.includes('getStateInstance')).length,transientFailures+1);
-      assert.deepEqual(c.delays,Array(transientFailures).fill(30_000));
+      assert.deepEqual(c.delays,Array(transientFailures).fill(method==='sendGreenApiOwnerWelcome'?60_000:30_000));
       checks++;
     }
   }
@@ -100,7 +100,7 @@ function context(options = {}) {
     for(const primaryStatus of [401,403,429,466]) {
       c=context({primaryStatus});await c.api[method]({phone:'966500000001',phoneNormalized:'966500000001',code:'123456',brandName:'Fixture',password:'fixture-only',startsTrial:false});
       assert.deepEqual(c.sends().map(s=>s.url.includes('waInstance111')?'primary':'backup'),['primary','primary','primary','backup']);
-      assert.deepEqual(c.sends().map(s=>s.at),[0,30_000,60_000,90_000]);
+      assert.deepEqual(c.sends().map(s=>s.at),method==='sendGreenApiOwnerWelcome'?[0,60_000,120_000,120_000]:[0,30_000,60_000,90_000]);
       assert.equal(new Set(c.sends().map(s=>s.body)).size,1);checks++;
     }
     c=context({env:{GREEN_API_ACCESS_SENDER:'backup'}});await c.api[method]({phone:'966500000001',phoneNormalized:'966500000001',code:'123456',brandName:'Fixture',password:'fixture-only',startsTrial:false});
@@ -110,5 +110,22 @@ function context(options = {}) {
       assert.equal(c.sends().length,1);assert.deepEqual(c.delays,[]);checks++;
     }
   }
+  // User decision 2026-11-23: the administrator's owner login is tried on the primary three times, one minute apart, and the standby sends only after the third failure
+  for(const options of [{primary:'notAuthorized'},{readinessTimeout:true}]) {
+    c=context(options);await c.api.sendGreenApiOwnerWelcome({phone:'966500000001',brandName:'Fixture',password:'fixture-only',startsTrial:false});
+    const reads=c.calls.filter(call=>call.url.includes('getStateInstance'));
+    assert.deepEqual(reads.map(call=>[call.url.includes('waInstance111')?'primary':'backup',call.at]),[['primary',0],['primary',60_000],['primary',120_000],['backup',120_000]]);
+    assert.deepEqual(c.delays,[60_000,60_000]);assert.equal(c.sends().length,1);assert.match(c.sends()[0].url,/waInstance222/);assert.equal(c.sends()[0].at,120_000);checks++;
+  }
+  c=context({});await c.api.sendGreenApiOwnerWelcome({phone:'966500000001',brandName:'Fixture',password:'fixture-only',startsTrial:false});
+  assert.equal(c.sends().length,1);assert.match(c.sends()[0].url,/waInstance111/);assert.equal(c.sends()[0].at,0);assert.ok(c.calls.every(call=>!call.url.includes('waInstance222')),'a healthy primary sends at once and the standby is never asked');checks++;
+  c=context({primary:'notAuthorized',backup:'notAuthorized'});await assert.rejects(()=>c.api.sendGreenApiOwnerWelcome({phone:'966500000001',brandName:'Fixture',password:'fixture-only',startsTrial:false}),/OWNER_WELCOME_REJECTED/);assert.equal(c.sends().length,0);checks++;
+  // The verification code keeps its thirty seconds, so sign-in never waits three minutes
+  c=context({primary:'notAuthorized'});await c.api.sendGreenApiSupabaseOtp({phoneNormalized:'966500000001',code:'123456'});
+  assert.deepEqual(c.delays,[30_000,30_000,30_000]);assert.match(c.sends()[0].url,/waInstance222/);assert.equal(c.sends()[0].at,90_000);checks++;
+  // Past the time budget nothing more is sent, so a claim whose lease moved on is never answered twice
+  { const realNow=Date.now;let clock=0;Date.now=()=>(clock+=120_000);
+    try { c=context({primaryStatus:403});await assert.rejects(()=>c.api.sendGreenApiOwnerWelcome({phone:'966500000001',brandName:'Fixture',password:'fixture-only',startsTrial:false}),/OWNER_WELCOME_REJECTED/);assert.equal(c.sends().length,1);assert.match(c.sends()[0].url,/waInstance111/);checks++; }
+    finally { Date.now=realNow; } }
   console.log(`PASS ${checks} platform primary/backup, recovery, media and no-duplicate scenarios; mocked only`);
 })().catch(e=>{console.error(e);process.exitCode=1;});
