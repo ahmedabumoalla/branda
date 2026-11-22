@@ -4,10 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
-import { emptyNearbySchedule, nearbyScheduleSchema, NEARBY_SCHEDULE_CAFE_ID, type NearbySchedule } from "@/lib/loyalty/nearby-schedule";
+import { emptyNearbySchedule, nearbyScheduleSchema, supportsNearbySchedule, type NearbySchedule } from "@/lib/loyalty/nearby-schedule";
 
 export async function getNearbySchedule(cafeId: string): Promise<NearbySchedule | null> {
-  if (cafeId !== NEARBY_SCHEDULE_CAFE_ID) return null;
+  if (!supportsNearbySchedule(cafeId)) return null;
   const { data, error } = await createAdminClient().from("loyalty_nearby_schedules").select("enabled,periods,revision").eq("cafe_id", cafeId).maybeSingle();
   if (error) throw new Error("تعذر تحميل فترات رسائل القرب");
   return data ? nearbyScheduleSchema.parse(data) : { ...emptyNearbySchedule };
@@ -15,7 +15,7 @@ export async function getNearbySchedule(cafeId: string): Promise<NearbySchedule 
 
 export async function saveOwnerNearbySchedule(input: unknown) {
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
-  if (cafe.id !== NEARBY_SCHEDULE_CAFE_ID || !featureCodesAllow(features, "loyalty")) throw new Error("غير مسموح بتعديل فترات رسائل القرب لهذا الحساب");
+  if (!supportsNearbySchedule(cafe.id) || !featureCodesAllow(features, "loyalty")) throw new Error("غير مسموح بتعديل فترات رسائل القرب لهذا الحساب");
   const parsed = nearbyScheduleSchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, message: parsed.error.issues[0].message };
   const { data, error } = await (await createClient()).rpc("save_loyalty_nearby_schedule", {

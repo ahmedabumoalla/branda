@@ -9,7 +9,7 @@ import { getWalletReadiness } from "@/lib/wallet";
 import type { LoyaltyDashboardView } from "@/components/rast-loyalty/rast-dashboard";
 import { getDashboardCafeContext } from "@/lib/data/cafes";
 import { getNearbySchedule } from "@/lib/data/nearby-schedule";
-import { NEARBY_SCHEDULE_CAFE_ID } from "@/lib/loyalty/nearby-schedule";
+import { supportsNearbySchedule } from "@/lib/loyalty/nearby-schedule";
 
 export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "customers" | "messages" } = {}) {
   const features = await getOwnerFeatureCodes().catch(() => []);
@@ -27,7 +27,7 @@ export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "cus
       getLoyaltyBrand(dashboard.cafeSlug),
       needsProgram ? getLoyaltyExperience(dashboard.cafeId).then((settings) => ({ settings, error: undefined as string | undefined })).catch(() => ({ settings: defaultLoyaltyExperience, error: "إعدادات تجربة الولاء لم تُفعّل بعد أكمل تهيئة قاعدة البيانات قبل الحفظ" })) : Promise.resolve({ settings: defaultLoyaltyExperience, error: undefined }),
       needsProgram && featureCodesAllow(features, "menu") ? getOwnerLoyaltyRewardProducts() : Promise.resolve([]),
-      needsProgram && !staffMode && dashboard.cafeId === NEARBY_SCHEDULE_CAFE_ID
+      needsProgram && !staffMode && supportsNearbySchedule(dashboard.cafeId)
         ? getNearbySchedule(dashboard.cafeId).then(schedule => ({ schedule })).catch(() => ({ schedule: null, error: "تعذر تحميل فترات رسائل القرب حدّث الصفحة قبل تعديلها" }))
         : Promise.resolve(undefined),
     ]);

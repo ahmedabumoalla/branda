@@ -128,7 +128,7 @@ let pageSlug="rast";
 const page=await load("components/loyalty/owner-loyalty-page.tsx",{
   "@/lib/data/cafes":{getDashboardCafeContext:async()=>({staff:false})},
   "@/lib/data/nearby-schedule":{getNearbySchedule:async()=>null},
-  "@/lib/loyalty/nearby-schedule":{NEARBY_SCHEDULE_CAFE_ID:"nearby-demo"},
+  "@/lib/loyalty/nearby-schedule":{supportsNearbySchedule: cafeId => cafeId === "nearby-demo"},
   "next/navigation":{redirect:()=>{throw new Error("redirect");}},
   "react/jsx-runtime":{jsx,jsxs:jsx,Fragment:"Fragment"},
   "@/components/dashboard/pages/loyalty-dashboard-page":{LoyaltyDashboardPage:"GenericLoyalty"},

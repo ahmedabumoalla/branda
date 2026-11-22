@@ -14,7 +14,9 @@ function load(file, stubs = {}) {
   return exports;
 }
 const helper = load("lib/loyalty/nearby-schedule.ts");
-const { nearbyScheduleSchema, scheduledNearbyMessage, NEARBY_SCHEDULE_CAFE_ID: cafe } = helper;
+const { nearbyScheduleSchema, scheduledNearbyMessage, supportsNearbySchedule } = helper;
+const cafe = "dbe942ba-dfa4-422b-a9f6-9527c3b27cc9";
+const hassoun = "39219b91-3545-4660-b5d9-f4267de290d2";
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const periods = [
   { id: id(1), start: "07:00", end: "09:00", message: "رسالة الصباح" },
@@ -24,6 +26,7 @@ const periods = [
 const schedule = { enabled: true, periods, revision: 0 };
 let checks = 0;
 function check(value, message) { assert.ok(value, message); checks++; }
+check(supportsNearbySchedule(cafe) && supportsNearbySchedule(hassoun) && !supportsNearbySchedule(id(99)));
 check(nearbyScheduleSchema.safeParse(schedule).success);
 for (const [utc, expected] of [["03:59", null], ["04:00", periods[0].message], ["05:59", periods[0].message], ["06:00", periods[1].message], ["07:00", null], ["20:00", periods[2].message], ["22:59", periods[2].message], ["23:00", null]]) {
   check(scheduledNearbyMessage(schedule, new Date(`2026-11-21T${utc}:00Z`)) === expected, utc);
@@ -63,11 +66,12 @@ await db.exec(`
  GRANT USAGE ON SCHEMA public,auth,platform_access_private TO authenticated,service_role;
  GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
  INSERT INTO public.profiles VALUES('${id(9)}','active'),('${id(10)}','active');
- INSERT INTO public.cafes VALUES('${cafe}','${id(9)}'),('${id(99)}','${id(10)}');
+ INSERT INTO public.cafes VALUES('${cafe}','${id(9)}'),('${hassoun}','${id(10)}'),('${id(99)}','${id(10)}');
  INSERT INTO public.loyalty_cards VALUES('${id(11)}','${cafe}','active'),('${id(12)}','${id(99)}','active');
  INSERT INTO public.wallet_passes(card_id,cafe_id,provider) VALUES('${id(11)}','${cafe}','apple'),('${id(11)}','${cafe}','google'),('${id(12)}','${id(99)}','apple');
 `);
 await db.exec(fs.readFileSync("supabase/migrations/20261120235457_bolingo_nearby_message_periods.sql", "utf8"));
+await db.exec(fs.readFileSync("supabase/migrations/20261122120800_hassoun_nearby_message_periods.sql", "utf8"));
 for (const rows of invalid) check(!await v("SELECT public.valid_loyalty_nearby_periods($1::jsonb)", [JSON.stringify(rows)]));
 for (const rows of [null, {}, [null], [{ message: "hello" }]]) check(!await v("SELECT public.valid_loyalty_nearby_periods($1::jsonb)", [JSON.stringify(rows)]));
 check(await v("SELECT public.valid_loyalty_nearby_periods($1::jsonb)", [JSON.stringify(periods)]));
@@ -103,6 +107,14 @@ check(await v("SELECT public.refresh_loyalty_nearby_schedules()") === 1);
 check(await v("SELECT count(*) FROM public.wallet_notification_jobs") === 1);
 await actor(id(9)); check((await save(false, periods, 1)).revision === 2);
 check(await v("SELECT enabled FROM public.loyalty_nearby_schedules") === false);
+await denied("SELECT public.save_loyalty_nearby_schedule($1,true,$2::jsonb,0)", [hassoun, JSON.stringify(periods)]);
+await actor(id(10));
+await denied("SELECT public.save_loyalty_nearby_schedule($1,true,$2::jsonb,0)", [id(99), JSON.stringify(periods)]);
+const hassounSaved = await v("SELECT public.save_loyalty_nearby_schedule($1,true,$2::jsonb,0)", [hassoun, JSON.stringify([periods[1]])]);
+check(hassounSaved.revision === 1 && hassounSaved.enabled && hassounSaved.periods.length === 1);
+check(await v("SELECT count(*) FROM public.loyalty_nearby_schedules WHERE cafe_id=$1", [cafe]) === 0);
+await actor("", "service_role");
+await denied("INSERT INTO public.loyalty_nearby_schedules(cafe_id) VALUES($1)", [id(99)]);
 await db.close();
 
 // Real data-service guards and action result handling with mocked database boundaries.
@@ -110,7 +122,7 @@ let adminReads = 0, rpcCalls = 0, currentCafe = cafe;
 const service = load("lib/data/nearby-schedule.ts", {
   "@/lib/loyalty/nearby-schedule": helper,
   "@/lib/supabase/admin": { createAdminClient: () => ({ from: () => { adminReads++; return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: schedule }) }) }) }; } }) },
-  "@/lib/supabase/server": { createClient: async () => ({ rpc: async (_name, args) => { rpcCalls++; assert.equal(args.p_cafe, cafe); return { data: { ...schedule, revision: 1 } }; } }) },
+  "@/lib/supabase/server": { createClient: async () => ({ rpc: async (_name, args) => { rpcCalls++; assert.equal(args.p_cafe, currentCafe); return { data: { ...schedule, revision: 1 } }; } }) },
   "@/lib/data/cafes": { requireOwnerCafeContext: async () => ({ id: currentCafe }) },
   "@/lib/data/feature-entitlements": { getOwnerFeatureCodes: async () => ["loyalty"] },
   "@/lib/platform/feature-gates": { featureCodesAllow: () => true },
@@ -119,6 +131,9 @@ check(await service.getNearbySchedule(id(99)) === null); check(adminReads === 0)
 check((await service.getNearbySchedule(cafe)).periods.length === 3);
 check(!(await service.saveOwnerNearbySchedule({ ...schedule, periods: invalid[0] })).ok); check(rpcCalls === 0);
 check((await service.saveOwnerNearbySchedule(schedule)).ok); check(rpcCalls === 1);
+currentCafe = hassoun;
+check((await service.getNearbySchedule(hassoun)).periods.length === 3);
+check((await service.saveOwnerNearbySchedule(schedule)).ok && rpcCalls === 2);
 currentCafe = id(99); await assert.rejects(() => service.saveOwnerNearbySchedule(schedule)); checks++;
 const { renderToStaticMarkup } = require("react-dom/server");
 const { createElement } = require("react");
