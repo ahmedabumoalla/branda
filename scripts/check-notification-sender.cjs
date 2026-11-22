@@ -262,7 +262,8 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
     assert.match(fs.readFileSync('lib/auth/otp-delivery.ts', 'utf8'), /await selectBrandOtpSender\(job\.cafe_id!\)/);
     assert.match(fs.readFileSync('lib/whatsapp/company-document.ts', 'utf8'), /selectBrandCustomerSender\(cafeId\)/);
     assert.match(fs.readFileSync('lib/loyalty/read-card-links.ts', 'utf8'), /selectNotificationSender\(\)/);
-    // Only verification codes and loyalty card links may be routed through the notifications number
+    // Meram rejection notices join the existing approved verification and loyalty routes.
+    assert.match(fs.readFileSync('lib/commerce/meram-notifications.ts', 'utf8'), /await selectNotificationSender\(\)/);
     const users = [];
     const walk = directory => fs.readdirSync(directory, { withFileTypes: true }).forEach(entry => {
       const file = `${directory}/${entry.name}`;
@@ -270,7 +271,7 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
       else if (/\.tsx?$/.test(entry.name) && /whatsapp\/notification-sender"/.test(fs.readFileSync(file, 'utf8'))) users.push(file);
     });
     ['app', 'lib', 'components'].forEach(walk);
-    assert.deepEqual(users.sort(), ['lib/loyalty/read-card-links.ts', 'lib/whatsapp/customer-routing.ts', 'lib/whatsapp/green-api.ts']);
+    assert.deepEqual(users.sort(), ['lib/commerce/meram-notifications.ts', 'lib/loyalty/read-card-links.ts', 'lib/whatsapp/customer-routing.ts', 'lib/whatsapp/green-api.ts']);
     checks++;
   }
 

@@ -22,7 +22,7 @@ assert.equal(giftOrderDraftSchema.safeParse({...order,address:""}).success,false
 for (const fields of [{address:"Long address only"},{address:""},{city:""},{fulfillment:"pickup"}]) assert.equal(giftOrderInputSchema.safeParse({...order,...fields}).success,false);
 assert.ok(giftOrderInputSchema.safeParse({...order,slug:"another-store",address:"Long address only"}).success);
 const active={NODE_ENV:"production",VERCEL_ENV:"production",VERCEL:"1"};
-const sender={generation:"generation",idInstance:"brand",expectedPhone:"966590000001"};
+const sender={idInstance:"branda-notifications"};
 const job={id:"order",attempt:"attempt",number:3,customerPhone:"966590000002",reason:"المنتج غير متوفر"};
 async function run(opts={}) {
   const calls=[],jobs=[job],sends=[];
@@ -32,23 +32,21 @@ async function run(opts={}) {
     return {data:true};
   };
   const api=load("lib/commerce/meram-notifications.ts",{
-    "@/lib/data/brand-whatsapp":{getBrandCustomerWhatsAppCredentials:async()=>opts.offline?null:sender},
     "@/lib/supabase/admin":{createAdminClient:()=>({rpc})},
-    "@/lib/whatsapp/green-api-marketing":{getGreenApiMarketingAccount:async()=>({phone:opts.mismatch?"another":sender.expectedPhone})},
-    "@/lib/whatsapp/notification-sender":{NOTIFICATION_SENDER_PHONE:opts.notify?sender.expectedPhone:"platform"},
-    "@/lib/whatsapp/green-api":{isGreenApiBackupOnly:()=>Boolean(opts.paused),isGreenApiPlatformSender:()=>Boolean(opts.platform),sendGreenApiCustomerMessage:async (account,payload)=>{sends.push([account,payload]);if(opts.throws)throw Error("timeout");return {status:opts.status??"queued"};}},
+    "@/lib/whatsapp/notification-sender":{selectNotificationSender:async()=>opts.offline?null:sender},
+    "@/lib/whatsapp/green-api":{isGreenApiBackupOnly:()=>Boolean(opts.paused),sendGreenApiCustomerMessage:async (account,payload)=>{sends.push([account,payload]);if(opts.throws)throw Error("timeout");return {status:opts.status??"queued"};}},
   },opts.env??active);
   const result=await api.runMeramRejections();return {calls,sends,result};
 }
 (async()=>{
-  for(const opts of [{env:{}},{env:{...active,VERCEL_ENV:"preview"}},{paused:true},{due:false},{offline:true},{mismatch:true},{platform:true},{notify:true}]) {
+  for(const opts of [{env:{}},{env:{...active,VERCEL_ENV:"preview"}},{paused:true},{due:false},{offline:true}]) {
     const {calls,sends}=await run(opts);assert.equal(sends.length,0);assert.ok(!calls.some(([fn])=>fn==="meram_order_notice_claim"));
   }
   for(const [opts,expected] of [[{},"sent"],[{status:"rejected"},"failed"],[{status:"unknown"},"unknown"],[{throws:true},"unknown"]]) {
     const {calls,sends}=await run(opts);assert.equal(sends.length,1);
     assert.equal(sends[0][0],sender);assert.equal(sends[0][1].phone,job.customerPhone);
-    assert.ok(sends[0][1].message.includes(job.reason));
-    assert.deepEqual(calls.find(([fn])=>fn==="meram_order_notice_claim")[1],{p_generation:sender.generation,p_phone:sender.expectedPhone,p_instance:sender.idInstance});
+    for(const term of [job.reason,String(job.number),'برندة','ميرام']) assert.ok(sends[0][1].message.includes(term));
+    assert.deepEqual(calls.find(([fn])=>fn==="meram_order_notice_claim")[1],undefined);
     assert.deepEqual(calls.find(([fn])=>fn==="meram_order_notice_finish")[1],{p_id:job.id,p_attempt:job.attempt,p_state:expected});
   }
   console.log("Meram location, checkout and rejection transport checks passed (mocked provider)");

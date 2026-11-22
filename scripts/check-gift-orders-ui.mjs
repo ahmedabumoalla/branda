@@ -91,7 +91,7 @@ h=harness('MeramOrderWorkflow',{...props,order:{...meramOrder,status:'accepted'}
 await button(h.render(),'تم التسليم').props.onClick();
 check(()=>{assert(!button(h.render(),'رفض الطلب'));assert.deepEqual(commands.at(-1),{id:order.id,action:'complete'});assert(nodes(h.render()).some(n=>n.type==='a'&&n.props.href.startsWith('https://wa.me/')))});
 h=harness('MeramOrderWorkflow',{...props,order:{...meramOrder,status:'cancelled',rejectionReason:'الورد غير متوفر',notificationStatus:'pending'}});
-check(()=>{assert(text(h.render()).includes('الورد غير متوفر'));assert(text(h.render()).includes('بانتظار الإرسال'));assert(!button(h.render(),'تم التسليم'))});
+check(()=>{assert(text(h.render()).includes('الورد غير متوفر'));assert(text(h.render()).includes('بانتظار الإرسال من رقم إشعارات برندة'));assert(!nodes(h.render()).some(n=>n.props?.href==='/dashboard/brand-phone'));assert(!button(h.render(),'تم التسليم'))});
 h=harness('OrderDetails',{...props,meram:true,finance:null});
 check(()=>{const t=h.render();assert(nodes(t).some(n=>n.type==='a'&&n.props.href?.includes('google.com/maps')));assert(text(t).includes('الإجمالي قبل رسوم التوصيل'));assert(!button(t,'قبول الطلب'));assert(!button(t,'إلغاء الطلب'));assert.equal(nodes(t).filter(n=>n.type?.name==='MeramOrderWorkflow').length,1)});
 let savedSettings;

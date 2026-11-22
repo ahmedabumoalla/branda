@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { Check, MessageCircle } from "lucide-react";
 import type { GiftOrder, GiftOrderCommand } from "@/lib/commerce/gift-orders";
@@ -52,11 +51,9 @@ export function MeramOrderWorkflow({ order, busy, command }: Props) {
       <h3>سبب رفض الطلب</h3><p className={styles.pre}>{order.rejectionReason || "لم يُسجّل سبب لهذا الطلب"}</p>
       {order.notificationStatus && <p className={styles.hint}>{
         order.notificationStatus === "sent" ? "قبل واتساب إشعار الرفض للإرسال" :
-        order.notificationStatus === "pending" ? "إشعار الرفض بانتظار الإرسال عبر واتساب ميرام" :
+        order.notificationStatus === "pending" ? "إشعار الرفض بانتظار الإرسال من رقم إشعارات برندة" :
         order.notificationStatus === "failed" ? "رفض واتساب إرسال الإشعار" : "تعذر تأكيد إرسال إشعار واتساب"
       }</p>}
-      {(order.notificationStatus === "pending" || order.notificationStatus === "failed") &&
-        <Link className={styles.meramNavLink} href="/dashboard/brand-phone">إدارة ربط واتساب ميرام</Link>}
     </section>;
   }
   if (order.status === "completed" || order.status === "refunded") return null;
