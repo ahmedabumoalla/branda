@@ -10,6 +10,12 @@ function transpile(file) {
   return ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 }
 
+function loadAuthHelper(name) {
+  const exports = {};
+  new Function('require', 'exports', transpile(name.slice(2) + '.ts'))(loadAuthHelper, exports);
+  return exports;
+}
+
 function selector({ rows, accounts, env = { GREEN_API_ID_INSTANCE: '111', GREEN_API_OTP_BACKUP_ID_INSTANCE: '222' }, inventoryFails = false }) {
   const asked = [];
   const exports = {};
@@ -34,6 +40,7 @@ function worker({ paused, notify, primaryReady = false, jobs, off = false, loco 
   const exports = {};
   new Function('require', 'exports', 'process', transpile('lib/loyalty/read-card-links.ts'))(name => ({
     'server-only': {},
+    '@/lib/auth/brand-phone': loadAuthHelper('@/lib/auth/brand-phone'),
     '@/lib/data/account-cancellation': { brandAllowsNewWork: async () => true },
     '@/lib/supabase/admin': { createAdminClient: () => ({ async rpc(fn, args) {
       if (fn === 'claim_stamp_card_link_v2') { claims.push(args); return { data: args.p_primary_ready ? queue.shift() ?? null : null, error: null }; }
@@ -230,6 +237,7 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
       const exports = {};
       new Function('require', 'exports', transpile('lib/whatsapp/customer-routing.ts'))(name => ({
         'server-only': {},
+    '@/lib/auth/brand-phone': loadAuthHelper('@/lib/auth/brand-phone'),
         '@/lib/data/brand-whatsapp': { getLocoCustomerWhatsAppCredentials: async () => null, getBrandCustomerWhatsAppCredentials: async () => linked },
         '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: 'loco', supportsPrivateWhatsApp: () => true },
         '@/lib/whatsapp/green-api': { isGreenApiBackupOnly: () => false, getGreenApiCustomerPlatformSenders: () => ({ primary: { idInstance: '111' }, backup: { idInstance: '222' } }),

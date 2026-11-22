@@ -48,6 +48,18 @@ function context(options={}) {
   };
   return {api:load("lib/auth/owner-onboarding.ts",stubs),events,jar,deferred,get code(){return capturedCode;}};
 }
+for (const [accountCountry, expected] of [["SA","966591234567"],["PS","970591234567"]]) await test(async () => {
+  const c = context();
+  assert((await c.api.requestOwnerOnboarding({...valid, accountCountry, phone:"٠٥٩١٢٣٤٥٦٧"})).ok);
+  const { p_draft, p_phone } = c.events.find(event => event.name === "begin_owner_onboarding").args;
+  assert.equal(p_draft.accountCountry, accountCountry);
+  assert.equal(p_phone, expected);
+});
+for (const [accountCountry, phone] of [["SA","+970591234567"],["PS","+966591234567"]]) await test(async () => {
+  const c = context();
+  assert(!(await c.api.requestOwnerOnboarding({...valid, accountCountry, phone})).ok);
+  assert.equal(c.events.length, 0);
+});
 for(const planChoice of ['loyalty','menu_loyalty'])for(const signInError of [false,true])await test(async()=>{
   const c=context({draft:{...valid,planChoice},signInError});
   await c.api.requestOwnerOnboarding({...valid,planChoice});

@@ -35,7 +35,7 @@ function harness(options={}) {
   const calls=[];
   const db={from(table){const filters=[];let patch;const q={select(){return q;},eq(k,v){filters.push([k,v]);return q;},is(k,v){filters.push([k,v]);return q;},not(){return q;},update(p){patch=p;return q;},maybeSingle(){return q;},then(resolve,reject){
     calls.push({table,filters,patch});let result;
-    if(table==='cafes') result={data:options.cafeMissing?null:{id:cafeId,name:cafeId===WAHED?'Wahed Masoub':'LOCO',owner_user_id:options.owner??id(1),status:options.cafeStatus??'active'}};
+    if(table==='cafes') result={data:options.cafeMissing?null:{phone_country:options.phoneCountry??'SA',id:cafeId,name:cafeId===WAHED?'Wahed Masoub':'LOCO',owner_user_id:options.owner??id(1),status:options.cafeStatus??'active'}};
     else if(table==='cafe_members')result={data:{role:options.member??'staff'}};
     else if(table==='brand_marketing_connections'){
       if(options.connectionError)result={error:{message:'private database failure'}};
@@ -77,7 +77,7 @@ try {
   await test('Read-only owner dashboard exposes no credentials, campaigns, audience or provider request',async()=>{
     const h=harness({connection:linked({last_error:'secret-provider-value'})}),d=await h.getBrandWhatsAppDashboard();
     assert.equal(d.brandName,'LOCO');assert.equal(d.transactionalEnabled,false);assert.equal(d.configured,true);
-    assert.deepEqual(Object.keys(d).sort(),['brandName','configured','connection','platformFallback','transactionalEnabled']);
+    assert.deepEqual(Object.keys(d).sort(),['brandName','configured','connection','phoneCountry','platformFallback','transactionalEnabled']);
     for(const secret of ['7103999999','private-test-token','encrypted_credentials','secret-provider-value','webhook_token_hash'])assert(!JSON.stringify(d).includes(secret));
     assert.equal(h.counts().stateReads,0);assert.equal(h.counts().provisions,0);assert(!h.calls.some(x=>x.rpc));
   });

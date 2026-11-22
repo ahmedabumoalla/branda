@@ -3,7 +3,8 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { createLoyaltySessionToken, loyaltyCookieName, loyaltyIdentityHash, LOYALTY_SESSION_SECONDS } from "@/lib/auth/loyalty-session-token";
 import { getBranchLoyaltyBrand } from "./loyalty-experience";
 
@@ -12,10 +13,10 @@ const schema = z.object({ slug: z.string().regex(/^[a-z0-9-]{1,80}$/), name: z.s
 export async function enrollLoyaltyCustomer(input: { slug: string; name: string; phone: string; birthDate?: string; branchId?: string }) {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false as const, message: "أدخل اسمك ورقم جوالك بشكل صحيح" };
-  const phone = normalizeSaudiPhone(parsed.data.phone.replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 1776 : 1632))));
-  if (!phone) return { ok: false as const, message: "أدخل رقم جوال سعودي صحيح يبدأ بـ 05" };
   const brand = await getBranchLoyaltyBrand(parsed.data.slug, parsed.data.branchId);
   if (!brand?.program.enabled) return { ok: false as const, message: "برنامج الولاء غير متاح حاليًا" };
+  const phone = normalizeBrandPhone(parsed.data.phone, await getBrandPhoneCountry(brand.cafeId));
+  if (!phone) return { ok: false as const, message: "أدخل رقم جوال صحيح لدولة العلامة" };
   const requestHeaders = await headers();
   const address = (requestHeaders.get("x-vercel-forwarded-for") ?? requestHeaders.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
   const { data, error } = await createAdminClient().rpc(parsed.data.branchId ? "enroll_branch_loyalty_customer" : "enroll_loyalty_customer_direct", {

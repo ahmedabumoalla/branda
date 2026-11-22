@@ -16,6 +16,9 @@ import type { FinanceCommandResult, FinanceHistory, FinanceProduct, FinanceSnaps
 import { getFinanceMaintenanceActor, resetFinanceBalances } from "./finance-shifts";
 import { after } from "next/server";
 import { dispatchShiftAlerts } from "./finance-shift-alerts";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
+import { normalizeFinanceContactPhones } from "@/lib/finance/contact-phones";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
 import { prepareFinancePosCustomerPayload } from "@/lib/finance/pos-customer-server";
 import { posPurchaseSchema, posSupplierPayoutSchema } from "@/lib/finance/pos-purchases";
 import { dispatchFinancePosCustomerMessages } from "./finance-pos-customer-messages";
@@ -67,13 +70,15 @@ export async function getBrandFinanceSnapshot(slug?: string): Promise<FinanceSna
 export async function readBrandFinanceSnapshot({ client, cafe }: Awaited<ReturnType<typeof getBrandFinanceContext>>, { signMenuImages = true } = {}): Promise<FinanceSnapshot> {
   // These reads share the already-authorized request and do not depend on the
   // financial result. Start them together instead of adding another round trip.
-  const [{ data, error }, resetActor, owner] = await Promise.all([
+  const [{ data, error }, resetActor, owner, phoneCountry] = await Promise.all([
     client.rpc("brand_finance_snapshot", { p_cafe_id: cafe.id }),
     getFinanceMaintenanceActor(cafe.id),
     cafe.maintenance ? client.from("cafes").select("owner_user_id").eq("id", cafe.id).single() : Promise.resolve(null),
+    getBrandPhoneCountry(cafe.id),
   ]);
   if (error) throw new Error("تعذر تحميل المالية حاول مجددا");
   const snapshot = data as FinanceSnapshot;
+  snapshot.cafe.phoneCountry = phoneCountry;
   if (snapshot.cafe.businessCategory === "butcher_shops") {
     const seller = await client.rpc("brand_finance_receipt_seller", { p_cafe_id: cafe.id });
     if (seller.error) throw new Error("تعذر تحميل بيانات البائع للإيصال حاول مجددًا");
@@ -103,6 +108,11 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
     if (phone.length > 30) throw new Error("رقم الجوال يجب ألا يتجاوز ٣٠ حرفًا");
     command.payload.phone = phone;
   }
+  if (command.operation === "party" && typeof command.payload.phone === "string" && command.payload.phone.trim() && await getBrandPhoneCountry(cafe.id) === "PS") {
+    const phone = normalizeBrandPhone(command.payload.phone, "PS");
+    if (!phone) throw new Error("أدخل رقم جوال فلسطيني صحيح");
+    command.payload.phone = phone;
+  }
   if (command.operation === "staff" && cafe.role !== "owner") {
     const maintenance = await getFinanceCashierMaintenance(cafe.id);
     if (!maintenance) throw new Error("إدارة الكاشير تتطلب صلاحية المالك أو جلسة صيانة سارية");
@@ -115,6 +125,13 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
   if (command.operation === "supplier_payout" && Object.hasOwn(command.payload, "supplierId")) {
     const parsed = posSupplierPayoutSchema.safeParse(command.payload);
     if (!parsed.success) throw new Error("راجع المورد والمبلغ وبيانات السداد");
+    if (parsed.data.newSupplier || parsed.data.supplierPhone) {
+      const country = await getBrandPhoneCountry(cafe.id);
+      if (parsed.data.newSupplier) normalizeFinanceContactPhones(parsed.data.newSupplier, country);
+      const contact = { phone: parsed.data.supplierPhone };
+      normalizeFinanceContactPhones(contact, country);
+      parsed.data.supplierPhone = contact.phone;
+    }
     command.payload = parsed.data;
   }
   if (command.operation === "shift_purchase" && Object.hasOwn(command.payload, "invoice")) {
@@ -122,6 +139,7 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
     const parsed = posPurchaseSchema.safeParse(purchase);
     const total = z.number().finite().nonnegative().safeParse(expectedTotal);
     if (!parsed.success || !total.success) throw new Error("راجع بيانات فاتورة المشتريات والمورد والأصناف");
+    if (parsed.data.newSupplier) normalizeFinanceContactPhones(parsed.data.newSupplier, await getBrandPhoneCountry(cafe.id));
     command.payload = { ...parsed.data, expectedTotal: total.data };
   }
   if (command.operation === "finance_reset") return resetFinanceBalances(cafe.id, command.payload, command.requestId);
@@ -131,7 +149,7 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
     delete command.payload.customerPhone;
     delete command.payload.redeemRewardId;
     delete command.payload.pagerFeedbackHash;
-  } else if (command.operation === "sale") prepareFinancePosCustomerPayload(command.payload, command.requestId);
+  } else if (command.operation === "sale") prepareFinancePosCustomerPayload(command.payload, command.requestId, command.payload.customerPhone ? await getBrandPhoneCountry(cafe.id) : undefined);
   // Loyalty points spent on this sale: checked and recorded by the database in the same transaction as the sale
   const redeemPoints = command.operation === "sale" ? command.payload.redeemPoints : undefined;
   delete command.payload.redeemPoints;

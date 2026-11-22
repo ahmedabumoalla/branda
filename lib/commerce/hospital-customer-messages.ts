@@ -8,7 +8,7 @@ import { createFinanceCustomerReceiptPdf } from "@/lib/data/finance-customer-rec
 import { isGreenApiFinanceReceiptConfigured, selectGreenApiPlatformSender, sendGreenApiCustomerMessage, sendGreenApiFinanceReceipt } from "@/lib/whatsapp/green-api";
 
 const contextSchema = z.object({
-  kind: z.enum(["account", "invoice", "loyalty_card"]), phone: z.string().regex(/^9665\d{8}$/), customerName: z.string().max(300),
+  kind: z.enum(["account", "invoice", "loyalty_card"]), phone: z.string().regex(/^(?:9665\d{8}|9705[69]\d{7})$/), customerName: z.string().max(300),
   brand: z.object({ name: z.string().min(1).max(300), slug: z.literal("mind-hospital") }),
   document: financeCustomerReceiptSchema.nullish(), invoiceEnabled: z.boolean(),
   cafeId: z.uuid().optional(), profileId: z.uuid().nullish(), cardId: z.uuid().nullish(), googleIssued: z.boolean().optional(),

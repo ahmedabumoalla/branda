@@ -1,14 +1,16 @@
 import { MARKETING_MEDIA_BODY_LIMIT, MARKETING_MEDIA_TYPES } from "@/lib/marketing/media-rules";
 
-export function parseCampaignRecipients(value: string) {
+export function parseCampaignRecipients(value: string, country: "SA" | "PS" = "SA") {
   const entries = value.trim().split(/[\s,،;؛]+/u).filter(Boolean);
   const numbers = entries.map((entry) => {
     let phone = entry.replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 1632)).replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 1776)).replace(/^\+|^00/, "");
-    if (/^05\d{8}$/.test(phone)) phone = `966${phone.slice(1)}`;
-    else if (/^5\d{8}$/.test(phone)) phone = `966${phone}`;
+    const prefix = country === "PS" ? "970" : "966";
+    if (/^05\d{8}$/.test(phone)) phone = prefix + phone.slice(1);
+    else if (/^5\d{8}$/.test(phone)) phone = prefix + phone;
     return phone;
   });
-  const invalid = numbers.filter((phone) => !/^9665\d{8}$/.test(phone));
+  const mobile = country === "PS" ? /^9705[69]\d{7}$/ : /^9665\d{8}$/;
+  const invalid = numbers.filter((phone) => !mobile.test(phone));
   return { phones: [...new Set(numbers)], invalid, duplicates: numbers.length - new Set(numbers).size };
 }
 

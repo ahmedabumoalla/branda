@@ -4,7 +4,7 @@ import { createHmac, randomBytes, randomInt, randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGreenApiConfigured, sendGreenApiOtp } from "@/lib/whatsapp/green-api";
 import { cashierSessionCookie } from "@/lib/data/cashier";
@@ -20,8 +20,8 @@ function digits(value: string) {
 }
 
 export async function requestCashierOtp(phone: string): Promise<CashierOtpResult> {
-  const parsed = z.string().max(30).transform(digits).transform(normalizeSaudiPhone).refine(Boolean).safeParse(phone);
-  if (!parsed.success) return { ok: false, message: "أدخل رقم جوال سعودي صحيحًا" };
+  const parsed = z.string().max(30).transform(digits).transform(value => normalizeOwnerPhone(value)).refine(Boolean).safeParse(phone);
+  if (!parsed.success) return { ok: false, message: "أدخل رقم جوال صحيحًا مع مفتاح الدولة" };
   if (!isGreenApiConfigured()) return unavailable();
   try {
     const admin = createAdminClient();

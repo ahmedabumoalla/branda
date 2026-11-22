@@ -3,7 +3,9 @@
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { createClient } from "@/lib/supabase/server";
-import { isAllowedCustomerOtpPhone, isPhoneOtpRequiredForBrand, normalizeSaudiPhone, requestCustomerPhoneOtp } from "@/lib/auth/phone-otp";
+import { getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { isAllowedCustomerOtpPhone, isPhoneOtpRequiredForBrand, requestCustomerPhoneOtp } from "@/lib/auth/phone-otp";
 
 async function requireHospitalFinance(slug: string) {
   if (slug !== "mind-hospital" || !featureCodesAllow(await getPublicCafeFeatureCodesBySlug(slug), "finance")) {
@@ -25,14 +27,14 @@ export async function requestHospitalCustomerOtpAction(slug: string, phone: stri
 export async function completeHospitalCustomerOtpAction(slug: string, phone: string, code: string) {
   try {
     await requireHospitalFinance(slug);
-    const normalized = typeof phone === "string" && phone.length <= 25 ? normalizeSaudiPhone(phone) : null;
+    const normalized = typeof phone === "string" && phone.length <= 25 ? normalizeBrandPhone(phone, await getBrandPhoneCountryBySlug(slug)) : null;
     if (!normalized || typeof code !== "string" || !isPhoneOtpRequiredForBrand(slug) || !isAllowedCustomerOtpPhone(normalized, slug) || !/^\d{6}$/.test(code)) {
       return { ok: false as const, message: "راجع رقم الجوال ورمز التحقق" };
     }
     const client = await createClient();
     const { data, error } = await client.auth.verifyOtp({ phone: `+${normalized}`, token: code, type: "sms" });
     if (error || !data.user || !data.session) return { ok: false as const, message: "رمز التحقق غير صحيح أو منتهي" };
-    if (!data.user.phone_confirmed_at || normalizeSaudiPhone(data.user.phone ?? "") !== normalized) {
+    if (!data.user.phone_confirmed_at || normalizeBrandPhone(data.user.phone ?? "", await getBrandPhoneCountryBySlug(slug)) !== normalized) {
       await client.auth.signOut({ scope: "local" });
       return { ok: false as const, message: "تعذر التحقق من رقم الجوال" };
     }

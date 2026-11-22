@@ -78,7 +78,7 @@ let permitted=true,token='token-a',seen=[],loyaltyCalls=0;
 const {cashierWorkspaceKey}=load('lib/cashier/workspace-session.ts');
 const {loadStaffScreenAction}=load('app/actions/staff-workspace.ts',{
   '@/lib/data/cashier':{requireCashierPermission:async permission=>{seen.push(permission);if(!permitted)throw Error('denied');return {token,businessCategory:'cafes_coffee'};},getCashierConsole:async options=>{assert.equal(options.recordEntry,false);loyaltyCalls++;return {...loyalty.data,cafe:{...loyalty.data.cafe,slug:'brand-a'}};}},
-  '@/lib/data/loyalty-experience':{getLoyaltyBrand:async slug=>{assert.equal(slug,'brand-a');return {identity:{name:'A'}};}},
+  '@/lib/data/loyalty-experience':{getLoyaltyBrand:async slug=>{assert.equal(slug,'brand-a');return {identity:{name:'A'},program:{}};}},
   '@/lib/data/pager':{getStaffPagerContext:async()=>pager.context,getPagerPage:async(filter,mode)=>{assert.deepEqual(filter,{status:'active'});assert.equal(mode,'staff');return pager.page;}},
 });
 const a=await loadStaffScreenAction('loyalty',cashierWorkspaceKey(token));

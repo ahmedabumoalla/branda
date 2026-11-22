@@ -48,11 +48,13 @@ check(await session.getLoyaltyCustomerProfile('taza')===null&&otpCalls===0,'Inva
 cookie='';await session.getLoyaltyCustomerProfile('taza');check(otpCalls===1,'Legacy verified session remains a fallback');
 let eligible=true,enabled=true,rpcCalls=0,returning=false,reason=null,fail=false;
 const writes=[];
+let phoneCountry="SA";
 const enrollment=load('lib/data/loyalty-enrollment.ts',{
+  '@/lib/data/brand-phone-country':{getBrandPhoneCountry: async id=>{assert.equal(id,cafe);return phoneCountry;}},
   ...base,'next/headers':{headers:async()=>new Map([['x-vercel-forwarded-for','192.0.2.1']]),cookies:async()=>({set:(...args)=>writes.push(args)})},
   './loyalty-experience':{getBranchLoyaltyBrand:async()=>eligible?{cafeId:cafe,program:{enabled}}:null},
   '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name,args)=>{
-    rpcCalls++;assert.equal(name,'enroll_loyalty_customer_direct');assert.equal(args.p_cafe_id,cafe);assert.equal(args.p_phone,'966500000001');
+    rpcCalls++;assert.equal(name,'enroll_loyalty_customer_direct');assert.equal(args.p_cafe_id,cafe);assert.equal(args.p_phone,phoneCountry==='SA'?'966500000001':'970590000001');
     assert.match(args.p_client_key,/^[a-f0-9]{64}$/);check(!JSON.stringify(args).includes('192.0.2.1'),'IP is hashed');
     return {error:fail?{}:null,data:reason?{ok:false,reason}:{ok:true,profile_id:profileId,returning_customer:returning}};
   }})},
@@ -62,6 +64,10 @@ check((await enrollment.enrollLoyaltyCustomer(input)).ok,'Arabic digits normaliz
 const [name,signed,options]=writes[0];check(name==='branda_loyalty_taza'&&options.httpOnly&&options.sameSite==='lax'&&options.path==='/'&&options.maxAge===tokens.LOYALTY_SESSION_SECONDS,'Separate cookie available to wallet endpoints');
 check(tokens.readLoyaltySessionToken(signed,'taza')?.profileId===profileId,'Enrollment cookie resolves same membership');
 returning=true;check((await enrollment.enrollLoyaltyCustomer({...input,phone:'00966500000001'})).returningCustomer,'Returning member keeps identity');
+phoneCountry='PS';
+check((await enrollment.enrollLoyaltyCustomer({...input,phone:'٠٥٩٠٠٠٠٠٠١'})).ok,'Palestinian member enrolls with own phone country');
+check(!(await enrollment.enrollLoyaltyCustomer({...input,phone:'+966590000001'})).ok,'Wrong explicit country is rejected');
+phoneCountry='SA';
 const count=rpcCalls;
 for(const invalid of [{...input,phone:'123'},{...input,name:'x'},{...input,slug:'../taza'}])check(!(await enrollment.enrollLoyaltyCustomer(invalid)).ok,'Invalid input rejected');
 eligible=false;check(!(await enrollment.enrollLoyaltyCustomer(input)).ok,'Unsubscribed brand rejected');eligible=true;enabled=false;

@@ -1,3 +1,4 @@
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import "server-only";
 import { z } from "zod";
 import { after } from "next/server";
@@ -7,7 +8,7 @@ import { readFinanceProviderMessageStatus } from "@/lib/whatsapp/finance-message
 import type { FinanceInvoiceMessageStatus } from "@/lib/finance/invoice-message-status";
 
 const inputSchema = z.object({ documentIds: z.array(z.uuid()).max(100) });
-const pollSchema = z.object({ id: z.uuid(), pollToken: z.uuid(), phone: z.string().regex(/^9665\d{8}$/), messageId: z.string().min(1).max(300) });
+const pollSchema = z.object({ id: z.uuid(), pollToken: z.uuid(), phone: z.string().regex(canonicalBrandMobile), messageId: z.string().min(1).max(300) });
 
 export async function getFinanceInvoiceMessageStatuses(input: { documentIds: string[] }, slug?: string): Promise<{ statuses: FinanceInvoiceMessageStatus[] }> {
   const ids = [...new Set(inputSchema.parse(input).documentIds)];

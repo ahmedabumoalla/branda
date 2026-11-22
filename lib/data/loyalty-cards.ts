@@ -10,7 +10,8 @@ import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import type { LoyaltyCardDesign } from "@/lib/loyalty/types";
 import { readPointsProgram, type PointsProgram } from "@/lib/loyalty/points-program";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { isGreenApiConfigured, sendGreenApiCashierWelcome } from "@/lib/whatsapp/green-api";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
@@ -121,6 +122,7 @@ export type LoyaltyCardsDashboard = {
 };
 
 export type CashierOperationsDashboard = {
+  phoneCountry?: BrandPhoneCountry;
   canOpenAsOwner?: boolean;
   cafeId: string;
   cafeSlug: string;
@@ -346,6 +348,7 @@ export async function getOwnerCashierOperations(): Promise<CashierOperationsDash
   if (activitiesError) throw activitiesError;
 
   return {
+    phoneCountry: await getBrandPhoneCountry(cafe.id),
     canOpenAsOwner: cafe.role === "owner" || cafe.role === "platform_admin",
     cafeId: cafe.id,
     cafeSlug: cafe.slug,
@@ -454,7 +457,7 @@ export async function createOwnerCashier(input: {
 }) {
   const parsed = z.object({
     fullName: z.string().trim().min(2).max(80).regex(/^[^\r\n\x00-\x1f]+$/),
-    phone: z.string().max(30).transform(normalizeSaudiPhone).refine(Boolean),
+    phone: z.string().max(30),
     employeeNumber: z.string().trim().max(40).optional(),
     canUseLoyalty: z.boolean().default(true),
     canUsePager: z.boolean().default(false),
@@ -463,7 +466,9 @@ export async function createOwnerCashier(input: {
 
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
-  const phone = `+${parsed.phone}`;
+  const normalized = normalizeBrandPhone(parsed.phone, await getBrandPhoneCountry(cafe.id));
+  if (!normalized) throw new Error("أدخل رقم جوال صحيحًا لدولة العلامة");
+  const phone = `+${normalized}`;
   const { data: cashierId, error } = await supabase.rpc("create_cafe_staff_whatsapp", {
     p_cafe_id: cafe.id,
     p_full_name: parsed.fullName,

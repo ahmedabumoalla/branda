@@ -1,3 +1,4 @@
+import type { BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import type { FinanceShiftSnapshot, ShiftOperationalRecord } from "./shift-operations";
 import type { FinanceRole, FinanceStaffRole } from "./permissions";
 import type { FinancePosCustomerResult } from "./pos-customer";
@@ -31,7 +32,7 @@ export type FinanceSnapshot = Partial<FinanceShiftSnapshot> & {
   receiptSeller?: FinanceReceiptSeller | null;
   units?: import("./inventory-catalog").FinanceInventoryUnit[];
   canResetBalances?: boolean;
-  cafe: { id: string; name: string; slug: string; businessCategory?: string }; userId: string; canManage: boolean; canAdminister: boolean; canManageCashiers?: boolean; role: FinanceRole;
+  cafe: { id: string; name: string; slug: string; phoneCountry?: BrandPhoneCountry; businessCategory?: string }; userId: string; canManage: boolean; canAdminister: boolean; canManageCashiers?: boolean; role: FinanceRole;
   settings: { vat_rate: number; tax_inclusive: boolean; currency: "SAR"; closed_through: string | null };
   accounts: FinanceAccount[]; parties: FinanceParty[]; products: FinanceProduct[]; items: FinanceItem[];
   warehouses: FinanceWarehouse[]; stock: FinanceStock[]; documents: FinanceDocument[]; shifts: (FinanceShift & Partial<ShiftOperationalRecord>)[];

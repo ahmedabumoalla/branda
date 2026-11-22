@@ -6,6 +6,8 @@ import { documentTemplateContext,documentTemplateError } from "@/lib/data/erp-te
 import { sanitizeTemplateBody,templateEscape } from "@/lib/erp/templates-render";
 import { substituteTemplate,type DocumentTemplateValues,type TemplateDelivery } from "@/lib/erp/templates";
 import { isMetaWhatsAppConfigured,sendMetaWhatsAppText } from "@/lib/whatsapp/meta-cloud";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { deliveryHttpState,normalizeTemplatePhone,templatePlainText } from "@/lib/erp/template-delivery-policy";
 import { sendSavedSystemTemplate } from "@/lib/erp/settings-delivery";
 type Claimed=TemplateDelivery&{cafe_id:string;lease_id:string;values:DocumentTemplateValues;cc:string[];bcc:string[]};
@@ -14,7 +16,17 @@ async function deliver(job:Claimed,manual=false):Promise<Outcome>{
  try{if(!await brandAllowsNewWork(job.cafe_id))return{status:'blocked',message:'حساب العلامة ملغى ولن ترسل رسائل جديدة'};}catch{return{status:'blocked',message:'تعذر التحقق من حالة حساب العلامة قبل الإرسال'};}
  const subject=substituteTemplate(job.subject,job.values),html=sanitizeTemplateBody(substituteTemplate(job.body,job.values,templateEscape)),text=templatePlainText(html);
  if(job.channel==="system")return{status:"sent",providerId:"internal:"+job.id};
- if(manual&&text){const saved=await sendSavedSystemTemplate({cafeId:job.cafe_id,id:job.id,channel:job.channel,recipient:job.recipient,subject,html,text,cc:job.cc,bcc:job.bcc});if(saved)return saved;}
+ let recipient = job.recipient;
+ if (job.channel === "sms" || job.channel === "whatsapp") {
+  try {
+   if (await getBrandPhoneCountry(job.cafe_id) === "PS") {
+    const phone = normalizeBrandPhone(recipient, "PS");
+    if (!phone) return { status: "blocked", message: "رقم المستلم الفلسطيني غير صالح" };
+    recipient = "+" + phone;
+   }
+  } catch { return { status: "blocked", message: "تعذر التحقق من دولة رقم المستلم" }; }
+ }
+ if(manual&&text){const saved=await sendSavedSystemTemplate({cafeId:job.cafe_id,id:job.id,channel:job.channel,recipient,subject,html,text,cc:job.cc,bcc:job.bcc});if(saved)return saved;}
  if(process.env.ERP_TEMPLATE_EXTERNAL_DELIVERY_ENABLED!=="true")return{status:"blocked",message:"الإرسال الخارجي للقوالب غير مفعل"};
  if(!text)return{status:"blocked",message:"محتوى الرسالة فارغ"};
  if((job.channel==="sms"&&text.length>1600)||(job.channel==="whatsapp"&&text.length>4096))return{status:"blocked",message:"نص الرسالة يتجاوز حد القناة اختر قالبًا أقصر"};
@@ -25,7 +37,7 @@ async function deliver(job:Claimed,manual=false):Promise<Outcome>{
    const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,"Content-Type":"application/json","Idempotency-Key":`erp-template-${job.id}`},body:JSON.stringify({from:process.env.RESEND_FROM_EMAIL,to:job.recipient,subject,html,text,cc:job.cc,bcc:job.bcc}),signal:AbortSignal.timeout(20000)});
    if(!response.ok)return{status:deliveryHttpState(response.status),message:"لم يؤكد مزود البريد قبول الرسالة"};const body=await response.json();return typeof body.id==="string"?{status:"sent",providerId:body.id}:{status:"unknown",message:"لم يصل معرف الرسالة من المزوّد"};
   }
-  const phone=normalizeTemplatePhone(job.recipient);if(!phone)return{status:"blocked",message:"رقم المستلم غير صالح"};
+  const phone=normalizeTemplatePhone(recipient);if(!phone)return{status:"blocked",message:"رقم المستلم غير صالح"};
   if(job.channel==="sms"){
    const sid=process.env.TWILIO_ACCOUNT_SID,token=process.env.TWILIO_AUTH_TOKEN,from=process.env.TWILIO_PHONE_NUMBER;if(!sid||!token||!from)return{status:"blocked",message:"خدمة الرسائل القصيرة غير مهيأة"};
    if(!/^AC[a-f0-9]{32}$/i.test(sid))return{status:"blocked",message:"إعداد حساب الرسائل القصيرة غير صالح"};

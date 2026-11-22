@@ -35,6 +35,7 @@ function fixture(options = {}) {
     return { data, error: state.error };
   } };
   const stubs = {
+    "@/lib/data/brand-phone-country": { getBrandPhoneCountry: async () => options.country ?? "SA" },
     "@/lib/supabase/admin": { createAdminClient: () => db },
     "@/lib/data/cashier": { requireCashierPermission: async (permission, client) => {
       assert.equal(permission, "loyalty"); assert.equal(client, db); calls.push({ name: "authorize" });

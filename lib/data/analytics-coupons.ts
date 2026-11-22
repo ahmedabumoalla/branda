@@ -1,9 +1,10 @@
 import "server-only";
 
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { requireCashierPermission } from "@/lib/data/cashier";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { analyticsCouponLookupSchema, analyticsCouponRedeemSchema, analyticsCouponPreviewSchema,
+import { couponLookupFor, couponRedeemFor, analyticsCouponPreviewSchema,
   type AnalyticsCouponErrorCode, type AnalyticsCouponPreview } from "@/lib/analytics/analytics-coupons";
 
 export class AnalyticsCouponError extends Error {
@@ -37,7 +38,7 @@ function databaseError(error: { code?: string; message?: string }, mutate: boole
 
 export async function loadAnalyticsCoupon(raw: unknown): Promise<AnalyticsCouponPreview> {
   const { db, session } = await context();
-  const parsed = analyticsCouponLookupSchema.safeParse(raw);
+  const parsed = couponLookupFor(await getBrandPhoneCountry(session.cafeId)).safeParse(raw);
   if (!parsed.success) throw new AnalyticsCouponError("أدخل كود الكوبون وجوال العميل ومبلغ الفاتورة بشكل صحيح", "invalid");
   const input = parsed.data;
   const result = await db.rpc("analytics_coupon_preview", {
@@ -53,7 +54,7 @@ export async function loadAnalyticsCoupon(raw: unknown): Promise<AnalyticsCoupon
 
 export async function redeemAnalyticsCoupon(raw: unknown): Promise<AnalyticsCouponPreview> {
   const { db, session } = await context();
-  const parsed = analyticsCouponRedeemSchema.safeParse(raw);
+  const parsed = couponRedeemFor(await getBrandPhoneCountry(session.cafeId)).safeParse(raw);
   if (!parsed.success) throw new AnalyticsCouponError("راجع بيانات الكوبون ومبلغ الفاتورة قبل تأكيد الصرف", "invalid");
   const input = parsed.data;
   const result = await db.rpc("analytics_coupon_redeem", {

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 
@@ -80,6 +82,9 @@ export async function upsertCustomerProfileForUser(
 
   const supabase = await createClient();
 
+  const phone = normalizeBrandPhone(profile.phone, await getBrandPhoneCountry(cafe.id));
+  if (!phone) throw new Error("تحقق من رقم الجوال");
+
   const { data: existingByUser } = await supabase
     .from("customer_profiles")
     .select("*")
@@ -92,7 +97,7 @@ export async function upsertCustomerProfileForUser(
       p_cafe_id: cafe.id,
       p_full_name: profile.fullName,
       p_email: profile.email ?? null,
-      p_phone: profile.phone,
+      p_phone: phone,
     });
     if (error) {
       if (error.code === "23505") {
@@ -112,7 +117,7 @@ export async function upsertCustomerProfileForUser(
   const { data, error } = await supabase.rpc("create_customer_profile", {
     p_cafe_id: cafe.id,
     p_full_name: profile.fullName,
-    p_phone: profile.phone,
+    p_phone: phone,
     p_email: profile.email ?? null,
   });
 
@@ -488,12 +493,14 @@ export async function registerCustomer(
     throw new Error("يوجد حساب بهذا البريد لدى هذه العلامة");
   }
 
+  const phone = normalizeBrandPhone(parsed.phone, await getBrandPhoneCountry(cafe.id));
+  if (!phone) throw new Error("تحقق من رقم الجوال");
   const { data: profile, error } = await admin
     .from("customer_profiles")
     .insert({
       cafe_id: cafe.id,
       full_name: parsed.fullName.trim(),
-      phone: parsed.phone.replace(/\D/g, ""),
+      phone,
       email,
       password_hash: hashCustomerPassword(parsed.password),
       password_updated_at: new Date().toISOString(),
@@ -545,11 +552,13 @@ export async function registerVerifiedCustomer(input: {
   }
 
   const admin = createAdminClient();
+  const phone = normalizeBrandPhone(parsed.phone, await getBrandPhoneCountry(cafe.id));
+  if (!phone) throw new Error("تحقق من رقم الجوال");
   const { data, error } = await admin.rpc("register_verified_customer", {
     p_challenge_id: parsed.challengeId,
     p_verification_token_hash: parsed.verificationTokenHash,
     p_cafe_id: cafe.id,
-    p_phone_normalized: parsed.phone,
+    p_phone_normalized: phone,
     p_full_name: parsed.fullName.trim(),
     p_email: email,
     p_password_hash: hashCustomerPassword(parsed.password),

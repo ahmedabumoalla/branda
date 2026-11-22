@@ -1,4 +1,6 @@
 "use server";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { revalidatePath } from "next/cache";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { actionResult } from "@/lib/platform/action-result";
@@ -13,7 +15,9 @@ function fail(error: { code?: string; message?: string } | null, fallback: strin
 export async function getPoints(filter?: { phone?: string; query?: string }, slug?: string) {
   return actionResult(async () => {
     const { client, cafe } = await getBrandFinanceContext(slug);
-    const { data, error } = await client.rpc("erp_points_read", { p_cafe: cafe.id, p_phone: filter?.phone?.slice(0, 25) || null, p_query: filter?.query?.slice(0, 40) ?? "" });
+    const phone = filter?.phone ? normalizeBrandPhone(filter.phone.slice(0, 25), await getBrandPhoneCountry(cafe.id)) : null;
+    if (filter?.phone && !phone) throw new Error("أدخل رقم جوال صحيحًا");
+    const { data, error } = await client.rpc("erp_points_read", { p_cafe: cafe.id, p_phone: phone, p_query: filter?.query?.slice(0, 40) ?? "" });
     fail(error, "تعذر تحميل نقاط الولاء");
     return { ...data, slug: cafe.slug, brand: cafe.name } as PointsSnapshot;
   }, "تعذر تحميل نقاط الولاء");
@@ -24,7 +28,9 @@ export async function getPointsBalance(slug: string, phone: string): Promise<Poi
   try {
     if (typeof phone !== "string" || phone.length > 25) return { enabled: false, balance: 0 };
     const { client, cafe } = await getBrandFinanceContext(slug);
-    const { data, error } = await client.rpc("erp_points_balance", { p_cafe: cafe.id, p_phone: phone });
+    const normalized = normalizeBrandPhone(phone, await getBrandPhoneCountry(cafe.id));
+    if (!normalized) return { enabled: false, balance: 0 };
+    const { data, error } = await client.rpc("erp_points_balance", { p_cafe: cafe.id, p_phone: normalized });
     if (error || !data) return { enabled: false, balance: 0 };
     return data as PointsBalance;
   } catch { return { enabled: false, balance: 0 }; }
@@ -47,7 +53,9 @@ export async function adjustPoints(input: unknown, slug?: string) {
     const parsed = pointsAdjustSchema.safeParse(input);
     if (!parsed.success) throw new Error(parsed.error.issues.find(issue => /[\u0600-\u06ff]/.test(issue.message))?.message ?? "راجع رقم الجوال وعدد النقاط وسبب التعديل");
     const { client, cafe } = await getBrandFinanceContext(slug);
-    const { data, error } = await client.rpc("erp_points_execute", { p_cafe: cafe.id, p_action: "adjust", p_payload: { ...parsed.data, branchId: parsed.data.branchId ?? "" } });
+    const phone = normalizeBrandPhone(parsed.data.phone, await getBrandPhoneCountry(cafe.id));
+    if (!phone) throw new Error("أدخل رقم جوال صحيحًا");
+    const { data, error } = await client.rpc("erp_points_execute", { p_cafe: cafe.id, p_action: "adjust", p_payload: { ...parsed.data, phone, branchId: parsed.data.branchId ?? "" } });
     fail(error, "تعذر تعديل رصيد النقاط");
     revalidatePath("/dashboard/system/points");
     return data as { phone: string; balance: number };

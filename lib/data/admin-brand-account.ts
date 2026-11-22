@@ -1,10 +1,11 @@
 import "server-only";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
 import { createAdminBrandAccount, updateAdminBrandOwner } from "@/lib/data/admin-brand-onboarding";
 import { replacePreparedBrandPlans } from "@/lib/data/admin-brand-subscriptions";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { AVAILABLE_BUSINESS_CATEGORY_IDS } from "@/lib/platform/business-categories";
-import { adminBrandOwnerSchema, adminBrandPlanIdsSchema, adminBrandProfileSchema, type AdminBrandAccountWithPlansInput, type AdminBrandOwnerInput, type AdminBrandProfileInput, type BrandOwnerDelivery } from "@/lib/platform/brand-onboarding";
+import { adminBrandOwnerFor, adminBrandPlanIdsSchema, adminBrandProfileSchema, type AdminBrandAccountWithPlansInput, type AdminBrandOwnerInput, type AdminBrandProfileInput, type BrandOwnerDelivery } from "@/lib/platform/brand-onboarding";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -45,7 +46,8 @@ async function ownerDeliveryState(client: SessionClient, cafeId: string): Promis
  */
 export async function saveAdminBrandOwner(input: AdminBrandOwnerInput): Promise<{ contactOnly: boolean }> {
   const actor = await requirePlatformAdmin();
-  const parsed = adminBrandOwnerSchema.safeParse(input);
+  const country = await getBrandPhoneCountry(input.cafeId);
+  const parsed = adminBrandOwnerFor(country).safeParse(input);
   if (!parsed.success) throw new Error("راجع بيانات المالك اترك البيانات الناقصة فارغة أو أدخلها بصورة صحيحة");
   const client = await createClient();
   const delivery = await ownerDeliveryState(client, parsed.data.cafeId);
@@ -64,12 +66,12 @@ export async function saveAdminBrandOwner(input: AdminBrandOwnerInput): Promise<
   const user = account.data?.user;
   if (account.error || !user) throw new Error("تعذر قراءة حساب دخول المالك حاول مجددًا");
   // The phone is the login only when the account already signs in with one; an email login keeps its address
-  const loginPhone = user.phone ? normalizeSaudiPhone(user.phone) ?? user.phone.replace(/\D/g, "") : "";
+  const loginPhone = user.phone ? normalizeOwnerPhone(user.phone) ?? user.phone.replace(/\D/g, "") : "";
   const emailIsLogin = Boolean(user.email) && !String(user.email).endsWith(PLACEHOLDER_EMAIL);
   const phoneIsLogin = Boolean(loginPhone);
   if (phoneIsLogin && !phone) throw new Error("لا يمكن إزالة جوال دخول محفوظ يمكنك استبداله برقم صحيح");
   if (phoneIsLogin && phone !== loginPhone) {
-    const clash = await admin.from("profiles").select("id").neq("id", ownerId).in("phone", [phone, `+${phone}`, `0${phone.slice(3)}`]).limit(1);
+    const clash = await admin.from("profiles").select("id").neq("id", ownerId).in("phone", (country === "SA" ? [phone, `+${phone}`, `0${phone.slice(3)}`] : [phone, `+${phone}`])).limit(1);
     if (clash.error) throw new Error("تعذر التحقق من رقم الجوال حاول مجددًا");
     if (clash.data?.length) throw new Error("رقم الجوال مرتبط بحساب موجود استخدم رقمًا آخر");
   }

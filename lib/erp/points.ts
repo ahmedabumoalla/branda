@@ -30,7 +30,7 @@ export type PointsSnapshot = {
   customer: { phone: string; balance: number } | null; ledger: PointsEntry[];
 };
 export const pointsKindLabels = { earn: "اكتساب", redeem: "استبدال", reverse: "تسوية مرتجع", adjust: "تعديل إداري" } as const;
-export const localPhone = (phone: string) => phone.startsWith("966") ? `0${phone.slice(3)}` : phone;
+export const localPhone = (phone: string) => /^(?:966|970)/.test(phone) ? `0${phone.slice(3)}` : phone;
 
 const round = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 export const pointsDiscount = (points: number, info: PointsBalance) => info.enabled && points > 0 ? round(points * (info.pointValue ?? 0)) : 0;

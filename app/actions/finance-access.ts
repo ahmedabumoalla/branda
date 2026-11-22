@@ -40,7 +40,7 @@ export async function createSalesCashierAccountAction(input: { name: string; pho
   catch (error) {
     if (error instanceof ZodError) {
       const field = error.issues[0]?.path[0];
-      return { ok: false as const, message: field === "password" ? SALES_CASHIER_PASSWORD_HINT : field === "phone" ? "أدخل رقم جوال سعودي صحيحًا" : "أدخل اسم الكاشير من حرفين إلى ١٠٠ حرف" };
+      return { ok: false as const, message: field === "password" ? SALES_CASHIER_PASSWORD_HINT : field === "phone" ? "أدخل رقم جوال صحيحًا" : "أدخل اسم الكاشير من حرفين إلى ١٠٠ حرف" };
     }
     if (error instanceof SalesCashierCreationError) {
       const messages = {

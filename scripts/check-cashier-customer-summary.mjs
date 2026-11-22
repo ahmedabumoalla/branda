@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 function load(relative) {
   const output = ts.transpileModule(fs.readFileSync(path.join(root, relative), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exports = {};
-  new Function("require", "exports", output)(name => load(path.join(path.dirname(relative), `${name}.ts`)), exports);
+  new Function("require", "exports", output)(name => load(name.startsWith("@/") ? `${name.slice(2)}.ts` : path.join(path.dirname(relative), `${name}.ts`)), exports);
   return exports;
 }
 const { createCustomerSummaryController, customerSummaryIdentifier } = load("lib/loyalty/customer-summary.ts");
@@ -143,6 +143,7 @@ async function withOutboxHook(run) {
   let now=1000, serial=0, cleanup;
   const timers=new Map(), events=new Map();
   const outbox={rows:[], authPaused:false, syncCalls:0, blockers:[], block:false,
+    async retryUnsent() {},
     async list() { return structuredClone(this.rows); },
     async sync() { this.syncCalls++; if(this.block) await new Promise(resolve=>this.blockers.push(resolve)); },
     async save(){ throw new Error("not used"); }};

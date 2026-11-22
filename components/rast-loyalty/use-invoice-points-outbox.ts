@@ -1,5 +1,6 @@
 "use client";
 
+import type { BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { useEffect, useMemo, useState } from "react";
 import { invoiceOutbox, type QueuedInvoice, type InvoiceTerms } from "@/lib/loyalty/invoice-points-outbox";
 import { createIndexedReadStore, readScopeKey, type ReadScope } from "@/lib/loyalty/read-outbox";
@@ -15,12 +16,12 @@ async function post(body: Record<string, unknown>) {
   } finally { clearTimeout(timer); }
 }
 
-export function useInvoicePointsOutbox({ cafeId, cashierId }: ReadScope, pointsEnabled: boolean) {
+export function useInvoicePointsOutbox({ cafeId, cashierId }: ReadScope, pointsEnabled: boolean, phoneCountry: BrandPhoneCountry = "SA") {
   const scopeKey = readScopeKey({ cafeId, cashierId });
-  const queue = useMemo(() => invoiceOutbox({ scope: { cafeId, cashierId },
+  const queue = useMemo(() => invoiceOutbox({ phoneCountry, scope: { cafeId, cashierId },
     store: createIndexedReadStore<QueuedInvoice>("branda-loyalty-invoice-points"), online: () => navigator.onLine,
     resolve: input => post({ step: "resolve", ...input }), credit: input => post({ step: "credit", ...input }),
-  }), [cafeId, cashierId]);
+  }), [cafeId, cashierId, phoneCountry]);
   const [rows, setRows] = useState<QueuedInvoice[]>([]);
   const [errorScope, setErrorScope] = useState("");
   useEffect(() => {

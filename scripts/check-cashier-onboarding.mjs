@@ -34,7 +34,9 @@ const cashierId = "20000000-0000-4000-8000-000000000002";
 const ownerId = "30000000-0000-4000-8000-000000000003";
 const password = "  Chosen-pass9  ";
 const input = { fullName: " Test employee ", email: " Employee@Example.test ", phone: "0501234567", password, employeeNumber: " E-17 " };
+let brandCountry = "SA";
 const baseStubs = {
+  "@/lib/data/brand-phone-country": { getBrandPhoneCountry: async () => brandCountry },
   "server-only": {},
   "@/lib/auth/rast-loyalty-session": {},
   "@/lib/data/operation-events": {},
@@ -91,6 +93,15 @@ try {
     assert.equal(result.cashier.id, cashierId); assert.equal(result.whatsappStatus, "queued");
     assert(!JSON.stringify(result).includes(password));
     assert(!Object.hasOwn(result.cashier, "password")); assert(!Object.hasOwn(result.cashier, "temporaryPassword"));
+  });
+  await check("Palestinian staff retain their national identity and reject foreign phones", async () => {
+    brandCountry = "PS";
+    const { cashier } = await createOwnerCashier({ ...input, phone: "٠٥٩١٢٣٤٥٦٧" });
+    assert.equal(cashier.phone, "+970591234567");
+    const before = calls.length;
+    await assert.rejects(createOwnerCashier({ ...input, phone: "+966591234567" }));
+    assert.equal(calls.length, before);
+    brandCountry = "SA";
   });
   await check("database failure never sends or leaks raw credentials", async () => {
     const before = sent.length;

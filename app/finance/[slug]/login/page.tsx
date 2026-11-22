@@ -1,3 +1,4 @@
+import { getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
 import { notFound } from "next/navigation";
 import { FinanceLogin } from "@/components/finance/finance-login";
 import { SalesCashierLogin } from "@/components/finance/sales-cashier-login";
@@ -9,5 +10,5 @@ export default async function FinanceLoginPage({ params, searchParams }: { param
   if (isHospitalStore(slug)) return <HospitalLogin slug={slug} />;
   const { access } = await searchParams;
   if (access === "management") return <FinanceLogin slug={slug} />;
-  return <SalesCashierLogin slug={slug} />;
+  return <SalesCashierLogin slug={slug} phoneCountry={await getBrandPhoneCountryBySlug(slug)} />;
 }

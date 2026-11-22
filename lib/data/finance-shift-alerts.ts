@@ -1,10 +1,11 @@
 import "server-only";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { isGreenApiConfigured, sendGreenApiFinanceShiftAlert } from "@/lib/whatsapp/green-api";
 
-type ShiftAlert = { id: string; leaseToken: string; phase: "opening" | "closing"; shiftNumber: number; difference: number; ownerPhone: string | null; brandName: string | null; drawerName: string | null; employeeName: string | null; previousEmployeeName: string | null; createdAt: string };
+type ShiftAlert = { id: string; cafeId: string; leaseToken: string; phase: "opening" | "closing"; shiftNumber: number; difference: number; ownerPhone: string | null; brandName: string | null; drawerName: string | null; employeeName: string | null; previousEmployeeName: string | null; createdAt: string };
 export function financeShiftAlertMessage(alert: ShiftAlert) {
   if (!Number.isSafeInteger(Number(alert.shiftNumber)) || Number(alert.shiftNumber) < 1 || !Number.isFinite(Number(alert.difference)) || Math.abs(Number(alert.difference)) < .005) throw new Error("INVALID_CASH_DIFFERENCE_ALERT");
   const amount = (value: number) => new Intl.NumberFormat("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value));
@@ -32,7 +33,7 @@ export async function dispatchShiftAlerts(cafeId?: string, shiftId?: string) {
   const alerts = (data ?? []) as ShiftAlert[];
   let queued = 0; let needsReview = 0;
   for (const alert of alerts) {
-    const phone = normalizeSaudiPhone(alert.ownerPhone ?? "");
+    const phone = alert.ownerPhone ? normalizeBrandPhone(alert.ownerPhone, await getBrandPhoneCountry(alert.cafeId)) : null;
     let status: "queued" | "rejected" | "unknown" | "missing_owner" = "missing_owner";
     let messageId: string | undefined;
     let message: string | undefined;

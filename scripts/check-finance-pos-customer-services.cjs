@@ -7,6 +7,7 @@ function load(file, mocks = {}) {
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new Function('require', 'exports', code)(name => {
     if (name in mocks) return mocks[name];
+    if (['@/lib/auth/input-digits', '@/lib/auth/owner-phone', '@/lib/auth/brand-phone'].includes(name)) return load(name.slice(2) + '.ts');
     if (name === '@/lib/data/account-cancellation') return { brandAllowsNewWork: async () => true, brandSlugAllowsNewWork: async () => true };
     if (name === 'zod' || name === 'node:crypto') return require(name);
     if (name === 'server-only') return {};
@@ -22,6 +23,18 @@ const lease = '33333333-3333-4333-8333-333333333333';
   const phone = '966500000001';
   for (const value of ['0500000001', '+966 50 000 0001', '00966500000001', '500000001', '\u0660\u0665\u0660\u0660\u0660\u0660\u0660\u0660\u0660\u0661', '\u06f0\u06f5\u06f0\u06f0\u06f0\u06f0\u06f0\u06f0\u06f0\u06f1']) assert.equal(shared.normalizePosCustomerPhone(value), phone);
   for (const value of ['', ' ', '050000000', '05000000010', 'abc0500000001', '966400000001', null, '0'.repeat(31)]) assert.equal(shared.normalizePosCustomerPhone(value), null);
+  const { normalizeFinanceContactPhones } = load('lib/finance/contact-phones.ts');
+  const directory = { phone: '02 222 2222', mobile: '٠٥٩١٢٣٤٥٦٧', contacts: [{ phone: '0561234567' }] };
+  normalizeFinanceContactPhones(directory, 'PS');
+  assert.deepEqual(directory, { phone: '02 222 2222', mobile: '970591234567', contacts: [{ phone: '970561234567' }] });
+  assert.throws(() => normalizeFinanceContactPhones({phone: '+966591234567'}, 'PS'));
+  const saudiDirectory = { phone: '0591234567' };
+  normalizeFinanceContactPhones(saudiDirectory, 'SA');
+  assert.equal(saudiDirectory.phone, '0591234567');
+  const lab = load('lib/erp/lab-orders.ts', { '@/lib/finance/pos-customer': shared, '@/lib/erp/template-delivery-policy': load('lib/erp/template-delivery-policy.ts') });
+  assert.equal(lab.normalizeLabCustomerPhone('0591234567', 'PS'), '+970591234567');
+  assert.equal(lab.normalizeLabCustomerPhone('+966591234567', 'PS'), null);
+  assert.equal(lab.normalizeLabCustomerPhone('+12025550100', 'SA'), '+12025550100');
   let keyReads = 0;
   const server = load('lib/finance/pos-customer-server.ts', { './pos-customer': shared, '@/lib/barndaksa/env': { getSupabaseServiceRoleKey: () => { keyReads++; return 'test-key'; } } });
   for (const customerPhone of [undefined, null, '', '  ']) { const payload = { customerPhone, pagerFeedbackHash: 'forged' }; server.prepareFinancePosCustomerPayload(payload, id); assert.deepEqual(payload, {}); }
@@ -37,7 +50,8 @@ const lease = '33333333-3333-4333-8333-333333333333';
 
   let calls = [], contexts = [], data, error = null;
   const context = async slug => { contexts.push(slug); return { cafe: { id, role: 'cashier' }, client: { rpc: async (name, args) => { calls.push({ name, args }); return { data, error }; } } }; };
-  const dal = load('lib/data/finance-pos-customer.ts', { './brand-finance': { getBrandFinanceContext: context }, '@/lib/finance/pos-customer': shared });
+  let country = 'SA';
+  const dal = load('lib/data/finance-pos-customer.ts', { '@/lib/data/brand-phone-country': { getBrandPhoneCountry: async cafeId => { assert.equal(cafeId,id); return country; } }, './brand-finance': { getBrandFinanceContext: context }, '@/lib/finance/pos-customer': shared });
   const afterJobs = []; let pagerRuns = 0;
   const actions = load('app/actions/finance-pos-customer.ts', { 'next/server': { after: callback => afterJobs.push(callback) }, '@/lib/platform/action-result': load('lib/platform/action-result.ts'), '@/lib/data/finance-pos-customer': dal, '@/lib/pager/worker': { runPagerMessageJobs: async n => { pagerRuns += n; } } });
   assert.equal((await actions.fetchFinancePosCustomerAction('bad')).ok, false); assert.equal(calls.length, 0);
@@ -48,6 +62,17 @@ const lease = '33333333-3333-4333-8333-333333333333';
   assert.deepEqual(calls.at(-1), { name: 'brand_finance_pos_customer', args: { p_cafe_id: id, p_phone: phone } }); assert.equal(contexts.at(-1), 'brand');
   data = { ...data, phone: '966500000002' }; assert.equal((await actions.fetchFinancePosCustomerAction(phone)).ok, false);
   data = { phone, loyaltyEnabled: false, pagerEnabled: false, member: false, purchasesRequired: null, rewards: [] }; assert.equal((await dal.getFinancePosCustomer(phone)).member, null);
+  country = 'PS';
+  data = { ...data, phone: '970590000001' };
+  assert.equal((await dal.getFinancePosCustomer('٠٥٩٠٠٠٠٠٠١')).phone, '970590000001');
+  const beforeWrongCountry = calls.length;
+  await assert.rejects(dal.getFinancePosCustomer('+966590000001'));
+  assert.equal(calls.length, beforeWrongCountry);
+  const palestinianSale = { customerPhone: '0590000001' };
+  server.prepareFinancePosCustomerPayload(palestinianSale, id, country);
+  assert.equal(palestinianSale.customerPhone, '970590000001');
+  assert.throws(() => server.prepareFinancePosCustomerPayload({ customerPhone: '970590000001' }, id, 'SA'));
+  country = 'SA';
   const row = { id: orderId, cafe_id: id, invoice_number: '19', phone, status: 'waiting', created_at: '2026-10-25T00:00:00Z', created_by: 'Employee', created_station: 'POS', message_count: 0 };
   data = { orders: [row], total: 1, page: 0, pageSize: 25, metrics: { total: 1 } };
   assert.equal((await dal.getFinancePosPager({ status: 'all', query: ' 19 ' }, 'brand')).orders[0].invoiceNumber, '19');
@@ -92,7 +117,12 @@ const lease = '33333333-3333-4333-8333-333333333333';
   assert(worker.financePosCustomerMessage({...job,brandName:'B'.repeat(300),receipt:{...receipt,brandName:'B'.repeat(300)},slug:'s'.repeat(120)}).length<=1024,'Provider caption limit even for maximum brand/slug');
 
   let saleError = null, customerDispatches = 0, financeRpcCalls = [], deferred = [], businessCategory = 'cafes';
-  const finance = load('lib/data/brand-finance.ts', { '@/lib/finance/inventory-catalog':load('lib/finance/inventory-catalog.ts'), '@/lib/finance/permissions':load('lib/finance/permissions.ts'),
+  const finance = load('lib/data/brand-finance.ts', {
+    react: { cache: fn => fn }, '@/lib/finance/contact-phones': load('lib/finance/contact-phones.ts'),
+    '@/lib/data/brand-phone-country': { getBrandPhoneCountry: async () => country },
+    '@/lib/finance/cashier-permissions': load('lib/finance/cashier-permissions.ts'), '@/lib/finance/employee-permissions':load('lib/finance/employee-permissions.ts',{'./permissions':load('lib/finance/permissions.ts')}),
+    './employee-rpc-approval': { withEmployeeApproval: client => client },
+    '@/lib/finance/pos-purchases': {}, '@/lib/whatsapp/brand-connection-types': {LOCO_CAFE_ID:'other'}, '@/lib/loyalty/loco-redemption-alert':{}, '@/lib/finance/inventory-catalog':load('lib/finance/inventory-catalog.ts'), '@/lib/finance/permissions':load('lib/finance/permissions.ts'),
     '@/lib/auth/active-user': { getActiveUser: async () => ({ id }) }, '@/lib/erp/request-context': { erpRequestSlug: () => undefined }, '@/lib/data/finance-cashier-maintenance': { getFinanceCashierMaintenance: async () => null }, '@/lib/finance/product-media-server': { financeProductMedia: async (_cafe,products) => products },
     '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id } } }) }, rpc: async (name, args) => {
       financeRpcCalls.push({ name, args });

@@ -1,3 +1,4 @@
+import type { BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { z } from "zod";
 import { normalizePosCustomerPhone } from "@/lib/finance/pos-customer";
 import { normalizeTemplatePhone } from "@/lib/erp/template-delivery-policy";
@@ -38,14 +39,15 @@ export const createLabOrderSchema = z.object({
 export const actLabOrderSchema = z.object({ requestId: z.uuid(), id: z.uuid(), revision: z.number().int().positive(), status: z.enum(labStatuses), note: z.string().trim().max(2000).default(""), quality: labQualitySchema.optional() });
 export const linkLabInvoiceSchema = z.object({ requestId: z.uuid(), id: z.uuid(), revision: z.number().int().positive(), invoiceId: z.uuid() });
 export const labOperatorSchema = z.object({ userId: z.uuid(), enabled: z.boolean() });
-export function normalizeLabCustomerPhone(value: string): string | null {
-  const saudi = normalizePosCustomerPhone(value);
-  if (saudi) return saudi;
+export function normalizeLabCustomerPhone(value: string, country: BrandPhoneCountry = "SA"): string | null {
+  const local = normalizePosCustomerPhone(value, country);
+  if (country === "PS") return local ? "+" + local : null;
+  if (local) return local;
   const western = value.trim().replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 1776 : 1632)));
   if (western.length > 30 || !/^(\+|00)[\d\s()-]+$/.test(western)) return null;
   return normalizeTemplatePhone(western);
 }
-export const labCustomerSchema = z.object({ requestId: z.uuid(), branchId: z.uuid().optional(), name: z.string().trim().min(2).max(150), phone: z.string().trim().max(30).refine(value => normalizeLabCustomerPhone(value) !== null, "أدخل رقم جوال سعودي أو رقمًا دوليًا مع مفتاح الدولة") }).strict();
+export const labCustomerSchema = z.object({ requestId: z.uuid(), branchId: z.uuid().optional(), name: z.string().trim().min(2).max(150), phone: z.string().trim().min(1).max(30) }).strict();
 export type CreateLabOrderInput = z.input<typeof createLabOrderSchema>;
 export type ActLabOrderInput = z.input<typeof actLabOrderSchema>;
 export type LinkLabInvoiceInput = z.input<typeof linkLabInvoiceSchema>;

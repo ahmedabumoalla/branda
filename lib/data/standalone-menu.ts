@@ -12,7 +12,8 @@ import { menuContacts } from "@/lib/menu/contacts";
 import { getStandaloneHighlights } from "@/lib/data/standalone-highlights";
 import { standaloneLogoVariant } from "@/lib/menu/logo-variants";
 import { publishedMenuLogo } from "@/lib/cafe/published-logo";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { isGreenApiConfigured } from "@/lib/whatsapp/green-api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
@@ -174,5 +175,5 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
   const rawPalette = identity?.palette;
   const palette = rawPalette && typeof rawPalette === "object" && !Array.isArray(rawPalette) ? Object.fromEntries(Object.entries(rawPalette).filter((entry): entry is [string, string] => typeof entry[1] === "string" && /^#[a-f\d]{6}$/i.test(entry[1]))) : {};
   return { ...(defaultPresentation ? { presentation: "signature" as const, appearance: { palette, heroUrl } } : {}), branch: chosenBranch ? branchDto(chosenBranch) : null, branches: publicBranches.map(branchDto), businessCategory: cafe.business_category, cafeId: cafe.id, name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights, loyaltyEnabled: featureCodesAllow(features, "loyalty"),
-    contacts: { ...menuContacts(cafe.id, settings?.instagram), feedbackEnabled: Boolean(normalizeSaudiPhone(settings?.whatsapp ?? "") && isGreenApiConfigured()) } };
+    contacts: { ...menuContacts(cafe.id, settings?.instagram), feedbackEnabled: Boolean(normalizeBrandPhone(settings?.whatsapp ?? "", await getBrandPhoneCountry(cafe.id)) && isGreenApiConfigured()) } };
 });

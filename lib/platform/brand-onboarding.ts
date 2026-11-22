@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { AVAILABLE_BUSINESS_CATEGORY_IDS } from "@/lib/platform/business-categories";
 
@@ -29,6 +30,7 @@ export const adminBrandProfileSchema = z.object({
   category: z.string().trim().min(1).max(60),
 });
 export type AdminBrandProfileInput = z.input<typeof adminBrandProfileSchema>;
-export const adminBrandOwnerSchema = z.object({ requestId: z.string().uuid(), cafeId: z.string().uuid(), ownerName: optionalName, phone: optionalPhone, email: optionalEmail, password: optionalPassword });
+export const adminBrandOwnerFor = (country: BrandPhoneCountry) => z.object({ requestId: z.string().uuid(), cafeId: z.string().uuid(), ownerName: optionalName, phone: z.string().trim().max(24).transform(value => value ? normalizeBrandPhone(value, country) : "").refine((value): value is string => value !== null), email: optionalEmail, password: optionalPassword });
+export const adminBrandOwnerSchema = adminBrandOwnerFor("SA");
 export type AdminBrandOwnerInput = z.input<typeof adminBrandOwnerSchema>;
 export type BrandOwnerDelivery = { state: "ready" | "editing" | "sending" | "uncertain" | "sent"; sentAt: string | null; detailsReady?: boolean; passwordReady?: boolean };

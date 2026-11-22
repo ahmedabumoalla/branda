@@ -14,6 +14,7 @@ export type MarketingCampaignSummary = {
   media?: MarketingCampaignMedia | null;
 };
 export type MarketingDashboard = {
+  phoneCountry: import("@/lib/auth/brand-phone").BrandPhoneCountry;
   brandName: string; eligible: boolean; configured: boolean; optOutCount: number;
   connection: { status: MarketingConnectionStatus; phone: string; verifiedPhone: string | null; lastError: string | null } | null;
   campaigns: MarketingCampaignSummary[];

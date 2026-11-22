@@ -1,5 +1,6 @@
 /** Interface copy; customer-written catalog content is localized separately */
 export const cashierEnglish: Record<string, string> = {
+  "دولة رقم الجوال": "Phone country", "السعودية": "Saudi Arabia", "فلسطين": "Palestine", "أدخل رقم جوال صحيحًا": "Enter a valid mobile number",
   "عرض الطلبات": "Order view",
   "الطلبات الحالية": "Current orders",
   "بانتظار الاستدعاء": "Awaiting call",

@@ -6,6 +6,12 @@ import ts from "typescript";
 import { transform } from "lightningcss";
 
 const require = createRequire(import.meta.url);
+function loadPhone(name) {
+  const output = ts.transpileModule(fs.readFileSync(name.slice(2) + ".ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  const exports = {};
+  new Function("require", "exports", output)(loadPhone, exports);
+  return exports;
+}
 const source = fs.readFileSync("components/dashboard/pages/operational-cashier-page.tsx", "utf8");
 const css = transform({ filename: "operational-cashier-page.module.css", code: fs.readFileSync("components/dashboard/pages/operational-cashier-page.module.css"), cssModules: true });
 for (const [, key] of source.matchAll(/styles\.(\w+)/g)) assert(css.exports[key], key);
@@ -13,6 +19,7 @@ const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKi
 function harness(dashboard, actions = {}) {
   const state = [], exports = {}; let cursor = 0;
   const stubs = {
+    "@/lib/auth/brand-phone": loadPhone("@/lib/auth/brand-phone"),
     react: { ...React, useState(initial) { const i = cursor++; if (!(i in state)) state[i] = initial; return [state[i], next => { state[i] = typeof next === "function" ? next(state[i]) : next; }]; }, useRef(initial) { const i = cursor++; if (!(i in state)) state[i] = { current: initial }; return state[i]; }, useMemo: fn => fn(), useEffect() {}, useActionState: action => ["", action, false] },
     "next/link": { __esModule: true, default: "a" },
     "@/app/actions/cashier": actions,

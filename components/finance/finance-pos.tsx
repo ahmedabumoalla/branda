@@ -85,7 +85,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
   // A stock item the owner chose to show in the menu is sold as itself: one linked component carrying the product's own name.
   // Recipe products, such as a coffee linked to its cup, never show a balance because the balance belongs to the component.
   const soldFromStock = (product: FinanceProduct) => { const components = product.stock_components ?? []; return components.length === 1 && data.items.find(item => item.id === components[0].item_id)?.name.trim() === product.name.trim(); };
-  const customer = usePosCustomer(slug ?? data.cafe.slug);
+  const customer = usePosCustomer(slug ?? data.cafe.slug, data.cafe.phoneCountry);
   // User request 2026-11-15: Aldeem customers earn points on every branch and spend them as a discount at any branch
   const points = usePosPoints(slug ?? data.cafe.slug, butcher ? null : customer.normalized, isAldeemCafe(data.cafe) && !offlineEntry, state.offline.connected);
   const [pagerRefreshKey, setPagerRefreshKey] = useState(0);

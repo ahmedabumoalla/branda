@@ -2,6 +2,7 @@
 
 import { after } from "next/server";
 import { z } from "zod";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { requireCashierPermission } from "@/lib/data/cashier";
 import { resolveCashierLoyaltyPhone } from "@/lib/data/cashier-loyalty-phone";
 import { lookupRastCashierCard, resolveCashierCardNumber } from "@/lib/data/loyalty-experience";
@@ -33,7 +34,7 @@ async function pointsSession(scope: Scope) {
 
 async function resolveIdentifier(cafeId: string, identifier: string) {
   const raw = normalizeLoyaltyDigits(z.string().trim().min(1).max(500).parse(identifier));
-  const code = resolveReadMethod("code", raw) === "phone" ? await resolveCashierLoyaltyPhone(raw)
+  const code = resolveReadMethod("code", raw, await getBrandPhoneCountry(cafeId)) === "phone" ? await resolveCashierLoyaltyPhone(raw)
     : await resolveCashierCardNumber(parseBarndaksaQrPayload(raw, "loyalty-card") ?? raw.toUpperCase(), cafeId);
   if (!isCashierLoyaltyCode(code)) throw new Error("رمز البطاقة غير صالح");
   return code;
@@ -41,7 +42,7 @@ async function resolveIdentifier(cafeId: string, identifier: string) {
 
 export async function resolveInvoiceCardAction(scope: Scope, identifier: string) {
   const session = await pointsSession(invoiceScopeSchema.parse(scope));
-  const phone = normalizeLoyaltyReadPhone(z.string().trim().min(1).max(500).parse(identifier));
+  const phone = normalizeLoyaltyReadPhone(z.string().trim().min(1).max(500).parse(identifier), await getBrandPhoneCountry(session.cafeId));
   if (phone) return `+${phone}`;
   return resolveIdentifier(session.cafeId, identifier);
 }
@@ -67,13 +68,15 @@ const award = z.object({
 export async function addCashierInvoicePointsAction(input: z.input<typeof invoiceCreditSchema>) {
   const parsed = invoiceCreditSchema.parse(input);
   const session = await pointsSession(parsed.scope);
+  const phone = "phone" in parsed ? normalizeLoyaltyReadPhone(parsed.phone, await getBrandPhoneCountry(session.cafeId)) : null;
+  if ("phone" in parsed && !phone) return { ok: false as const, reason: "invalid_input" };
   const args = {
     p_session_token: session.token, p_request_id: parsed.requestId,
     p_amount_sar: parsed.amountHalalas / 100, p_expected_rate_sar: parsed.rateSar, p_expected_rate_quantity: parsed.rateQuantity,
   };
   const client = createAdminClient();
   const { data, error } = "phone" in parsed
-    ? await client.rpc("scan_loyalty_invoice_points_by_phone", { ...args, p_phone: parsed.phone })
+    ? await client.rpc("scan_loyalty_invoice_points_by_phone", { ...args, p_phone: phone })
     : await client.rpc("scan_loyalty_invoice_points", { ...args, p_card_code: parsed.cardCode });
   if (error?.message?.includes("Scan request conflict")) return { ok: false as const, reason: "request_conflict" };
   if (error?.code === "42501") return { ok: false as const, reason: "unauthorized" };

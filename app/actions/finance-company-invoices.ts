@@ -1,5 +1,6 @@
 "use server";
 
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { z } from "zod";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
@@ -65,7 +66,7 @@ export async function sendCompanyInvoiceWhatsAppAction(id: string, slug: string)
     if (!canFinance(cafe.role, "accounting_write")) throw new Error("لا تملك صلاحية إرسال الفواتير");
     const invoice = await readIssuedCompanyInvoice(slug, id);
     if (!invoice) throw new Error("أصدر الفاتورة أولًا قبل إرسالها");
-    if (!/^9665\d{8}$/.test(invoice.customer.phone)) throw new Error("رقم جوال العميل المحفوظ في الفاتورة غير صالح للواتساب");
+    if (!canonicalBrandMobile.test(invoice.customer.phone)) throw new Error("رقم جوال العميل المحفوظ في الفاتورة غير صالح للواتساب");
     const [pdf, sender] = await Promise.all([issuedCompanyInvoicePdf(invoice), selectCompanyDocumentSender(cafe.id)]);
     if (!sender) throw new Error("رقم الواتساب غير متصل حاليًا الفاتورة محفوظة ويمكن إعادة محاولة إرسالها لاحقًا");
     const { data: claim, error: claimError } = await client.rpc("brand_finance_claim_company_delivery", { p_cafe_id: cafe.id, p_id: id });

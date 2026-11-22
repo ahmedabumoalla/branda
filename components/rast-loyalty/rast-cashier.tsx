@@ -109,12 +109,12 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
   const focusInputAfterScan = useRef(false);
   const previewElement = useRef<HTMLElement>(null);
   const errorElement = useRef<HTMLParagraphElement>(null);
-  const reads = useReadOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
-  const invoices = useInvoicePointsOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id }, Boolean(points));
+  const reads = useReadOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id }, initialData.cafe.phoneCountry);
+  const invoices = useInvoicePointsOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id }, Boolean(points), initialData.cafe.phoneCountry);
   const [lastReadId, setLastReadId] = useState<string | null>(null);
   const lastRead = reads.rows.find(row => row.requestId === lastReadId);
   const readFeedback = lastRead ? readDisplay(lastRead) : null;
-  const customerSummary = useCustomerSummary({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
+  const customerSummary = useCustomerSummary({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id }, initialData.cafe.phoneCountry);
   const [summaryRead, setSummaryRead] = useState<{ requestId: string; lookupId: number; cafeId: string; cashierId: string } | null>(null);
   const selectedRead = summaryRead && summaryRead.cafeId === initialData.cafe.id && summaryRead.cashierId === initialData.cashier.id
     && summaryRead.lookupId === customerSummary.state.id ? reads.rows.find(row => row.requestId === summaryRead.requestId) : undefined;
@@ -163,7 +163,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
     processing.current = true;
     setPending(true); setError(""); setMessage(""); setNoRewards(false);
     try {
-      const phoneInput = lookupMethod === "phone" || (kind === "stamp" && resolveReadMethod(lookupMethod, value) === "phone");
+      const phoneInput = lookupMethod === "phone" || (kind === "stamp" && resolveReadMethod(lookupMethod, value, initialData.cafe.phoneCountry) === "phone");
       if (!confirm) {
         setPreview(null);
         let code = value;
@@ -268,7 +268,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
         {reads.storageError && <p role="alert" className={layout.readAlert}>{t("تخزين الجهاز غير متاح لا تغلق الصفحة قبل التأكد من حفظ القراءة")}</p>}
       </section>}
       <InvoicePointsHistory queue={invoices} />
-      {!embedded && <AnalyticsCouponRedemption />}
+      {!embedded && <AnalyticsCouponRedemption phoneCountry={initialData.cafe.phoneCountry} />}
     </div>
   </Container>;
 }

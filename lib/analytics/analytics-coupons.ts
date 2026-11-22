@@ -1,3 +1,4 @@
+import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { z } from "zod";
 
 const money = (max: number) => z.number().finite().nonnegative().max(max)
@@ -26,23 +27,19 @@ export function buildAnalyticsCouponMessage(body: string, coupon: AnalyticsCoupo
   ].join("\n");
 }
 
-export function normalizeAnalyticsCouponPhone(value: string) {
-  let phone = value.trim().replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 1776 : 1632)));
-  if (!/^[+\d\s()-]+$/.test(phone)) return "";
-  phone = phone.replace(/\D/g, "");
-  if (phone.startsWith("00966")) phone = phone.slice(2);
-  if (phone.startsWith("05")) phone = `966${phone.slice(1)}`;
-  if (/^5\d{8}$/.test(phone)) phone = `966${phone}`;
-  return /^9665\d{8}$/.test(phone) ? phone : "";
+export function normalizeAnalyticsCouponPhone(value: string, country: BrandPhoneCountry = "SA") {
+  return normalizeBrandPhone(value, country) ?? "";
 }
 
-const lookupFields = {
+const lookupFields = (country: BrandPhoneCountry) => ({
   code: z.string().trim().max(40).transform(value => value.toUpperCase()).pipe(z.string().regex(/^BC-[A-F0-9]{32}$/)),
-  phone: z.string().trim().max(30).transform(normalizeAnalyticsCouponPhone).pipe(z.string().regex(/^9665\d{8}$/)),
+  phone: z.string().trim().max(30).transform(value => normalizeAnalyticsCouponPhone(value, country)).pipe(z.string().min(1)),
   subtotal: money(1000000).refine(value => value > 0),
-};
-export const analyticsCouponLookupSchema = z.object(lookupFields).strict();
-export const analyticsCouponRedeemSchema = z.object({ ...lookupFields, idempotencyKey: z.uuid() }).strict();
+});
+export const couponLookupFor = (country: BrandPhoneCountry) => z.object(lookupFields(country)).strict();
+export const couponRedeemFor = (country: BrandPhoneCountry) => z.object({ ...lookupFields(country), idempotencyKey: z.uuid() }).strict();
+export const analyticsCouponLookupSchema = couponLookupFor("SA");
+export const analyticsCouponRedeemSchema = couponRedeemFor("SA");
 export const analyticsCouponPreviewSchema = z.object({
   couponId: z.uuid(), title: z.string(), customerName: z.string(),
   discountType: z.enum(["percentage", "fixed"]), discountValue: money(100000).refine(value => value > 0),

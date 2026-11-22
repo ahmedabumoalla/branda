@@ -103,7 +103,7 @@ function ownerHarness({profile={role:"cafe_owner",status:"active"},user={id:id(1
     if(call.rpc==="marketing_suppress"){suppressed.push(call.args.p_phone);return {data:true};}
     if(call.rpc==="marketing_disconnect_connection"){assert.equal(call.args.p_generation,row.generation);row={...row,status:"disconnecting",generation:id(8),lease_until:new Date(Date.now()+60000).toISOString()};return {data:row.generation};}
     if(call.rpc)return {data:true};
-    if(call.table==="cafes")return {data:{id:id(10),name:"Brand",owner_user_id:owner,status:"active"}};
+    if(call.table==="cafes")return {data:{id:id(10),name:"Brand",phone_country:"SA",owner_user_id:owner,status:"active"}};
     if(call.table==="cafe_members")return {data:{role:member}};
     if(call.table==="brand_marketing_suppressions")return {count:suppressed.length,data:suppressed.map(phone=>({phone}))};
     if(["customer_profiles","loyalty_cards"].includes(call.table))return audienceError?{error:{message:"private"}}:{data:(call.table==="customer_profiles"?customers:cards).slice(call.range[0],call.range[1]+1)};

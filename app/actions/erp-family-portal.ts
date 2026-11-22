@@ -1,7 +1,9 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAllowedCustomerOtpPhone, isPhoneOtpRequiredForBrand, normalizeSaudiPhone, requestCustomerPhoneOtp } from "@/lib/auth/phone-otp";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
+import { isAllowedCustomerOtpPhone, isPhoneOtpRequiredForBrand, requestCustomerPhoneOtp } from "@/lib/auth/phone-otp";
 
 const validSlug = (slug: unknown): slug is string => typeof slug === "string" && /^[a-z0-9][a-z0-9-]{0,79}$/.test(slug);
 const failure = { required: true as const, ok: false as const, message: "تعذر إرسال رمز التحقق تأكدي من رقم الجوال المسجل لدى المتجر" };
@@ -26,14 +28,14 @@ export async function requestFamilyOtp(slug: string, phone: string) {
 
 export async function completeFamilyOtp(slug: string, phone: string, code: string) {
   try {
-    const normalized = validSlug(slug) && typeof phone === "string" && phone.length <= 25 ? normalizeSaudiPhone(phone) : null;
+    const normalized = validSlug(slug) && typeof phone === "string" && phone.length <= 25 ? normalizeBrandPhone(phone, await getBrandPhoneCountryBySlug(slug)) : null;
     if (!normalized || typeof code !== "string" || !/^\d{6}$/.test(code) || !isPhoneOtpRequiredForBrand(slug) || !isAllowedCustomerOtpPhone(normalized, slug) || !await registered(slug, phone)) {
       return { ok: false as const, message: "راجعي رقم الجوال ورمز التحقق" };
     }
     const client = await createClient();
     const { data, error } = await client.auth.verifyOtp({ phone: `+${normalized}`, token: code, type: "sms" });
     if (error || !data.user || !data.session) return { ok: false as const, message: "رمز التحقق غير صحيح أو منتهي" };
-    if (!data.user.phone_confirmed_at || normalizeSaudiPhone(data.user.phone ?? "") !== normalized) {
+    if (!data.user.phone_confirmed_at || normalizeBrandPhone(data.user.phone ?? "", await getBrandPhoneCountryBySlug(slug)) !== normalized) {
       await client.auth.signOut({ scope: "local" });
       return { ok: false as const, message: "تعذر التحقق من رقم الجوال" };
     }

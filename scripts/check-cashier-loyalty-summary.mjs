@@ -37,8 +37,10 @@ await check('ordinary cashier uses one scoped RPC and exact compact summary', as
 await check('Arabic Persian numbers and phone in either tab normalize safely', async () => {
   for (const method of ['code', 'phone']) for (const value of ['٠٥٠١٢٣٤٥٦٧', '۰۵۰۱۲۳۴۵۶۷', '+966 50 123 4567', '00966501234567', '501234567']) {
     assert.equal((await dal.getCashierLoyaltySummary({ ...input, method, value })).ok, true);
-    assert.equal(calls.at(-1).args.p_method, 'phone'); assert.equal(calls.at(-1).args.p_value, '966501234567');
+    assert.equal(calls.at(-1).args.p_method, 'phone'); assert.match(calls.at(-1).args.p_value, /^(?:0?|\+966|00966)501234567$/, 'Local numbers retain country context for the authenticated RPC');
   }
+  await dal.getCashierLoyaltySummary({ ...input, value: '٠٥٩١٢٣٤٥٦٧' });
+  assert.equal(calls.at(-1).args.p_value, '0591234567');
   for (const value of ['1', '٢', '۹۹۹۹۹']) {
     await dal.getCashierLoyaltySummary({ ...input, method: 'phone', value });
     assert.equal(calls.at(-1).args.p_method, 'code');

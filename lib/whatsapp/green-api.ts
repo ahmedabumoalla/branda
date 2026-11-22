@@ -4,7 +4,7 @@ import { ownerGuideFilename, ownerGuideUrl, ownerCompanionGuides, type OwnerComp
 import { queueOwnerCompanionGuides } from "@/lib/whatsapp/owner-guide-delivery";
 import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
 
-const ownerMobile = /^(?:9665\d{8}|9705[69]\d{7})$/;
+const supportedMobile = /^(?:9665\d{8}|9705[69]\d{7})$/;
 const DEFAULT_GREEN_API_TIMEOUT_MS = 10_000;
 
 type GreenApiSendResponse = {
@@ -13,7 +13,7 @@ type GreenApiSendResponse = {
 
 /** Provider acknowledgement does not claim delivery/read receipt; billing mode comes from the locked handoff claim. */
 export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName: string; password: string; startsTrial: boolean; trialTerms?: unknown }) {
-  if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_OWNER_RECIPIENT");
+  if (!supportedMobile.test(input.phone)) throw new Error("INVALID_OWNER_RECIPIENT");
   let trialMessage = "بيانات الدخول تخص باقتك الحالية دون تغيير مدة الاشتراك";
   if (input.startsTrial) {
     const terms = input.trialTerms;
@@ -69,7 +69,7 @@ export async function sendGreenApiOwnerCompanionGuide(phone: string, guide: Owne
 }
 
 async function sendOwnerVideo(phone: string, urlFile: string, fileName: string, caption: string, kind: "owner" | "owner_handoff" = "owner") {
-  if (!ownerMobile.test(phone)) throw new Error("INVALID_OWNER_RECIPIENT");
+  if (!supportedMobile.test(phone)) throw new Error("INVALID_OWNER_RECIPIENT");
   if (caption.length > 1024) throw new Error("OWNER_WELCOME_REJECTED");
   const primary = await requireDeliveryConfig(kind);
   const backup = backupOtpSender(primary);
@@ -101,7 +101,7 @@ export async function isGreenApiLoyaltyWelcomeReady() {
 }
 
 export async function sendGreenApiLoyaltyWelcome(input: { phone: string; message: string }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
-  if (!/^9665\d{8}$/.test(input.phone) || !input.message.trim() || input.message.length > 2000) throw new Error("INVALID_LOYALTY_WELCOME");
+  if (!supportedMobile.test(input.phone) || !input.message.trim() || input.message.length > 2000) throw new Error("INVALID_LOYALTY_WELCOME");
   const { apiUrl, idInstance, apiTokenInstance } = validateOtpSender(await requireDeliveryConfig("other"));
   try {
     const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
@@ -118,7 +118,7 @@ export async function sendGreenApiLoyaltyWelcome(input: { phone: string; message
 
 /** A provider acknowledgement means queued only. Ambiguous outcomes must not be retried automatically */
 export async function sendGreenApiFinanceShiftAlert(input: { phone: string; message: string }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
-  if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_FINANCE_RECIPIENT");
+  if (!supportedMobile.test(input.phone)) throw new Error("INVALID_FINANCE_RECIPIENT");
   const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   try {
     const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
@@ -150,7 +150,7 @@ function financeReceiptMediaOrigin(senderId = process.env.GREEN_API_ID_INSTANCE?
 }
 
 export async function sendGreenApiFinanceReceipt(input: { phone: string; message: string; pdf: Uint8Array; invoiceNumber: number }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string; errorCode?: string }> {
-  if (!/^9665\d{8}$/.test(input.phone) || !Number.isSafeInteger(input.invoiceNumber) || input.invoiceNumber < 1 || input.message.length > 1024 || !input.pdf.length || input.pdf.length > 8 * 1024 * 1024 || new TextDecoder().decode(input.pdf.slice(0, 5)) !== "%PDF-") throw new Error("INVALID_FINANCE_RECEIPT");
+  if (!supportedMobile.test(input.phone) || !Number.isSafeInteger(input.invoiceNumber) || input.invoiceNumber < 1 || input.message.length > 1024 || !input.pdf.length || input.pdf.length > 8 * 1024 * 1024 || new TextDecoder().decode(input.pdf.slice(0, 5)) !== "%PDF-") throw new Error("INVALID_FINANCE_RECEIPT");
   const { idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   const mediaOrigin = financeReceiptMediaOrigin(idInstance);
   const body = new FormData();
@@ -172,7 +172,7 @@ export async function sendGreenApiFinanceReceipt(input: { phone: string; message
 
 /** A provider ID means queued by GREEN-API, not delivered or read */
 export async function sendGreenApiPagerMessage(input: { phone: string; message: string }) {
-  if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_PAGER_RECIPIENT");
+  if (!supportedMobile.test(input.phone)) throw new Error("INVALID_PAGER_RECIPIENT");
   const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("pager");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
@@ -189,7 +189,7 @@ export async function sendGreenApiPagerMessage(input: { phone: string; message: 
 export async function sendGreenApiSalesCashierWelcome(input: {
   phone: string; fullName: string; brandName: string; slug: string; password: string;
 }) {
-  if (!/^9665\d{8}$/.test(input.phone) || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(input.slug)) throw new Error("INVALID_SALES_CASHIER_RECIPIENT");
+  if (!supportedMobile.test(input.phone) || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(input.slug)) throw new Error("INVALID_SALES_CASHIER_RECIPIENT");
   const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
@@ -213,7 +213,7 @@ export async function sendGreenApiSalesCashierWelcome(input: {
 
 /** Linking a customer never reveals or replaces their existing password. */
 export async function sendGreenApiLinkedSalesCashierWelcome(input: { phone: string; fullName: string; brandName: string }) {
-  if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_SALES_CASHIER_RECIPIENT");
+  if (!supportedMobile.test(input.phone)) throw new Error("INVALID_SALES_CASHIER_RECIPIENT");
   const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
@@ -240,7 +240,7 @@ export async function sendGreenApiCashierWelcome(input: {
   fullName: string;
   brandName: string;
 }) {
-  if (!/^\+9665\d{8}$/.test(input.phone)) throw new Error("INVALID_CASHIER_RECIPIENT");
+  if (!/^\+(?:9665\d{8}|9705[69]\d{7})$/.test(input.phone)) throw new Error("INVALID_CASHIER_RECIPIENT");
   const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendFileByUrl/${apiTokenInstance}`, {
     method: "POST",
@@ -276,7 +276,7 @@ export async function sendGreenApiCashierWelcome(input: {
 
 /** idMessage acknowledges provider queueing only, not WhatsApp delivery */
 export async function sendGreenApiMenuFeedback(input: { recipient: string; brandName: string; rating: number; notes: string }) {
-  if (!/^9665\d{8}$/.test(input.recipient)) throw new Error("INVALID_FEEDBACK_RECIPIENT");
+  if (!supportedMobile.test(input.recipient)) throw new Error("INVALID_FEEDBACK_RECIPIENT");
   const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
@@ -351,7 +351,7 @@ export async function isGreenApiCustomerSenderReady(sender: GreenApiCustomerSend
 
 /** Exactly one POST. Selection/failover must finish before calling this function. */
 export async function sendGreenApiCustomerMessage(sender: GreenApiCustomerSender, input: { phone: string; message: string }, timeoutMs = 10_000, kind: "otp" | "other" = "other"): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
-  const validPhone = kind === "otp" ? ownerMobile.test(input.phone) : /^9665\d{8}$/.test(input.phone);
+  const validPhone = supportedMobile.test(input.phone);
   if (!validPhone || !input.message.trim() || input.message.length > 2000) throw new Error("INVALID_CUSTOMER_MESSAGE");
   if (isGreenApiBackupOnly() && kind === "other") throw new Error("MESSAGING_TEMPORARILY_PAUSED");
   // A sender the brand connected itself keeps working; only Branda's own numbers are held to access messages
@@ -444,7 +444,7 @@ async function submitPlatformMessage(primary: OtpSender, backup: OtpSender | nul
  * Never repeat a POST after timeout/5xx/malformed acknowledgement: it may be queued.
  */
 async function sendVerificationCode(phone: string, code: string, message: string, timeoutMs: number) {
-  if (!ownerMobile.test(phone) || !/^\d{6}$/.test(code)) throw new Error("OTP_INPUT_INVALID");
+  if (!supportedMobile.test(phone) || !/^\d{6}$/.test(code)) throw new Error("OTP_INPUT_INVALID");
   // Verification codes leave from the notifications number first (user decision 2026-11-22). Its state is read
   // right before sending because the provider queues messages for a disconnected number. Branda's primary and
   // first standby carry a code only when that number is not connected or refuses, so sign-in never depends on one number
@@ -517,7 +517,7 @@ export async function selectGreenApiPlatformSender() {
 
 /** Explicitly authorized renewal notices also use standby during the primary restriction. */
 export async function sendGreenApiSubscriptionReminder(input: { phone: string; message: string }, authorize: () => Promise<boolean>): Promise<{ status: "queued" | "rejected" | "unknown" | "not_sent" | "skipped"; providerMessageId?: string }> {
-  if (!/^9665\d{8}$/.test(input.phone) || !input.message || input.message.length > 2000) throw new Error("INVALID_SUBSCRIPTION_REMINDER");
+  if (!supportedMobile.test(input.phone) || !input.message || input.message.length > 2000) throw new Error("INVALID_SUBSCRIPTION_REMINDER");
   let sender: OtpSender;
   try {
     sender = validateOtpSender(await requireDeliveryConfig("subscription_reminder"));

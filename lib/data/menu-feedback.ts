@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
 import { isGreenApiConfigured, sendGreenApiMenuFeedback } from "@/lib/whatsapp/green-api";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
@@ -31,13 +31,13 @@ export async function submitMenuFeedback(slug: string, input: Feedback, clientAd
     throw new FeedbackError(400, "راجع بيانات التقييم وحاول مرة أخرى");
   }
   const admin = createAdminClient();
-  const { data: cafe, error } = await admin.from("cafes").select("id,name").eq("slug", slug).is("deleted_at", null).maybeSingle();
+  const { data: cafe, error } = await admin.from("cafes").select("id,name,phone_country").eq("slug", slug).is("deleted_at", null).maybeSingle();
   if (error) throw error;
   if (!cafe) throw new FeedbackError(404, "المنيو غير متاح");
   if (!featureCodesAllow(await getCafeFeatureCodes(String(cafe.id)), "menu")) throw new FeedbackError(404, "المنيو غير متاح");
   const settings = await admin.from("cafe_settings").select("whatsapp").eq("cafe_id", cafe.id).maybeSingle();
   if (settings.error) throw settings.error;
-  const recipient = normalizeSaudiPhone(settings.data?.whatsapp ?? "");
+  const recipient = normalizeBrandPhone(settings.data?.whatsapp ?? "", cafe.phone_country);
   if (!recipient || !isGreenApiConfigured()) throw new FeedbackError(503, "استقبال التقييمات غير متاح مؤقتًا");
 
   const id = eventId(`${cafe.id}:request:${input.requestId}`);

@@ -1,4 +1,6 @@
 import "server-only";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import { z } from "zod";
 import { getBrandFinanceContext } from "./brand-finance";
 import { normalizePosCustomerPhone, type FinancePosCustomer } from "@/lib/finance/pos-customer";
@@ -10,7 +12,7 @@ const filterSchema = z.object({
   query: z.string().trim().max(120).default(""),
 }).strict();
 const lookupSchema = z.object({
-  phone: z.string().regex(/^9665\d{8}$/), loyaltyEnabled: z.boolean(), pagerEnabled: z.boolean(), member: z.boolean(),
+  phone: z.string().regex(canonicalBrandMobile), loyaltyEnabled: z.boolean(), pagerEnabled: z.boolean(), member: z.boolean(),
   customerName: z.string().nullish(), stampsInCycle: z.number().int().nonnegative().default(0), purchasesRequired: z.number().int().nonnegative().nullish(),
   rewards: z.array(z.object({ id: z.uuid(), title: z.string(), expiresAt: z.string().nullable().optional() })),
 });
@@ -26,9 +28,9 @@ function mapOrder(row: Record<string, unknown>): PagerOrder {
 }
 
 export async function getFinancePosCustomer(input: unknown, slug?: string): Promise<FinancePosCustomer> {
-  const phone = typeof input === "string" ? normalizePosCustomerPhone(input) : null;
-  if (!phone) throw new Error("أدخل رقم جوال سعودي صحيح");
   const { client, cafe } = await getBrandFinanceContext(slug);
+  const phone = typeof input === "string" ? normalizePosCustomerPhone(input, await getBrandPhoneCountry(cafe.id)) : null;
+  if (!phone) throw new Error("أدخل رقم جوال صحيح");
   const { data, error } = await client.rpc("brand_finance_pos_customer", { p_cafe_id: cafe.id, p_phone: phone });
   const parsed = lookupSchema.safeParse(data);
   if (error || !parsed.success || parsed.data.phone !== phone) throw new Error("تعذر التحقق من ولاء العميل حاول مجددًا");

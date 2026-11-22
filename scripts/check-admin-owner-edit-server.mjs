@@ -15,7 +15,8 @@ for(const [error,expected] of [
   'server-only':{},'node:crypto':{randomUUID:()=> 'fixture-attempt'},zod:{},
   '@/lib/data/cafes':{requirePlatformAdmin:async()=>({id:'fixture-admin'})},
   '@/lib/auth/brand-welcome-secret':{accountFingerprint:()=> 'fingerprint',sealWelcomePassword:()=>{throw Error('Password must remain unchanged')}},
-  '@/lib/platform/brand-onboarding':{adminBrandOwnerSchema:{safeParse:raw=>({success:true,data:raw})}},
+  '@/lib/data/brand-phone-country':{getBrandPhoneCountry:async()=>'SA'},
+  '@/lib/platform/brand-onboarding':{adminBrandOwnerFor:()=>({safeParse:raw=>({success:true,data:raw})})},
   '@/lib/whatsapp/green-api':{},
   '@/lib/supabase/admin':{createAdminClient:()=>({
    rpc:async(name)=>{calls.push(name);if(name==='admin_prepare_brand_owner_edit'){preparations++;return {data:{done:false,ownerId:'fixture-owner',proof:'fixture-proof'}}}return {data:null}},

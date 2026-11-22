@@ -7,7 +7,7 @@ export const financePosCustomerEnglish: Record<string, string> = {
   "جوال العميل والولاء": "Customer phone and loyalty",
   "رقم جوال العميل": "Customer phone number", "اختياري": "Optional",
   "بدون رقم تُصدر الفاتورة كالمعتاد": "You can issue the invoice without a phone number",
-  "أدخل رقم جوال سعودي صحيحًا": "Enter a valid Saudi mobile number",
+  "أدخل رقم جوال صحيحًا": "Enter a valid mobile number",
   "جار التحقق من بطاقة الولاء": "Checking loyalty card",
   "إعادة التحقق": "Check again", "ولاء العميل": "Customer loyalty",
   "أختام البطاقة": "Card stamps", "يُسجل ختم لهذه الفاتورة بعد حفظ البيع": "A stamp is recorded after saving the sale",

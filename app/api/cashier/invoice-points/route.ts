@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     return reply(await addCashierInvoicePointsAction(parsed.data));
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "";
-    if (["رمز البطاقة غير صالح", "أدخل رقم جوال سعودي صحيح يبدأ بـ 05", "لا توجد بطاقة ولاء متاحة لهذا الرقم لدى العلامة"].includes(message)) {
+    if (["رمز البطاقة غير صالح", "أدخل رقم جوال صحيح لدولة العلامة", "أدخل رقم جوال سعودي صحيح يبدأ بـ 05", "لا توجد بطاقة ولاء متاحة لهذا الرقم لدى العلامة"].includes(message)) {
       return reply({ ok: false, reason: "card_unavailable" });
     }
     if (["Cashier session expired", "تغيرت جلسة الكاشير افتح القارئ مجددًا", "لا تملك صلاحية استخدام هذه الخدمة أو أن اشتراكها غير مفعّل"].includes(message)) {

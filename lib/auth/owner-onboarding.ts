@@ -5,6 +5,7 @@ import { cookies, headers } from "next/headers";
 import { after } from "next/server";
 import { z } from "zod";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
 import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { normalizeInputDigits } from "@/lib/auth/input-digits";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -22,16 +23,25 @@ const mapsUrl = z.string().trim().max(1000).url().refine((value) => {
   );
 }, "أدخل رابطًا صحيحًا من خرائط Google");
 export const ownerOnboardingSchema = z.object({
+  accountCountry: z.enum(["SA", "PS"]).optional(),
   planChoice: z.enum(["loyalty", "menu_loyalty"]).default("menu_loyalty"),
   brandNameAr: z.string().trim().min(2).max(120).regex(/[\u0600-\u06ff]/),
   brandNameEn: z.string().trim().min(2).max(120).regex(/^[A-Za-z0-9 &'().-]+$/).regex(/[A-Za-z]/),
   ownerName: z.string().trim().min(2).max(120),
   email: z.string().trim().pipe(z.union([z.literal(""), z.string().email().max(254)]))
     .nullish().transform(value => value?.toLowerCase() || null),
-  phone: z.string().trim().max(64).transform(value => normalizeOwnerPhone(value)).refine(value => Boolean(value), "أدخل رقم جوال سعودي أو فلسطيني صحيح"),
+  phone: z.string().trim().max(64),
   mapsUrl: z.string().trim().pipe(z.union([z.literal(""), mapsUrl]))
     .nullish().transform(value => value || null),
   couponCode: z.string().trim().max(30).optional().transform(value => value?.toUpperCase() || ""),
+}).transform((draft, ctx) => {
+  const phone = draft.accountCountry ? normalizeBrandPhone(draft.phone, draft.accountCountry) : normalizeOwnerPhone(draft.phone);
+  if (!phone) {
+    ctx.addIssue({ code: "custom", path: ["phone"], message: "تحقق من رقم الجوال ودولة الحساب" });
+    return z.NEVER;
+  }
+  // Older registration forms sent the selected calling code as part of the phone.
+  return { ...draft, phone, accountCountry: draft.accountCountry ?? (phone.startsWith("970") ? "PS" as const : "SA" as const) };
 });
 export type OwnerOnboardingInput = z.input<typeof ownerOnboardingSchema>;
 export type OwnerOnboardingResult = { ok: boolean; message: string; retryAfterSeconds?: number; redirectTo?: string | null };

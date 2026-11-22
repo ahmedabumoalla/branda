@@ -1,9 +1,10 @@
+import { getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
 import "server-only";
 import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
-import { giftOrderInputSchema, giftOrderCommandSchema, giftStoreSettingsSchema, type GiftOrder, type GiftStoreSettings, type GiftOrderReceipt, type GiftOrderTracking, type GiftOrderCommandResult } from "@/lib/commerce/gift-orders";
+import { giftOrderInputFor, giftOrderCommandSchema, giftStoreSettingsSchema, type GiftOrder, type GiftStoreSettings, type GiftOrderReceipt, type GiftOrderTracking, type GiftOrderCommandResult } from "@/lib/commerce/gift-orders";
 import { z } from "zod";
 
 function failure(error: { message?: string } | null, fallback: string) {
@@ -22,7 +23,7 @@ export async function getGiftStoreSettings(slug: string): Promise<GiftStoreSetti
   return data as GiftStoreSettings | null;
 }
 export async function submitGiftOrder(input: unknown, rateKey: string): Promise<GiftOrderReceipt> {
-  const { slug, requestId, ...payload } = giftOrderInputSchema.parse(input);
+  const { slug, requestId, ...payload } = giftOrderInputFor(await getBrandPhoneCountryBySlug(z.object({slug:z.string().min(1).max(120)}).parse(input).slug)).parse(input);
   const { data, error } = await createAdminClient().rpc("gift_order_submit", { p_slug: slug, p_request: requestId, p_payload: payload, p_rate_key: rateKey });
   if (error) throw failure(error, "تعذر إرسال الطلب حاول مجددًا بنفس الطلب");
   return data as GiftOrderReceipt;

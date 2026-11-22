@@ -1,7 +1,8 @@
 import "server-only";
 import { getSessionUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
 import type { FamilyPortalSnapshot } from "@/lib/erp/families";
 
 export type FamilyPortalState = { state: "ready"; data: FamilyPortalSnapshot } | { state: "missing" | "login" | "unlinked" | "unavailable" };
@@ -16,7 +17,7 @@ export async function readFamilyPortal(slug: string): Promise<FamilyPortalState>
     if (enabled.error) return { state: "unavailable" };
     if (enabled.data !== true) return { state: "missing" };
     const user = await getSessionUser();
-    if (!user || !user.phone_confirmed_at || !normalizeSaudiPhone(user.phone ?? "")) return { state: "login" };
+    if (!user || !user.phone_confirmed_at || !normalizeBrandPhone(user.phone ?? "", await getBrandPhoneCountryBySlug(slug))) return { state: "login" };
     const { data, error } = await admin.rpc("erp_family_portal", { p_slug: slug, p_user: user.id });
     if (error) {
       if (/FAMILY_UNAVAILABLE/.test(error.message ?? "")) return { state: "missing" };

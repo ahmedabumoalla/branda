@@ -34,7 +34,7 @@ export function SalesCashierForm({ snapshot, pending, error, onCancel, onSubmit 
     <fieldset disabled={pending} className={styles.form} style={{ border: 0, padding: 0, margin: 0 }}>
       <div className={styles.fields}>
         <Field label="اسم كاشير المبيعات"><input name="name" required minLength={2} maxLength={100} autoComplete="off" /></Field>
-        <Field label="رقم الجوال" hint="يستخدمه الموظف للدخول إلى نقطة البيع"><input name="phone" type="tel" inputMode="tel" dir="ltr" required maxLength={30} autoComplete="off" placeholder="05xxxxxxxx" /></Field>
+        <Field label="رقم الجوال" hint="يستخدمه الموظف للدخول إلى نقطة البيع"><input name="phone" type="tel" inputMode="tel" dir="ltr" required maxLength={30} autoComplete="off" placeholder={snapshot.cafe.phoneCountry === "PS" ? "059xxxxxxx" : "05xxxxxxxx"} /></Field>
       </div>
       <Field label="كلمة المرور" hint={`${SALES_CASHIER_PASSWORD_HINT} — للحساب الجديد فقط ولا تستبدل كلمة مرور العميل المسجل`}><input name="password" type={visible ? "text" : "password"} dir="ltr" required minLength={8} maxLength={128} pattern={SALES_CASHIER_PASSWORD_PATTERN} title={SALES_CASHIER_PASSWORD_HINT} autoComplete="new-password" /></Field>
       <label className={styles.check}><input type="checkbox" checked={visible} onChange={event => setVisible(event.target.checked)} />إظهار كلمة المرور</label>

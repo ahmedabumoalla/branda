@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { readMaintenanceSessionCookie } from "@/lib/platform/maintenance";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { encryptMarketingSecret, decryptMarketingSecret, hashMarketingToken, marketingConfigured, marketingPublicOrigin } from "@/lib/marketing/crypto";
 import { provisionGreenApiMarketingInstance, configureGreenApiMarketingWebhook, getGreenApiMarketingState, getGreenApiMarketingAccount, getGreenApiMarketingQr, deleteGreenApiMarketingInstance, GreenApiProviderError, type GreenApiMarketingCredentials } from "@/lib/whatsapp/green-api-marketing";
 import type { MarketingDashboard, MarketingResult, MarketingConnectionStatus, MarketingCampaignSummary, MarketingAudienceMember } from "@/lib/marketing/types";
@@ -14,12 +14,10 @@ import { MARKETING_MEDIA_BODY_LIMIT } from "@/lib/marketing/media-rules";
 export class MarketingError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
-const phone = z.string().max(30).transform(value => value.replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 0x06f0 : 0x0660))))
-  .refine(value => /^[+\d\s()-]+$/.test(value), "أدخل رقم جوال سعودي صحيح")
-  .transform(value => normalizeSaudiPhone(value)).refine((value): value is string => Boolean(value), "أدخل رقم جوال سعودي صحيح");
+const brandPhoneSchema = (country: BrandPhoneCountry) => z.string().max(30).transform(value => normalizeBrandPhone(value, country)).refine((value): value is string => Boolean(value), "تحقق من رقم الجوال ودولة الحساب");
 const customerId = z.string().regex(/^(customer|loyalty):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
-const inputSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("connect"), phone }),
+const inputSchema = (country: BrandPhoneCountry) => z.discriminatedUnion("action", [
+  z.object({ action: z.literal("connect"), phone: brandPhoneSchema(country) }),
   z.object({ action: z.enum(["refresh", "qr", "disconnect"]) }),
   z.object({ action: z.literal("optOut"), customerId }).strict(),
   z.object({ action: z.literal("cancelCampaign"), campaignId: z.uuid() }),
@@ -39,7 +37,7 @@ export async function requireMarketingContext() {
     cafeId = maintenance.cafeId;
   } else cafeId = (await requireOwnerCafeContext()).id;
   const db = createAdminClient();
-  const { data: cafe, error: cafeError } = await db.from("cafes").select("id,name,owner_user_id,status").eq("id", cafeId).is("deleted_at", null).maybeSingle();
+  const { data: cafe, error: cafeError } = await db.from("cafes").select("id,name,owner_user_id,status,phone_country").eq("id", cafeId).is("deleted_at", null).maybeSingle();
   if (cafeError || !cafe) throw new MarketingError("العلامة غير متاحة", 403);
   if (profile.role !== "platform_admin" && cafe.owner_user_id !== user.id) {
     const { data: member, error } = await db.from("cafe_members").select("role").eq("cafe_id", cafeId).eq("user_id", user.id).maybeSingle();
@@ -47,7 +45,7 @@ export async function requireMarketingContext() {
   }
   const { data: eligible, error } = await db.rpc("marketing_actor_allowed", { p_cafe: cafeId, p_actor: user.id });
   if (error) throw new MarketingError("خدمة الحملات غير متاحة حاليًا حاول لاحقًا", 503);
-  return { db, cafeId, userId: user.id, brandName: String(cafe.name), eligible: eligible === true };
+  return { db, cafeId, phoneCountry: cafe.phone_country as BrandPhoneCountry, userId: user.id, brandName: String(cafe.name), eligible: eligible === true };
 }
 type Context = Awaited<ReturnType<typeof requireMarketingContext>>;
 
@@ -62,6 +60,7 @@ async function audienceRows(context: Context, table: string, columns: string, or
   }
 }
 async function audience(context: Context): Promise<MarketingAudienceMember[]> {
+  const phone = brandPhoneSchema(context.phoneCountry);
   const [customers, cards, suppressions] = await Promise.all([
     audienceRows(context, "customer_profiles", "id,full_name,phone,status,blocked_at,phone_auth_conflict", "id"),
     audienceRows(context, "loyalty_cards", "id,customer_name,customer_phone,status,customer_profile_id", "id"),
@@ -108,7 +107,7 @@ async function dashboard(context: Context): Promise<MarketingDashboard> {
   ]);
   if (history.error || suppressions.error) throw new MarketingError("تعذر تحميل سجل الحملات", 503);
   return {
-    brandName: context.brandName, eligible: context.eligible, configured: marketingConfigured(), optOutCount: suppressions.count ?? 0,
+    phoneCountry: context.phoneCountry, brandName: context.brandName, eligible: context.eligible, configured: marketingConfigured(), optOutCount: suppressions.count ?? 0,
     connection: row ? { status: row.status, phone: row.requested_phone, verifiedPhone: row.verified_phone,
       lastError: row.status === "mismatch" ? "الرقم المربوط مختلف عن الرقم المطلوب افصل الاتصال وأعد المحاولة" : row.status === "uncertain" ? "نتحقق من حالة الاتصال قبل السماح بالمحاولة التالية" : row.last_error ? "تعذر إكمال الاتصال أعد التحقق من حالته" : null } : null,
     campaigns: (history.data ?? []) as MarketingCampaignSummary[],
@@ -126,7 +125,7 @@ export async function refreshMarketingConnection(context: Pick<Context, "db" | "
   let status: MarketingConnectionStatus = "pairing", verified: string | null = null;
   if (state === "authorized") {
     const account = await getGreenApiMarketingAccount(auth);
-    verified = normalizeSaudiPhone(account.phone);
+    verified = normalizeBrandPhone(account.phone, row.requested_phone.startsWith("970") ? "PS" : "SA");
     status = verified === row.requested_phone ? "connected" : "mismatch";
   }
   const { error } = await context.db.from("brand_marketing_connections").update({ status, verified_phone: verified, last_error: null, updated_at: new Date().toISOString() })
@@ -213,9 +212,10 @@ export async function runMarketingConnectionAction(context: ConnectionContext, i
 }
 
 export async function runMarketingAction(raw: unknown): Promise<MarketingResult> {
-  const parsed = inputSchema.safeParse(raw);
+  const context = await requireMarketingContext();
+  const parsed = inputSchema(context.phoneCountry).safeParse(raw);
   if (!parsed.success) throw new MarketingError("راجع بيانات الحملة والأرقام وتأكيد موافقة المستلمين");
-  const input = parsed.data, context = await requireMarketingContext();
+  const input = parsed.data;
   if (["connect", "createCampaign", "qr"].includes(input.action) && !context.eligible) throw new MarketingError("الحملات غير مشمولة في اشتراك علامتك الحالي", 403);
   if (!["cancelCampaign", "optOut"].includes(input.action) && !marketingConfigured()) throw new MarketingError("خدمة الربط غير متاحة حاليًا حاول لاحقًا", 503);
   let qr: string | undefined, qrStatus: string | undefined;

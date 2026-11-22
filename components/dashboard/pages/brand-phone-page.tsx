@@ -135,8 +135,8 @@ export function BrandPhonePage({ initialDashboard }: { initialDashboard: BrandWh
   async function connect(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     if (mutation.current || authorizationLost.current) return;
-    const parsed = parseCampaignRecipients(phone);
-    if (parsed.phones.length !== 1 || parsed.invalid.length) { setError("أدخل رقم واتساب سعوديًا صحيحًا مثل ‎+9665XXXXXXXX"); return; }
+    const parsed = parseCampaignRecipients(phone, dashboard?.phoneCountry);
+    if (parsed.phones.length !== 1 || parsed.invalid.length) { setError("أدخل رقم واتساب صحيحًا لدولة الحساب"); return; }
     intent.current = { started: Date.now(), lastQr: 0, received: false };
     setQr(null); setQrWaiting(true);
     const result = await request({ action: "connect", phone: parsed.phones[0] });
@@ -167,7 +167,7 @@ export function BrandPhonePage({ initialDashboard }: { initialDashboard: BrandWh
           {!configured && <p className={styles.error} role="status">خدمة ربط الرقم غير جاهزة حاليًا تواصل مع دعم برندة</p>}
           <div className={styles.layout}>
             <div className={styles.details}>
-              {canConnect ? <form onSubmit={connect} className={styles.form}><label htmlFor="brand-whatsapp-phone" className={styles.field}>رقم واتساب {brandName}<input id="brand-whatsapp-phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="+9665XXXXXXXX" required maxLength={24} value={phone} disabled={disabled} onChange={event => setPhone(event.target.value)} /></label><button className={styles.button} disabled={disabled}><Smartphone size={18} aria-hidden="true" />{busy ? "جارٍ تجهيز الاتصال" : "ربط الرقم"}</button></form> : <>
+              {canConnect ? <form onSubmit={connect} className={styles.form}><label htmlFor="brand-whatsapp-phone" className={styles.field}>رقم واتساب {brandName}<input id="brand-whatsapp-phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder={dashboard?.phoneCountry === "PS" ? "+97059XXXXXXX" : "+9665XXXXXXXX"} required maxLength={24} value={phone} disabled={disabled} onChange={event => setPhone(event.target.value)} /></label><button className={styles.button} disabled={disabled}><Smartphone size={18} aria-hidden="true" />{busy ? "جارٍ تجهيز الاتصال" : "ربط الرقم"}</button></form> : <>
                 <p className={styles.number}>الرقم المطلوب <bdi dir="ltr">+{dashboard.connection?.phone}</bdi>{connected && <>الرقم المتصل <strong><bdi dir="ltr">+{dashboard.connection?.verifiedPhone}</bdi></strong></>}</p>
                 {status === "mismatch" && <p className={styles.error}>الرقم الذي مسح الرمز مختلف عن الرقم المطلوب افصل الاتصال ثم اربط رقم العلامة الصحيح</p>}
                 {connected && !dashboard.transactionalEnabled && <button type="button" className={styles.button} disabled={disabled} onClick={() => void connect()}>تفعيل الرقم لرسائل العملاء</button>}

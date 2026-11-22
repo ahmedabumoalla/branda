@@ -15,7 +15,9 @@ import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getBrandFinanceSnapshot } from "@/lib/data/brand-finance";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
+import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry, getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
 import { getSupabaseServiceRoleKey, requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
 import { isSalesCashierPassword, SALES_CASHIER_PASSWORD_HINT } from "@/lib/finance/sales-cashier-password";
 import { greenApiProviderInstanceKey, sendGreenApiSalesCashierWelcome, sendGreenApiLinkedSalesCashierWelcome } from "@/lib/whatsapp/green-api";
@@ -31,9 +33,7 @@ const staffSchema = z.object({
 });
 
 const salesPhoneSchema = z.string().trim().max(30)
-  .transform(value => value.replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 1776 : 1632))))
-  .refine(value => /^[+\d\s()-]+$/.test(value))
-  .transform(normalizeSaudiPhone).refine((value): value is string => value !== null);
+  .transform(value => normalizeOwnerPhone(value)).refine((value): value is string => value !== null);
 const salesCashierSchema = z.object({
   employeePermissions: employeePermissionsSchema.optional(),
   posPermissions: cashierPermissionsSchema.default(defaultCashierPermissions),
@@ -144,7 +144,7 @@ export async function resetSalesCashierPassword(phone: string, code: string, pas
     const eligible = await createAdminClient().rpc("brand_finance_sales_cashier_phone_enabled", { p_phone: normalized });
     if (eligible.error || eligible.data !== true) return { ok: false as const, message: "تعذر تسجيل الدخول تحقق من الرمز وصلاحية حساب الكاشير" };
     const { data, error } = await supabase.auth.verifyOtp({ phone: `+${normalized}`, token, type: "sms" });
-    if (error || !data.user || !data.session?.access_token || !data.session.refresh_token || data.session.user.id !== data.user.id || normalizeSaudiPhone(data.user.phone ?? "") !== normalized) {
+    if (error || !data.user || !data.session?.access_token || !data.session.refresh_token || data.session.user.id !== data.user.id || normalizeOwnerPhone(data.user.phone ?? "") !== normalized) {
       return { ok: false as const, message: "الرمز غير صحيح أو منتهي اطلب رمزًا جديدًا" };
     }
     // Derive authorization and the password target from this freshly verified session.
@@ -175,8 +175,9 @@ export async function resetSalesCashierPassword(phone: string, code: string, pas
 
 /** Owner may link an existing customer; its personal credentials and profile stay unchanged. */
 export async function provisionSalesCashier(input: { name: string; phone: string; password: string; posPermissions?: unknown; employeePermissions?: unknown }) {
-  const parsed = salesCashierSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
+  const phone = normalizeBrandPhone(input.phone, await getBrandPhoneCountry(cafe.id));
+  const parsed = salesCashierSchema.parse({ ...input, phone: phone ?? "" });
   const maintenance = cafe.role === "platform_admin" ? await getFinanceCashierMaintenance(cafe.id) : null;
   if (cafe.role !== "owner" && !maintenance) throw new SalesCashierCreationError("owner_required");
   if (!featureCodesAllow(await getOwnerFeatureCodes(), "finance")) throw new SalesCashierCreationError("finance_required");
@@ -230,8 +231,8 @@ export async function provisionSalesCashier(input: { name: string; phone: string
 }
 
 /** A split hospital owner shares contact details, but keeps a separate Auth identity. */
-async function hospitalOwnerContactEmail(slug: string, identity: string): Promise<string | null> {
-  const normalizedPhone = /^[+\d\s()-]+$/.test(identity) ? normalizeSaudiPhone(identity) : null;
+async function hospitalOwnerContactEmail(slug: string, identity: string, country: BrandPhoneCountry): Promise<string | null> {
+  const normalizedPhone = normalizeBrandPhone(identity, country);
   if (!isHospitalStore(slug) || (!normalizedPhone && !identity.includes("@"))) return null;
   const admin = createAdminClient();
   const cafe = await admin.from("cafes").select("id,owner_user_id").eq("slug", slug).is("deleted_at", null).in("status", ["active", "published"]).maybeSingle();
@@ -241,7 +242,7 @@ async function hospitalOwnerContactEmail(slug: string, identity: string): Promis
   if (owner.error) throw new Error("Finance sign in unavailable");
   if (!owner.data) return null;
   const contactMatches = normalizedPhone
-    ? normalizeSaudiPhone(String(owner.data.phone ?? "")) === normalizedPhone
+    ? normalizeBrandPhone(String(owner.data.phone ?? ""), country) === normalizedPhone
     : String(owner.data.email ?? "").trim().toLowerCase() === identity.trim().toLowerCase();
   if (!contactMatches) return null;
   if (owner.data.status !== "active" || owner.data.role !== "cafe_owner") throw new Error("Finance sign in unavailable");
@@ -258,14 +259,17 @@ export async function signInFinance(slug: string, identity: string, password: st
   const value = z.string().trim().min(3).max(254).parse(identity);
   z.string().min(1).max(128).parse(password);
   const supabase = await createClient();
-  const phone = value.replace(/[\s()-]/g, "").replace(/^00/, "+");
-  const alias = !value.includes("@") && !normalizeSaudiPhone(value) ? ownerLoginAliasEmail(value) : null;
-  const hospitalContactEmail = await hospitalOwnerContactEmail(safeSlug, value);
+  const isEmail = value.includes("@");
+  const alias = isEmail ? null : ownerLoginAliasEmail(value);
+  const country = isEmail || alias ? "SA" : await getBrandPhoneCountryBySlug(safeSlug);
+  const phone = isEmail || alias ? null : normalizeBrandPhone(value, country);
+  if (!isEmail && !alias && !phone) return { ok: false as const, message: "تعذر تسجيل الدخول تحقق من بياناتك" };
+  const hospitalContactEmail = await hospitalOwnerContactEmail(safeSlug, value, country);
   const credentials = hospitalContactEmail
     ? { email: hospitalContactEmail, password }
     : value.includes("@")
     ? { email: value.toLowerCase(), password }
-    : alias ? { email: alias, password } : { phone: phone.startsWith("+") ? phone : phone.startsWith("05") ? "+966" + phone.slice(1) : "+" + phone, password };
+    : alias ? { email: alias, password } : { phone: "+" + phone, password };
   const { data, error } = await supabase.auth.signInWithPassword(credentials);
   if (error || !data.user) return { ok: false as const, message: "تعذر تسجيل الدخول تحقق من بياناتك" };
   try {
@@ -328,8 +332,9 @@ async function requirePhoneStaffOwner() {
 
 /** Phone identities belong to this employer and never replace an existing customer identity. */
 export async function provisionFinancePhoneStaff(input: z.input<typeof phoneStaffSchema>) {
-  const parsed = phoneStaffSchema.parse(input);
   const { cafe, supabase } = await requirePhoneStaffOwner();
+  const phone = normalizeBrandPhone(input.phone, await getBrandPhoneCountry(cafe.id));
+  const parsed = phoneStaffSchema.parse({ ...input, phone: phone ?? "" });
   const admin = createAdminClient();
   const created = await admin.auth.admin.createUser({
     phone: `+${parsed.phone}`, password: parsed.password, phone_confirm: true,

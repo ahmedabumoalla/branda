@@ -1,4 +1,5 @@
 "use client";
+import type { BrandPhoneCountry } from "@/lib/auth/brand-phone";
 
 import { startTransition, useEffect, useRef, useState } from "react";
 import { TicketPercent } from "lucide-react";
@@ -23,7 +24,7 @@ function moneyInput(raw: string) {
 }
 
 /** Confirmation records a coupon redemption; it does not collect a payment. */
-export function AnalyticsCouponRedemption() {
+export function AnalyticsCouponRedemption({ phoneCountry = "SA" }: { phoneCountry?: BrandPhoneCountry } = {}) {
   const { locale } = useCashierLanguage();
   const copy = (ar: string, en: string) => locale === "ar" ? ar : en;
   const [code, setCode] = useState("");
@@ -65,7 +66,7 @@ export function AnalyticsCouponRedemption() {
   async function inspect() {
     if (processing.current || locked.current) return;
     const normalizedCode = code.trim().toUpperCase();
-    const normalizedPhone = normalizeAnalyticsCouponPhone(phone);
+    const normalizedPhone = normalizeAnalyticsCouponPhone(phone, phoneCountry);
     const amount = moneyInput(subtotal);
     setReview(null);
     setCompleted(null);

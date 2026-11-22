@@ -1,4 +1,5 @@
 import "server-only";
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import { brandAllowsNewWork } from '@/lib/data/account-cancellation';
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createLoyaltySessionToken, loyaltyIdentityHash } from "@/lib/auth/loyalty-session-token";
@@ -16,7 +17,7 @@ export const PLATFORM_CARD_LINK_CAFE_IDS: ReadonlySet<string> = new Set(["dbe942
 /** `rating` is the text for a brand named above: it suits stamps and points alike and closes with a rating that
  * invites a reply. Brands with their own sender keep the original text */
 export function stampCardLinkMessage(job: CardLinkJob, options: { rating?: boolean } = {}) {
-  if (!/^[a-z0-9-]{1,80}$/.test(job.brandSlug) || !/^9665\d{8}$/.test(job.phone)) throw new Error("invalid_card_link_job");
+  if (!/^[a-z0-9-]{1,80}$/.test(job.brandSlug) || !canonicalBrandMobile.test(job.phone)) throw new Error("invalid_card_link_job");
   const token = createLoyaltySessionToken({ slug: job.brandSlug, cafeId: job.cafeId, profileId: job.profileId, phoneHash: loyaltyIdentityHash(job.phone) });
   const link = `https://barndaksa.com/loyalty/${job.brandSlug}/access?token=${encodeURIComponent(token)}`;
   const name = job.brandName.replace(/[\r\n\u0000-\u001f]/g, " ").trim().slice(0, 180);
@@ -26,7 +27,7 @@ export function stampCardLinkMessage(job: CardLinkJob, options: { rating?: boole
 /** The only loyalty message Branda's own numbers send since 2026-11-22: a stamp completed the card and a reward
  * is waiting. It speaks in the brand's name, carries the card link, and closes with a rating to invite a reply. */
 export function rewardNoticeMessage(job: CardLinkJob) {
-  if (!/^[a-z0-9-]{1,80}$/.test(job.brandSlug) || !/^9665\d{8}$/.test(job.phone)) throw new Error("invalid_card_link_job");
+  if (!/^[a-z0-9-]{1,80}$/.test(job.brandSlug) || !canonicalBrandMobile.test(job.phone)) throw new Error("invalid_card_link_job");
   const token = createLoyaltySessionToken({ slug: job.brandSlug, cafeId: job.cafeId, profileId: job.profileId, phoneHash: loyaltyIdentityHash(job.phone) });
   const link = `https://barndaksa.com/loyalty/${job.brandSlug}/access?token=${encodeURIComponent(token)}`;
   const clean = (value: unknown, max: number) => String(value ?? "").replace(/[\r\n\u0000-\u001f]/g, " ").trim().slice(0, max);

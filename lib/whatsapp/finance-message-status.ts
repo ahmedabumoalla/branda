@@ -1,3 +1,4 @@
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import "server-only";
 
 export type ProviderMessageStatus = "pending" | "sent" | "delivered" | "read" | "failed" | "yellowCard";
@@ -8,7 +9,7 @@ export async function readFinanceProviderMessageStatus(phone: string, messageId:
   const api = process.env.GREEN_API_API_URL?.trim();
   const instance = process.env.GREEN_API_ID_INSTANCE?.trim();
   const token = process.env.GREEN_API_API_TOKEN_INSTANCE?.trim();
-  if (!api || !instance || !token || !/^9665\d{8}$/.test(phone) || !messageId || messageId.length > 300) return null;
+  if (!api || !instance || !token || !canonicalBrandMobile.test(phone) || !messageId || messageId.length > 300) return null;
   try {
     const url = new URL(api);
     if (url.protocol !== "https:" || !/(^|\.)(green-api\.com|greenapi\.com)$/.test(url.hostname) || url.username || url.password) return null;

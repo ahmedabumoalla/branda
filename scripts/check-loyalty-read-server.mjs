@@ -15,6 +15,7 @@ function load(file, mocks = {}) {
     // The notifications number has its own check; these scenarios cover the other senders
     if (name === "@/lib/whatsapp/notification-sender") return { selectNotificationSender: async () => null };
     if (name.startsWith("@/")) return load(`${name.slice(2)}.ts`, mocks);
+    if (name.startsWith(".")) return load(path.join(path.dirname(file), `${name}.ts`), mocks);
     return require(name);
   }, exports, process, Buffer);
   return exports;
@@ -25,7 +26,9 @@ const op = { requestId, status: "pending", identifierHint: "***4567", attempts: 
 let session = { cafeId, cashierId, token: "test-session" }, owner = { id: cafeId, role: "owner" }, calls = [], entitlement = true;
 let rpcResult = { data: { ok: true, operation: op }, error: null };
 const rpc = async (name, input) => { calls.push({ name, input }); return rpcResult; };
+let phoneCountry = "SA";
 const mocks = {
+  "@/lib/data/brand-phone-country": { getBrandPhoneCountry: async id => { assert.equal(id, cafeId); return phoneCountry; } },
   "@/lib/data/cashier": { requireCashierPermission: async permission => { assert.equal(permission, "loyalty"); return session; } },
   "@/lib/data/cafes": { requireOwnerCafeContext: async () => owner },
   "@/lib/data/rast-loyalty-access": { assertRastLoyaltyEntitlement: async () => { if (!entitlement) throw Error("Forbidden"); } },
@@ -55,6 +58,15 @@ await check("normalize phone and bind queue to authenticated session", async () 
   assert.equal(calls.at(-1).input.p_value, "966501234567");
   assert.equal(calls.at(-1).input.p_session_token, session.token);
   await assert.rejects(dal.enqueueLoyaltyRead({ ...input, value: "not-a-phone" }), { code: "invalid_phone" });
+});
+await check("Palestinian tenant reads local mobile and rejects explicit Saudi mobile without queueing", async () => {
+  phoneCountry = "PS";
+  await dal.enqueueLoyaltyRead({ ...input, method: "code", value: "٠٥٩١٢٣٤٥٦٧" });
+  assert.equal(calls.at(-1).input.p_value, "970591234567");
+  const before = calls.length;
+  await assert.rejects(dal.enqueueLoyaltyRead({ ...input, method: "code", value: "+966591234567" }), { code: "invalid_phone" });
+  assert.equal(calls.length, before);
+  phoneCountry = "SA";
 });
 await check("only loyalty-card QR and bounded valid identifiers accepted", async () => {
   const { createBarndaksaQrPayload } = load("lib/loyalty/secure-qr-payload.ts");

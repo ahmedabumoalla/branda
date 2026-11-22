@@ -1,3 +1,4 @@
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import "server-only";
 import { brandSlugAllowsNewWork } from '@/lib/data/account-cancellation';
 import { z } from "zod";
@@ -8,7 +9,7 @@ import { financeCustomerReceiptSchema } from "@/lib/finance/customer-receipt";
 import { createFinanceCustomerReceiptPdf } from "./finance-customer-receipt";
 
 const jobSchema = z.object({
-  id: z.uuid(), leaseToken: z.uuid(), phone: z.string().regex(/^9665\d{8}$/),
+  id: z.uuid(), leaseToken: z.uuid(), phone: z.string().regex(canonicalBrandMobile),
   brandName: z.string().min(1).max(300), slug: z.string().regex(/^[a-z0-9-]{1,120}$/),
   invoiceNumber: z.union([z.number().int().positive(), z.string().min(1).max(120)]),
   loyaltyStatus: z.enum(["stamped", "pending_enrollment", "unavailable"]),

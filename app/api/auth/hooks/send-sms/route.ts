@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { after } from "next/server";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { verifySupabaseHookSignature } from "@/lib/auth/supabase-hook-signature";
 import { enqueueOtpDelivery, deliverQueuedOtp } from "@/lib/auth/otp-delivery";
 import { isAllowedCustomerOtpPhone, isPhoneOtpRequiredForBrand } from "@/lib/auth/phone-otp";
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   const parsed = sendSmsHookSchema.safeParse(payload);
   if (!parsed.success) return errorResponse(400);
 
-  const phoneNormalized = normalizeSaudiPhone(parsed.data.user.phone);
+  const phoneNormalized = normalizeOwnerPhone(parsed.data.user.phone);
   if (!phoneNormalized) {
     return errorResponse(403);
   }

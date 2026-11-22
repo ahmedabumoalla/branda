@@ -37,7 +37,7 @@ async function main() {
   const client = {
     auth: {
       verifyOtp: async input => {
-        events.push('verify'); assert.deepEqual(input, { phone: '+966500000000', token: '123456', type: 'sms' });
+        events.push('verify'); assert.deepEqual(input, { phone: '+' + user.phone, token: '123456', type: 'sms' });
         if (scenario === 'verifyThrows') throw Error('private auth details');
         return { error: scenario === 'badCode' ? { message: 'private auth details' } : null, data: {
           user: scenario === 'wrongPhone' ? { ...user, phone: '966500000001' } : user,
@@ -48,7 +48,7 @@ async function main() {
       signOut: async opts => { assert.deepEqual(opts, { scope: 'local' }); events.push('signOut'); return {}; },
     },
     rpc: async (name, args) => {
-      events.push('destinations'); assert.equal(name, 'brand_finance_sales_cashier_destinations'); assert.equal(args, undefined);
+      events.push('destinations'); assert.equal(name, 'brand_finance_phone_staff_destinations'); assert.equal(args, undefined);
       const brands = [{ id: '00000000-0000-4000-8000-000000000001', slug: 'brand-one', name: 'One' }];
       if (scenario === 'multi') brands.push({ id: '00000000-0000-4000-8000-000000000002', slug: 'brand-two', name: 'Two' });
       if (scenario === 'unsafeSlug') brands[0].slug = 'https://other.test';
@@ -58,13 +58,13 @@ async function main() {
   const mocks = {
     '@supabase/supabase-js': { createClient: (url, key, options) => { ephemeralCount++; assert.equal(url, 'https://test.invalid'); assert.equal(key, 'test-anon'); assert.deepEqual(options.auth, { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }); return client; } },
     '@/lib/supabase/server': { createClient: async () => { clientCount++; return { auth: { setSession: async session => { events.push('persist'); assert.deepEqual(session, { access_token: 'test-only-session', refresh_token: 'test-only-refresh' }); if (scenario === 'persistThrows') throw Error('private persistence'); return { error: scenario === 'persistFails' ? {} : null }; } } }; } },
-    '@/lib/supabase/admin': { createAdminClient: () => ({ rpc: async (name, args) => { events.push('eligible'); assert.equal(name, 'brand_finance_sales_cashier_phone_enabled'); assert.deepEqual(args, { p_phone: '966500000000' }); return { data: scenario !== 'ineligible', error: scenario === 'eligibilityFails' ? {} : null }; } }) },
+    '@/lib/supabase/admin': { createAdminClient: () => ({ rpc: async (name, args) => { events.push('eligible'); assert.equal(name, 'brand_finance_sales_cashier_phone_enabled'); assert.deepEqual(args, { p_phone: user.phone }); return { data: scenario !== 'ineligible', error: scenario === 'eligibilityFails' ? {} : null }; } }) },
     'next/headers': {}, '@/lib/data/cafes': {}, '@/lib/data/feature-entitlements': {}, '@/lib/data/brand-finance': {}, '@/lib/whatsapp/green-api': {}, '@/lib/barndaksa/env': { requireSupabaseUrl: () => 'https://test.invalid', requireSupabaseAnonKey: () => 'test-anon' },
   };
   const access = load('lib/data/finance-access.ts', mocks);
   const action = load('app/actions/finance-access.ts', { ...mocks, '@/lib/data/finance-access': access }).resetSalesCashierPasswordAction;
   const reset = (password = 'Test!Pass9', confirmation = password, phone = '٠٥٠٠٠٠٠٠٠٠', code = '١٢٣٤٥٦') => action(phone, code, password, confirmation);
-  for (const password of ['short', 'test!pass9', 'TestPass9', 'Test!\nPass9', 'A!'.repeat(65)]) assert.equal((await reset(password)).ok, false);
+  for (const password of ['short', '        ', 'Test!\nPass9', 'A!'.repeat(65)]) assert.equal((await reset(password)).ok, false);
   assert.equal((await reset('Test!Pass9', 'Different!9')).ok, false);
   assert.equal((await reset('Test!Pass9', 'Test!Pass9', 'bad-phone')).ok, false);
   assert.equal((await reset('Test!Pass9', 'Test!Pass9', '0500000000', '12345')).ok, false);
@@ -83,8 +83,11 @@ async function main() {
   assert.equal(ephemeralCount, 1, 'OTP, membership and password update share one isolated client');
   assert.equal(clientCount, 1, 'SSR client is used only to persist the completed session');
   assert.deepEqual(events, ['eligible', 'verify', 'destinations', 'update', 'persist']);
+  user.phone = '970590000001';
+  assert.equal((await reset('Test!Pass9', 'Test!Pass9', '+970590000001')).ok, true);
+  user.phone = '966500000000';
   scenario = 'multi'; events.length = 0;
-  assert.deepEqual((await reset()).brands, [{ slug: 'brand-one', name: 'One' }, { slug: 'brand-two', name: 'Two' }]);
+  assert.deepEqual((await reset()).brands, [{ slug: 'brand-one', name: 'One', redirectTo: '/finance/brand-one/pos' }, { slug: 'brand-two', name: 'Two', redirectTo: '/finance/brand-two/pos' }]);
   assert(!events.includes('signOut'));
 
   const state = hooks(), requests = [], resetCalls = [], navigated = []; let locale = 'ar', result = { ok: false, message: 'الرمز غير صحيح أو منتهي اطلب رمزًا جديدًا' };
@@ -105,13 +108,13 @@ async function main() {
     button(render(), 'نسيت كلمة المرور أو تريد تعيينها؟').props.onClick();
     assert.equal(requests.length, 0, 'Choosing password setup does not send automatically');
     assert(!nodes(render()).some(n => n.type === 'input' && n.props.name === 'password'));
-    const first = submit(); await submit(); await first; assert.deepEqual(requests, ['0500000000']);
+    const first = submit(); await submit(); await first; assert.deepEqual(requests, ['966500000000']);
     for (const name of ['code', 'newPassword', 'confirmation']) assert(find(render(), n => n.type === 'input' && n.props.name === name).props.required);
     assert.equal(find(render(), n => n.type === 'input' && n.props.name === 'newPassword').props.autoComplete, 'new-password');
     await submit(); assert.equal(resetCalls.length, 0); assert.match(text(render()), /لا يطابق/);
     locale = 'en'; assert.equal(render().props.dir, 'ltr'); assert.match(text(render()), /Set your cashier password/); assert.match(text(render()), /confirmation does not match/);
     fields.confirmation = fields.newPassword; await submit(); assert.equal(resetCalls.length, 1); assert.match(text(render()), /incorrect or expired/); assert.equal(navigated.length, 0); assert.equal(formResets, 0);
-    assert.deepEqual(resetCalls[0], ['0500000000', '123456', 'Test!Pass9', 'Test!Pass9']);
+    assert.deepEqual(resetCalls[0], ['966500000000', '123456', 'Test!Pass9', 'Test!Pass9']);
     result = { ok: true, redirectTo: '/finance/brand-one/pos' }; await submit(); assert.deepEqual(navigated, ['/finance/brand-one/pos']); assert.equal(formResets, 1);
   } finally { global.FormData = oldFormData; }
   console.log('Sales cashier password recovery: validation, phone/session identity, live access, same-client update, failure cleanup and bilingual UI PASS');

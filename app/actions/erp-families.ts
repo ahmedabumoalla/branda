@@ -1,4 +1,6 @@
 "use server";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
+import { normalizeFinanceContactPhones } from "@/lib/finance/contact-phones";
 import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -53,6 +55,7 @@ export async function saveFamily(input: unknown, slug?: string) {
     const existing = value.id ? current.families.find(row => row.id === value.id) : undefined;
     if (value.id && !existing) throw new Error("الأسرة غير موجودة أعد تحميل الصفحة");
     const supplierId = existing?.supplierId ?? value.supplierId;
+    normalizeFinanceContactPhones(value.profile, await getBrandPhoneCountry(context.cafe.id));
     const phone = value.profile.phone;
     if (!existing && value.createSupplier) {
       await purchase(context, "supplier", { id: supplierId, revision: 0, name: value.name, phone, email: "", taxNumber: "", active: true, firstName: "", lastName: "", mobile: phone, commercialRegistration: "", number: "", currency: "SAR", address: { ...emptyAddress, city: value.profile.city }, contacts: [], addresses: [], note: "", openingBalance: 0, openingDate: today() }, stepId(value.requestId, "supplier"), input);

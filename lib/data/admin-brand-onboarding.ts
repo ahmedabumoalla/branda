@@ -1,10 +1,11 @@
 import "server-only";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { accountFingerprint, openWelcomePassword, sealWelcomePassword } from "@/lib/auth/brand-welcome-secret";
-import { adminBrandAccountSchema, adminBrandOwnerSchema, type AdminBrandAccountInput, type AdminBrandOwnerInput } from "@/lib/platform/brand-onboarding";
+import { adminBrandAccountSchema, adminBrandOwnerFor, type AdminBrandAccountInput, type AdminBrandOwnerInput } from "@/lib/platform/brand-onboarding";
 import { isGreenApiConfigured, sendGreenApiOwnerWelcome } from "@/lib/whatsapp/green-api";
 
 function accountError(code: string): never {
@@ -65,7 +66,8 @@ export async function createAdminBrandAccount(input: AdminBrandAccountInput) {
 
 export async function updateAdminBrandOwner(input: AdminBrandOwnerInput) {
   const actor = await requirePlatformAdmin();
-  const parsed = adminBrandOwnerSchema.safeParse(input);
+  const country = await getBrandPhoneCountry(input.cafeId);
+  const parsed = adminBrandOwnerFor(country).safeParse(input);
   if (!parsed.success) throw new Error("راجع بيانات المالك اترك البيانات الناقصة فارغة أو أدخلها بصورة صحيحة");
   const { requestId, cafeId, password, ...details } = parsed.data;
   const admin = createAdminClient();

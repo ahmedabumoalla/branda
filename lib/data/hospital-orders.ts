@@ -1,10 +1,11 @@
+import { getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
 import "server-only";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { getStandaloneMenu } from "@/lib/data/standalone-menu";
 import type { FinanceDocument } from "@/lib/finance/brand-finance";
-import { hospitalOrderInputSchema, hospitalCounterInputSchema, hospitalCommandSchema, hospitalCollectionSchema, type HospitalOrder, type HospitalOrderReceipt, type HospitalOrderCommandResult, type HospitalDebtor } from "@/lib/commerce/hospital-orders";
+import { hospitalOrderInputFor, hospitalCounterInputFor, hospitalCommandFor, hospitalCollectionSchema, type HospitalOrder, type HospitalOrderReceipt, type HospitalOrderCommandResult, type HospitalDebtor } from "@/lib/commerce/hospital-orders";
 
 function failure(error: { message?: string } | null): never {
   const known = error?.message?.match(/HOSPITAL_[A-Z_]+/)?.[0];
@@ -20,7 +21,7 @@ export function assertHospitalWriteEnvironment() {
 }
 export async function submitHospitalOrder(input: unknown, rateKey: string): Promise<HospitalOrderReceipt> {
   assertHospitalWriteEnvironment();
-  const { slug, requestId, ...payload } = hospitalOrderInputSchema.parse(input);
+  const { slug, requestId, ...payload } = hospitalOrderInputFor(await getBrandPhoneCountryBySlug(z.object({slug:z.string().min(1).max(120)}).parse(input).slug)).parse(input);
   const { data, error } = await createAdminClient().rpc("hospital_order_submit", { p_slug: slug, p_request: requestId, p_payload: payload, p_rate_key: rateKey });
   if (error) failure(error); return data as HospitalOrderReceipt;
 }
@@ -34,7 +35,7 @@ export async function readHospitalOrders(slug: string): Promise<HospitalOrder[]>
 }
 export async function createHospitalCounterOrder(slug: string, input: unknown): Promise<HospitalOrder> {
   assertHospitalWriteEnvironment();
-  const { requestId, ...payload } = hospitalCounterInputSchema.parse(input);
+  const { requestId, ...payload } = hospitalCounterInputFor(await getBrandPhoneCountryBySlug(slug)).parse(input);
   const { client, cafe } = await getBrandFinanceContext(slug);
   const { data, error } = await client.rpc("hospital_counter_order", { p_cafe: cafe.id, p_request: requestId, p_payload: payload });
   if (error) failure(error); return data as HospitalOrder;
@@ -49,7 +50,7 @@ export async function readHospitalCatalog(slug: string) {
 }
 export async function manageHospitalOrder(slug: string, input: unknown): Promise<HospitalOrderCommandResult> {
   assertHospitalWriteEnvironment();
-  const { id, requestId, action, ...payload } = hospitalCommandSchema.parse(input);
+  const { id, requestId, action, ...payload } = hospitalCommandFor(await getBrandPhoneCountryBySlug(slug)).parse(input);
   const { client, cafe } = await getBrandFinanceContext(slug);
   const { data, error } = await client.rpc("hospital_order_manage", { p_cafe: cafe.id, p_order: id, p_request: requestId, p_action: action, p_payload: payload });
   if (error) failure(error); return data as HospitalOrderCommandResult;

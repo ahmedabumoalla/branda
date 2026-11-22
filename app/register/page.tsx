@@ -8,7 +8,7 @@ import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import styles from "./register.module.css";
 import { normalizeInputDigits } from "@/lib/auth/input-digits";
 
-import { normalizeOwnerPhone, type OwnerPhoneCountry } from "@/lib/auth/owner-phone";
+import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 
 const steps = ["بيانات العلامة", "تحقق واتساب", "كلمة المرور"];
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -19,8 +19,8 @@ export default function RegisterPage() {
   const [step, setStep] = useState(0);
   const [planChoice, setPlanChoice] = useState<"loyalty" | "menu_loyalty">("menu_loyalty");
   const [draft, setDraft] = useState({ brandNameAr: "", brandNameEn: "", ownerName: "", email: "", phone: "", couponCode: "" });
-  const [phoneCountry, setPhoneCountry] = useState<OwnerPhoneCountry>("966");
-  const normalizedPhone = normalizeOwnerPhone(draft.phone, phoneCountry);
+  const [accountCountry, setAccountCountry] = useState<BrandPhoneCountry>("SA");
+  const normalizedPhone = normalizeBrandPhone(draft.phone, accountCountry);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -32,7 +32,7 @@ export default function RegisterPage() {
   const update = (field: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [field]: value }));
   async function sendCode() {
     if (!normalizedPhone) { setMessage("تحقق من رقم الجوال ومفتاح الدولة"); return; }
-    const result = await requestOwnerRegistrationOtpAction({ ...draft, phone: normalizedPhone, planChoice });
+    const result = await requestOwnerRegistrationOtpAction({ ...draft, phone: normalizedPhone, accountCountry, planChoice });
     setMessage(result.message);
     if (result.retryAfterSeconds) setResendAt(Date.now() + result.retryAfterSeconds * 1000);
     if (result.ok) { setCode(""); setStep(1); }
@@ -98,21 +98,14 @@ export default function RegisterPage() {
               <Field label="اسم العلامة بالعربية"><input placeholder="كما سيظهر لعملائك" value={draft.brandNameAr} onChange={event => update("brandNameAr", event.target.value)} required minLength={2} maxLength={120} autoComplete="organization" /></Field>
               <Field label="اسم العلامة بالإنجليزية"><input placeholder="Your brand name" value={draft.brandNameEn} onChange={event => update("brandNameEn", event.target.value)} required minLength={2} maxLength={120} dir="ltr" /></Field>
             </div>
+            <Field label="دولة الحساب"><select value={accountCountry} onChange={event => setAccountCountry(event.target.value === "PS" ? "PS" : "SA")}><option value="SA">السعودية (+966)</option><option value="PS">فلسطين (+970)</option></select></Field>
+            <p className={styles.note}>تُستخدم دولة الحساب لتحديد مفتاح جوال الموظفين والعملاء</p>
             </div>
             <div className={styles.fieldGroup}><h3><UserRound size={18} aria-hidden="true" /> بيانات المسؤول</h3>
             <Field label="اسم المسؤول"><input placeholder="الاسم الكامل" value={draft.ownerName} onChange={event => update("ownerName", event.target.value)} required minLength={2} maxLength={120} autoComplete="name" /></Field>
             <div className={styles.columns}>
               <Field label="البريد الإلكتروني (اختياري)"><input type="email" placeholder="name@example.com" value={draft.email} onChange={event => update("email", event.target.value)} maxLength={254} autoComplete="email" dir="ltr" /></Field>
-              <Field label="مفتاح دولة الجوال"><select value={phoneCountry} onChange={event => {
-                if (normalizedPhone) update("phone", "0" + normalizedPhone.slice(3));
-                setPhoneCountry(event.target.value === "970" ? "970" : "966");
-              }}><option value="966">السعودية (+966)</option><option value="970">فلسطين (+970)</option></select></Field>
-              <Field label="رقم الجوال المرتبط بواتساب"><input type="tel" placeholder={phoneCountry === "970" ? "059xxxxxxx" : "05xxxxxxxx"} value={draft.phone} onChange={event => {
-                const value = event.target.value;
-                update("phone", value);
-                const prefix = /^(?:\+|00)?(966|970)/.exec(normalizeInputDigits(value).trim());
-                if (prefix) setPhoneCountry(prefix[1] === "970" ? "970" : "966");
-              }} required maxLength={64} autoComplete="tel" dir="ltr" /></Field>
+              <Field label="رقم الجوال المرتبط بواتساب"><input type="tel" placeholder={accountCountry === "PS" ? "059xxxxxxx" : "05xxxxxxxx"} value={draft.phone} onChange={event => update("phone", event.target.value)} required maxLength={64} autoComplete="tel" dir="ltr" /></Field>
             </div>
             <p className={styles.hint}><ShieldCheck size={15} aria-hidden="true" /> سنرسل رمز التحقق إلى رقم واتساب هذا</p></div>
             <details className={styles.coupon}><summary><TicketPercent size={18} aria-hidden="true" /> لديك كوبون خصم؟ <span>اختياري</span></summary><Field label="كوبون الخصم"><input placeholder="أدخل رمز الكوبون" value={draft.couponCode} onChange={event => update("couponCode", event.target.value)} maxLength={30} dir="ltr" autoCapitalize="characters" /></Field></details>

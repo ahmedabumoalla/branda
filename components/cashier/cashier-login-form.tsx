@@ -1,5 +1,6 @@
 "use client";
 
+import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { Eye, EyeOff, Loader2, LogIn } from "lucide-react";
@@ -18,6 +19,7 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
   const [message, setMessage] = useState(initialMessage);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"whatsapp" | "password">("whatsapp");
+  const [country, setCountry] = useState<BrandPhoneCountry>("SA");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
@@ -32,7 +34,9 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
   }, [retryAt]);
 
   async function requestCode() {
-    const result = await requestCashierOtpAction(phone);
+    const normalized = normalizeBrandPhone(phone, country);
+    if (!normalized) { setMessage("أدخل رقم جوال صحيحًا"); return; }
+    const result = await requestCashierOtpAction(normalized);
     setMessage(result.message);
     if (result.retryAfterSeconds) {
       setRemaining(result.retryAfterSeconds);
@@ -118,9 +122,10 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
             </span>
           </label>
           </> : <>
+            <label className={styles.field}>{t("دولة رقم الجوال")}<select value={country} onChange={event => setCountry(event.target.value === "PS" ? "PS" : "SA")} disabled={codeSent}><option value="SA">{t("السعودية")} (+966)</option><option value="PS">{t("فلسطين")} (+970)</option></select></label>
             <label className={styles.field}>{t("رقم واتساب")}
               <input type="tel" dir="ltr" inputMode="tel" autoComplete="tel" required maxLength={30} readOnly={codeSent} value={phone}
-                onChange={event => setPhone(event.target.value)} placeholder="05xxxxxxxx" />
+                onChange={event => setPhone(event.target.value)} placeholder={country === "PS" ? "059xxxxxxx" : "05xxxxxxxx"} />
             </label>
             {codeSent ? <>
               <button type="button" onClick={() => { setCodeSent(false); setCode(""); setMessage(""); }} className={styles.switchLink}>{t("تغيير الرقم")}</button>

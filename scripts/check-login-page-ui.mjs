@@ -14,6 +14,14 @@ const compiledCss = transform({ filename: "login.module.css", code: Buffer.from(
 assert(compiledCss.code.length > 0);
 for (const [, name] of source.matchAll(/styles\.(\w+)/g)) assert(compiledCss.exports[name], `Missing CSS class ${name}`);
 
+function loadHelper(name) {
+  if (!name.startsWith("@/lib/")) return require(name);
+  const exports = {};
+  const source = fs.readFileSync(new URL("../" + name.slice(2) + ".ts", import.meta.url), "utf8");
+  const { outputText } = ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}});
+  new Function("require","exports",outputText)(loadHelper, exports);
+  return exports;
+}
 function harness(actions = {}) {
   const state = [];
   const calls = [];
@@ -45,7 +53,7 @@ function harness(actions = {}) {
   };
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const exports = {};
-  new Function("require", "exports", output)(name => Object.hasOwn(stubs, name) ? stubs[name] : require(name), exports);
+  new Function("require", "exports", output)(name => Object.hasOwn(stubs, name) ? stubs[name] : loadHelper(name), exports);
   return { calls, render() { cursor = 0; return exports.default(); } };
 }
 function nodes(tree) {
@@ -62,6 +70,15 @@ function fill(h, identity = "owner@example.invalid", password = "test-password")
   byId(h.render(), "login-password").props.onChange({ target: { value: password } });
 }
 let checks = 1;
+for (const country of ["PS","SA"]) {
+  const identities=[];
+  const h=harness({loginOwnerAction:async (value)=>{identities.push(value);return {ok:true,redirectTo:"/dashboard"};}});
+  fill(h,"0591234567");
+  byId(h.render(),"login-country").props.onChange({target:{value:country}});
+  await forms(h.render())[0].props.onSubmit(submit);
+  assert.deepEqual(identities,[country === "PS" ? "970591234567" : "0591234567"]);
+  checks++;
+}
 async function test(run) { await run(); checks++; }
 
 await test(() => {

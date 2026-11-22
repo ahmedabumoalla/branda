@@ -1,6 +1,7 @@
 import "server-only";
 
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { requireCashierPermission } from "@/lib/data/cashier";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -14,10 +15,10 @@ export async function resolveCashierLoyaltyPhone(rawPhone: string): Promise<stri
   const admin = createAdminClient();
   const session = await requireCashierPermission("loyalty", admin);
   await assertRastLoyaltyEntitlement(session.cafeId);
-  if (typeof rawPhone !== "string" || rawPhone.length > 30) throw new Error("أدخل رقم جوال سعودي صحيح يبدأ بـ 05");
+  if (typeof rawPhone !== "string" || rawPhone.length > 30) throw new Error("أدخل رقم جوال صحيح لدولة العلامة");
   const digits = rawPhone.trim().replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 1776 : 1632)));
-  const phone = /^[+\d\s()-]+$/.test(digits) ? normalizeSaudiPhone(digits) : null;
-  if (!phone) throw new Error("أدخل رقم جوال سعودي صحيح يبدأ بـ 05");
+  const phone = /^[+\d\s()-]+$/.test(digits) ? normalizeBrandPhone(digits, await getBrandPhoneCountry(session.cafeId)) : null;
+  if (!phone) throw new Error("أدخل رقم جوال صحيح لدولة العلامة");
 
   // Both queries derive the tenant from the authenticated session, never client input.
   const { data: customer, error: customerError } = await admin.from("customer_profiles")

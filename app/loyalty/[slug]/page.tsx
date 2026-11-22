@@ -5,6 +5,7 @@ import { isFawaselStore } from "@/lib/commerce/fawasel-profile";
 import { branchEnrollmentPath } from "@/lib/loyalty/branch-types";
 import Link from "next/link";
 import { getWalletReadiness } from "@/lib/wallet";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { RastEnrollment } from "@/components/rast-loyalty/rast-enrollment";
 import { RastMemberCard } from "@/components/rast-loyalty/rast-member-card";
 import { getLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
@@ -30,5 +31,5 @@ export default async function LoyaltyJoinPage({ params, searchParams }: { params
   const readiness = getWalletReadiness();
   const analytics = brand.program.enabled ? <PublicPageAnalytics slug={slug} kind={loyaltyVisitKind((await searchParams).source)} /> : null;
   if (membership) return <>{analytics}<RastMemberCard identity={membership.identity} member={membership} loadedAt={membership.loadedAt} walletAvailability={{ apple: readiness.apple && brand.program.appleWalletEnabled, google: readiness.google && brand.program.googleWalletEnabled }} /></>;
-  return <>{analytics}<RastEnrollment identity={brand.identity} program={brand.program} authenticated={Boolean(profile)} /></>;
+  return <>{analytics}<RastEnrollment phoneCountry={await getBrandPhoneCountry(brand.cafeId)} identity={brand.identity} program={brand.program} authenticated={Boolean(profile)} /></>;
 }

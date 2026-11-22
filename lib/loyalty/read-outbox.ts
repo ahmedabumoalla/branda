@@ -1,3 +1,4 @@
+import type { BrandPhoneCountry } from "../auth/brand-phone";
 import type { LoyaltyReadOperation } from "./read-operation-types";
 import { parseBarndaksaQrPayload } from "./secure-qr-payload";
 import { normalizeLoyaltyDigits, resolveReadMethod } from "./read-identifier";
@@ -78,6 +79,7 @@ async function withDeadline<T>(request: Promise<T>): Promise<T> {
   finally { clearTimeout(timeout); }
 }
 export function createReadOutbox(options: {
+  phoneCountry?: BrandPhoneCountry;
   scope: ReadScope; store: ReadStore; send: (input: ReadIntent) => Promise<Result>;
   load: (ids: string[], scope: ReadScope) => Promise<LoadResult>;
   now?: () => number; uuid?: () => string; online?: () => boolean;
@@ -92,11 +94,11 @@ export function createReadOutbox(options: {
   const list = () => store.change(key, rows => { const retained = keepRows(rows, now()); return { rows: retained, result: retained }; });
   async function save(method: "code" | "phone", value: string) {
     const clean = value.trim();
-    method = resolveReadMethod(method, clean);
+    method = resolveReadMethod(method, clean, options.phoneCountry);
     if (!clean || clean.length > (method === "phone" ? 30 : 500)) throw new Error("invalid_identifier");
     const digits = normalizeLoyaltyDigits(clean);
     let canonical = method === "code" ? parseBarndaksaQrPayload(digits, "loyalty-card") ?? digits.toUpperCase() : digits.replace(/\D/g, "");
-    if (method === "phone") canonical = canonical.replace(/^(?:00966|966|0)/, "");
+    if (method === "phone") canonical = canonical.replace(options.phoneCountry === "PS" ? /^(?:00970|970|0)/ : /^(?:00966|966|0)/, "");
     const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${key}:${method}:${canonical}`));
     const identifierKey = Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join("");
     const row: LocalRead = { requestId: uuid(), scope: key, method, value: clean, identifierKey, identifierHint: `••••${canonical.slice(-4)}`, createdAt: new Date(now()).toISOString(), attempts: 0, nextAttemptAt: 0, leaseUntil: 0 };

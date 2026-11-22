@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptMarketingSecret, marketingConfigured } from "@/lib/marketing/crypto";
 import { getGreenApiMarketingState, getGreenApiMarketingAccount, sendGreenApiMarketingMessage, sendGreenApiMarketingMedia, GreenApiProviderError, type GreenApiMarketingCredentials } from "@/lib/whatsapp/green-api-marketing";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { MARKETING_STOP_FOOTER } from "@/lib/marketing/media-rules";
 import { signMarketingMedia } from "@/lib/marketing/media";
 
@@ -26,7 +26,7 @@ export async function runMarketingJobs() {
       if (credentials.idInstance !== job.instance_id) throw new Error("MARKETING_INSTANCE_MISMATCH");
       const state = await getGreenApiMarketingState(credentials);
       const account = state === "authorized" ? await getGreenApiMarketingAccount(credentials) : null;
-      const verified = account ? normalizeSaudiPhone(account.phone) : null;
+      const verified = account ? normalizeOwnerPhone(account.phone) : null;
       if (state !== "authorized" || verified !== job.requested_phone) {
         await db.from("brand_marketing_connections").update({ status: state === "authorized" ? "mismatch" : "pairing", verified_phone: verified, updated_at: new Date().toISOString() }).eq("cafe_id", job.cafe_id).eq("generation", job.generation).eq("status", "connected");
         await finish(job, "queued"); result.deferred++; return;

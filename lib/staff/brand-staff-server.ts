@@ -3,7 +3,8 @@ import "server-only";
 import { z } from "zod";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
 import { brandStaffAccessFromPermissions, brandStaffLandingPath } from "@/lib/staff/brand-staff-access";
 
@@ -33,9 +34,9 @@ function toLatinDigits(value: string) {
   return value.replace(/[٠-٩]/g, digit => String(digit.charCodeAt(0) - 0x660)).replace(/[۰-۹]/g, digit => String(digit.charCodeAt(0) - 0x6f0));
 }
 
-/** E.164 form (+9665XXXXXXXX) or null */
-export function normalizeStaffPhone(value: string | null | undefined) {
-  const digits = normalizeSaudiPhone(toLatinDigits(String(value ?? "")));
+/** International phone for the employee identity */
+export function normalizeStaffPhone(value: string | null | undefined, country: BrandPhoneCountry = "SA") {
+  const digits = normalizeBrandPhone(toLatinDigits(String(value ?? "")), country);
   return digits ? `+${digits}` : null;
 }
 
@@ -82,13 +83,14 @@ export async function listBrandStaff() {
   ]);
   if (accounts.error || cashiers.error) throw new Error("تعذر تحميل الموظفين حاول مجددًا");
   const rows = (accounts.data ?? []) as AccountRow[];
+  const country = await getBrandPhoneCountry(cafe.id);
   const byCashier = new Map(rows.filter(row => row.cashier_id).map(row => [row.cashier_id as string, row]));
   const cashierMembers: BrandStaffMember[] = (cashiers.data ?? []).map(cashier => {
     const row = byCashier.get(cashier.id);
     if (row) return memberFromAccount(row, cashier);
     return {
       key: `cashier:${cashier.id}`, accountId: null, cashierId: cashier.id, name: cashier.full_name,
-      phone: normalizeStaffPhone(cashier.phone), cashierActive: cashier.active, hasLogin: false,
+      phone: normalizeStaffPhone(cashier.phone, country), cashierActive: cashier.active, hasLogin: false,
       canLogin: false, menu: false, messages: false, rewards: false,
     };
   });
@@ -121,9 +123,9 @@ function firstIssue(error: z.ZodError) {
 export async function addBrandEmployee(input: z.input<typeof employeeSchema> & Omit<z.input<typeof accessSchema>, "accountId" | "cashierId" | "phone">): Promise<Result> {
   const parsed = employeeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: firstIssue(parsed.error) };
-  const phone = normalizeStaffPhone(parsed.data.phone);
-  if (!phone) return { ok: false, message: "رقم الجوال غير صحيح اكتبه بصيغة 05XXXXXXXX" };
   const cafe = await requireLocoOwner();
+  const phone = normalizeStaffPhone(parsed.data.phone, await getBrandPhoneCountry(cafe.id));
+  if (!phone) return { ok: false, message: "رقم الجوال غير صحيح اكتبه بصيغة 05XXXXXXXX" };
   const admin = createAdminClient();
   const created = await admin.from("brand_staff_accounts")
     .insert({ cafe_id: cafe.id, full_name: parsed.data.name, phone })
@@ -158,7 +160,8 @@ export async function saveBrandStaffAccess(input: z.input<typeof accessSchema>):
     const existing = await admin.from("brand_staff_accounts").select(accountColumns).eq("cashier_id", cashier.data.id).maybeSingle();
     account = existing.data as AccountRow | null;
     if (!account) {
-      const phone = normalizeStaffPhone(cashier.data.phone) ?? normalizeStaffPhone(parsed.phone);
+      const country = await getBrandPhoneCountry(cafe.id);
+      const phone = normalizeStaffPhone(cashier.data.phone, country) ?? normalizeStaffPhone(parsed.phone, country);
       if (!phone) return { ok: false, message: "أضف رقم جوال الكاشير لتفعيل دخوله إلى لوحة التحكم" };
       const created = await admin.from("brand_staff_accounts")
         .insert({ cafe_id: cafe.id, cashier_id: cashier.data.id, full_name: cashier.data.full_name, phone })

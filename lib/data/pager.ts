@@ -7,7 +7,8 @@ import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
 import { requireOwnerCafeContext, requirePlatformAdmin } from "@/lib/data/cafes";
 import { requireCashierPermission } from "@/lib/data/cashier";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
 import type { PagerContext, PagerFeedback, PagerFilter, PagerMessageJob, PagerMode, PagerOrder, PagerPage } from "@/lib/pager/types";
 import { normalizeGoogleReviewLink } from "@/lib/pager/google-review-link";
@@ -81,8 +82,8 @@ export async function createPagerOrder(input: unknown, mode: PagerMode = "staff"
   const ctx = await actorContext(mode);
   const draft = z.object({ id: idSchema, invoiceNumber: z.string().min(1).max(120).refine(v => v.trim().length > 0), phone: z.string().max(30), customerName: z.string().trim().max(120).default("") }).parse(input);
   const digits = draft.phone.replace(/[٠-٩]/g, c => String(c.charCodeAt(0)-1632)).replace(/[۰-۹]/g, c => String(c.charCodeAt(0)-1776));
-  const phone = normalizeSaudiPhone(digits);
-  if (!phone) throw new Error("أدخل رقم جوال سعودي صحيح");
+  const phone = normalizeBrandPhone(digits, await getBrandPhoneCountry(ctx.cafeId));
+  if (!phone) throw new Error("أدخل رقم جوال صحيح لدولة الحساب");
   const { data, error } = await createAdminClient().rpc("pager_create_named_order", { p_id: draft.id, p_cafe: ctx.cafeId, p_name: draft.customerName,
     p_invoice: draft.invoiceNumber, p_phone: phone, p_actor: ctx.actorName, p_station: ctx.station, p_actor_id: ctx.actorId,
     p_feedback_hash: hashToken(tokenForOrder(draft.id)) });

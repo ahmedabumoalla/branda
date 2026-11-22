@@ -1,12 +1,20 @@
 "use strict";
 const fs = require("node:fs"), assert = require("node:assert/strict"), crypto = require("node:crypto"), ts = require("typescript");
-const file = "lib/commerce/hospital-orders.ts", exportsObject = {};
-new Function("require", "exports", ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(require, exportsObject);
+const file = "lib/commerce/hospital-orders.ts";
+function loadModule(path) {
+  const exports = {};
+  const { outputText } = ts.transpileModule(fs.readFileSync(path, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } });
+  new Function("require", "exports", outputText)(name => name.startsWith("@/") ? loadModule(name.slice(2) + ".ts") : require(name), exports);
+  return exports;
+}
+const exportsObject = loadModule(file);
 const { hospitalOrderInputSchema: order, hospitalCounterInputSchema: counter, hospitalCommandSchema: command, hospitalCollectionSchema: collection } = exportsObject;
 const uuid = () => crypto.randomUUID();
 const input = { slug: "mind-hospital", requestId: uuid(), customerName: "Hospital guest", phone: "0501234567", floor: "2", clinic: "Clinic A", language: "en", items: [{ productId: uuid(), quantity: 2 }] };
 let checks = 0;
 const check = (value, label) => { assert.ok(value, label); checks++; };
+check(exportsObject.hospitalOrderInputFor("PS").parse({ ...input, phone: "0591234567" }).phone === "970591234567", "Palestinian local phone normalized");
+check(!exportsObject.hospitalOrderInputFor("PS").safeParse(input).success, "Reject foreign local prefix");
 check(order.parse(input).phone === "966501234567", "Saudi local phone normalized");
 check(order.parse({ ...input, phone: "+966 50 123 4567" }).phone === "966501234567", "International phone normalized");
 check(order.parse({ ...input, phone: "٠٥٠١٢٣٤٥٦٧" }).phone === "966501234567", "Arabic digits normalized");

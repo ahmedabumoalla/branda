@@ -1,3 +1,4 @@
+import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { z } from "zod";
 
 export const giftStoreSettingsSchema = z.object({
@@ -9,14 +10,15 @@ export const giftStoreSettingsSchema = z.object({
 }).refine(v => v.deliveryEnabled || v.pickupEnabled, "فعّل التوصيل أو الاستلام من المحل");
 export type GiftStoreSettings = z.infer<typeof giftStoreSettingsSchema> & { vatRate: number; taxInclusive: boolean };
 const identifier = z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/);
-export const giftOrderInputSchema = z.object({
+export const giftOrderInputFor = (country: BrandPhoneCountry) => z.object({
   slug: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/), requestId: z.uuid(),
-  customerName: z.string().trim().min(2).max(120), phone: z.string().transform(value => value.replace(/[\s+()-]/g, "").replace(/^05/, "9665").replace(/^00966/, "966")).pipe(z.string().regex(/^9665\d{8}$/)),
+  customerName: z.string().trim().min(2).max(120), phone: z.string().max(30).transform(value => normalizeBrandPhone(value, country)).pipe(z.string()),
   fulfillment: z.enum(["delivery", "pickup"]), city: z.string().trim().max(100).default(""), address: z.string().trim().max(1000).default(""),
   paymentMethod: z.enum(["cod", "bank_transfer"]), giftMessage: z.string().trim().max(1000).default(""), notes: z.string().trim().max(1000).default(""),
   expectedTotal: z.number().finite().min(0).max(100_000_000),
   items: z.array(z.object({ productId: z.uuid(), optionId: identifier.optional(), quantity: z.number().int().min(1).max(99), selections: z.array(z.object({ groupId: identifier, choiceIds: z.array(identifier).max(50).optional(), text: z.string().trim().max(1000).optional(), attachmentToken: z.uuid().optional() })).max(20).default([]) })).min(1).max(30),
 });
+export const giftOrderInputSchema = giftOrderInputFor("SA");
 export type GiftOrderInput = z.input<typeof giftOrderInputSchema>;
 export type GiftOrderStatus = "pending" | "quote_requested" | "accepted" | "preparing" | "ready" | "completed" | "cancelled" | "refunded";
 export type GiftPaymentStatus = "unpaid" | "paid" | "partially_refunded" | "refunded";

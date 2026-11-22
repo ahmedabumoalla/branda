@@ -9,7 +9,7 @@ import type { PagerBrand, PagerCustomer, PagerDirectoryFilters, PagerReview, Pag
 
 const page = z.number().int().min(0).max(100000).default(0);
 const query = z.string().trim().max(120).default("");
-const directorySchema = z.object({ cafeId: z.uuid().optional(), phone: z.string().regex(/^9665[0-9]{8}$/).optional(), query, page, period: z.enum(["all", "today", "yesterday", "7d", "30d", "365d"]).default("all") });
+const directorySchema = z.object({ cafeId: z.uuid().optional(), phone: z.string().regex(/^(?:9665\d{8}|9705[69]\d{7})$/).optional(), query, page, period: z.enum(["all", "today", "yesterday", "7d", "30d", "365d"]).default("all") });
 
 export async function getPagerCustomerDirectory(input: PagerDirectoryFilters) {
   await requirePlatformAdmin();

@@ -1,3 +1,4 @@
+import type { BrandPhoneCountry } from "../auth/brand-phone";
 import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits, normalizeLoyaltyReadPhone, resolveReadMethod } from "./read-identifier";
 import { parseBarndaksaQrPayload } from "./secure-qr-payload";
 import { readScopeKey, type ReadScope, type ReadStore } from "./read-outbox";
@@ -12,14 +13,14 @@ type ScopeInput = { scope: ReadScope };
 type CreditInput = ScopeInput & InvoiceTerms & { requestId: string } & ({ cardCode: string } | { phone: string });
 type Failure = { ok: false; reason: string };
 type Dependencies = {
-  store: ReadStore<QueuedInvoice>; scope: ReadScope; online: () => boolean;
+  phoneCountry?: BrandPhoneCountry; store: ReadStore<QueuedInvoice>; scope: ReadScope; online: () => boolean;
   resolve: (input: ScopeInput & { identifier: string }) => Promise<Failure | { ok: true; cardCode: string }>;
   credit: (input: CreditInput) => Promise<Failure | { ok: true; pointsAdded: number; pointsBalance: number }>;
   now?: () => number;
 };
 const definitive = new Set(["invalid_input", "card_unavailable", "request_conflict", "points_rate_changed", "points_mode_changed", "zero_points", "points_limit", "approval_rejected"]);
 
-export function invoiceOutbox({ store, scope, online, resolve, credit, now = Date.now }: Dependencies) {
+export function invoiceOutbox({ store, scope, online, resolve, credit, phoneCountry, now = Date.now }: Dependencies) {
   const key = readScopeKey(scope);
   let running = false;
   const keep = (rows: QueuedInvoice[]) => {
@@ -29,7 +30,7 @@ export function invoiceOutbox({ store, scope, online, resolve, credit, now = Dat
   const list = async () => store.read ? keep(await store.read(key)) : store.change(key, rows => ({ rows, result: keep(rows) }));
   async function save(identifier: string, terms: InvoiceTerms) {
     const raw = normalizeLoyaltyDigits(identifier);
-    const phone = resolveReadMethod("code", raw) === "phone";
+    const phone = resolveReadMethod("code", raw, phoneCountry) === "phone";
     const code = phone ? raw : parseBarndaksaQrPayload(raw, "loyalty-card") ?? raw.toUpperCase();
     if (!raw || raw.length > 500 || (!phone && !isCashierLoyaltyCode(code))) throw new Error("invalid_identifier");
     const row: QueuedInvoice = { ...terms, requestId: crypto.randomUUID(), scope: key,
@@ -57,7 +58,7 @@ export function invoiceOutbox({ store, scope, online, resolve, credit, now = Dat
         if (!row) break;
         let result: Awaited<ReturnType<typeof credit>> = { ok: false, reason: "unavailable" };
         try {
-          const phone = !row.cardCode && row.identifier ? normalizeLoyaltyReadPhone(row.identifier) : null;
+          const phone = !row.cardCode && row.identifier ? normalizeLoyaltyReadPhone(row.identifier, phoneCountry) : null;
           let code = row.cardCode;
           if (!code && !phone && row.identifier) {
             const target = await resolve({ scope, identifier: row.identifier });

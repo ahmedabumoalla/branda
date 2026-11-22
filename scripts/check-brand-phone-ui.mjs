@@ -82,7 +82,7 @@ try {
   });
   await check("invalid and multiple numbers never reach the API", async () => {
     const before = requests.length; const h = harness(); let tree = h.render();
-    for (const phone of ["invalid", "+12025550123", "0511111111 0522222222"]) { field(tree).props.onChange({ target: { value: phone } }); tree = h.render(); await form(tree).props.onSubmit({ preventDefault() {} }); tree = h.render(); assert.match(text(tree), /رقم واتساب سعوديًا صحيحًا/); }
+    for (const phone of ["invalid", "+12025550123", "0511111111 0522222222"]) { field(tree).props.onChange({ target: { value: phone } }); tree = h.render(); await form(tree).props.onSubmit({ preventDefault() {} }); tree = h.render(); assert.match(text(tree), /رقم واتساب صحيحًا لدولة الحساب/); }
     assert.equal(requests.length, before); h.unmount();
   });
   await check("one connect click normalizes the phone and automatically obtains QR", async () => {

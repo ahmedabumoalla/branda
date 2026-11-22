@@ -35,10 +35,11 @@ import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
 import {
   isAllowedCustomerOtpPhone,
   isPhoneOtpRequiredForBrand,
-  normalizeSaudiPhone,
   requestCustomerPhoneOtp,
   type CustomerPhoneOtpPurpose,
 } from "@/lib/auth/phone-otp";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
 import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { linkCustomerAfterSupabasePhoneOtp } from "@/lib/auth/customer-phone-auth";
 import { recordNewCustomerRegistration, type RegistrationSource } from "@/lib/analytics/registration-attribution";
@@ -658,7 +659,8 @@ export async function completeCustomerPhoneOtpAction(
         message: "أدخل اسمًا صحيحًا من حرفين إلى 120 حرفًا",
       };
     }
-    const phoneNormalized = normalizeSaudiPhone(phone);
+    const phoneCountry = await getBrandPhoneCountryBySlug(cafeSlug);
+    const phoneNormalized = normalizeBrandPhone(phone, phoneCountry);
     if (
       !phoneNormalized ||
       !isAllowedCustomerOtpPhone(phoneNormalized, cafeSlug, registrationSource) ||
@@ -677,7 +679,7 @@ export async function completeCustomerPhoneOtpAction(
     if (verificationError || !verified.user || !verified.session) {
       return { ok: false as const, message: "رمز التحقق غير صحيح أو منتهي" };
     }
-    if (normalizeSaudiPhone(verified.user.phone ?? "") !== phoneNormalized) {
+    if (normalizeBrandPhone(verified.user.phone ?? "", phoneCountry) !== phoneNormalized) {
       await supabase.auth.signOut({ scope: "local" });
       return { ok: false as const, message: "تعذر التحقق من رقم الجوال" };
     }

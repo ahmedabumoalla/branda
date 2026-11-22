@@ -260,7 +260,7 @@ assert(pointsHtml.includes("تسجيل نقاط الفاتورة") && !pointsHtm
   assert.equal((await POST(request({step:"credit",...credit,phone:"0501234567"}))).status,400);
   assert.equal((await POST(request({step:"credit",...phoneInvoice,phone:"invalid0501234567"}))).status,400);
   await POST(request({step:"credit",...phoneInvoice,phone:"٠٥٠ ١٢٣ ٤٥٦٧"}));
-  assert.deepEqual(apiCalls.at(-1),forwarded);
+  assert.deepEqual(apiCalls.at(-1),{...phoneInvoice,phone:"٠٥٠ ١٢٣ ٤٥٦٧"}, "Local phone reaches the trusted tenant validation before normalization");
   await POST(request({step:"credit",...phoneInvoice,cardCode:"+966501234567"}));
   assert.deepEqual(apiCalls.at(-1),forwarded, "An older client's pinned phone reference performs the same atomic credit");
 }
@@ -275,6 +275,7 @@ assert(pointsHtml.includes("تسجيل نقاط الفاتورة") && !pointsHtm
   const { addCashierInvoicePointsAction, resolveInvoiceCardAction, inspectPointsCardAction, redeemCashierPointsAction } = load("app/actions/cashier-invoice-points.ts", {
     "next/server": { after: job => jobs.push(job) },
     "@/lib/data/cashier": { requireCashierPermission: async permission => { assert.equal(permission, "loyalty"); return { ...scope, token: "verified-session" }; } },
+    "@/lib/data/brand-phone-country": { getBrandPhoneCountry: async id => { assert.equal(id, scope.cafeId); return "SA"; } },
     "@/lib/data/cashier-loyalty-phone": { resolveCashierLoyaltyPhone: async () => { lookups++; return "CARD123"; } },
     "@/lib/data/loyalty-experience": { lookupRastCashierCard: async () => ({customerName:"Member"}) },
     "@/lib/data/rast-loyalty-access": { assertRastLoyaltyEntitlement: async id => assert.equal(id, scope.cafeId) },

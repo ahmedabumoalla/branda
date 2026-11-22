@@ -22,15 +22,15 @@ const mocks={
   "@/app/actions/loyalty-experience": {},
   "@/lib/supabase/admin": {createAdminClient:()=>({rpc:async(name,args)=>{
     adminCalls++;
-    if(name==="claim_customer_phone_otp_delivery") return {data:queued.splice(0,1),error:null};
+    if(name==="claim_customer_phone_otp_delivery_context") return {data:queued.splice(0,1),error:null};
     if(name==="finish_customer_phone_otp_delivery") return {data:true,error:null};
     assert.equal(name,"enqueue_customer_phone_otp_delivery");
     assert.equal(args.p_provider_instance,"isolated-provider");
-    assert.match(args.p_phone_normalized,/^9665\d{8}$/);
+    assert.match(args.p_phone_normalized,/^(?:9665\d{8}|9705[69]\d{7})$/);
     const data=admittedSlug; admittedSlug=null;
     if(!data) return {data:null,error:{code:"42501"}};
     const id="16b4c203-44a2-4a18-98c5-c63403800a01";
-    queued.push({id,payload:args.p_payload,lease_token:"16b4c203-44a2-4a18-98c5-c63403800a02"});
+    queued.push({id,cafe_id:null,purpose:null,payload:args.p_payload,lease_token:"16b4c203-44a2-4a18-98c5-c63403800a02"});
     return {data:id,error:null};
   }})},
   "@/lib/supabase/server": {createClient:()=>{throw new Error("unexpected real auth access");}},
@@ -114,6 +114,9 @@ try {
   expect((await POST(request())).status,200,"SQL-admitted sales cashier can use the existing signed hook");
   expect((await POST(request())).status,403,"sales cashier dispatch cannot replay without fresh admission");
   expect(deliveries.length,5,"one message for one finance admission");
+  admittedSlug="palestinian-brand";
+  expect((await POST(request(body("+970591234567")))).status,200,"admitted Palestinian phone reaches signed hook");
+  expect(deliveries.at(-1).phoneNormalized,"970591234567","worker delivers the admitted Palestinian canonical number");
   expect(isPhoneOtpRequiredForBrand("unlisted-brand","loyalty"),true,"loyalty scope supports entitled new brands");
   expect(isAllowedCustomerOtpPhone("966500000099","unlisted-brand","loyalty"),true,"loyalty customers can verify their own phones");
   expect(isPhoneOtpRequiredForBrand("rast"),true,"Rast enabled in test mode");
@@ -135,6 +138,29 @@ try {
     expect(paused.includes('href="/menu/rast"'),true,"disabled program keeps its actual menu link");
   }
   expect(renderEnrollment(true,false).includes('<form'),true,"enabled program retains its enrollment form");
+  const cafeId = "10000000-0000-4000-8000-000000000001", canonical = "970591234567";
+  let authPhone = canonical, writes = 0;
+  const profileFilters = [];
+  mocks["@/lib/supabase/admin"] = {createAdminClient: () => ({
+    from(table) {
+      const query = {
+        select() { return query; }, not() { return query; }, limit() { return query; },
+        eq(column, value) { if (table === "customer_profiles") profileFilters.push([column,value]); return query; },
+        async maybeSingle() { return {data: table === "customer_profiles" ? {user_id:"customer"} : table === "profiles" ? {role:"customer"} : null}; },
+      };
+      return query;
+    },
+    auth:{admin:{
+      getUserById: async () => ({data:{user:{id:"customer", phone:authPhone}}}),
+      updateUserById: async () => { writes++; throw Error("unexpected credential change"); },
+    }},
+  })};
+  const {ensureCustomerPhoneAuthUser} = load("lib/auth/customer-phone-auth.ts");
+  expect((await ensureCustomerPhoneAuthUser(canonical,cafeId)).id,"customer","canonical Auth phone supports both provider representations");
+  expect(profileFilters.some(([key,value]) => key === "cafe_id" && value === cafeId),true,"legacy candidate is isolated to requesting cafe");
+  authPhone = "+966591234567";
+  await assert.rejects(ensureCustomerPhoneAuthUser(canonical,cafeId), /IDENTITY_CONFLICT/);
+  expect(writes,0,"same national number in another country never changes an existing credential");
   console.log(`PASS: ${checks} OTP hook and enrollment checks with actual HMAC verification; database/provider isolated, no messages sent.`);
 } finally {
   for(const key of envKeys) { if(previous[key]===undefined) delete process.env[key]; else process.env[key]=previous[key]; }

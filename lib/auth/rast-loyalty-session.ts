@@ -2,7 +2,8 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { getCustomerProfileByUser } from "@/lib/data/customers";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
@@ -32,10 +33,11 @@ export async function getLoyaltyCustomerProfile(slug: string) {
   if (claimsError || !data || data.claims.sub !== user.id) return null;
   const methods = data.claims.amr;
   if (!Array.isArray(methods) || !methods.some((entry) => typeof entry === "object" && entry !== null && "method" in entry && entry.method === "otp")) return null;
-  const phone = normalizeSaudiPhone(user.phone ?? "");
+  const phoneCountry = await getBrandPhoneCountryBySlug(slug);
+  const phone = normalizeBrandPhone(user.phone ?? "", phoneCountry);
   if (!phone) return null;
   const profile = await getCustomerProfileByUser(slug, user.id);
-  if (!profile || profile.status !== "active" || profile.blocked_at || profile.phone_auth_conflict || normalizeSaudiPhone(String(profile.phone_normalized ?? profile.phone ?? "")) !== phone) return null;
+  if (!profile || profile.status !== "active" || profile.blocked_at || profile.phone_auth_conflict || normalizeBrandPhone(String(profile.phone_normalized ?? profile.phone ?? ""), phoneCountry) !== phone) return null;
   return profile;
 }
 

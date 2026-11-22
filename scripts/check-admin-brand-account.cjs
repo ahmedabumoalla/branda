@@ -64,6 +64,7 @@ function account(scenario = {}) {
   };
   const api = load("lib/data/admin-brand-account.ts", {
     "@/lib/data/cafes": { requirePlatformAdmin: async () => ({ id: "admin" }) },
+    "@/lib/data/brand-phone-country": { getBrandPhoneCountry: async () => "SA" },
     "@/lib/data/admin-brand-onboarding": {
       createAdminBrandAccount: async input => { created.push(input); return cafe; },
       updateAdminBrandOwner: async input => { staged.push(input); },

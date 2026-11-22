@@ -1,5 +1,8 @@
 import "server-only";
 
+import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
@@ -80,7 +83,7 @@ export function isAllowedCustomerOtpPhone(phoneNormalized: string, cafeSlug?: st
   if (source === "loyalty" || cafeSlug?.trim().toLowerCase() === "rast") return true;
   if (!enabled(process.env.PHONE_OTP_TEST_MODE)) return true;
   return [...csvSet(process.env.PHONE_OTP_ALLOWED_PHONES)].some(
-    (phone) => normalizeSaudiPhone(phone) === phoneNormalized,
+    (phone) => normalizeOwnerPhone(phone) === phoneNormalized,
   );
 }
 
@@ -107,12 +110,14 @@ export async function requestCustomerPhoneOtp(
     return { required: false, ok: true };
   }
 
-  const phoneNormalized = normalizeSaudiPhone(phone);
+  const cafe = await getPublicCafeBySlugAdmin(slug);
+  if (!cafe) return { required: true, ok: false, message: "تعذر إرسال رمز التحقق حاول مرة أخرى" };
+  const phoneNormalized = normalizeBrandPhone(phone, await getBrandPhoneCountry(cafe.id));
   if (!phoneNormalized) {
     return {
       required: true,
       ok: false,
-      message: "أدخل رقم جوال سعودي صحيحًا",
+      message: "أدخل رقم جوال صحيح لدولة العلامة",
     };
   }
   if (!isAllowedCustomerOtpPhone(phoneNormalized, slug, source)) {
@@ -120,15 +125,6 @@ export async function requestCustomerPhoneOtp(
       required: true,
       ok: false,
       message: "تعذر إرسال رمز التحقق لهذا الرقم",
-    };
-  }
-
-  const cafe = await getPublicCafeBySlugAdmin(slug);
-  if (!cafe) {
-    return {
-      required: true,
-      ok: false,
-      message: "تعذر إرسال رمز التحقق حاول مرة أخرى",
     };
   }
 
@@ -158,7 +154,7 @@ export async function requestCustomerPhoneOtp(
   }
 
   try {
-    await ensureCustomerPhoneAuthUser(phoneNormalized);
+    await ensureCustomerPhoneAuthUser(phoneNormalized, cafe.id);
     const supabase = await createClient();
     const { error: otpError } = await supabase.auth.signInWithOtp({
       phone: `+${phoneNormalized}`,

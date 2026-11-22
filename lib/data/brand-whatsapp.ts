@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { readMaintenanceSessionCookie } from "@/lib/platform/maintenance";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { marketingConfigured } from "@/lib/marketing/crypto";
 import { MarketingError as BrandWhatsAppError, readMarketingConnection, marketingConnectionCredentials, refreshMarketingConnection, runMarketingConnectionAction } from "@/lib/data/marketing";
 import { LOCO_CAFE_ID, supportsPrivateWhatsApp, type BrandWhatsAppDashboard, type BrandWhatsAppResult } from "@/lib/whatsapp/brand-connection-types";
@@ -12,12 +12,9 @@ import type { GreenApiMarketingCredentials } from "@/lib/whatsapp/green-api-mark
 
 export { BrandWhatsAppError };
 
-const phone = z.string().max(30)
-  .transform(value => value.replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 0x06f0 : 0x0660))))
-  .refine(value => /^[+\d\s()-]+$/.test(value))
-  .transform(value => normalizeSaudiPhone(value)).refine((value): value is string => Boolean(value));
-const actionSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("connect"), phone }).strict(),
+const brandPhoneSchema = (country: BrandPhoneCountry) => z.string().max(30).transform(value => normalizeBrandPhone(value, country)).refine((value): value is string => Boolean(value), "تحقق من رقم الجوال ودولة الحساب");
+const actionSchema = (country: BrandPhoneCountry) => z.discriminatedUnion("action", [
+  z.object({ action: z.literal("connect"), phone: brandPhoneSchema(country) }).strict(),
   z.object({ action: z.enum(["refresh", "qr", "disconnect"]) }).strict(),
 ]);
 
@@ -39,20 +36,20 @@ async function requireBrandWhatsAppContext() {
   }
   if (!supportsPrivateWhatsApp(cafeId)) throw new BrandWhatsAppError("ربط رقم العلامة غير متاح لهذا الحساب", 403);
   const db = createAdminClient();
-  const { data: cafe, error: cafeError } = await db.from("cafes").select("id,name,owner_user_id,status").eq("id", cafeId).is("deleted_at", null).maybeSingle();
+  const { data: cafe, error: cafeError } = await db.from("cafes").select("id,name,owner_user_id,status,phone_country").eq("id", cafeId).is("deleted_at", null).maybeSingle();
   if (cafeError || !cafe || !["active", "published"].includes(cafe.status)) throw new BrandWhatsAppError("العلامة غير متاحة", 403);
   if (profile.role !== "platform_admin" && cafe.owner_user_id !== user.id) {
     const { data: member, error } = await db.from("cafe_members").select("role").eq("cafe_id", cafeId).eq("user_id", user.id).maybeSingle();
     if (error || member?.role !== "owner") throw new BrandWhatsAppError("ربط الرقم متاح لمالك العلامة فقط", 403);
   }
-  return { db, cafeId, userId: user.id, brandName: String(cafe.name) };
+  return { db, cafeId, phoneCountry: cafe.phone_country as BrandPhoneCountry, userId: user.id, brandName: String(cafe.name) };
 }
 
 type Context = Awaited<ReturnType<typeof requireBrandWhatsAppContext>>;
 async function dashboard(context: Context): Promise<BrandWhatsAppDashboard> {
   const row = await readMarketingConnection(context);
   return {
-    brandName: context.brandName,
+    phoneCountry: context.phoneCountry, brandName: context.brandName,
     configured: marketingConfigured(),
     platformFallback: context.cafeId !== LOCO_CAFE_ID,
     transactionalEnabled: Boolean(row?.transactional_requested_at) && !["disconnected", "disconnecting"].includes(row!.status),
@@ -68,9 +65,11 @@ async function dashboard(context: Context): Promise<BrandWhatsAppDashboard> {
 export async function getBrandWhatsAppDashboard() { return dashboard(await requireBrandWhatsAppContext()); }
 
 export async function runBrandWhatsAppAction(raw: unknown): Promise<BrandWhatsAppResult> {
-  const input = actionSchema.safeParse(raw);
-  if (!input.success) throw new BrandWhatsAppError("راجع الطلب وأدخل رقم جوال سعودي صحيح");
+  const candidates = { SA: actionSchema("SA").safeParse(raw), PS: actionSchema("PS").safeParse(raw) };
+  if (!candidates.SA.success && !candidates.PS.success) throw new BrandWhatsAppError("راجع الطلب وأدخل رقم جوال صحيح لدولة الحساب");
   const context = await requireBrandWhatsAppContext();
+  const input = candidates[context.phoneCountry];
+  if (!input.success) throw new BrandWhatsAppError("راجع الطلب وأدخل رقم جوال صحيح لدولة الحساب");
   if (!marketingConfigured()) throw new BrandWhatsAppError("خدمة الربط غير متاحة حاليًا حاول لاحقًا", 503);
   if (input.data.action === "connect") {
     const row = await readMarketingConnection(context);
@@ -97,7 +96,7 @@ export async function getBrandCustomerWhatsAppCredentials(cafeId: string | null 
     const { data: cafe, error } = await db.from("cafes").select("id,status").eq("id", cafeId).is("deleted_at", null).maybeSingle();
     if (error || !cafe || !["active", "published"].includes(cafe.status)) return null;
     const row = await readMarketingConnection({ db, cafeId });
-    if (!row?.transactional_requested_at || row.status !== "connected" || !/^9665\d{8}$/.test(row.requested_phone)
+    if (!row?.transactional_requested_at || row.status !== "connected" || !/^(?:9665\d{8}|9705[69]\d{7})$/.test(row.requested_phone)
       || row.requested_phone !== row.verified_phone || !row.instance_id || !row.encrypted_credentials) return null;
     return { ...marketingConnectionCredentials(row), expectedPhone: row.requested_phone, generation: row.generation };
   } catch { return null; }

@@ -31,7 +31,9 @@ const db = { from(table) {
   const chain = { select() { return chain; }, eq(key, value) { query.filters.push([key, value]); return chain; }, async maybeSingle() { return { data: table === "customer_profiles" ? customer : card, error: dbError ? { message: "private db detail" } : null }; } };
   return chain; // No mutation methods: searching must never write customer/card balances.
 } };
+let phoneCountry = "SA";
 const { resolveCashierLoyaltyPhone } = load("lib/data/cashier-loyalty-phone.ts", {
+  "@/lib/data/brand-phone-country": { getBrandPhoneCountry: async id => { assert.equal(id, "brand-a"); return phoneCountry; } },
   "server-only": {}, "@/lib/supabase/admin": { createAdminClient: () => db },
   "@/lib/data/cashier": { requireCashierPermission: async permission => { assert.equal(permission, "loyalty"); if (!authorized) throw Error("unauthorized"); return { cafeId: "brand-a" }; } },
   "@/lib/data/rast-loyalty-access": { assertRastLoyaltyEntitlement: async id => { assert.equal(id, "brand-a"); if (!entitled) throw Error("not entitled"); } },
@@ -41,6 +43,12 @@ for (const phone of ["0501234567", "+966501234567", "00966501234567", "501234567
   assert.equal(await resolveCashierLoyaltyPhone(phone), "CARD123");
   assert.deepEqual(queries.map(q => q.filters), [[['cafe_id', 'brand-a'], ['phone_normalized', '966501234567']], [['cafe_id', 'brand-a'], ['customer_profile_id', 'customer-a']]]);
 }
+phoneCountry = "PS";
+queries.length = 0;
+assert.equal(await resolveCashierLoyaltyPhone("0561234567"), "CARD123");
+assert.deepEqual(queries[0].filters, [["cafe_id", "brand-a"], ["phone_normalized", "970561234567"]]);
+await assert.rejects(() => resolveCashierLoyaltyPhone("+966561234567"));
+phoneCountry = "SA";
 for (const invalid of ["", "50123", "abc0501234567", "0501234567%", "1".repeat(31), null, {}, "+15551234567"]) {
   queries.length = 0; await assert.rejects(() => resolveCashierLoyaltyPhone(invalid)); assert.equal(queries.length, 0);
 }
@@ -136,6 +144,7 @@ assert(!all().some(n => n.type === 'button' && text(n).includes('تأكيد إص
 const scope = { cafeId:crypto.randomUUID(), cashierId:crypto.randomUUID() };
 const requestId = crypto.randomUUID(), mutations = [];
 const { scanLoyaltyExperienceAction } = load("app/actions/loyalty-experience.ts", {
+  "@/lib/data/brand-phone-country": { getBrandPhoneCountry: async id => { assert.equal(id, scope.cafeId); return "SA"; } },
   "@/lib/data/loyalty-experience": {}, "@/lib/data/loyalty-enrollment": {}, "next/cache": {}, "next/server": { after() {} },
   "@/lib/data/cashier": { requireCashierPermission: async () => ({ ...scope, cafeSlug:"demo", token:"local-session" }) },
   "@/lib/data/cafes": {}, "@/lib/data/feature-entitlements": { getPublicCafeFeatureCodesBySlug:async () => ["loyalty"] },

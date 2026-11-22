@@ -9,7 +9,8 @@ import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { requireCashierPermission } from "@/lib/data/cashier";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { salonLoyaltyToken } from "@/lib/salon/loyalty-link";
 import { bookingStatuses, type SalonBooking, type SalonCommand, type SalonFilter, type SalonMode, type SalonPage, type SalonAnnouncement } from "@/lib/salon/types";
 
@@ -66,8 +67,8 @@ async function actor(mode: SalonMode, pager = false) {
 export async function createSalonBooking(input: unknown) {
   const draft = z.object({ id: uuid, slug: z.string(), name: z.string().trim().min(2).max(120), phone: z.string().max(30), serviceId: uuid.nullable(), start: z.string().datetime() }).parse(input);
   const brand = await salonBrand(draft.slug);
-  const phone = normalizeSaudiPhone(draft.phone.replace(/[٠-٩۰-۹]/g, d => String(d.charCodeAt(0) - (d >= "۰" ? 1776 : 1632))));
-  if (!phone) throw new Error("أدخل رقم جوال سعودي صحيح يبدأ بـ 05");
+  const phone = normalizeBrandPhone(draft.phone, await getBrandPhoneCountry(brand.id));
+  if (!phone) throw new Error("أدخل رقم جوال صحيح لدولة الحساب");
   const h = await headers();
   const address = (h.get("x-vercel-forwarded-for") ?? h.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
   const token = salonPortalToken(draft.id);

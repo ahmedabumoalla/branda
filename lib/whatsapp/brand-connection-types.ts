@@ -13,6 +13,7 @@ export function supportsPrivateWhatsAppSlug(slug: string | null | undefined) {
 }
 
 export type BrandWhatsAppDashboard = {
+  phoneCountry: import("@/lib/auth/brand-phone").BrandPhoneCountry;
   brandName: string;
   configured: boolean;
   transactionalEnabled: boolean;

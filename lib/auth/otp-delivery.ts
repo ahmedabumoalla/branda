@@ -1,4 +1,5 @@
 import "server-only";
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -7,7 +8,7 @@ import { greenApiProviderInstanceKey, sendGreenApiCustomerMessage, sendGreenApiS
 import { isBrandCustomerOtp, selectBrandOtpSender } from "@/lib/whatsapp/customer-routing";
 
 const payloadSchema = z.object({
-  phoneNormalized: z.string().regex(/^9665\d{8}$/),
+  phoneNormalized: z.string().regex(canonicalBrandMobile),
   code: z.string().regex(/^\d{6}$/),
 });
 const sealedPayloadSchema = payloadSchema.extend({ providerInstance: z.string().min(1).max(200) });

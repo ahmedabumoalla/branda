@@ -1,4 +1,6 @@
 'use server';
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
+import { normalizeFinanceContactPhones } from "@/lib/finance/contact-phones";
 import {z} from 'zod';
 import {revalidatePath} from 'next/cache';
 import {actionResult} from '@/lib/platform/action-result';
@@ -14,7 +16,9 @@ import {readSystemPayment} from '@/lib/erp/settings-payments';
 import {invalidateFinanceViews} from '@/lib/performance/finance-route-invalidation';
 import {SAUDI_EINVOICE_APP} from '@/lib/finance/invoice-amendment';
 import {readSaudiEinvoicePolicy} from '@/lib/data/invoice-amendment';
-async function write(slug:string,action:string,data:Record<string,unknown>,request:string){z.uuid().parse(request);const c=await systemSettingsContext(slug),r=await c.client.rpc('erp_system_settings_write',{p_cafe:c.cafe.id,p_action:action,p_data:data,p_request:request});systemSettingsError(r.error);revalidatePath('/dashboard/system','layout');revalidatePath(`/finance/${slug}/system`,'layout');if(action==='general')invalidateFinanceViews(c.cafe.slug);return r.data as {id:string|null;revision:number};}
+async function write(slug:string,action:string,data:Record<string,unknown>,request:string){z.uuid().parse(request);const c=await systemSettingsContext(slug);
+if (action === 'general') normalizeFinanceContactPhones(data, await getBrandPhoneCountry(c.cafe.id));
+const r=await c.client.rpc('erp_system_settings_write',{p_cafe:c.cafe.id,p_action:action,p_data:data,p_request:request});systemSettingsError(r.error);revalidatePath('/dashboard/system','layout');revalidatePath(`/finance/${slug}/system`,'layout');if(action==='general')invalidateFinanceViews(c.cafe.slug);return r.data as {id:string|null;revision:number};}
 export async function saveSystemGeneral(slug:string,input:unknown,request:string){return actionResult(()=>{const parsed=systemGeneralSchema.safeParse(input);if(!parsed.success){const taxIssue=parsed.error.issues.find(issue=>issue.path[0]==='taxNumber');throw new Error(taxIssue?.message||'راجع بيانات إعدادات الحساب ثم احفظ مجددًا');}return write(slug,'general',parsed.data,request);},'راجع إعدادات الحساب');}
 export async function saveSystemBrand(slug:string,input:unknown,request:string){return actionResult(()=>write(slug,'brand',systemBrandSchema.parse(input),request),'راجع شعار وألوان النظام');}
 export async function saveSystemApps(slug:string,apps:unknown,revision:number,request:string){return actionResult(async()=>{const data=z.record(z.string(),z.boolean()).parse(apps);if(Object.keys(data).some(k=>k!==SAUDI_EINVOICE_APP&&(!erpRoleDomains.some(d=>d.key===k)||['store','templates'].includes(k))))throw new Error('اختر تطبيقًا متاحًا');if(Object.hasOwn(data,SAUDI_EINVOICE_APP)){const c=await systemSettingsContext(slug),policy=await readSaudiEinvoicePolicy(c.client,c.cafe.id);if(!policy.available)throw new Error(policy.message);if(policy.appsRevision!==revision)throw new Error('تغيرت التطبيقات أعد تحميل الصفحة');}const result=await write(slug,'apps',{...data,revision:z.number().int().min(0).parse(revision)},request);invalidateFinanceViews(slug);return result;},'تعذر حفظ التطبيقات');}

@@ -1,5 +1,6 @@
 "use client";
 
+import type { BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { useEffect, useMemo, useState } from "react";
 import type { enqueueLoyaltyReadAction, loadCashierLoyaltyReadsAction } from "@/app/actions/loyalty-read-operations";
 import { createIndexedReadStore, createReadOutbox, readScopeKey, type LocalRead, type ReadScope } from "@/lib/loyalty/read-outbox";
@@ -19,13 +20,13 @@ async function postRead<T>(body: object): Promise<T> {
   }
 }
 
-export function useReadOutbox({ cafeId, cashierId }: ReadScope) {
+export function useReadOutbox({ cafeId, cashierId }: ReadScope, phoneCountry: BrandPhoneCountry = "SA") {
   const scopeKey = readScopeKey({ cafeId, cashierId });
   const outbox = useMemo(() => createReadOutbox({
-    scope: { cafeId, cashierId }, store: createIndexedReadStore(),
+    phoneCountry, scope: { cafeId, cashierId }, store: createIndexedReadStore(),
     send: input => postRead<Awaited<ReturnType<typeof enqueueLoyaltyReadAction>>>({ step: "enqueue", input }),
     load: (ids, scope) => postRead<Awaited<ReturnType<typeof loadCashierLoyaltyReadsAction>>>({ step: "status", ids, scope }),
-  }), [cafeId, cashierId]);
+  }), [cafeId, cashierId, phoneCountry]);
   const [rows, setRows] = useState<LocalRead[]>([]);
   const [storageFailedFor, setStorageFailedFor] = useState<string | null>(null);
   const [authPaused, setAuthPaused] = useState(false);

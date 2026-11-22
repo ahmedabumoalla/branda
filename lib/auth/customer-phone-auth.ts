@@ -1,6 +1,8 @@
 import "server-only";
 import type { RegistrationSource } from "@/lib/analytics/registration-attribution";
 
+import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
 import {
@@ -8,7 +10,6 @@ import {
   type CustomerProfileRow,
 } from "@/lib/data/customers";
 import {
-  normalizeSaudiPhone,
   type CustomerPhoneOtpPurpose,
 } from "@/lib/auth/phone-utils";
 
@@ -22,6 +23,10 @@ function firstRow(data: unknown): LinkRpcRow {
   return (data ?? {}) as LinkRpcRow;
 }
 
+function matchesAuthPhone(value: string | undefined, canonical: string) {
+  return value === canonical || value === `+${canonical}`;
+}
+
 async function findAuthUserByPhone(phoneNormalized: string) {
   const admin = createAdminClient();
   for (let page = 1; page <= 10; page += 1) {
@@ -30,14 +35,14 @@ async function findAuthUserByPhone(phoneNormalized: string) {
       perPage: 100,
     });
     if (error) throw error;
-    const found = data.users.find((user) => user.phone === `+${phoneNormalized}`);
+    const found = data.users.find((user) => matchesAuthPhone(user.phone, phoneNormalized));
     if (found) return found;
     if (data.users.length < 100) break;
   }
   return null;
 }
 
-export async function ensureCustomerPhoneAuthUser(phoneNormalized: string) {
+export async function ensureCustomerPhoneAuthUser(phoneNormalized: string, cafeId: string) {
   const admin = createAdminClient();
   const { data: identity, error: identityError } = await admin
     .from("customer_phone_auth_identities")
@@ -49,6 +54,7 @@ export async function ensureCustomerPhoneAuthUser(phoneNormalized: string) {
   const { data: linkedProfile, error: profileError } = await admin
     .from("customer_profiles")
     .select("user_id")
+    .eq("cafe_id", cafeId)
     .eq("phone_normalized", phoneNormalized)
     .eq("phone_auth_conflict", false)
     .not("user_id", "is", null)
@@ -88,7 +94,9 @@ export async function ensureCustomerPhoneAuthUser(phoneNormalized: string) {
     });
     if (error || !data.user) throw error ?? new Error("CUSTOMER_AUTH_CREATE_FAILED");
     user = data.user;
-  } else if (user.phone !== `+${phoneNormalized}`) {
+  } else if (user.phone && !matchesAuthPhone(user.phone, phoneNormalized)) {
+    throw new Error("CUSTOMER_PHONE_AUTH_IDENTITY_CONFLICT");
+  } else if (!user.phone) {
     const { data, error } = await admin.auth.admin.updateUserById(user.id, {
       phone: `+${phoneNormalized}`,
       user_metadata: {
@@ -112,7 +120,7 @@ export async function linkCustomerAfterSupabasePhoneOtp(input: {
   registrationSource?: RegistrationSource;
 }) {
   const cafe = await getPublicCafeBySlugAdmin(input.slug);
-  const phoneNormalized = normalizeSaudiPhone(input.phone);
+  const phoneNormalized = cafe ? normalizeBrandPhone(input.phone, await getBrandPhoneCountry(cafe.id)) : null;
   if (!cafe || !phoneNormalized) {
     return {
       ok: false as const,

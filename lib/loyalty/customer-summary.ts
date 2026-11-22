@@ -1,4 +1,5 @@
-import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits, resolveReadMethod } from "./read-identifier";
+import type { BrandPhoneCountry } from "../auth/brand-phone";
+import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits, normalizeLoyaltyReadPhone, resolveReadMethod } from "./read-identifier";
 import { parseBarndaksaQrPayload } from "./secure-qr-payload";
 
 export type CustomerSummary = {
@@ -17,15 +18,13 @@ type SummaryInput = { cafeId: string; cashierId: string; method: "code" | "phone
 const EMPTY: CustomerSummaryState = { id: null, status: "idle", summary: null, confirmed: false };
 
 /** Only complete identifiers leave the device; partial phones are never card lookups. */
-export function customerSummaryIdentifier(method: "code" | "phone", raw: string) {
+export function customerSummaryIdentifier(method: "code" | "phone", raw: string, country: BrandPhoneCountry = "SA") {
   const value = normalizeLoyaltyDigits(raw.trim());
   if (!value || value.length > 500) return null;
-  method = resolveReadMethod(method, value);
+  method = resolveReadMethod(method, value, country);
   if (method === "phone") {
-    if (!/^[+\d\s()-]+$/.test(value)) return null;
-    const digits = value.replace(/\D/g, "");
-    if (!/^(?:05\d{8}|5\d{8}|9665\d{8}|009665\d{8})$/.test(digits)) return null;
-    return { method, value: `966${digits.replace(/^(?:00966|966|0)/, "")}` };
+    const phone = normalizeLoyaltyReadPhone(value, country);
+    return phone ? { method, value: phone } : null;
   }
   const parsed = parseBarndaksaQrPayload(value, "loyalty-card");
   const code = parsed ?? value.toUpperCase();
@@ -47,6 +46,7 @@ function summaryValue(value: unknown): CustomerSummary | null {
 
 /** Per-mounted-cashier memory only; never persisted or shared across scopes. */
 export function createCustomerSummaryController(options: {
+  phoneCountry?: BrandPhoneCountry;
   scope: { cafeId: string; cashierId: string };
   fetch?: typeof fetch;
   timers?: { setTimeout: typeof setTimeout; clearTimeout: typeof clearTimeout };
@@ -81,7 +81,7 @@ export function createCustomerSummaryController(options: {
   }
   function resume() { const start = suspended; suspended = null; start?.(); }
   function lookup(method: "code" | "phone", value: string, settings: { immediate?: boolean } = {}): number | null {
-    const identifier = customerSummaryIdentifier(method, value);
+    const identifier = customerSummaryIdentifier(method, value, options.phoneCountry);
     if (!identifier) { clear(); return null; }
     const key = JSON.stringify([identifier.method, identifier.value]);
     if (key === identifierKey && ["loading", "slow", "ready"].includes(state.status)) {

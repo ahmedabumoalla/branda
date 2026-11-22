@@ -227,8 +227,8 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
   }
   async function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const parsed = parseCampaignRecipients(phone);
-    if (parsed.phones.length !== 1 || parsed.invalid.length) { setError("أدخل رقم واتساب سعوديًا صحيحًا مثل ‎+9665XXXXXXXX"); return; }
+    const parsed = parseCampaignRecipients(phone, dashboard?.phoneCountry);
+    if (parsed.phones.length !== 1 || parsed.invalid.length) { setError("أدخل رقم واتساب صحيحًا لدولة الحساب"); return; }
     const result = await request({ action: "connect", phone: parsed.phones[0] });
     if (result) setNotice("بدأ تجهيز اتصال علامتك سيظهر خيار رمز الربط عند جاهزيته");
   }
@@ -273,7 +273,7 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
         {!dashboard.configured && <div className={styles.error} role="status">خدمة ربط واتساب غير جاهزة حاليًا تواصل مع دعم برندة لإكمال إعدادها</div>}
         <section className={`${styles.panel} ${styles.connection}`} aria-labelledby="sender-heading">
           <div className={styles.heading}><div><p className={styles.eyebrow}>رقم الإرسال</p><h2 id="sender-heading">واتساب علامتك</h2><p className={styles.hint}>اختر رقم واتساب الذي تريد أن تصل رسائلك منه ويمكن أن يختلف عن رقم التواصل في حسابك</p></div><span className={styles.badge} data-connected={connected} role="status">{connected && <CheckCheck size={15} aria-hidden="true" />}{connectionLabels[connectionStatus ?? "disconnected"] ?? "جارٍ التحقق"}</span></div>
-          {canConnect ? <form onSubmit={connect} className={styles.inline}><label className={styles.field} htmlFor="sender-phone">رقم واتساب العلامة مع رمز الدولة<input id="sender-phone" className={styles.input} dir="ltr" type="tel" autoComplete="tel" inputMode="tel" placeholder="+9665XXXXXXXX" value={phone} onChange={(event) => setPhone(event.target.value)} required maxLength={24} disabled={busy || !dashboard.configured || !dashboard.eligible} /></label><button className={styles.button} disabled={busy || !dashboard.configured || !dashboard.eligible}><Smartphone size={17} aria-hidden="true" />{busy ? "جارٍ تجهيز الاتصال" : "ربط رقم العلامة"}</button></form> : <>
+          {canConnect ? <form onSubmit={connect} className={styles.inline}><label className={styles.field} htmlFor="sender-phone">رقم واتساب العلامة مع رمز الدولة<input id="sender-phone" className={styles.input} dir="ltr" type="tel" autoComplete="tel" inputMode="tel" placeholder={dashboard?.phoneCountry === "PS" ? "+97059XXXXXXX" : "+9665XXXXXXXX"} value={phone} onChange={(event) => setPhone(event.target.value)} required maxLength={24} disabled={busy || !dashboard.configured || !dashboard.eligible} /></label><button className={styles.button} disabled={busy || !dashboard.configured || !dashboard.eligible}><Smartphone size={17} aria-hidden="true" />{busy ? "جارٍ تجهيز الاتصال" : "ربط رقم العلامة"}</button></form> : <>
             <p className={styles.hint}>الرقم المطلوب <bdi dir="ltr">+{dashboard.connection?.phone}</bdi>{connected && <> — الرقم المتصل <strong><bdi dir="ltr">+{dashboard.connection?.verifiedPhone}</bdi></strong></>}</p>
             {dashboard.connection?.lastError && <p className={styles.error}>{dashboard.connection.lastError}</p>}
             {connectionStatus === "mismatch" && <p className={styles.error}>الرقم الذي مسح الرمز مختلف عن رقم الإرسال المطلوب افصل الاتصال ثم اربط الرقم الصحيح</p>}

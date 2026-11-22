@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BellRing, Gift, RefreshCw, WalletCards } from "lucide-react";
 import { fetchFinancePosCustomerAction, fetchFinancePosPagerAction, updateFinancePosPagerAction } from "@/app/actions/finance-pos-customer";
+import type { BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { normalizePosCustomerPhone, type FinancePosCustomer, type FinancePosCustomerResult } from "@/lib/finance/pos-customer";
 import type { PagerPage } from "@/lib/pager/types";
 import { Modal } from "@/components/dashboard/ui/modal";
@@ -22,7 +23,7 @@ export function financePosCustomerNotice(result?: FinancePosCustomerResult, lang
   return messages.filter(Boolean).map(text => language === "en" ? financePosCustomerEnglish[text] ?? text : text).join(" · ");
 }
 
-export function usePosCustomer(slug?: string) {
+export function usePosCustomer(slug?: string, country: BrandPhoneCountry = "SA") {
   const [phone, setPhone] = useState("");
   const [result, setResult] = useState<{ data: FinancePosCustomer; slug?: string } | null>(null);
   const [rewardId, setRewardId] = useState("");
@@ -30,7 +31,7 @@ export function usePosCustomer(slug?: string) {
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const generation = useRef(0);
-  const normalized = normalizePosCustomerPhone(phone);
+  const normalized = normalizePosCustomerPhone(phone, country);
   const matching = result?.slug === slug && result?.data.phone === normalized ? result.data : null;
 
   function changePhone(value: string) {
@@ -60,16 +61,16 @@ export function usePosCustomer(slug?: string) {
     if (rewardId && !matching?.rewards.some((reward) => reward.id === rewardId)) throw new Error("حدّث بطاقة العميل قبل صرف المكافأة");
     return { customerPhone: normalized, ...(rewardId ? { redeemRewardId: rewardId } : {}) };
   }
-  return { phone, customer: matching, rewardId, loading, error, normalized, changePhone, selectReward: setRewardId, retry: () => { setError(""); setAttempt((value) => value + 1); }, reset: () => changePhone(""), payload };
+  return { phone, country, customer: matching, rewardId, loading, error, normalized, changePhone, selectReward: setRewardId, retry: () => { setError(""); setAttempt((value) => value + 1); }, reset: () => changePhone(""), payload };
 }
 
 export function FinancePosCustomerField({ state, disabled }: { state: ReturnType<typeof usePosCustomer>; disabled: boolean }) {
   const { t, displayName } = useFinancePosLocale();
   const customer = state.customer;
   return <section className={s.customer} aria-label={t("جوال العميل والولاء")}>
-    <label className={s.phoneLabel}><span>{t("رقم جوال العميل")} <small>{t("اختياري")}</small></span><input name="posCustomerPhone" type="tel" inputMode="tel" autoComplete="off" dir="ltr" maxLength={24} placeholder="05xxxxxxxx" value={state.phone} disabled={disabled} onChange={(event) => state.changePhone(event.target.value)} aria-describedby="pos-customer-help" aria-invalid={!!state.phone.trim() && !state.normalized} /></label>
+    <label className={s.phoneLabel}><span>{t("رقم جوال العميل")} <small>{t("اختياري")}</small></span><input name="posCustomerPhone" type="tel" inputMode="tel" autoComplete="off" dir="ltr" maxLength={24} placeholder={state.country === "PS" ? "059xxxxxxx" : "05xxxxxxxx"} value={state.phone} disabled={disabled} onChange={(event) => state.changePhone(event.target.value)} aria-describedby="pos-customer-help" aria-invalid={!!state.phone.trim() && !state.normalized} /></label>
     <p className={s.hint} id="pos-customer-help">{t("بدون رقم تُصدر الفاتورة كالمعتاد")}</p>
-    {!!state.phone.trim() && !state.normalized && <p className={s.error}>{t("أدخل رقم جوال سعودي صحيحًا")}</p>}
+    {!!state.phone.trim() && !state.normalized && <p className={s.error}>{t("أدخل رقم جوال صحيحًا")}</p>}
     <div aria-live="polite" aria-busy={state.loading}>
       {state.loading && <p className={s.hint}>{t("جار التحقق من بطاقة الولاء")}</p>}
       {state.error && <div className={s.feedback}><p>{t(state.error)}</p><button type="button" className={styles.secondary} disabled={disabled || state.loading} onClick={state.retry}>{t("إعادة التحقق")}</button></div>}

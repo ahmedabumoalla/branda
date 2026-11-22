@@ -17,11 +17,15 @@ import { isStorefrontEnabled } from "@/lib/platform/storefront-availability";
 import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
 import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits } from "@/lib/loyalty/read-identifier";
 
+import type { BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
+
 export const cashierSessionCookie = "barndaksa_cashier_session";
 
 export type CashierConsole = {
   pointsProgram?: import("@/lib/loyalty/points-program").PointsProgram;
   cafe: {
+    phoneCountry: BrandPhoneCountry;
     id: string;
     name: string;
     slug: string;
@@ -606,7 +610,10 @@ export async function getCashierConsole({ recordEntry = true, includeOrders = tr
   });
   if (!verifiedSession) return null;
 
-  const { orders, dataError } = includeOrders ? await loadCashierOrders(admin, verifiedSession) : { orders: [], dataError: null };
+  const [{ orders, dataError }, phoneCountry] = await Promise.all([
+    includeOrders ? loadCashierOrders(admin, verifiedSession) : { orders: [], dataError: null },
+    getBrandPhoneCountry(verifiedSession.cafeId),
+  ]);
   if (recordEntry) await recordCashierConsoleEntry({
     cafeId: verifiedSession.cafeId,
     cafeSlug: verifiedSession.cafeSlug,
@@ -617,6 +624,7 @@ export async function getCashierConsole({ recordEntry = true, includeOrders = tr
 
   return {
     cafe: {
+      phoneCountry,
       id: verifiedSession.cafeId,
       name: verifiedSession.cafeName,
       slug: verifiedSession.cafeSlug,

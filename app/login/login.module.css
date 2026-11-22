@@ -116,6 +116,7 @@
 .field label { font-size: var(--label-size); font-weight: 700; display: inline-block; }
 .inputWrap { display: flex; align-items: center; position: relative; margin-top: 9px; }
 .inputWrap > svg { position: absolute; inset-inline-start: 17px; color: var(--muted); pointer-events: none; z-index: 1; }
+.country,
 .inputWrap input {
   width: 100%;
   min-width: 0;

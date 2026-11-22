@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 function load(relative) {
   const output = ts.transpileModule(fs.readFileSync(path.join(root, relative), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exports = {};
-  new Function("require", "exports", output)(name => load(path.join(path.dirname(relative), `${name}.ts`)), exports);
+  new Function("require", "exports", output)(name => load(name.startsWith("@/") ? `${name.slice(2)}.ts` : path.join(path.dirname(relative), `${name}.ts`)), exports);
   return exports;
 }
 const { createReadOutbox, createIndexedReadStore, readScopeKey } = load("lib/loyalty/read-outbox.ts");
@@ -208,5 +208,14 @@ await check("reconnect replays a network failure immediately with the original r
   await restored.retryUnsent();
   await restored.sync();
   assert.deepEqual(sent, [row.requestId]);
+});
+await check("Palestinian cashier preserves the original phone and request when reopening a queued invoice", async () => {
+  const { invoiceOutbox } = load("lib/loyalty/invoice-points-outbox.ts");
+  const store = memoryStore(), sent = [];
+  const deps = { scope, store, phoneCountry: "PS", online: () => true, resolve: async () => { throw Error("expected a phone"); }, credit: async input => { sent.push(input); return { ok: true, pointsAdded: 1, pointsBalance: 1 }; } };
+  const row = await invoiceOutbox(deps).save("٠٥٩١٢٣٤٥٦٧", { amountHalalas: 1000, rateSar: 10, rateQuantity: 1 });
+  await invoiceOutbox(deps).sync();
+  assert.equal(sent[0].phone, "970591234567");
+  assert.equal(sent[0].requestId, row.requestId);
 });
 console.log(`PASS ${checks} loyalty read outbox behavior checks (isolated store; no customer operations)`);
