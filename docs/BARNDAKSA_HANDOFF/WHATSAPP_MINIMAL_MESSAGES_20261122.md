@@ -69,3 +69,14 @@ Known limit, told to the user before publishing: with Bolingo on points this exc
 Checks: `scripts/check-minimal-platform-messages.cjs` 19 (six new for the named brand), `scripts/check-whatsapp-access-only.cjs` 37, `scripts/check-notification-sender.cjs` 56, text integrity, TypeScript, deployment size guard. Not opened in a browser, no message sent
 
 Production: commit `e8432a54` on main, on top of `f6240012` from Codex, GitHub Production deployment 7977555967, Vercel build pending 10:43:28Z, success 10:44:17Z on 2026-11-22 UTC, 49 seconds. The deployment size guard wiring check passed before the push; the commit changes none of the files that trigger the GitHub guard workflow. barndaksa.com and Bolingo's loyalty page answered HTTP 200 after the deployment. No Bolingo card link has left yet, for the reason under "Known limit"
+
+### Points step applied, 2026-11-22 16:45Z (Claude)
+
+The user asked whether Bolingo's card messages reach its customers from the notifications number and said to turn them on if they do not. They did not: 14 points invoices that day and no card link job since 2026-11-21, four customers never sent their card. After the full description of the database change and the real messages, the user confirmed
+
+- Migration `20261122130000_named_brand_points_card_link.sql`, applied and recorded in migration history with the file checksum `a62891d222559189a78369683d418f39`
+- Trigger `named_brand_points_card_link` on `public.loyalty_scan_requests`, after insert, only when `operation = 'points'` and the cafe is Bolingo. It inserts one job into `loyalty_read_private.card_link_jobs` under the stamp path's conditions: active card and customer, Saudi mobile, card not in Apple Wallet, no job for the card in the last 24 hours and none open. A failure inside it is swallowed, so it can never fail or undo the invoice. No change to any function Codex owns
+- One job for each Bolingo card that was never sent a link, is not in Apple Wallet and had no job open: four jobs
+- Result, read from the queue with counts only: the four jobs were created at 16:45:09Z and closed as `queued` with a provider message id between 16:45:21Z and 16:46:09Z, one attempt each, from the notifications number through the published exception. Accepted by the provider; delivery on the phones was not confirmed. No job of another brand comes from this trigger
+- From now on a Bolingo customer who earns points and does not keep the card in Apple Wallet gets the card message once a day at most, with the closing rating
+- To stop it: drop the trigger, and remove Bolingo from `PLATFORM_CARD_LINK_CAFE_IDS` to stop the sending itself. To add a brand, the user's word is needed for both places
