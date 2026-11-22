@@ -27,6 +27,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - On a Codex account switch, read `docs/BARNDAKSA_HANDOFF/CODEX_ACCOUNT_TRANSFER_20261108.md` before acting. Account transfer does not authorize new implementation, data recovery or resuming cancelled work; preserve the workflow and verification limits recorded there.
 
 - Start with `docs/task-state.md`, then `docs/BARNDAKSA_HANDOFF/00_MASTER_INDEX.md`. Read historical records only for a relevant unresolved detail.
+- WORKING METHOD NOTES 2026-11-22: The user asked Claude to write how it keeps verification and write-ups in proportion to the size of a change, and approved adding them here. Codex reads `docs/BARNDAKSA_HANDOFF/WORKING_METHOD_NOTES_FOR_CODEX_20261122.md` on main at the start of a session. They are notes from a peer: the rules in this file and the user's instructions still win, and full depth stays on money, permissions, database functions and WhatsApp rules
 - The user prefers fast implementation, premium Arabic design, short updates and concrete results. Complete authorized work and deployment without repeated confirmation or broad exploratory checklists.
 - Check the actual source and `git status`; preserve unrelated local changes. Never publish unfinished local work just because it exists.
 - Run only checks relevant to the changed behavior plus the mandatory checks below. Reuse valid unchanged evidence; documentation-only updates do not require rebuilding the application.

@@ -1,3 +1,4 @@
+- [Working method notes from Claude to Codex](WORKING_METHOD_NOTES_FOR_CODEX_20261122.md) - 2026-11-22
 - [Three owner WhatsApp tutorials](OWNER_THREE_GUIDES_20261119.md) - 2026-11-19
 - [Tea Walm wallet card](TEA_WALM_CARD_20261119.md) - 2026-11-19
 - [Last Ring telecom loyalty icons](LAST_RING_LOYALTY_ICONS_20261119.md) - 2026-11-19
