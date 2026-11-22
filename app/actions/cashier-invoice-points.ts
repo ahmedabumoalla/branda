@@ -6,13 +6,13 @@ import { requireCashierPermission } from "@/lib/data/cashier";
 import { resolveCashierLoyaltyPhone } from "@/lib/data/cashier-loyalty-phone";
 import { lookupRastCashierCard, resolveCashierCardNumber } from "@/lib/data/loyalty-experience";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
-import { isCashierLoyaltyCode, normalizeLoyaltyDigits, resolveReadMethod } from "@/lib/loyalty/read-identifier";
+import { isCashierLoyaltyCode, normalizeLoyaltyDigits, normalizeLoyaltyReadPhone, resolveReadMethod } from "@/lib/loyalty/read-identifier";
+import { invoiceCreditSchema, invoiceScopeSchema } from "@/lib/loyalty/invoice-points-input";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncWalletCardByCode } from "@/lib/wallet";
 
-const scopeSchema = z.object({ cafeId: z.string().uuid(), cashierId: z.string().uuid() }).strict();
-type Scope = z.infer<typeof scopeSchema>;
+type Scope = z.infer<typeof invoiceScopeSchema>;
 const affordableRewards = z.array(z.object({ points: z.number().int().positive(), reward: z.string() }));
 const cardCode = z.string().min(1).max(100).refine(isCashierLoyaltyCode);
 
@@ -40,12 +40,14 @@ async function resolveIdentifier(cafeId: string, identifier: string) {
 }
 
 export async function resolveInvoiceCardAction(scope: Scope, identifier: string) {
-  const session = await pointsSession(scopeSchema.parse(scope));
+  const session = await pointsSession(invoiceScopeSchema.parse(scope));
+  const phone = normalizeLoyaltyReadPhone(z.string().trim().min(1).max(500).parse(identifier));
+  if (phone) return `+${phone}`;
   return resolveIdentifier(session.cafeId, identifier);
 }
 
 export async function inspectPointsCardAction(scope: Scope, identifier: string) {
-  const session = await pointsSession(scopeSchema.parse(scope));
+  const session = await pointsSession(invoiceScopeSchema.parse(scope));
   const code = await resolveIdentifier(session.cafeId, identifier);
   const [card, options] = await Promise.all([
     lookupRastCashierCard(code),
@@ -56,24 +58,23 @@ export async function inspectPointsCardAction(scope: Scope, identifier: string) 
   return { code, customerName: card.customerName, ...current };
 }
 
-const invoice = z.object({
-  scope: scopeSchema, cardCode,
-  amountHalalas: z.number().int().min(1).max(100_000_000), requestId: z.string().uuid(),
-  rateSar: z.number().finite().positive(), rateQuantity: z.number().int().positive(),
-}).strict();
 const award = z.object({
   ok: z.literal(true), status: z.literal("points_added"), pointsAdded: z.number().int().nonnegative(),
   pointsBalance: z.number().int().nonnegative(), cardCode: z.string(),
   affordableRewards,
 });
 
-export async function addCashierInvoicePointsAction(input: z.infer<typeof invoice>) {
-  const parsed = invoice.parse(input);
+export async function addCashierInvoicePointsAction(input: z.input<typeof invoiceCreditSchema>) {
+  const parsed = invoiceCreditSchema.parse(input);
   const session = await pointsSession(parsed.scope);
-  const { data, error } = await createAdminClient().rpc("scan_loyalty_invoice_points", {
-    p_session_token: session.token, p_card_code: parsed.cardCode, p_request_id: parsed.requestId,
+  const args = {
+    p_session_token: session.token, p_request_id: parsed.requestId,
     p_amount_sar: parsed.amountHalalas / 100, p_expected_rate_sar: parsed.rateSar, p_expected_rate_quantity: parsed.rateQuantity,
-  });
+  };
+  const client = createAdminClient();
+  const { data, error } = "phone" in parsed
+    ? await client.rpc("scan_loyalty_invoice_points_by_phone", { ...args, p_phone: parsed.phone })
+    : await client.rpc("scan_loyalty_invoice_points", { ...args, p_card_code: parsed.cardCode });
   if (error?.message?.includes("Scan request conflict")) return { ok: false as const, reason: "request_conflict" };
   if (error?.code === "42501") return { ok: false as const, reason: "unauthorized" };
   if (error) throw new Error("تعذر تأكيد تسجيل النقاط");
@@ -86,7 +87,7 @@ export async function addCashierInvoicePointsAction(input: z.infer<typeof invoic
 }
 
 const redemption = z.object({
-  scope: scopeSchema, cardCode, requestId: z.string().uuid(), cost: z.number().int().positive(),
+  scope: invoiceScopeSchema, cardCode, requestId: z.string().uuid(), cost: z.number().int().positive(),
   reward: z.string().min(1).max(120), expectedBalance: z.number().int().nonnegative(),
 }).strict();
 

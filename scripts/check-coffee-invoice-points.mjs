@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
+import { checkPhonePoints } from "./check-phone-invoice-points.mjs";
 
 const modulePath = process.env.PGLITE_MODULE ?? path.join(tmpdir(), "branda-loyalty-sql-tests/node_modules/@electric-sql/pglite/dist/index.js");
 const { PGlite } = await import(pathToFileURL(modulePath).href);
@@ -209,6 +210,7 @@ try {
   await db.exec("update cafe_cashiers set active=false");
   await assert.rejects(() => earn(6,later),{code:"42501"});
   console.log("Coffee invoice points: earning, affordable rewards, 211-200=11, repeated redemption, insufficient balance, replay, approval and stamp isolation passed");
+  await checkPhonePoints({db, scalar, migration, demo, otherBrand, actor, cashier});
 } finally {
   await db.close();
 }

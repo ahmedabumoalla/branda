@@ -10,6 +10,7 @@ import type { CashierConsole } from "@/lib/data/cashier";
 import type { CashierRewardPreview } from "@/lib/data/customer-rewards";
 import type { LocalRead } from "@/lib/loyalty/read-outbox";
 import { readDisplay } from "@/lib/loyalty/read-display";
+import { resolveReadMethod } from "@/lib/loyalty/read-identifier";
 import { CashierInvoicePoints, InvoicePointsHistory } from "./cashier-invoice-points";
 import { useInvoicePointsOutbox } from "./use-invoice-points-outbox";
 import { CashierPointsRedemption } from "./cashier-points-redemption";
@@ -102,6 +103,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
   const [message, setMessage] = useState<CashierMessage>("");
   const [checkedAt, setCheckedAt] = useState(0);
   const [preview, setPreview] = useState<RastScanPreview | null>(null);
+  const [newMemberRequest, setNewMemberRequest] = useState("");
   const [session] = useState(() => createRastScanSession({ lookupCard: lookupRastCashierCardAction, lookupReward: lookupRastCashierRewardAction, commit: input => scanLoyaltyExperienceAction({ ...input, expectedScope: { cafeId: initialData.cafe.id, cashierId: initialData.cashier.id } }), createRequestId: () => crypto.randomUUID() }));
   const input = useRef<HTMLInputElement>(null);
   const focusInputAfterScan = useRef(false);
@@ -130,6 +132,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
   useEffect(() => { if (embedded && active) { if (preview) previewElement.current?.focus(); else input.current?.focus(); } }, [embedded, active, preview]);
   function updateCode(code: string, immediate = false) {
     if (processing.current || session.busy) return;
+    setNewMemberRequest("");
     if (summaryRead) customerSummary.clear();
     resolvedCode.current = ""; session.invalidate(); setValue(code); setPreview(null); setMessage(""); setError(""); setNoRewards(false); setSummaryRead(null); setLastReadId(null);
     if (kind === "stamp" && code.trim()) customerSummary.lookup(lookupMethod, code, { immediate });
@@ -137,7 +140,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
   }
   function detectCode(code: string) { if (session.busy) return; updateCode(code, true); setMessage(kind === "stamp" ? "تمت قراءة الرمز اضغط تسجيل الختم" : "تمت قراءة الرمز اضغط فحص لعرض بيانات العميل قبل التأكيد"); input.current?.focus(); }
   async function queueStamp() {
-    if (confirmedFinanceFlow) { await processScan(); return; }
+    if (confirmedFinanceFlow) { await processScan(Boolean(newMemberRequest)); return; }
     if (processing.current || !value.trim()) return;
     processing.current = true;
     setPending(true); setError(""); setMessage("");
@@ -160,11 +163,16 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
     processing.current = true;
     setPending(true); setError(""); setMessage(""); setNoRewards(false);
     try {
+      const phoneInput = lookupMethod === "phone" || (kind === "stamp" && resolveReadMethod(lookupMethod, value) === "phone");
       if (!confirm) {
         setPreview(null);
         let code = value;
-        if (lookupMethod === "phone") {
+        if (phoneInput) {
           const found = await lookupCashierLoyaltyPhoneAction(value);
+          if (!found.ok && found.missingCard && kind === "stamp" && confirmedFinanceFlow) {
+            setNewMemberRequest(crypto.randomUUID());
+            return;
+          }
           if (!found.ok) throw new Error(found.message);
           code = found.cardCode;
         }
@@ -172,7 +180,9 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
         const next = await session.inspect(kind, code);
         setPreview(next); setNoRewards(kind === "redeem" && next === null); return;
       }
-      const result = await session.confirm(kind, lookupMethod === "phone" ? resolvedCode.current : value);
+      const result: Record<string, unknown> | null = newMemberRequest && kind === "stamp"
+        ? await scanLoyaltyExperienceAction({ kind, value, requestId: newMemberRequest, stampByPhone: true, expectedScope: { cafeId: initialData.cafe.id, cashierId: initialData.cashier.id } })
+        : await session.confirm(kind, phoneInput ? resolvedCode.current : value);
       if (!result) return;
       setPreview(session.preview);
       const status = String(result.status ?? "");
@@ -183,12 +193,13 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
           ? { text: "تم صرف {reward} بنجاح", values: { reward: reward?.catalog?.fields.title ?? { ar: reward?.rewardTitle ?? "المكافأة", en: "Reward" } } }
           : status === "reward_issued" ? { text: "اكتملت البطاقة! استحق {name} مكافأته", values: { name: customer } }
           : { text: "تم تسجيل الختم رصيد {name}: {stamps} من {required}", values: { name: customer, stamps: Number(result.stampsInCycle), required: Number(result.purchasesRequired) } });
-        focusInputAfterScan.current = true; setValue(""); setPreview(null);
+        setNewMemberRequest(""); focusInputAfterScan.current = true; setValue(""); setPreview(null);
       } else {
         const errors: Record<string, string> = { recent_scan: "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", cooldown: "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", already_redeemed: "هذه المكافأة مصروفة سابقًا", expired: "انتهت صلاحية المكافأة", inactive: "البطاقة غير نشطة", invalid: "الرمز غير صالح أو لا يتبع هذه العلامة", duplicate: "هذه العملية مسجلة بالفعل", reward_unavailable: "المكافأة المحددة صُرفت أو لم تعد متاحة أعد فحص البطاقة؛ لم تُصرف مكافأة أخرى", card_unavailable: "البطاقة أو حساب العميل غير نشط", session_invalid: "انتهت جلسة الكاشير سجّل الدخول من جديد", program_disabled: "برنامج الولاء موقوف حاليًا", request_conflict: "بيانات العملية لا تطابق الطلب السابق أعد فحص الرمز", invalid_code: "الرمز غير صالح أعد فحص البطاقة", operation_failed: "لم تُسجل العملية أعد فحص الرمز وحاول مرة أخرى" };
         errors.daily_stamp_limit = "بلغ العميل الحد اليومي المسموح وهو ختمان يمكن إضافة ختم جديد غدًا";
         errors.approval_pending = "أرسل الطلب لمسؤول الموافقة أعد التأكيد بعد اعتماده من طلبات الموافقة";
         errors.approval_rejected = "رفض مسؤول الموافقة هذه العملية راجع ملاحظة الرفض في طلبات الموافقة";
+        if (newMemberRequest && status === "approval_rejected") setNewMemberRequest("");
         setError(errors[status] ?? "لم تسجل العملية تحقق من البطاقة وصلاحية البرنامج");
       }
     } catch (cause) { if (confirm) setPreview(session.preview); setError(cause instanceof Error && /[\u0600-\u06ff]/.test(cause.message) ? cause.message : "تعذر إتمام العملية يمكنك إعادة المحاولة بأمان"); }
@@ -233,7 +244,8 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
           <form onSubmit={(event) => { event.preventDefault(); if (kind === "stamp") void queueStamp(); else void processScan(); }} className={layout.scanForm} aria-busy={pending}>
             <label htmlFor="rast-scan-code" className="block text-sm font-bold">{lookupMethod === "phone" ? t("رقم جوال العميل") : kind === "stamp" ? t("رقم البطاقة أو رقم الجوال") : t("رمز البطاقة أو المكافأة")}</label>
             <input id="rast-scan-code" ref={input} dir="ltr" type={lookupMethod === "phone" ? "tel" : "text"} inputMode={lookupMethod === "phone" ? "tel" : "text"} value={value} disabled={pending} onChange={(event) => updateCode(event.target.value)} aria-describedby="rast-scan-help" autoComplete="off" autoCapitalize="off" spellCheck={false} maxLength={lookupMethod === "phone" ? 30 : 500} placeholder={lookupMethod === "phone" ? "05xxxxxxxx" : kind === "stamp" ? t("امسح البطاقة أو أدخل رقم البطاقة أو الجوال") : t("امسح بالقارئ أو أدخل الرمز")} className="min-h-11 w-full min-w-0 rounded-xl border border-[var(--cashier-ink)]/30 bg-white px-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cashier-ink)]" />
-            <button type="submit" disabled={pending || !value.trim()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--cashier-ink)] px-4 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{kind === "stamp" ? <BadgeCheck size={19} aria-hidden="true" /> : lookupMethod === "phone" ? <Search size={19} aria-hidden="true" /> : <ScanLine size={19} aria-hidden="true" />}{kind === "stamp" ? pending ? t("جاري حفظ القراءة") : t("تسجيل الختم") : pending ? t("جاري التحقق") : lookupMethod === "phone" ? t("البحث عن العميل") : t("فحص المكافأة")}</button>
+            {newMemberRequest && <p className={layout.scanHelp} role="status">{t("سيُصدر لهذا الجوال بطاقة ولاء عند تأكيد تسجيل الختم")}</p>}
+            <button type="submit" disabled={pending || !value.trim()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--cashier-ink)] px-4 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{kind === "stamp" ? <BadgeCheck size={19} aria-hidden="true" /> : lookupMethod === "phone" ? <Search size={19} aria-hidden="true" /> : <ScanLine size={19} aria-hidden="true" />}{kind === "stamp" ? pending ? t("جاري حفظ القراءة") : newMemberRequest ? t("تأكيد إصدار البطاقة وتسجيل الختم") : t("تسجيل الختم") : pending ? t("جاري التحقق") : lookupMethod === "phone" ? t("البحث عن العميل") : t("فحص المكافأة")}</button>
           </form>
           {kind === "stamp" && <CashierCustomerSummary state={customerSummary.state} saved={Boolean(selectedRead)} operation={selectedRead?.operation} displayName={displayName} />}
           {lookupMethod === "code" && <RastCameraScanner key={kind} disabled={pending} onDetected={detectCode} />}</>}

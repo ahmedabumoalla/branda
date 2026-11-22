@@ -5,6 +5,10 @@ import { requireCashierPermission } from "@/lib/data/cashier";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export class CashierPhoneWithoutCard extends Error {
+  constructor() { super("لا توجد بطاقة ولاء متاحة لهذا الرقم لدى العلامة"); }
+}
+
 /** Resolves an existing card only; preview and confirmation use the audited scanner. */
 export async function resolveCashierLoyaltyPhone(rawPhone: string): Promise<string> {
   const admin = createAdminClient();
@@ -20,14 +24,16 @@ export async function resolveCashierLoyaltyPhone(rawPhone: string): Promise<stri
     .select("id,status,blocked_at,phone_auth_conflict")
     .eq("cafe_id", session.cafeId).eq("phone_normalized", phone).maybeSingle();
   if (customerError) throw new Error("تعذر البحث عن العميل حاول مرة أخرى");
-  if (!customer || customer.status !== "active" || customer.blocked_at || customer.phone_auth_conflict) {
+  if (!customer) throw new CashierPhoneWithoutCard();
+  if (customer.status !== "active" || customer.blocked_at || customer.phone_auth_conflict) {
     throw new Error("لا توجد بطاقة ولاء متاحة لهذا الرقم لدى العلامة");
   }
   const { data: card, error: cardError } = await admin.from("loyalty_cards")
     .select("card_code,status").eq("cafe_id", session.cafeId)
     .eq("customer_profile_id", customer.id).maybeSingle();
   if (cardError) throw new Error("تعذر البحث عن العميل حاول مرة أخرى");
-  if (!card || card.status !== "active" || !/^[A-Z0-9_-]{4,100}$/.test(card.card_code)) {
+  if (!card) throw new CashierPhoneWithoutCard();
+  if (card.status !== "active" || !/^[A-Z0-9_-]{4,100}$/.test(card.card_code)) {
     throw new Error("لا توجد بطاقة ولاء متاحة لهذا الرقم لدى العلامة");
   }
   return card.card_code;

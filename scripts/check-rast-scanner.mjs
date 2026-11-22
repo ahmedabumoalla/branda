@@ -255,6 +255,14 @@ assert(pointsHtml.includes("تسجيل نقاط الفاتورة") && !pointsHtm
   assert.deepEqual(await (await POST(request({step:"resolve",scope,identifier:"123"}))).json(),{ok:true,cardCode:"MEMBER"});
   assert.deepEqual(await (await POST(request({step:"credit", ...credit}))).json(),{ok:true,pointsAdded:7,pointsBalance:17});
   assert.deepEqual(apiCalls,[[scope,"123"],credit]);
+  const {cardCode, ...phoneInvoice}=credit;
+  const forwarded={...phoneInvoice,phone:"966501234567"};
+  assert.equal((await POST(request({step:"credit",...credit,phone:"0501234567"}))).status,400);
+  assert.equal((await POST(request({step:"credit",...phoneInvoice,phone:"invalid0501234567"}))).status,400);
+  await POST(request({step:"credit",...phoneInvoice,phone:"٠٥٠ ١٢٣ ٤٥٦٧"}));
+  assert.deepEqual(apiCalls.at(-1),forwarded);
+  await POST(request({step:"credit",...phoneInvoice,cardCode:"+966501234567"}));
+  assert.deepEqual(apiCalls.at(-1),forwarded, "An older client's pinned phone reference performs the same atomic credit");
 }
 {
   const { POINTS_CAFE_ID } = load("lib/loyalty/points-program.ts");
@@ -263,10 +271,11 @@ assert(pointsHtml.includes("تسجيل نقاط الفاتورة") && !pointsHtm
   const args = { scope, requestId, cardCode: "CARD123", amountHalalas: 320, rateSar: 2, rateQuantity: 3 };
   const jobs = [], syncs = [], calls = [];
   let rpcResult = { ok: false, errorCode: "points_rate_changed" };
-  const { addCashierInvoicePointsAction, inspectPointsCardAction, redeemCashierPointsAction } = load("app/actions/cashier-invoice-points.ts", {
+  let lookups=0;
+  const { addCashierInvoicePointsAction, resolveInvoiceCardAction, inspectPointsCardAction, redeemCashierPointsAction } = load("app/actions/cashier-invoice-points.ts", {
     "next/server": { after: job => jobs.push(job) },
     "@/lib/data/cashier": { requireCashierPermission: async permission => { assert.equal(permission, "loyalty"); return { ...scope, token: "verified-session" }; } },
-    "@/lib/data/cashier-loyalty-phone": { resolveCashierLoyaltyPhone: async () => "CARD123" },
+    "@/lib/data/cashier-loyalty-phone": { resolveCashierLoyaltyPhone: async () => { lookups++; return "CARD123"; } },
     "@/lib/data/loyalty-experience": { lookupRastCashierCard: async () => ({customerName:"Member"}) },
     "@/lib/data/rast-loyalty-access": { assertRastLoyaltyEntitlement: async id => assert.equal(id, scope.cafeId) },
     "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, payload) => { calls.push([name, payload]); return { data: rpcResult }; } }) },
@@ -284,8 +293,19 @@ assert(pointsHtml.includes("تسجيل نقاط الفاتورة") && !pointsHtm
   rpcResult = { ok: true, status: "points_added", cardCode: "CARD123", pointsBalance: 203, pointsAdded: 4, affordableRewards };
   assert.deepEqual(await addCashierInvoicePointsAction(args), { ok: true, pointsAdded: 4, pointsBalance: 203, affordableRewards });
   await jobs[0](); assert.deepEqual(syncs, ["CARD123"], "A committed points result schedules its wallet refresh");
+  const {cardCode, ...phoneTerms} = args;
+  assert.equal(await resolveInvoiceCardAction(scope,"٠٥٠١٢٣٤٥٦٧"),"+966501234567");
+  const phoneCredit = {...phoneTerms,phone:"0501234567"};
+  await assert.rejects(addCashierInvoicePointsAction({...phoneCredit,scope:{...scope,cashierId:requestId}}));
+  assert.deepEqual(await addCashierInvoicePointsAction(phoneCredit), { ok:true, pointsAdded:4, pointsBalance:203, affordableRewards });
+  assert.deepEqual(calls.at(-1), ["scan_loyalty_invoice_points_by_phone", {
+    p_request_id:requestId, p_session_token:"verified-session", p_phone:"966501234567", p_amount_sar:3.2, p_expected_rate_sar:2, p_expected_rate_quantity:3,
+  }]);
+  assert.equal(lookups,0, "Credit and compatibility resolve need no pre-existing membership");
+  await jobs[1](); assert.deepEqual(syncs,["CARD123","CARD123"], "Phone credit syncs the canonical card from the committed receipt");
   rpcResult = { ok: true, status: "points_options", pointsBalance: 203, affordableRewards };
   assert.deepEqual(await inspectPointsCardAction(scope,"0501234567"), { code:"CARD123", customerName:"Member", pointsBalance:203, affordableRewards });
+  assert.equal(lookups,1, "Reward inspection is still lookup-only");
   assert.equal(calls.at(-1)[0], "get_loyalty_points_options");
   const spend = { scope, requestId, cardCode:"CARD123", cost:200, reward:"Coffee", expectedBalance:203 };
   await assert.rejects(redeemCashierPointsAction({ ...spend, scope: { ...scope, cafeId: requestId } }));
@@ -296,7 +316,7 @@ assert(pointsHtml.includes("تسجيل نقاط الفاتورة") && !pointsHtm
   }]);
   rpcResult = { ok:true, status:"points_redeemed", cardCode:"CARD123", pointsBalance:3, pointsSpent:200, reward:"Coffee", affordableRewards:[] };
   assert.deepEqual(await redeemCashierPointsAction(spend), { ok:true, replayed:false, pointsBalance:3, pointsSpent:200, reward:"Coffee", affordableRewards:[] });
-  await jobs[1](); assert.deepEqual(syncs, ["CARD123","CARD123"]);
+  await jobs[2](); assert.deepEqual(syncs, ["CARD123","CARD123","CARD123"]);
 }
 const summaryRows = [
   { operation: { status: "succeeded", rewardIssued: true } },

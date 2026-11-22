@@ -11,13 +11,16 @@ export function isLoyaltyDisplayNumber(input: string): boolean {
 export function isCashierLoyaltyCode(input: string): boolean {
   return isLoyaltyDisplayNumber(input) || /^[A-Z0-9_-]{4,100}$/.test(input);
 }
+export function normalizeLoyaltyReadPhone(input: string): string | null {
+  const value = normalizeLoyaltyDigits(input);
+  if (!/^[+\d\s()-]+$/.test(value)) return null;
+  const match = /^(?:0|966|00966)?(5\d{8})$/.exec(value.replace(/\D/g, ""));
+  return match ? `966${match[1]}` : null;
+}
 /** Detect unambiguous stamp identifiers independently of the input tab. */
 export function resolveReadMethod(method: "code" | "phone", input: string): "code" | "phone" {
   const value = normalizeLoyaltyDigits(input.trim());
   if (value.startsWith("BARNDAKSA_QR:") || /^[a-f\d]{16}$/i.test(value) || isLoyaltyDisplayNumber(value)) return "code";
-  if (/^[+\d\s()-]+$/.test(value)) {
-    const digits = value.replace(/\D/g, "");
-    if (/^(?:05\d{8}|5\d{8}|9665\d{8}|009665\d{8})$/.test(digits)) return "phone";
-  }
+  if (normalizeLoyaltyReadPhone(value)) return "phone";
   return method;
 }

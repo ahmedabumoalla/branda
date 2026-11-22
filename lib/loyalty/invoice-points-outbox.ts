@@ -1,4 +1,4 @@
-import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits, resolveReadMethod } from "./read-identifier";
+import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits, normalizeLoyaltyReadPhone, resolveReadMethod } from "./read-identifier";
 import { parseBarndaksaQrPayload } from "./secure-qr-payload";
 import { readScopeKey, type ReadScope, type ReadStore } from "./read-outbox";
 
@@ -9,7 +9,7 @@ export type QueuedInvoice = InvoiceTerms & {
   lease?: string; leaseUntil: number; attempts: number; nextAttempt: number;
 };
 type ScopeInput = { scope: ReadScope };
-type CreditInput = ScopeInput & InvoiceTerms & { cardCode: string; requestId: string };
+type CreditInput = ScopeInput & InvoiceTerms & { requestId: string } & ({ cardCode: string } | { phone: string });
 type Failure = { ok: false; reason: string };
 type Dependencies = {
   store: ReadStore<QueuedInvoice>; scope: ReadScope; online: () => boolean;
@@ -57,8 +57,9 @@ export function invoiceOutbox({ store, scope, online, resolve, credit, now = Dat
         if (!row) break;
         let result: Awaited<ReturnType<typeof credit>> = { ok: false, reason: "unavailable" };
         try {
+          const phone = !row.cardCode && row.identifier ? normalizeLoyaltyReadPhone(row.identifier) : null;
           let code = row.cardCode;
-          if (!code && row.identifier) {
+          if (!code && !phone && row.identifier) {
             const target = await resolve({ scope, identifier: row.identifier });
             if (target.ok) {
               code = target.cardCode;
@@ -70,8 +71,11 @@ export function invoiceOutbox({ store, scope, online, resolve, credit, now = Dat
               if (!pinned) continue;
             } else result = target;
           }
-          if (code) result = await credit({ scope, cardCode: code, requestId: row.requestId, amountHalalas: row.amountHalalas, rateSar: row.rateSar, rateQuantity: row.rateQuantity });
-        } catch { /* A lost response is retried with the same card and UUID. */ }
+          const target = code ? { cardCode: code } : phone ? { phone } : null;
+          if (target) {
+            result = await credit({ scope, ...target, requestId: row.requestId, amountHalalas: row.amountHalalas, rateSar: row.rateSar, rateQuantity: row.rateQuantity });
+          }
+        } catch { /* A lost response is retried with the same identifier and UUID. */ }
         await store.change(key, rows => {
           const current = rows.find(r => r.requestId === row.requestId && r.lease === lease);
           if (current) {

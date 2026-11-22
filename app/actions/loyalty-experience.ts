@@ -1,5 +1,5 @@
 "use server";
-import { isCashierLoyaltyCode, normalizeLoyaltyDigits } from "@/lib/loyalty/read-identifier";
+import { isCashierLoyaltyCode, normalizeLoyaltyDigits, normalizeLoyaltyReadPhone } from "@/lib/loyalty/read-identifier";
 
 import { z } from "zod";
 import { saveOwnerLoyaltyExperience, saveRastLoyaltySettings, saveBrandLoyaltyProgram, lookupRastCashierCard, resolveCashierCardNumber } from "@/lib/data/loyalty-experience";
@@ -72,8 +72,8 @@ export async function lookupRastCashierRewardAction(value: string) {
     product: typeof terms.rewardProductName === "string" ? terms.rewardProductName : "", terms: typeof terms.terms === "string" ? terms.terms : "" }) };
 }
 
-export async function scanLoyaltyExperienceAction(input: { value: string; requestId: string; kind: "stamp" | "redeem"; expectedScope?: { cafeId: string; cashierId: string } }) {
-  const parsed = z.object({ value: z.string().trim().min(1).max(500), requestId: z.string().uuid(), kind: z.enum(["stamp", "redeem"]), expectedScope: z.object({ cafeId: z.string().uuid(), cashierId: z.string().uuid() }).strict().optional() }).parse(input);
+export async function scanLoyaltyExperienceAction(input: { value: string; requestId: string; kind: "stamp" | "redeem"; stampByPhone?: boolean; expectedScope?: { cafeId: string; cashierId: string } }) {
+  const parsed = z.object({ value: z.string().trim().min(1).max(500), requestId: z.string().uuid(), kind: z.enum(["stamp", "redeem"]), stampByPhone: z.boolean().optional(), expectedScope: z.object({ cafeId: z.string().uuid(), cashierId: z.string().uuid() }).strict().optional() }).parse(input);
   const session = await requireCashierPermission("loyalty");
   if (parsed.expectedScope && (parsed.expectedScope.cafeId !== session.cafeId || parsed.expectedScope.cashierId !== session.cashierId)) {
     throw new Error("تغيرت جلسة كاشير الولاء افتح القارئ مجددًا");
@@ -84,10 +84,16 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
   }
   const normalized = normalizeLoyaltyDigits(parsed.value);
   const value = parseBarndaksaQrPayload(normalized, parsed.kind === "stamp" ? "loyalty-card" : "customer-reward") ?? normalized.toUpperCase();
-  if (!(parsed.kind === "stamp" ? isCashierLoyaltyCode(value) : /^[A-Z0-9_-]{4,100}$/.test(value))) throw new Error("الرمز غير صالح لنوع العملية المحدد");
-  const { data, error } = await createAdminClient().rpc("execute_loyalty_audited_operation", {
+  const phone = parsed.stampByPhone ? normalizeLoyaltyReadPhone(normalized) : null;
+  if (parsed.stampByPhone && (parsed.kind !== "stamp" || !parsed.expectedScope || !phone)) throw new Error("أدخل رقم جوال سعودي صحيح يبدأ بـ 05");
+  if (!phone && !(parsed.kind === "stamp" ? isCashierLoyaltyCode(value) : /^[A-Z0-9_-]{4,100}$/.test(value))) throw new Error("الرمز غير صالح لنوع العملية المحدد");
+  const admin = createAdminClient();
+  const { data, error } = phone ? await admin.rpc("stamp_linked_cashier_by_phone", {
+    p_session_token: token, p_phone: phone, p_request_id: parsed.requestId,
+  }) : await admin.rpc("execute_loyalty_audited_operation", {
     p_session_token: token, p_code: parsed.kind === "stamp" ? await resolveCashierCardNumber(value, session.cafeId) : value, p_request_id: parsed.requestId, p_operation: parsed.kind,
   });
+  if (phone && error?.code === "42501") throw new Error("تحقق من صلاحية الموظف لإصدار البطاقة وتسجيل الختم");
   if (error) throw new Error("تعذر تسجيل العملية تحقق من صلاحية البطاقة وجلسة الموظف");
   const result = (Array.isArray(data) ? data[0] : data) as Record<string, unknown>;
   if (result?.status === "approval_pending" || result?.status === "approval_rejected") return { ok: false, status: String(result.status) };

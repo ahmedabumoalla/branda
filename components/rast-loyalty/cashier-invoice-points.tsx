@@ -11,6 +11,7 @@ import styles from "./rast-cashier.module.css";
 type Queue = ReturnType<typeof useInvoicePointsOutbox>;
 const reasonText: Record<string,string> = {
   approval_pending: "العملية بانتظار موافقة المسؤول",
+  enrollment_rate_limited: "تأجل تسجيل العضوية وستعاد المزامنة تلقائيًا",
   unauthorized: "تحقق من جلسة الكاشير لاستكمال المزامنة",
   points_rate_changed: "تغيرت تسعيرة النقاط حدّث الصفحة ثم راجع الفاتورة",
   points_mode_changed: "تغير نوع برنامج الولاء حدّث الصفحة",

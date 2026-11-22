@@ -50,7 +50,7 @@ let eligible=true,enabled=true,rpcCalls=0,returning=false,reason=null,fail=false
 const writes=[];
 const enrollment=load('lib/data/loyalty-enrollment.ts',{
   ...base,'next/headers':{headers:async()=>new Map([['x-vercel-forwarded-for','192.0.2.1']]),cookies:async()=>({set:(...args)=>writes.push(args)})},
-  './loyalty-experience':{getLoyaltyBrand:async()=>eligible?{cafeId:cafe,program:{enabled}}:null},
+  './loyalty-experience':{getBranchLoyaltyBrand:async()=>eligible?{cafeId:cafe,program:{enabled}}:null},
   '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name,args)=>{
     rpcCalls++;assert.equal(name,'enroll_loyalty_customer_direct');assert.equal(args.p_cafe_id,cafe);assert.equal(args.p_phone,'966500000001');
     assert.match(args.p_client_key,/^[a-f0-9]{64}$/);check(!JSON.stringify(args).includes('192.0.2.1'),'IP is hashed');
