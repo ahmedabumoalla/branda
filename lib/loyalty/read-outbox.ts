@@ -120,7 +120,7 @@ export function createReadOutbox(options: {
         if (!row?.value) break;
         let response: Result;
         try { response = await withDeadline(options.send({ ...scope, requestId: row.requestId, method: row.method, value: row.value, clientCreatedAt: row.createdAt })); }
-        catch { response = { ok: false, code: "network_error", message: "" }; }
+        catch { response = { ok: false, code: "network_error", message: "تعذر الاتصال بخدمة المزامنة ستتم إعادة المحاولة تلقائيًا" }; }
         if (!response.ok && (isAuth(response.code) || (response.retryable === false && !isPermanent(response.code)))) paused = true;
         await store.change(key, rows => {
           const current = rows.find(item => item.requestId === row.requestId);
@@ -152,5 +152,13 @@ export function createReadOutbox(options: {
       }
     } finally { busy = false; }
   }
-  return { save, list, sync, get authPaused() { return paused; } };
+  async function retryUnsent() {
+    await store.change(key, rows => {
+      for (const row of rows) {
+        if (row.value && !terminal(row) && !row.leaseOwner && (!row.errorCode || row.errorCode === "network_error")) row.nextAttemptAt = 0;
+      }
+      return { rows, result: undefined };
+    });
+  }
+  return { save, list, sync, retryUnsent, get authPaused() { return paused; } };
 }

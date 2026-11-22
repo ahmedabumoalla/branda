@@ -81,6 +81,7 @@ const readEnglish: Record<string, string> = {
   "لم يُسجل ختم إضافي لهذه القراءة": "No additional stamp was recorded for this scan",
   "لم يُسجل الختم": "Stamp not recorded",
   "راجع بيانات القراءة قبل المحاولة مجددًا": "Check the scan details before trying again",
+  "تعذر الاتصال بخدمة المزامنة ستتم إعادة المحاولة تلقائيًا": "Could not reach the sync service. This scan will retry automatically",
   "لم يتأكد الختم بعد": "Stamp not confirmed yet",
   "وصلت القراءة للنظام وجارٍ تنفيذها": "The server received this scan and is processing it",
   "القراءة محفوظة على الجهاز وتنتظر وصولها للنظام": "This scan is saved on the device and waiting to reach the server",

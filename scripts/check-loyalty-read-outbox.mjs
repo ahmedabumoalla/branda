@@ -195,4 +195,18 @@ await check("invoice points enroll by phone on credit and keep their original re
   assert.equal(failure.state,"rejected"); assert.equal(failure.cardCode,undefined);
   await rejected.retry(); await rejected.sync(); assert.equal((await rejected.list()).find(r=>r.requestId===failure.requestId).attempts,1);
 });
+await check("reconnect replays a network failure immediately with the original request id", async () => {
+  const store = memoryStore();
+  const first = make(store, { send: async () => { throw Error("unreachable"); } });
+  const { row } = await first.save("phone", "0501234567");
+  await first.sync();
+  assert.ok((await first.list())[0].nextAttemptAt > now);
+  const sent = [];
+  const restored = make(store, { send: async input => { sent.push(input.requestId); return { ok: true, operation: operation(input.requestId, "succeeded") }; } });
+  await restored.retryUnsent();
+  await restored.sync();
+  await restored.retryUnsent();
+  await restored.sync();
+  assert.deepEqual(sent, [row.requestId]);
+});
 console.log(`PASS ${checks} loyalty read outbox behavior checks (isolated store; no customer operations)`);

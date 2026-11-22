@@ -267,4 +267,26 @@ await check("Wahed card links prefer verified private sender with primary fallba
     assert.deepEqual(sent, expectedSender ? [expectedSender] : [], "no second sender after ambiguous or rejected POST");
   }
 });
+await check("cashier read transport enforces same origin and forwards the original request and scope", async () => {
+  const calls = [];
+  const route = load("app/api/cashier/loyalty-reads/route.ts", {
+    "@/app/actions/loyalty-read-operations": {
+      enqueueLoyaltyReadAction: async input => { calls.push(input); return { ok: true }; },
+      loadCashierLoyaltyReadsAction: async (ids, scope) => { calls.push({ ids, scope }); return { ok: true }; },
+    },
+  });
+  const url = "https://example.invalid/api/cashier/loyalty-reads";
+  const post = (data, origin = "https://example.invalid") => route.POST(new Request(url, {
+    method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify(data),
+  }));
+  const input = { requestId, cafeId, cashierId, method: "phone", value: "0501234567" };
+  assert.equal((await post({ step: "enqueue", input }, "https://another.invalid")).status, 403);
+  assert.equal((await post({})).status, 400);
+  assert.equal(calls.length, 0);
+  assert.equal((await post({ step: "enqueue", input })).status, 200);
+  const scope = { cafeId, cashierId };
+  const status = await post({ step: "status", ids: [requestId], scope });
+  assert.match(status.headers.get("cache-control"), /no-store/);
+  assert.deepEqual(calls, [input, { ids: [requestId], scope }]);
+});
 console.log(`Loyalty read server: ${checks} checks passed`);

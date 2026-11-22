@@ -1,15 +1,30 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { enqueueLoyaltyReadAction, loadCashierLoyaltyReadsAction } from "@/app/actions/loyalty-read-operations";
+import type { enqueueLoyaltyReadAction, loadCashierLoyaltyReadsAction } from "@/app/actions/loyalty-read-operations";
 import { createIndexedReadStore, createReadOutbox, readScopeKey, type LocalRead, type ReadScope } from "@/lib/loyalty/read-outbox";
+
+async function postRead<T>(body: object): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 22_000);
+  try {
+    const response = await fetch("/api/cashier/loyalty-reads", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      credentials: "same-origin", cache: "no-store", signal: controller.signal,
+    });
+    if (!response.ok) throw new Error("read_transport_unavailable");
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export function useReadOutbox({ cafeId, cashierId }: ReadScope) {
   const scopeKey = readScopeKey({ cafeId, cashierId });
   const outbox = useMemo(() => createReadOutbox({
     scope: { cafeId, cashierId }, store: createIndexedReadStore(),
-    send: enqueueLoyaltyReadAction, load: loadCashierLoyaltyReadsAction,
-    online: () => navigator.onLine,
+    send: input => postRead<Awaited<ReturnType<typeof enqueueLoyaltyReadAction>>>({ step: "enqueue", input }),
+    load: (ids, scope) => postRead<Awaited<ReturnType<typeof loadCashierLoyaltyReadsAction>>>({ step: "status", ids, scope }),
   }), [cafeId, cashierId]);
   const [rows, setRows] = useState<LocalRead[]>([]);
   const [storageFailedFor, setStorageFailedFor] = useState<string | null>(null);
@@ -48,13 +63,16 @@ export function useReadOutbox({ cafeId, cashierId }: ReadScope) {
         else schedule();
       }
     }
-    void tick();
     const wake = () => { storageStopped = false; window.clearTimeout(timer); void tick(); };
     const saved = () => { fastUntil = Date.now() + 15_000; wake(); };
-    window.addEventListener("online", wake);
+    function reconnect() {
+      void outbox.retryUnsent().catch(() => {}).then(() => { if (alive) wake(); });
+    }
+    reconnect();
+    window.addEventListener("online", reconnect);
     window.addEventListener("pageshow", wake);
     window.addEventListener("branda-loyalty-read-saved", saved);
-    return () => { alive = false; window.clearTimeout(timer); window.removeEventListener("online", wake); window.removeEventListener("pageshow", wake); window.removeEventListener("branda-loyalty-read-saved", saved); };
+    return () => { alive = false; window.clearTimeout(timer); window.removeEventListener("online", reconnect); window.removeEventListener("pageshow", wake); window.removeEventListener("branda-loyalty-read-saved", saved); };
   }, [outbox, scopeKey]);
   async function save(method: "code" | "phone", value: string) {
     try {
