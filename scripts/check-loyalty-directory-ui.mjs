@@ -14,9 +14,9 @@ const check = (label, fn) => { fn(); checks++; console.log(`PASS ${label}`); };
 const nodes = tree => !tree || typeof tree !== 'object' ? [] : Array.isArray(tree) ? tree.flatMap(nodes) : [tree, ...nodes(tree.props?.children)];
 const text = tree => tree == null || typeof tree === 'boolean' ? '' : Array.isArray(tree) ? tree.map(text).join('') : typeof tree === 'object' ? text(tree.props?.children) : String(tree);
 const settle = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
-const row = { id: 'customer-a', name: 'عميل الاختبار', loyalty: {stampsCollected: 8, rewardsRedeemed: 2, availableStampRewards: 1, pointsBalance: 11, affordablePointRewards: 0}, joinedAt: '2026-10-11T01:00:00Z' };
+const row = { id: 'customer-a', name: 'عميل الاختبار', loyalty: {mode: 'points', stampsInCycle: 3, stampsCollected: 8, rewardsRedeemed: 2, availableStampRewards: 1, pointsEarned: 211, pointsSpent: 200, pointsBalance: 11, affordablePointRewards: 0}, joinedAt: '2026-10-11T01:00:00Z' };
 const page = { rows: [row], page: 0, pageSize: 20, total: 21 };
-const detail = { id: row.id, name: row.name, phone: '+966500000001' };
+const detail = { id: row.id, name: row.name, phone: '+966500000001', loyalty: { ...row.loyalty, pointsEarned: 214, pointsBalance: 14 } };
 const timers = new Map(); let timerId = 0;
 globalThis.window = { setTimeout(fn, delay) { timers.set(++timerId, { fn, delay }); return timerId; }, clearTimeout(id) { timers.delete(id); } };
 const runTimers = () => { const queued = [...timers.values()]; timers.clear(); queued.forEach(timer => timer.fn()); };
@@ -65,7 +65,7 @@ check('directory requests one bounded name page only on mount', () => { assert.d
 check('semantic table displays names without phone or hidden contact data', () => { const value = html(h); assert.match(value, /<table/); assert.match(value, /scope="col"/); assert.match(value, /عميل الاختبار/); assert.ok(!value.includes(detail.phone)); assert.ok(!value.includes('رقم الجوال')); });
 check('directory shows separately labeled totals and spendable balance', () => {
   const value = html(h);
-  for (const [label, amount] of [['إجمالي الأختام',8], ['المكافآت المصروفة',2], ['مكافآت الأختام المتاحة',1], ['رصيد النقاط',11], ['خيارات الاستبدال بالنقاط',0]]) {
+  for (const [label, amount] of [['إجمالي الأختام المكتسبة',8], ['أختام الدورة الحالية',3], ['المكافآت المصروفة',2], ['مكافآت الأختام المتاحة',1], ['إجمالي النقاط المكتسبة',211], ['إجمالي النقاط المصروفة',200], ['رصيد النقاط الحالي',11], ['خيارات الاستبدال بالنقاط',0]]) {
     assert.ok(value.includes('<dt>'+label+'</dt><dd>'+new Intl.NumberFormat('ar-SA').format(amount)+'</dd>'));
   }
 });
@@ -119,6 +119,13 @@ const previousFocusCount = opener.focused;
 const modal = harness('LoyaltyCustomerDetailDialog', { customer: row, onClose: () => { closed++; } });
 check('detail starts without any phone or copy-all control', () => { assert.ok(!html(modal).includes(detail.phone)); assert.ok(!html(modal).includes('نسخ')); });
 modal.effects(); await settle();
+check('individual profile displays independently refreshed balances', () => {
+  const value = html(modal);
+  for (const [label, amount] of [['إجمالي الأختام المكتسبة',8], ['أختام الدورة الحالية',3], ['المكافآت المصروفة',2], ['مكافآت الأختام المتاحة',1], ['إجمالي النقاط المكتسبة',214], ['إجمالي النقاط المصروفة',200], ['رصيد النقاط الحالي',14], ['خيارات الاستبدال بالنقاط',0]]) {
+    assert.ok(value.includes('<dt>'+label+'</dt><dd>'+new Intl.NumberFormat('ar-SA').format(amount)+'</dd>'));
+  }
+  assert.ok(value.includes('بطاقة نقاط'));
+});
 check('opening selected customer invokes one dedicated detail query', () => { assert.deepEqual(modal.calls, [['detail', row.id]]); assert.equal(modal.modal.opens, 1); assert.match(html(modal), /\+966500000001/); assert.match(html(modal), /<bdi dir="ltr">/); });
 check('detail name text remains safely escaped', () => { const safe = harness('LoyaltyCustomerDetailDialog', { customer: { ...row, name: '<script>alert(1)</script>' }, onClose() {} }); assert.match(html(safe), /&lt;script&gt;/); assert.ok(!html(safe).includes('<script>')); });
 const dialog = element(modal, n => n.type === 'dialog'); let prevented = false;

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, Cake, ChevronLeft, ChevronRight, Phone, Search, UsersRound, X } from "lucide-react";
 import { loadLoyaltyCustomerDetailAction, loadLoyaltyCustomersAction } from "@/app/actions/loyalty-customers";
-import type { LoyaltyCustomerDetail, LoyaltyCustomerPage, LoyaltyCustomerRow } from "@/lib/loyalty/customer-directory-types";
+import type { LoyaltyCustomerBalance, LoyaltyCustomerDetail, LoyaltyCustomerPage, LoyaltyCustomerRow } from "@/lib/loyalty/customer-directory-types";
 import { CustomerCardMessage } from "./customer-card-message";
 import styles from "./customer-directory.module.css";
 
@@ -17,6 +17,24 @@ function birthDateLabel(value: string) {
 
 function initials(name: string) {
   return name.trim().split(/\s+/u).slice(0, 2).map((part) => Array.from(part)[0]).join(" ") || "؟";
+}
+
+function CustomerBalances({ loyalty, name }: { loyalty: LoyaltyCustomerBalance | null; name: string }) {
+  if (!loyalty) return <p className={styles.noCard}>لم تُصدر بطاقة ولاء لهذا العميل</p>;
+
+  const stamps = <dl key="stamps" className={styles.balances} aria-label={`أختام ومكافآت ${name}`}>
+    <div><dt>إجمالي الأختام المكتسبة</dt><dd>{number.format(loyalty.stampsCollected)}</dd></div>
+    <div><dt>أختام الدورة الحالية</dt><dd>{number.format(loyalty.stampsInCycle)}</dd></div>
+    <div><dt>المكافآت المصروفة</dt><dd>{number.format(loyalty.rewardsRedeemed)}</dd></div>
+    <div><dt>مكافآت الأختام المتاحة</dt><dd>{number.format(loyalty.availableStampRewards)}</dd></div>
+  </dl>;
+  const points = <dl key="points" className={styles.balances} aria-label={`نقاط ${name}`}>
+    <div><dt>رصيد النقاط الحالي</dt><dd>{number.format(loyalty.pointsBalance)}</dd></div>
+    <div><dt>إجمالي النقاط المكتسبة</dt><dd>{number.format(loyalty.pointsEarned)}</dd></div>
+    <div><dt>إجمالي النقاط المصروفة</dt><dd>{number.format(loyalty.pointsSpent)}</dd></div>
+    {loyalty.affordablePointRewards !== null && <div><dt>خيارات الاستبدال بالنقاط</dt><dd>{number.format(loyalty.affordablePointRewards)}</dd></div>}
+  </dl>;
+  return <div className={styles.balanceGroups}>{loyalty.mode === "points" ? [points, stamps] : [stamps, points]}</div>;
 }
 
 export function LoyaltyCustomerDetailDialog({ customer, onClose, downloadedOnly = false }: {
@@ -66,8 +84,9 @@ export function LoyaltyCustomerDetailDialog({ customer, onClose, downloadedOnly 
         <div className={styles.identity}>
           <span className={styles.largeAvatar} aria-hidden="true">{initials(detail?.name || customer.name)}</span>
           <h3 id={headingId}>{detail?.name || customer.name}</h3>
-          <p>سجل عملاء الولاء</p>
+          {detail?.loyalty && <p>{detail.loyalty.mode === "points" ? "بطاقة نقاط" : "بطاقة أختام"}</p>}
         </div>
+        {detail && <CustomerBalances loyalty={detail.loyalty} name={detail.name} />}
         <div className={styles.contact} aria-busy={!detail && !error}>
           {error ? <div className={styles.detailError}><p role="alert">{error}</p><button className={styles.retry} type="button" onClick={() => setRetry((value) => value + 1)}>إعادة المحاولة</button></div>
             : detail ? <dl><dt><Phone size={18} aria-hidden="true" /> رقم الجوال</dt><dd>{detail.phone ? <bdi dir="ltr">{detail.phone}</bdi> : <span className={styles.missingPhone}>رقم الجوال غير متوفر</span>}</dd>{detail.birthdayEnabled ? <><dt className={styles.nextTerm}><Cake size={18} aria-hidden="true" /> تاريخ الميلاد</dt><dd>{detail.birthDate ? <span className={styles.birthDate}>{birthDateLabel(detail.birthDate)}</span> : <span className={styles.missingPhone}>لم يسجل تاريخ الميلاد</span>}</dd></> : null}</dl>
@@ -147,13 +166,7 @@ export function LoyaltyCustomerDirectory({ downloadedOnly = false }: { downloade
                     <span className={styles.customerName}>{customer.name}</span>
                     <span className={styles.openProfile} aria-hidden="true"><span>عرض الملف</span><ArrowLeft size={18} /></span>
                   </button>
-                  {loyalty ? <dl className={styles.balances} aria-label={`رصيد الولاء للعميل ${customer.name}`}>
-                    <div><dt>إجمالي الأختام</dt><dd>{number.format(loyalty.stampsCollected)}</dd></div>
-                    <div><dt>المكافآت المصروفة</dt><dd>{number.format(loyalty.rewardsRedeemed)}</dd></div>
-                    <div><dt>مكافآت الأختام المتاحة</dt><dd>{number.format(loyalty.availableStampRewards)}</dd></div>
-                    {(loyalty.affordablePointRewards !== null || loyalty.pointsBalance > 0) && <div><dt>رصيد النقاط</dt><dd>{number.format(loyalty.pointsBalance)}</dd></div>}
-                    {loyalty.affordablePointRewards !== null && <div><dt>خيارات الاستبدال بالنقاط</dt><dd>{number.format(loyalty.affordablePointRewards)}</dd></div>}
-                  </dl> : <p className={styles.noCard}>لم تُصدر بطاقة ولاء لهذا العميل</p>}
+                  <CustomerBalances loyalty={loyalty} name={customer.name} />
                 </td></tr>)}</tbody>
               </table>}
       </div>

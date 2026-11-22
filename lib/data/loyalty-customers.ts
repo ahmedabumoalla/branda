@@ -6,6 +6,20 @@ import { createClient } from "@/lib/supabase/server";
 import type { LoyaltyCustomerDetail, LoyaltyCustomerPage } from "@/lib/loyalty/customer-directory-types";
 
 const filterSchema = z.object({ page: z.number().int().min(0).max(100000).default(0), query: z.string().trim().max(100).default(""), downloadedOnly: z.boolean().default(false) });
+const count = z.number().int().nonnegative();
+const loyalty = z.object({
+  mode: z.enum(["stamps", "points"]),
+  stampsCollected: count, stampsInCycle: count, rewardsRedeemed: count, availableStampRewards: count,
+  pointsEarned: count, pointsSpent: count, pointsBalance: count, affordablePointRewards: count.nullable(),
+}).nullable();
+const directoryPage = z.object({
+  rows: z.array(z.object({ id: z.string().uuid(), name: z.string(), joinedAt: z.string(), loyalty })),
+  total: count, page: count, pageSize: z.number().int().positive(),
+});
+const directoryDetail = z.object({
+  id: z.string().uuid(), name: z.string(), phone: z.string().nullable(),
+  birthdayEnabled: z.boolean(), birthDate: z.string().nullable(), loyalty,
+});
 
 async function directoryContext() {
   const cafe = await requireOwnerCafeContext();
@@ -29,23 +43,17 @@ export async function getOwnerLoyaltyCustomers(input: unknown = {}): Promise<Loy
     p_cafe: cafeId, p_page: page, p_query: query, p_members_only: downloadedOnly,
   });
   if (error || !data) throw new Error("Customer directory unavailable");
-  return data as LoyaltyCustomerPage;
+  return directoryPage.parse(data);
 }
 
 /** Contact details are returned for one selected customer after fresh authorization */
 export async function getOwnerLoyaltyCustomerDetail(id: unknown, downloadedOnly: unknown = false): Promise<LoyaltyCustomerDetail> {
   const customerId = z.string().uuid().parse(id);
-  const downloaded = z.boolean().parse(downloadedOnly);
+  const membersOnly = z.boolean().parse(downloadedOnly);
   const { db, cafeId } = await directoryContext();
-  if (downloaded) {
-    const { data, error } = await db.rpc("finance_loyalty_customer_detail", { p_cafe: cafeId, p_customer: customerId });
-    if (error || !data) throw new Error("Customer unavailable");
-    return data as LoyaltyCustomerDetail;
-  }
-  const [{ data, error }, birthday] = await Promise.all([
-    db.from("customer_profiles").select("id,full_name,phone,birth_date").eq("cafe_id", cafeId).eq("id", customerId).maybeSingle(),
-    db.rpc("loyalty_birthday_enabled", { p_cafe: cafeId }),
-  ]);
+  const { data, error } = await db.rpc("loyalty_customer_directory_detail", {
+    p_cafe: cafeId, p_customer: customerId, p_members_only: membersOnly,
+  });
   if (error || !data) throw new Error("Customer unavailable");
-  return { id: String(data.id), name: String(data.full_name || "عميل بدون اسم"), phone: data.phone ? String(data.phone) : null, birthdayEnabled: birthday.data === true, birthDate: data.birth_date ? String(data.birth_date) : null };
+  return directoryDetail.parse(data);
 }

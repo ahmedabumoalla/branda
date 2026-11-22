@@ -13,11 +13,13 @@ const list = async (cafe = brand, page = 0, query = "") =>
   (await db.query("SELECT public.finance_loyalty_customers_read($1,$2,$3) AS result", [cafe, page, query])).rows[0].result;
 const detail = async customer =>
   (await db.query("SELECT public.finance_loyalty_customer_detail($1,$2) AS result", [brand, customer])).rows[0].result;
+const profile = async (customer, membersOnly, cafe = brand) =>
+  (await db.query("SELECT public.loyalty_customer_directory_detail($1,$2,$3) AS result", [cafe, customer, membersOnly])).rows[0].result;
 const enroll = (cafe, customer, name) => db.query(
   "INSERT INTO customer_profiles(id,cafe_id,full_name,phone) VALUES ($1,$2,$3,'test-only')", [customer, cafe, name]
 );
 const issue = (cafe, customer) => db.query(
-  "INSERT INTO loyalty_cards(id,cafe_id,customer_profile_id) VALUES ($1,$2,$1)", [customer, cafe]
+  "INSERT INTO loyalty_cards(id,cafe_id,customer_profile_id,card_code) VALUES ($1,$2,$1,$1::uuid::text)", [customer, cafe]
 );
 try {
   await db.exec(`
@@ -27,7 +29,8 @@ try {
     CREATE FUNCTION brand_finance_private.role_for(uuid) RETURNS text LANGUAGE sql AS 'SELECT ''owner''::text';
     CREATE FUNCTION platform_access_private.service_enabled(uuid,text) RETURNS boolean LANGUAGE sql AS 'SELECT true';
     CREATE TABLE customer_profiles(id uuid PRIMARY KEY,cafe_id uuid,full_name text,phone text,birth_date date,created_at timestamptz DEFAULT now());
-    CREATE TABLE loyalty_cards(id uuid,cafe_id uuid,customer_profile_id uuid,available_loyalty_points integer DEFAULT 0,UNIQUE(cafe_id,customer_profile_id));
+    CREATE TABLE loyalty_cards(id uuid,cafe_id uuid,customer_profile_id uuid,available_loyalty_points integer DEFAULT 0,stamps_in_cycle integer DEFAULT 0,card_code text,UNIQUE(cafe_id,customer_profile_id));
+    CREATE TABLE loyalty_scan_requests(cafe_id uuid,target_code text,operation text,result jsonb);
     CREATE TABLE cafe_loyalty_programs(cafe_id uuid,points_mode text,points_milestones jsonb);
     CREATE TABLE loyalty_card_events(cafe_id uuid,card_id uuid,event_type text,invoice_barcode text,created_at timestamptz DEFAULT now(),stamps_added integer DEFAULT 0);
     CREATE TABLE customer_reward_instances(cafe_id uuid,loyalty_card_id uuid,source_type text,status text,reward_code text,expires_at timestamptz,metadata jsonb);
@@ -46,7 +49,18 @@ try {
   await issue(brand, walletMember);
   await issue(other, foreignMember);
   await db.query("INSERT INTO cafe_loyalty_programs VALUES ($1,'points',$2)", [brand, JSON.stringify([{points: 10}, {points: 200}])]);
-  await db.query("UPDATE loyalty_cards SET available_loyalty_points=11 WHERE id=$1", [cashierMember]);
+  await db.query("UPDATE loyalty_cards SET available_loyalty_points=11,stamps_in_cycle=1 WHERE id=$1", [cashierMember]);
+  await db.query(`INSERT INTO loyalty_scan_requests VALUES
+    ($1,$2,'points','{"ok":true,"status":"points_added","pointsAdded":205}'),
+    ($1,$2,'points','{"ok":true,"status":"points_added","pointsAdded":6}'),
+    ($1,$2,'spend_points','{"ok":true,"status":"points_redeemed","pointsSpent":200}'),
+    ($1,$2,'points','{"ok":false,"status":"approval_pending","pointsAdded":95}'),
+    ($1,$2,'spend_points','{"ok":false,"status":"rejected","pointsSpent":90}'),
+    ($1,$2,'stamp','{"ok":true,"status":"stamped","pointsAdded":700}'),
+    ($1,$4,'points','{"ok":true,"status":"points_added","pointsAdded":50}'),
+    ($1,$4,'spend_points','{"ok":true,"status":"points_redeemed","pointsSpent":50}'),
+    ($3,$2,'points','{"ok":true,"status":"points_added","pointsAdded":700}')`,
+  [brand, cashierMember, other, walletMember]);
   await db.query(`INSERT INTO loyalty_card_events(cafe_id,card_id,event_type,invoice_barcode,stamps_added) VALUES
     ($1,$2,'stamp','a',2),($1,$2,'stamp','b',1),($1,$2,'void','b',0),
     ($1,$2,'redeem','POINTS-1',0),($1,$2,'redeem','POS-4',0),($1,$2,'redeem',null,0),
@@ -60,12 +74,14 @@ try {
   await db.query("INSERT INTO wallet_apple_registrations VALUES ($1,$2)", [brand, walletMember]);
   assert.deepEqual((await list()).rows.map(row => row.id), [walletMember]);
   await db.exec(await readFile("supabase/migrations/20261122094921_cashier_members_in_loyalty_directory.sql", "utf8"));
+  await db.exec(await readFile("supabase/migrations/20261122103000_loyalty_customer_totals.sql", "utf8"));
   await db.exec("SET ROLE authenticated");
   const initial = await list();
   assert.equal(initial.total, 2);
   assert.deepEqual(new Set(initial.rows.map(row => row.id)), new Set([cashierMember, walletMember]));
   assert.deepEqual(Object.keys(initial.rows[0]).sort(), ["id", "joinedAt", "loyalty", "name"]);
-  const metrics = {stampsCollected: 2, rewardsRedeemed: 4, availableStampRewards: 1, pointsBalance: 11, affordablePointRewards: 1};
+  const metrics = {mode:'points', stampsCollected:2, stampsInCycle:1, rewardsRedeemed:4, availableStampRewards:1,
+    pointsBalance:11, pointsEarned:211, pointsSpent:200, affordablePointRewards:1};
   assert.deepEqual(initial.rows.find(row => row.id === cashierMember).loyalty, metrics);
   const general = (await db.query("SELECT public.loyalty_customer_directory_page($1,0,'',false) AS result", [brand])).rows[0].result;
   assert.equal(general.total, 3);
@@ -73,6 +89,13 @@ try {
   assert.deepEqual(general.rows.find(row => row.id === cashierMember).loyalty, metrics);
   assert.equal((await list(brand, 0, '%')).total, 0);
   assert.equal((await detail(cashierMember)).phone, "test-only");
+  assert.deepEqual((await detail(cashierMember)).loyalty, metrics);
+  assert.deepEqual((await profile(cashierMember, false)).loyalty, metrics);
+  assert.deepEqual((await profile(cashierMember, true)).loyalty, metrics);
+  assert.equal((await profile(guest, false)).loyalty, null);
+  await assert.rejects(profile(guest, true), /LOYALTY_CUSTOMER_UNAVAILABLE/);
+  await assert.rejects(profile(foreignMember, false), /LOYALTY_CUSTOMER_UNAVAILABLE/);
+  await assert.rejects(profile(foreignMember, false, other), /LOYALTY_FORBIDDEN/);
   assert.equal((await detail(walletMember)).birthdayEnabled, true);
   assert.equal((await list(brand, 500, "الولاء")).rows[0].id, cashierMember);
   await assert.rejects(detail(guest), /LOYALTY_CUSTOMER_UNAVAILABLE/);
@@ -86,8 +109,12 @@ try {
   const next = await list();
   assert.equal(next.total, 3);
   assert.equal(next.rows[0].id, newMember);
-  assert.deepEqual(next.rows.find(row => row.id === cashierMember).loyalty, {...metrics, affordablePointRewards:null});
-  assert.deepEqual(next.rows[0].loyalty, {stampsCollected:0,rewardsRedeemed:0,availableStampRewards:0,pointsBalance:0,affordablePointRewards:null});
+  assert.deepEqual(next.rows.find(row => row.id === cashierMember).loyalty, {...metrics, mode:'stamps', affordablePointRewards:null});
+  assert.deepEqual((await profile(cashierMember, true)).loyalty, {...metrics, mode:'stamps', affordablePointRewards:null});
+  const emptyMetrics = {mode:'stamps', stampsCollected:0, stampsInCycle:0, rewardsRedeemed:0, availableStampRewards:0,
+    pointsBalance:0, pointsEarned:0, pointsSpent:0, affordablePointRewards:null};
+  assert.deepEqual(next.rows[0].loyalty, emptyMetrics);
+  assert.deepEqual((await detail(walletMember)).loyalty, {...emptyMetrics, pointsEarned:50, pointsSpent:50});
   assert.equal((await detail(newMember)).id, newMember);
   await db.exec("RESET ROLE");
   await db.query(`WITH added AS (
@@ -104,8 +131,10 @@ try {
   assert.deepEqual(await list(brand, 20, 'missing'), {rows:[],total:0,page:0,pageSize:20});
   await db.exec("RESET ROLE; SET ROLE anon");
   await assert.rejects(list(), /permission denied/);
+  await assert.rejects(profile(cashierMember, false), /permission denied/);
+  await assert.rejects(db.query("SELECT brand_finance_private.loyalty_customer_balance($1,$2)", [brand,cashierMember]), /permission denied/);
   await assert.rejects(db.query("SELECT public.loyalty_customer_directory_page($1,0,'',false)", [brand]), /permission denied/);
-  console.log("PASS cashier membership, historical stamps and redemption, expiration, points balance and eligibility, paging and tenant isolation");
+  console.log("PASS cashier membership, historical stamps and redemption, lifetime posted points, balance, shared detail, paging and tenant isolation");
 } finally {
   await db.close();
 }

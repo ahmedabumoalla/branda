@@ -26,7 +26,15 @@ async function harness(options={}){
   const calls=[],customerRequests=[],rpcCalls=[];let contextCalls=0,featureCalls=0,dbCalls=0;
   const rows=options.rows??[fixture(1),fixture(2),fixture(3,"brand-two")];
   const defaultPage={rows:[],total:2,page:0,pageSize:20};
-  const db={rpc:async(name,args)=>{rpcCalls.push({name,args});return options.rpcError?{data:null,error:{message:"denied"}}:{data:options.rpcData??(name==="loyalty_customer_directory_page"?defaultPage:null),error:null};},auth:{getUser:async()=>({data:{user:options.user===false?null:{id:"owner-id"}}})},from:table=>{
+  const db={rpc:async(name,args)=>{
+    rpcCalls.push({name,args});
+    if(options.rpcError)return {data:null,error:{message:"denied"}};
+    if(options.rpcData)return {data:options.rpcData,error:null};
+    if(name==="loyalty_customer_directory_page")return {data:defaultPage,error:null};
+    assert.equal(name,"loyalty_customer_directory_detail");
+    const row=rows.find(row=>row.id===args.p_customer&&row.cafe_id===args.p_cafe);
+    return {data:row?{id:row.id,name:row.full_name||"عميل بدون اسم",phone:row.phone,email:row.email,birthdayEnabled:false,birthDate:null,loyalty:null}:null,error:null};
+  },auth:{getUser:async()=>({data:{user:options.user===false?null:{id:"owner-id"}}})},from:table=>{
     const entry={table,select:null,selectOptions:null,eq:[],is:[],orders:[],range:null,ilike:null,single:false};calls.push(entry);
     const chain={
       select:(fields,settings)=>{entry.select=fields;entry.selectOptions=settings;return chain;},
@@ -77,25 +85,25 @@ equal(h.calls.find(x=>x.table==="profiles").eq,[["id","owner-id"]],"status check
 equal(h.calls.find(x=>x.table==="cafes").is,[["deleted_at",null]],"deleted cafe excluded");
 h=await harness({rpcError:true});await rejects(()=>h.api.getOwnerLoyaltyCustomers(),"list DB error is not empty success");
 h=await harness();let detail=await h.api.getOwnerLoyaltyCustomerDetail(customerId(1));
-equal(detail,{id:customerId(1),name:"Customer 1",phone:"private-phone-1",birthdayEnabled:false,birthDate:null},"detail returns the selected customer and birthday settings");
-equal(h.customerRequests[0].select,"id,full_name,phone,birth_date","detail never selects email or unrelated fields");
-equal(h.customerRequests[0].eq,[["cafe_id","brand-one"],["id",customerId(1)]],"detail requires both tenant and exact selected UUID");
+equal(detail,{id:customerId(1),name:"Customer 1",phone:"private-phone-1",birthdayEnabled:false,birthDate:null,loyalty:null},"profile without an issued card has no fabricated balances");
+equal(h.rpcCalls,[{name:"loyalty_customer_directory_detail",args:{p_cafe:"brand-one",p_customer:customerId(1),p_members_only:false}}],"single profile lookup uses exact tenant, customer and scope");
 check(!JSON.stringify(detail).includes("email"),"detail never returns email");
 await rejects(()=>h.api.getOwnerLoyaltyCustomerDetail(customerId(3)),"known customer UUID in other cafe denied");
 await rejects(()=>h.api.getOwnerLoyaltyCustomerDetail(customerId(999)),"unknown selected customer denied");
 h=await harness({rows:[{...fixture(1),full_name:"",phone:null}]});detail=await h.api.getOwnerLoyaltyCustomerDetail(customerId(1));
 equal(detail.phone,null,"missing contact remains explicitly unavailable");check(detail.name.length>0,"missing name has readable fallback");
-h=await harness({customerError:true});await rejects(()=>h.api.getOwnerLoyaltyCustomerDetail(customerId(1)),"detail DB failure rejected");
+h=await harness({rpcError:true});await rejects(()=>h.api.getOwnerLoyaltyCustomerDetail(customerId(1)),"detail DB failure rejected");
 
-const downloadedPage={rows:[{id:customerId(1),name:"Wallet customer",joinedAt:"2026-11-14T00:00:00Z"}],total:1,page:0,pageSize:20};
-h=await harness({rpcData:downloadedPage});
+const loyalty={mode:"points",stampsInCycle:1,stampsCollected:8,rewardsRedeemed:2,availableStampRewards:0,pointsEarned:211,pointsSpent:200,pointsBalance:11,affordablePointRewards:0};
+const downloadedPage={rows:[{id:customerId(1),name:"Wallet customer",joinedAt:"2026-11-14T00:00:00Z",loyalty}],total:1,page:0,pageSize:20};
+h=await harness({rpcData:{...downloadedPage,rows:downloadedPage.rows.map(row=>({...row,phone:"must-not-leak",email:"must-not-leak"}))}});
 equal(await h.api.getOwnerLoyaltyCustomers({downloadedOnly:true,page:2,query:"  Wallet  "}),downloadedPage,"downloaded directory uses bounded authorized RPC result");
 equal(h.rpcCalls,[{name:"loyalty_customer_directory_page",args:{p_cafe:"brand-one",p_page:2,p_query:"Wallet",p_members_only:true}}],"downloaded RPC uses server-resolved tenant and parsed filters");
 equal(h.customerRequests.length,0,"downloaded directory never falls back to all profiles");
-const downloadedDetail={id:customerId(1),name:"Wallet customer",phone:"selected-phone"};
+const downloadedDetail={id:customerId(1),name:"Wallet customer",phone:"selected-phone",birthdayEnabled:true,birthDate:null,loyalty};
 h=await harness({rpcData:downloadedDetail});
 equal(await h.api.getOwnerLoyaltyCustomerDetail(customerId(1),true),downloadedDetail,"downloaded modal uses membership-guarded detail RPC");
-equal(h.rpcCalls,[{name:"finance_loyalty_customer_detail",args:{p_cafe:"brand-one",p_customer:customerId(1)}}],"downloaded detail remains exact tenant and customer");
+equal(h.rpcCalls,[{name:"loyalty_customer_directory_detail",args:{p_cafe:"brand-one",p_customer:customerId(1),p_members_only:true}}],"member detail remains exact tenant and customer");
 equal(h.customerRequests.length,0,"downloaded detail cannot fall back to unrelated profile");
 for(const run of [api=>api.getOwnerLoyaltyCustomers({downloadedOnly:true}),api=>api.getOwnerLoyaltyCustomerDetail(customerId(1),true)]){
  h=await harness({rpcError:true});await rejects(()=>run(h.api),"downloaded RPC denial is not empty success");equal(h.customerRequests.length,0,"downloaded RPC denial never widens membership");

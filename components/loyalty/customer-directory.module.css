@@ -36,10 +36,18 @@
 .table th span { float: left; font-weight: 400; }
 .table td { padding: 0; border-bottom: 1px solid var(--directory-line); }
 .table tr:last-child td { border-bottom: 0; }
-.balances { margin: 0 var(--directory-space) 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 115px), 1fr)); gap: 12px; }
-.balances > div { border-inline-start: 2px solid var(--directory-line); padding-inline-start: 10px; }
+.balanceGroups { margin: 0 var(--directory-space) 22px; display: grid; gap: 8px; container-type: inline-size; }
+.balances { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 8px; padding: 12px; border: 1px solid var(--directory-line); border-radius: 12px; }
+.balances:first-child { background: var(--directory-blush); }
+.balances > div { min-width: 0; padding-inline: 5px; }
+.balances > div + div { border-inline-start: 1px solid var(--directory-line); }
 .balances dt, .noCard { font-size: 12px; line-height: 1.6; color: var(--directory-muted); }
-.balances dd { margin: 2px 0 0; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.balances dd { margin: 2px 0 0; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.detailCard .balanceGroups, .detailCard .noCard { margin: 0 0 16px; }
+@container (max-width: 510px) {
+  .balances { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .balances > div:nth-child(odd) { border-inline-start: 0; }
+}
 .noCard { margin: 0 var(--directory-space) 18px; }
 .customer { width: 100%; min-height: 84px; padding: 16px var(--directory-space); display: flex; align-items: center; gap: 16px; border: 0; background: transparent; color: var(--directory-wine); text-align: start; font: inherit; cursor: pointer; transition: background 160ms ease, box-shadow 160ms ease; }
 .customer:hover { background: var(--directory-blush); box-shadow: inset -3px 0 0 var(--directory-red); }
