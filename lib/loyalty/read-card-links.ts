@@ -10,10 +10,12 @@ import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
 import { getGoogleWalletSaveState } from "@/lib/wallet/google";
 
 type CardLinkJob = { id: string; claimToken: string; cafeId: string; profileId: string; cardId: string; brandSlug: string; brandName: string; phone: string; cardCreated: boolean; googleIssued: boolean; stampsInCycle?: number | null; purchasesRequired?: number | null; rewardName?: string | null };
-/** User decision of 2026-11-22: these brands alone get the card link back from the notifications number while
- * BRANDA_PLATFORM_CARD_LINKS is "off", closing with a rating. Today that is Bolingo only. Every other brand on
- * Branda's numbers stays off. Add a brand here only on the user's word */
-export const PLATFORM_CARD_LINK_CAFE_IDS: ReadonlySet<string> = new Set(["dbe942ba-dfa4-422b-a9f6-9527c3b27cc9"]);
+const BOLINGO_CAFE_ID = "dbe942ba-dfa4-422b-a9f6-9527c3b27cc9";
+/** Brands explicitly authorized to send card links through Branda's notifications number. */
+export const PLATFORM_CARD_LINK_CAFE_IDS: ReadonlySet<string> = new Set([
+  BOLINGO_CAFE_ID,
+  "49a6e788-1650-48d7-b8f8-4d65e8bcfd37", // Atheer Spa
+]);
 /** `rating` is the text for a brand named above: it suits stamps and points alike and closes with a rating that
  * invites a reply. Brands with their own sender keep the original text */
 export function stampCardLinkMessage(job: CardLinkJob, options: { rating?: boolean } = {}) {
@@ -71,10 +73,9 @@ export async function dispatchStampCardLinks(limit = 2) {
     const usesPlatformNumber = job.cafeId !== LOCO_CAFE_ID && !(job.cafeId === WAHED_MASOUB_CAFE_ID && wahedSender);
     // A stamp that completes the card sets the count back to zero, so zero right after a stamp means a reward was earned
     // A brand the user named keeps its card link while the platform switch is off, from the notifications number
-    // only and never from the primary or the first standby. It gets the link on every job, not the reward notice:
-    // a card on points always shows zero stamps, which the notice would misread as a completed card
+    // only. Bolingo's points invoices report zero stamps even when no reward has been earned.
     const namedLink = Boolean(platformOff && usesPlatformNumber && readyNotifySender) && PLATFORM_CARD_LINK_CAFE_IDS.has(job.cafeId);
-    const earnedReward = !namedLink && Boolean(drain && usesPlatformNumber && rewardSender) && Number(job.stampsInCycle) === 0 && Number(job.purchasesRequired) >= 1;
+    const earnedReward = !(namedLink && job.cafeId === BOLINGO_CAFE_ID) && Boolean(drain && usesPlatformNumber && rewardSender) && job.stampsInCycle === 0 && Number(job.purchasesRequired) >= 1;
     if (drain && usesPlatformNumber && !earnedReward && !namedLink) { await finish("skipped"); continue; }
     if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
     if (job.googleIssued) {

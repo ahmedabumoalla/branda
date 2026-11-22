@@ -80,3 +80,7 @@ The user asked whether Bolingo's card messages reach its customers from the noti
 - Result, read from the queue with counts only: the four jobs were created at 16:45:09Z and closed as `queued` with a provider message id between 16:45:21Z and 16:46:09Z, one attempt each, from the notifications number through the published exception. Accepted by the provider; delivery on the phones was not confirmed. No job of another brand comes from this trigger
 - From now on a Bolingo customer who earns points and does not keep the card in Apple Wallet gets the card message once a day at most, with the closing rating
 - To stop it: drop the trigger, and remove Bolingo from `PLATFORM_CARD_LINK_CAFE_IDS` to stop the sending itself. To add a brand, the user's word is needed for both places
+
+### Atheer Spa, 2026-11-23
+
+The owner restored Branda notifications-number card links for Atheer Spa (brand-3d0c0e791153). Its active program uses stamps and the existing card-link queue. Eligible new and updated cards receive the link; completion retains the single reward notice with the link. Existing wallet and duplicate checks still apply. No historical replay requested.

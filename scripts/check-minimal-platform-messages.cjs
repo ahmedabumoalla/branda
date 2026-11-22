@@ -14,6 +14,7 @@ function worker({ env, notify, jobs, saved = false }) {
   const exports = {};
   new Function('require', 'exports', 'process', transpile('lib/loyalty/read-card-links.ts'))(name => ({
     'server-only': {},
+    '@/lib/auth/brand-phone': brandPhone,
     '@/lib/data/account-cancellation': { brandAllowsNewWork: async () => true },
     '@/lib/supabase/admin': { createAdminClient: () => ({ async rpc(fn, args) {
       if (fn === 'claim_stamp_card_link_v2') return { data: args.p_primary_ready ? queue.shift() ?? null : null, error: null };
@@ -35,6 +36,12 @@ function worker({ env, notify, jobs, saved = false }) {
 const job = (id, extra = {}) => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardId: 'c', brandSlug: 'example', brandName: 'قهوة المثال', phone: '966500000001', cardCreated: false, googleIssued: false, stampsInCycle: 3, purchasesRequired: 6, rewardName: 'قهوة مجانية', ...extra });
 const notify = { idInstance: 'notify' };
 const live = { BRANDA_ACCESS_MESSAGES_ONLY: 'true', BRANDA_PLATFORM_CARD_LINKS: 'off', BRANDA_REWARD_NOTICES: 'on' };
+function loadAuth(name) {
+  const exports = {};
+  new Function('require', 'exports', transpile(name.slice(2) + '.ts'))(loadAuth, exports);
+  return exports;
+}
+const brandPhone = loadAuth('@/lib/auth/brand-phone');
 
 (async () => {
   let checks = 0;
@@ -86,12 +93,12 @@ const live = { BRANDA_ACCESS_MESSAGES_ONLY: 'true', BRANDA_PLATFORM_CARD_LINKS: 
     assert.equal(x.sent.length, 2); checks++;
   }
 
-  // User decision of 2026-11-22: Bolingo alone gets its card link back, from the notifications number, closing
-  // with a rating. Every other brand on Branda's numbers is still closed unsent
+  // Tenant exceptions for ordinary card links use the notifications number.
   const bolingo = 'dbe942ba-dfa4-422b-a9f6-9527c3b27cc9';
+  const atheer = '49a6e788-1650-48d7-b8f8-4d65e8bcfd37';
   {
     const x = worker({ env: live, notify, jobs: [job('other'), job('known', { cafeId: bolingo, brandName: 'بولينقو' }), job('new', { cafeId: bolingo, brandName: 'بولينقو', cardCreated: true }), job('other2', { cardCreated: true })] });
-    assert.deepEqual([...x.exports.PLATFORM_CARD_LINK_CAFE_IDS], [bolingo], 'one named brand only');
+    assert.deepEqual([...x.exports.PLATFORM_CARD_LINK_CAFE_IDS], [bolingo, atheer]);
     const result = await x.exports.dispatchStampCardLinks(5);
     assert.deepEqual(x.finished, [['other', 'skipped'], ['known', 'queued'], ['new', 'queued'], ['other2', 'skipped']]);
     assert.deepEqual(x.sent.map(([sender]) => sender), ['notify', 'notify']); assert.equal(result.queued, 2);
@@ -109,8 +116,24 @@ const live = { BRANDA_ACCESS_MESSAGES_ONLY: 'true', BRANDA_PLATFORM_CARD_LINKS: 
     }
     checks++;
   }
-  // A card on points shows zero stamps: the named brand still gets the card link, never a false reward notice
+  // Atheer retains one card link for an ordinary stamp and one reward message on completion.
   {
+    const brand = { cafeId: atheer, brandSlug: 'brand-3d0c0e791153', brandName: 'مركز اثير الرفاهية سبا للمساج' };
+    const jobs = [job('new', { ...brand, cardCreated: true }), job('stamp', brand), job('reward', { ...brand, stampsInCycle: 0 })];
+    const x = worker({ env: live, notify, jobs });
+    await x.exports.dispatchStampCardLinks(5);
+    assert.deepEqual(x.sent.map(([sender]) => sender), ['notify', 'notify', 'notify']);
+    assert.match(x.sent[0][1], /بطاقة الولاء جاهزة باسمك/);
+    assert.match(x.sent[1][1], /تم تحديث رصيدك/);
+    assert.match(x.sent[2][1], /استحقيت مكافأة/);
+    for (const [,message] of x.sent) assert.ok(message.includes('/loyalty/brand-3d0c0e791153/access?token='));
+    const offline = worker({ env: live, notify: null, jobs });
+    await offline.exports.dispatchStampCardLinks(5);
+    assert.deepEqual(offline.sent, []);
+    checks++;
+  }
+  {
+    // A points card reports zero stamps, even when it has not earned a reward.
     const x = worker({ env: live, notify, jobs: [job('zero', { cafeId: bolingo, stampsInCycle: 0 })] });
     await x.exports.dispatchStampCardLinks(2);
     assert.equal(x.sent.length, 1); assert.doesNotMatch(x.sent[0][1], /مبروك|مكافأ/); assert.match(x.sent[0][1], /تم تحديث رصيدك/); checks++;
