@@ -43,6 +43,26 @@ async function main() {
       return new NextRequest('https://barndaksa.com' + pathname, { method, headers: { host: 'barndaksa.com', cookie: 'test=original', [routing.hospitalAccountRouteHeader]: marker }, ...(body ? { body } : {}) });
     }
     const rows = [];
+    const printedPath = '/loyalty/brand-8ad185ee82e3';
+    const printedQr = printedPath + '?source=qr';
+    const originalNow = Date.now;
+    try {
+      Date.now = () => Date.parse('2026-11-23T16:59:59.999Z');
+      check((await proxy(request(printedQr))).headers.get('location'), null, 'Printed QR before Riyadh cutover');
+      Date.now = () => Date.parse('2026-11-23T17:00:00Z');
+      for (const method of ['GET', 'HEAD']) {
+        const result = await proxy(request(printedQr, method));
+        check(result.status, 307, 'Temporary QR redirect at cutover');
+        check(result.headers.get('location'), 'https://barndaksa.com/loyalty/mind-hospital?source=qr', 'MIND enrollment');
+        check(result.headers.get('cache-control'), 'no-store', 'QR redirect is not cached');
+      }
+      for (const path of [printedPath, printedPath + '?source=menu', printedQr + '&branch=branch-id', printedPath + '/access?token=test', '/loyalty/mind-hospital?source=qr']) {
+        check((await proxy(request(path))).headers.get('location'), null, 'Separate enrollment and member routes');
+      }
+      check((await proxy(request(printedQr, 'POST'))).headers.get('location'), null, 'Do not forward submissions');
+    } finally {
+      Date.now = originalNow;
+    }
     check(routing.hospitalAccountEntryHref(), routing.hospitalAccountPath + '?portal=1', 'Stable link bypasses cached legacy permanent redirect');
     for (const route of [routing.hospitalAccountPath, routing.hospitalAccountLoginPath, routing.hospitalAccountPath + '/', routing.hospitalAccountEntryHref()]) for (const method of ['GET', 'HEAD']) {
       const before = sessionCalls.length;
@@ -97,12 +117,16 @@ async function main() {
     await assert.rejects(() => layout.default({ params: Promise.resolve({ slug: 'mind-hospital' }), children: 'other' }), /غير متاح/); assertions++;
 
     let state, calls;
-    const phone = load('lib/auth/phone-utils.ts');
+    const digits = load('lib/auth/input-digits.ts');
+    const ownerPhone = load('lib/auth/owner-phone.ts', { '@/lib/auth/input-digits': digits });
+    const brandPhone = load('lib/auth/brand-phone.ts', { '@/lib/auth/owner-phone': ownerPhone });
     const reset = () => { calls = []; state = { features: ['finance'], configured: true, allowed: true, user: { id: 'verified-user', phone: '+966500000001', phone_confirmed_at: '2026-11-15' }, session: { token: 'mock' }, error: null }; };
     const auth = load('app/actions/hospital-customer-auth.ts', {
+      '@/lib/auth/brand-phone': brandPhone,
+      '@/lib/data/brand-phone-country': { getBrandPhoneCountryBySlug: async () => 'SA' },
       '@/lib/data/feature-entitlements': { getPublicCafeFeatureCodesBySlug: async slug => { calls.push(['features', slug]); return state.features; } },
       '@/lib/platform/feature-gates': { featureCodesAllow: (features, code) => features.includes(code) },
-      '@/lib/auth/phone-otp': { normalizeSaudiPhone: phone.normalizeSaudiPhone, isPhoneOtpRequiredForBrand: () => state.configured, isAllowedCustomerOtpPhone: () => state.allowed, requestCustomerPhoneOtp: async (...args) => { calls.push(['request', ...args]); return { required: true, ok: true, maskedPhone: '9665****0001', resendAfterSeconds: 60 }; } },
+      '@/lib/auth/phone-otp': { isPhoneOtpRequiredForBrand: () => state.configured, isAllowedCustomerOtpPhone: () => state.allowed, requestCustomerPhoneOtp: async (...args) => { calls.push(['request', ...args]); return { required: true, ok: true, maskedPhone: '9665****0001', resendAfterSeconds: 60 }; } },
       '@/lib/supabase/server': { createClient: async () => ({ auth: { verifyOtp: async input => { calls.push(['verify', input]); return { data: { user: state.user, session: state.session }, error: state.error }; }, signOut: async options => { calls.push(['signOut', options]); } } }) },
     });
     reset();
@@ -137,6 +161,7 @@ async function main() {
 
     for (const file of ['scripts/check-hospital-account-routing.cjs', 'app/c/[slug]/hospital-account/page.tsx', 'app/c/[slug]/hospital-account/login/page.tsx', 'components/hospital/doctor-login.tsx', 'components/hospital/doctor-login.module.css', 'lib/data/hospital-doctor-portal.ts', 'lib/auth/phone-otp.ts', 'lib/supabase/middleware.ts', 'package.json', 'package-lock.json', 'tsconfig.json', 'next.config.ts']) inputs.add(file);
     const report = { at: new Date().toISOString(), runtime: process.version, passed: true, assertions, rows, command: 'node scripts/check-hospital-account-routing.cjs', limits: ['Actual proxy/layout/action functions with mocked service/auth/OTP dependencies; real NextRequest/NextResponse including streamed POST', 'No real OTP, account/session changes, database writes, messages or live customer identity'], inputs: Object.fromEntries([...inputs].sort().map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')])) };
+    fs.mkdirSync('output/mind-ui-review-20261115', { recursive: true });
     fs.writeFileSync('output/mind-ui-review-20261115/hospital-account-routing-check.json', JSON.stringify(report, null, 2) + '\n');
     console.log(JSON.stringify({ passed: true, assertions, routes: rows.length }));
   } finally { if (originalFlag === undefined) delete process.env.STOREFRONT_ENABLED; else process.env.STOREFRONT_ENABLED = originalFlag; }
