@@ -17,6 +17,14 @@ const rowSchema = z.object({
   trial_days: z.number().int().nonnegative().nullable(),
   last_activity: z.string().nullable(),
   last_activity_at: timestamp.nullable(),
+  active_plan_names: z.string(),
+  subscription_expires_at: timestamp.nullable(),
+  issued_card_count: z.number().int().nonnegative(),
+  stamp_operation_count: z.number().int().nonnegative(),
+  menu_visitor_count: z.number().int().nonnegative().nullable(),
+  dashboard_login_count: z.number().int().nonnegative(),
+  menu_tracking_since: timestamp.nullable(),
+  stamp_tracking_since: timestamp.nullable(),
 });
 
 export type BrandContactRow = z.infer<typeof rowSchema>;
@@ -29,7 +37,7 @@ export async function getBrandContactReport(): Promise<BrandContactReport> {
   const rows: BrandContactRow[] = [];
   let cursor: string | null = null;
   for (;;) {
-    let query = client.rpc("admin_brand_contact_report").lte("joined_at", exportedAt)
+    let query = client.rpc("admin_brand_contact_report_v2").lte("joined_at", exportedAt)
       .order("brand_id", { ascending: true }).limit(500);
     if (cursor !== null) query = query.gt("brand_id", cursor);
     const result = await query;

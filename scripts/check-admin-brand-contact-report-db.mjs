@@ -56,5 +56,50 @@ try {
   assert.equal(new Date(first.last_activity_at).toISOString(),"2025-01-02T00:00:00.000Z");
   assert.equal(pending.trial_days,30);assert.equal(pending.trial_started_at,null);assert.equal(pending.last_activity_at,null);
   assert.equal(pending.handoff_status,"بانتظار إرسال بيانات الدخول");
+  await q("reset role");
+  await db.exec(`
+    alter table cafes add column slug text;
+    alter table brand_onboarding_private.accounts add column sent_at timestamptz,add column provider_message_id text;
+    alter table platform_plans add column name text;
+    create schema platform_access_private; create schema brand_analytics_private; create schema loyalty_audit_private;
+    create function platform_access_private.service_enabled(uuid,text) returns boolean language sql as $$select $2='menu'$$;
+    create table brand_analytics_private.events(cafe_id uuid,visitor_key text,kind text,occurred_at timestamptz);
+    create table brand_analytics_private.settings(recording_started_at timestamptz);
+    create table loyalty_audit_private.settings(recording_started_at timestamptz);
+    insert into brand_analytics_private.settings values('2025-01-01');
+    insert into loyalty_audit_private.settings values('2025-02-01');
+    create table loyalty_cards(cafe_id uuid,issued_at timestamptz);
+    update cafes set slug='real-brand'; update platform_plans set name=id;
+  `);
+  await db.exec(await readFile("supabase/migrations/20261123232417_admin_brand_contact_metrics.sql","utf8"));
+  const v2="select * from public.admin_brand_contact_report_v2()";
+  await q("insert into loyalty_cards values($1,'2025-03-01'),($1,'2025-03-02')",[a]);
+  await q("insert into loyalty_activity_events values($1,null,'2025-04-01','success','stamp','owner'),($1,$2,'2025-03-03','success','stamp','cashier'),($1,$2,'2025-03-03','failed','stamp','cashier'),($1,$2,'2025-03-03','duplicate','stamp','cashier')",[a,cashier]);
+  await q("insert into cafe_operation_events values($1,$2,'2025-03-01','brand_login','brand_user'),($1,$2,'2025-03-02','brand_login','brand_user')",[a,owner]);
+  await q("insert into brand_analytics_private.events values($1,'same','menu_view',now()),($1,'same','menu_view',now()),($1,'other','menu_view',now()),($1,'not-menu','menu_loyalty_click',now())",[a]);
+  await q("insert into subscriptions(cafe_id,plan_id,status,activation_source,started_at,expires_at) values($1,'-','trialing','admin_whatsapp_trial',now()-interval '1 day',now()+interval '5 days'),($1,'finance','active','admin_manual_change',now()-interval '1 day',now()+interval '10 days')",[a]);
+  await q("set role anon"); await assert.rejects(q(v2),/permission denied/); await q("reset role");
+  await q("set role authenticated"); await q("select set_config('fixture.actor',$1,false)",[owner]); await assert.rejects(q(v2),/Admin access denied/);
+  await q("select set_config('fixture.actor',$1,false)",[admin]);
+  const current=(await q(v2)).rows;assert.equal(current.length,1);
+  const metric=current[0];assert.equal(Number(metric.issued_card_count),2);assert.equal(Number(metric.stamp_operation_count),2);
+  assert.equal(Number(metric.menu_visitor_count),2);assert.equal(Number(metric.dashboard_login_count),2);
+  assert.equal(metric.last_activity,'تسجيل ختم ولاء');assert.equal(new Date(metric.last_activity_at).toISOString(),'2025-04-01T00:00:00.000Z');
+  assert(metric.active_plan_names.includes('finance'));assert(metric.active_plan_names.includes('تجريبية'));
+  assert(new Date(metric.subscription_expires_at).getTime()>Date.now()+4*86400000);
+  assert(new Date(metric.subscription_expires_at).getTime()<Date.now()+6*86400000);
+  await q("reset role");
+  for(const slug of ['test-cafe','mens-barbershop-dev','khayal-aldeem','demo-brand']) {
+    await q("update cafes set slug=$1 where id=$2",[slug,a]);assert.equal((await q(v2)).rows.length,0);
+  }
+  await q("update cafes set slug='real-brand' where id=$1",[a]);
+  await q("update profiles set phone=null where id=$1",[owner]);assert.equal((await q(v2)).rows.length,0);
+  await q("update profiles set phone='0500000000' where id=$1",[owner]);
+  await q("update brand_onboarding_private.accounts set state='uncertain' where cafe_id=$1",[a]);assert.equal((await q(v2)).rows.length,0);
+  await q("update brand_onboarding_private.accounts set sent_at=now(),provider_message_id='historical-proof' where cafe_id=$1",[a]);assert.equal((await q(v2)).rows.length,1);
+  await q("delete from brand_onboarding_private.accounts where cafe_id=$1",[a]);assert.equal((await q(v2)).rows.length,0);
+  await q("insert into subscriptions(cafe_id,activation_source) values($1,'verified_owner_signup')",[a]);assert.equal((await q(v2)).rows.length,1);
+  await q("delete from cafe_operation_events where actor_id=$1",[owner]);assert.equal((await q(v2)).rows.length,0);
   console.log("PASS contact report auth gate, directory scope, pending/current/history, owner contact, activity attribution and maintenance exclusion");
+  console.log("PASS metrics: sent/self-signup evidence, test/contact exclusions, card/stamp counts, distinct visitors, owner activity, real dashboard logins, multiple active packages and real expiry");
 } finally { await db.close(); }

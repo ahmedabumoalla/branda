@@ -229,12 +229,15 @@ async function main() {
   await test('activation report restricts the RPC and exports filtered RTL dates and phones as text', async () => {
     const base = { brand_id:'20000000-0000-4000-8000-000000000001', brand_name:'=PrivateFixture', owner_phone:'+970590000001',
       account_status:'نشط', handoff_status:'غير موثّق', trial_state:'لم تبدأ', trial_days:7, trial_started_at:null,
-      joined_at:'2026-11-01T22:30:00.000Z',last_activity:null,last_activity_at:null };
+      joined_at:'2026-11-01T22:30:00.000Z',last_activity:null,last_activity_at:null,
+      active_plan_names:'ولاء، منيو',subscription_expires_at:'2026-12-01T21:00:00.000Z',issued_card_count:123,
+      stamp_operation_count:45,menu_visitor_count:67,dashboard_login_count:8,
+      menu_tracking_since:'2026-10-05T00:00:00.000Z',stamp_tracking_since:'2026-10-04T00:00:00.000Z' };
     const pages = [[base],[{ ...base,brand_id:'20000000-0000-4000-8000-000000000002',brand_name:'Z',owner_phone:null }],[]];
     const cursors = [];
     const stubs = { '@/lib/data/cafes':{requirePlatformAdmin:async()=>({id:'fixture'})},
       '@/lib/supabase/server':{createClient:async()=>({rpc(name){
-        assert.equal(name,'admin_brand_contact_report');
+        assert.equal(name,'admin_brand_contact_report_v2');
         return {lte(){return this;},order(column){assert.equal(column,'brand_id');return this;},limit(){return this;},
           gt(column,value){assert.equal(column,'brand_id');cursors.push(value);return this;},
           then(resolve){resolve({data:pages.shift(),error:null});}};
@@ -258,13 +261,17 @@ async function main() {
     assert.equal(cursors.length,2);
     const output = new ExcelJS.Workbook();await output.xlsx.load(await response.arrayBuffer());
     const sheet=output.worksheets[0];
-    assert.equal(sheet.views[0].rightToLeft,true);assert.equal(sheet.autoFilter,'A2:J4');
+    assert.equal(sheet.views[0].rightToLeft,true);assert.equal(sheet.autoFilter,'A2:P4');
     const row=[sheet.getRow(3),sheet.getRow(4)].find(r=>r.getCell(1).value===base.brand_name);
     assert.equal(row.getCell(1).type,ExcelJS.ValueType.String);
     assert.equal(row.getCell(2).value,base.owner_phone);assert.equal(row.getCell(2).numFmt,'@');
     assert.equal(row.getCell(3).value.toISOString(),'2026-11-02T01:30:00.000Z');
     assert.equal(row.getCell(7).value,null);assert.equal(row.getCell(8).value,7);
     assert.equal(row.getCell(9).value,'لا يوجد نشاط موثّق');assert.equal(row.getCell(10).value,null);
+    assert.equal(row.getCell(11).value,base.active_plan_names);
+    assert.equal(row.getCell(12).value.toISOString(),'2026-12-02T00:00:00.000Z');
+    assert.deepEqual([13,14,15,16].map(c=>row.getCell(c).value),[123,45,67,8]);
+    assert.equal(output.worksheets[1].name,'دليل المؤشرات');
     for (const [message,status] of [['Unauthorized',401],['Forbidden',403],['private database error',503]]) {
       const denied = await endpoint({getBrandContactReport:async()=>{throw Error(message);}}).GET();
       assert.equal(denied.status,status);assert.equal(denied.headers.get('Content-Disposition'),null);
