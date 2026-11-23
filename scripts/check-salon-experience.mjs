@@ -14,7 +14,7 @@ async function load(file, stubs = {}) {
   const exports = {};
   new Function("require", "exports", code)(name => {
     if (name === "server-only") return {};
-    if (name === "next/image") return { __esModule: true, default: (input) => { const props = { ...input }; delete props.unoptimized; return React.createElement("img", props); } };
+    if (name === "next/image") return { __esModule: true, default: (input) => { const props = { ...input }; delete props.unoptimized; delete props.priority; return React.createElement("img", props); } };
     if (name in stubs) return stubs[name];
     if (name.endsWith(".module.css")) return { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) };
     if (["react", "react/jsx-runtime", "zod", "lucide-react"].includes(name) || name.startsWith("node:")) return require(name);
@@ -30,7 +30,7 @@ try {
   const cafeLookup = await load("lib/data/cafes.ts", {
     "@/lib/supabase/server": { createClient: async () => ({ from: () => brandQuery(false), rpc: async () => ({ data: publicBrand ? [publicBrand] : [], error: null }) }) },
     "@/lib/supabase/admin": { createAdminClient: () => ({ from: () => brandQuery(true) }) },
-    "@/lib/platform/maintenance": {},
+    ...Object.fromEntries(["@/lib/auth/active-user","@/lib/auth/active-profile-role","@/lib/whatsapp/brand-connection-types","@/lib/staff/brand-staff-access","@/lib/brands/management","next/navigation","@/lib/platform/maintenance"].map(name => [name, {}])),
   });
   ok((await cafeLookup.getCafeBySlug("salon-test"))?.id === "salon", "unlisted active salon direct loyalty link shares public salon visibility");
   directBrand = { ...directBrand, business_category: "cafes_coffee" };
@@ -67,7 +67,11 @@ try {
     "@/lib/auth/loyalty-session-token": loyaltySessions,
     "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name,args) => { assert.equal(name,"salon_loyalty_link_context"); assert.match(args.p_hash,/^[a-f0-9]{64}$/); return {data:linkContext,error:null}; } }) },
   });
+  const digits = await load("lib/auth/input-digits.ts");
+  const ownerPhone = await load("lib/auth/owner-phone.ts", { "@/lib/auth/input-digits": digits });
   const data = await load("lib/data/salon.ts", {
+    "@/lib/auth/brand-phone": await load("lib/auth/brand-phone.ts", { "@/lib/auth/owner-phone": ownerPhone }),
+    "@/lib/data/brand-phone-country": { getBrandPhoneCountry: async () => "SA" },
     "@/lib/salon/loyalty-link": loyaltyLink,
     "next/headers": { headers: async () => new Headers({ "x-vercel-forwarded-for": "127.0.0.1" }) },
     "@/lib/supabase/admin": { createAdminClient: () => ({ from: builder, rpc: async (name, args) => { rpcCalls.push({ name, args }); return { data: true, error: null }; } }) },
@@ -77,7 +81,7 @@ try {
     "@/lib/data/cafes": { requireOwnerCafeContext: async () => ({ id: cafeId, role: "owner", businessCategory: category }) },
     "@/lib/data/cashier": { requireCashierPermission: async () => ({ cafeId, cashierId: id }) },
     "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async () => featureList },
-    "@/lib/auth/phone-utils": await load("lib/auth/phone-utils.ts"), "@/lib/salon/types": types,
+    "@/lib/salon/types": types,
   });
   const token = data.salonPortalToken(id);
   ok(/^[a-f0-9]{64}$/.test(token) && token === data.salonPortalToken(id), "retry-stable opaque capability");
@@ -142,14 +146,15 @@ try {
   h = await workerHarness({ kinds: ["loyalty_welcome"] }); await h.worker.runSalonMessageJobs(); await h.worker.runSalonMessageJobs();
   ok(h.sent.length === 1 && h.sent[0].message.includes(`/salon/card/${loyaltyLink.salonLoyaltyToken(id)}`) && h.sent[0].message.includes("ينتظر تأكيد الصالون"), "welcome sends one direct card link without falsely confirming appointment");
   const loyaltyEntry = await load("components/menu/brand-loyalty-entry.tsx", { "next/link": { __esModule: true, default: "a" }, "@/lib/analytics/public-tracking": { trackBrandEngagement() {} }, "./loyalty-link-content": { LoyaltyLinkContent: ({ label }) => React.createElement("span", null, label) } });
-  const publicUi = await load("components/salon/public-salon.tsx", { "@/app/actions/salon": {}, "@/lib/salon/types": types, "./salon-theme": salonTheme, "@/components/menu/brand-loyalty-entry": loyaltyEntry });
+  const degreesImports = { "@/lib/salon/degrees": await load("lib/salon/degrees.ts"), "./degrees-opening": await load("components/salon/degrees-opening.tsx") };
+  const publicUi = await load("components/salon/public-salon.tsx", { ...degreesImports, "@/app/actions/salon": {}, "@/lib/salon/types": types, "./salon-theme": salonTheme, "@/components/menu/brand-loyalty-entry": loyaltyEntry });
   const html = renderToStaticMarkup(React.createElement(publicUi.PublicSalon, { menu: { name: "صالون الاختبار", slug: "salon-test", products: [{ id, name: "حلاقة شعر", catalogKind: "service", price: 40, preparationTimeMinutes: 30, images: [] }, { id: cafeId, name: "زيت عناية", catalogKind: "product", price: 25, images: [] }], contacts: {}, loyaltyEnabled: true }, announcements: [{ id: "ad", title: "خدمة جديدة", description: "عناية باللحية" }], colors: { background: "#112211", foreground: "#ffffff", accent: "#aabbcc" } }));
   ok(html.includes("الخدمات والأسعار") && html.includes("منتجات العناية") && html.includes("حلاقة شعر") && html.includes("زيت عناية"), "services and retail products separated on public page");
   ok(html.includes('type="date"') && html.includes('type="time"') && !html.includes("نحضّر لك المنيو"), "direct booking without cafe loading or barber selector");
   ok(html.includes("خدمة جديدة") && html.includes("/loyalty/salon-test"), "announcements and original loyalty flow rendered");
   const slots = []; let cursor = 0;
   const hookReact = { ...React, useState: initial => { const i=cursor++; if (!(i in slots)) slots[i]=initial; return [slots[i],next=>{slots[i]=next;}]; }, useRef: initial => { const i=cursor++; return slots[i] ?? (slots[i]={current:initial}); }, useEffect:()=>{}, useTransition:()=>[false,fn=>fn()] };
-  const interactive = await load("components/salon/public-salon.tsx", { react: hookReact, "@/app/actions/salon": {}, "@/lib/salon/types": types, "./salon-theme": salonTheme, "@/components/menu/brand-loyalty-entry": loyaltyEntry });
+  const interactive = await load("components/salon/public-salon.tsx", { ...degreesImports, react: hookReact, "@/app/actions/salon": {}, "@/lib/salon/types": types, "./salon-theme": salonTheme, "@/components/menu/brand-loyalty-entry": loyaltyEntry });
   const props = {menu:{name:"صالون الاختبار",slug:"salon-test",contacts:{},categories:[{id:"hair",name:"الشعر"},{id:"beard",name:"اللحية"}],products:[{id,name:"حلاقة شعر",categoryId:"hair",catalogKind:"service",price:40,images:[]},{id:cafeId,name:"تهذيب اللحية",categoryId:"beard",catalogKind:"service",price:25,images:[]}]},announcements:[],colors:{background:"#112211",foreground:"#ffffff",accent:"#aabbcc"}};
   const walk = tree => Array.isArray(tree) ? tree.flatMap(walk) : tree && typeof tree==='object' ? [tree,...walk(tree.props?.children)] : [];
   const text = tree => Array.isArray(tree) ? tree.map(text).join('') : tree && typeof tree==='object' ? text(tree.props?.children) : typeof tree==='string' ? tree : '';
@@ -163,6 +168,9 @@ try {
   ok(text(rendered.find(n=>n.props?.id==='booking-heading')).includes('القادم يبدأ'),"booking heading preserves word separation across responsive layout");
   const consoleUi = await load("components/salon/booking-console.tsx", { "@/components/ui/design-system": { DashboardPageShell: ({ title, children }) => React.createElement("section", null, React.createElement("h1", null, title), children) }, "@/app/actions/salon": {}, "@/lib/salon/types": types });
   const baseBooking = { ...portal.booking, phone: "966500000001", proposedStart: null, calledAt: null, completedAt: null, rating: null, review: "" };
+  const degreesHtml = renderToStaticMarkup(React.createElement(publicUi.PublicSalon, { ...props, menu: { ...props.menu, cafeId: degreesImports["@/lib/salon/degrees"].DEGREES_SALON_ID, products: [...props.menu.products, { id:"vip", categoryId:"hair", name:"خدمات VIP", price:0, catalogKind:"service", commerceDetails:{quoteOnly:true}, images:[] }] } }));
+  ok(degreesHtml.includes('data-salon-presentation="100-degrees"') && degreesHtml.includes('/salon/100-degrees/wordmark.webp') && degreesHtml.includes('شاملة ضريبة القيمة المضافة'), '100 Degrees scoped branding and tax-inclusive service list');
+  ok(degreesHtml.includes('احجز خدمات VIP — يُحدّد مع الصالون') && !degreesHtml.includes('احجز خدمات VIP — ٠ ر س'), 'unpriced booking is shown as a quote');
   const fineCutHtml = renderToStaticMarkup(React.createElement(publicUi.PublicSalon, { menu: { cafeId: "b21a113d-918c-4934-ad47-7c60fa0f4aa9", name: "Fine Cut", slug: "fine-cut", products: [], contacts: {}, loyaltyEnabled: false }, announcements: [], colors: { background: "#10120f", foreground: "#f5f1e7", accent: "#d4b780" } }));
   ok(fineCutHtml.includes("fineCut") && fineCutHtml.includes("/salon/fine-cut/portrait-gold.webp") && fineCutHtml.includes("حضور يُتقن"), "commissioned Fine Cut identity renders only for its immutable tenant");
   ok(html.includes('data-salon-presentation="editorial"') && html.includes("/salon/editorial-portrait-v1.webp") && !html.includes("/salon/fine-cut/portrait-gold.webp"), "new and generic salons use the approved composition with independent shared portrait");

@@ -8,6 +8,8 @@ import { salonInputTime, salonToday, type SalonAnnouncement } from "@/lib/salon/
 import type { StandaloneMenu, StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { BrandLoyaltyEntry } from "@/components/menu/brand-loyalty-entry";
 import { salonTheme } from "./salon-theme";
+import { DEGREES_SALON_ID } from "@/lib/salon/degrees";
+import { DegreesOpening, DegreesService, degreesMark } from "./degrees-opening";
 import styles from "./public-salon.module.css";
 
 const money = (amount: number) => amount.toLocaleString("ar-SA", { maximumFractionDigits: 2 });
@@ -16,6 +18,9 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
   // This commissioned identity belongs to this tenant, even if its slug changes.
   const barber55 = menu.cafeId === "ac27c25a-79f3-40f7-ade2-70df8f715551";
   const fineCut = menu.cafeId === "b21a113d-918c-4934-ad47-7c60fa0f4aa9";
+  const degrees = menu.cafeId === DEGREES_SALON_ID;
+  const logo = degrees ? degreesMark : menu.logoUrl;
+  const servicePrice = (product: StandaloneMenuProduct) => degrees && product.price === 0 && product.commerceDetails?.quoteOnly ? "يُحدّد مع الصالون" : money(product.price) + " ر س";
   const [bookingOpen, setBookingOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const [serviceId, setServiceId] = useState("");
@@ -79,9 +84,9 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
       </div>
     </article>;
   }
-  return <main className={`${styles.page}${barber55 ? ` ${styles.barber55}` : ` ${styles.editorial}`}${fineCut ? ` ${styles.fineCut}` : ""}`} style={brandStyle} dir="rtl" data-salon-presentation={barber55 ? "barber55" : "editorial"}>
+  return <main className={`${styles.page}${degrees ? ` ${styles.degrees}` : barber55 ? ` ${styles.barber55}` : ` ${styles.editorial}`}${fineCut ? ` ${styles.fineCut}` : ""}`} style={brandStyle} dir="rtl" data-salon-presentation={degrees ? "100-degrees" : barber55 ? "barber55" : "editorial"}>
     <a className={styles.skip} href="#services">انتقل إلى الخدمات</a>
-    <div className={styles.opening}>
+    {degrees ? <DegreesOpening book={() => setBookingOpen(true)} loyalty={Boolean(menu.loyaltyEnabled)} /> : <div className={styles.opening}>
       <header className={styles.header}>
         <a href={`/salon/${menu.slug}`} className={styles.brand} aria-label={menu.name}>
           {menu.logoUrl ? <Image unoptimized width={64} height={64} src={menu.logoUrl} alt={barber55 ? menu.name : ""} className={styles.logo} /> : <span className={styles.brandMark}><Scissors aria-hidden="true" /></span>}
@@ -109,19 +114,26 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
         </div>
       </section>
       <div className={styles.openingFooter}><span><Scissors aria-hidden="true" />عناية تبدأ من هنا</span><div>{menu.contacts.location && <a href={menu.contacts.location.googleUrl} target="_blank" rel="noreferrer"><MapPin aria-hidden="true" />موقع الصالون<ArrowUpLeft aria-hidden="true" /></a>}{menu.contacts.instagramUrl && <a href={menu.contacts.instagramUrl} target="_blank" rel="noreferrer"><Camera aria-hidden="true" />إنستغرام<ArrowUpLeft aria-hidden="true" /></a>}</div><a href="#services" className={styles.scrollLink}>اكتشف أكثر<ArrowDown aria-hidden="true" /></a></div>
-    </div>
+    </div>}
     <div className={styles.content}>
       <section id="services" className={styles.section} aria-labelledby="services-heading">
-        <div className={styles.sectionHead}><div><p className={styles.eyebrow}>الخدمات والأسعار</p><h2 id="services-heading">عناية تليق <em>بتفاصيلك</em></h2></div><p className={styles.sectionDescription}>اختر خدمتك<br />وخلّ وقت العناية لك</p></div>
+        {degrees ? <div className={styles.degreesMenuHead}><h2 id="services-heading">قائمة الخدمات</h2><p>الأسعار بالريال وشاملة ضريبة القيمة المضافة</p></div> : <div className={styles.sectionHead}><div><p className={styles.eyebrow}>الخدمات والأسعار</p><h2 id="services-heading">عناية تليق <em>بتفاصيلك</em></h2></div><p className={styles.sectionDescription}>اختر خدمتك<br />وخلّ وقت العناية لك</p></div>}
         {categories.length > 1 && <div className={styles.categories} aria-label="تصنيفات الخدمات"><button aria-pressed={!category} onClick={() => setCategory("")}>كل الخدمات <span>{services.length}</span></button>{categories.map(c => <button key={c.id} aria-pressed={category === c.id} onClick={() => setCategory(c.id)}>{c.name}</button>)}</div>}
-        {services.length ? <div className={styles.serviceGrid}>{visibleServices.map(p => item(p, true))}</div> : <div className={styles.emptyServices}><div className={styles.emptyMark} aria-hidden="true"><Scissors /></div><div><p className={styles.eyebrow}>نبدأ بموعد يناسبك</p><h3>لكل إطلالة تفاصيلها</h3><p>قائمة الخدمات تُجهّز لك<br />يمكنك حجز موعد وتحديد عنايتك مع الصالون</p></div><button className={styles.outline} onClick={() => setBookingOpen(true)}>احجز موعدك<ArrowUpLeft aria-hidden="true" /></button></div>}
+        {degrees && services.length ? <div className={styles.degreesMenu}>
+          {[...categories, { id: "", name: "خدمات أخرى" }].map(group => {
+            const items = visibleServices.filter(p => (p.categoryId || "") === group.id);
+            return items.length > 0 && <section className={styles.degreesGroup} key={group.id}><h3>{group.name}</h3>
+              {items.map(p => <DegreesService key={p.id} name={p.name} price={servicePrice(p)} book={() => choose(p.id)} />)}
+            </section>;
+          })}
+        </div> : services.length ? <div className={styles.serviceGrid}>{visibleServices.map(p => item(p, true))}</div> : <div className={styles.emptyServices}><div className={styles.emptyMark} aria-hidden="true"><Scissors /></div><div><p className={styles.eyebrow}>نبدأ بموعد يناسبك</p><h3>لكل إطلالة تفاصيلها</h3><p>قائمة الخدمات تُجهّز لك<br />يمكنك حجز موعد وتحديد عنايتك مع الصالون</p></div><button className={styles.outline} onClick={() => setBookingOpen(true)}>احجز موعدك<ArrowUpLeft aria-hidden="true" /></button></div>}
       </section>
       {products.length > 0 && <section id="products" className={styles.section} aria-labelledby="products-heading"><div className={styles.sectionHead}><div><p className={styles.eyebrow}>العناية مستمرة</p><h2 id="products-heading">منتجات العناية</h2></div><ShoppingBag className={styles.headingIcon} aria-hidden="true" /></div><div className={styles.serviceGrid}>{products.map(p => item(p, false))}</div></section>}
       {hasOffers && <section id="offers" className={styles.section} aria-labelledby="offers-heading"><div className={styles.sectionHead}><div><p className={styles.eyebrow}>مساحة للجديد</p><h2 id="offers-heading">لك من الصالون</h2></div><span className={styles.sectionDescription}>العروض والخدمات الجديدة</span></div><div className={styles.offers}>
         {offers.map(offer => <article className={styles.offer} key={offer.id}>{offer.imageUrl && <Image unoptimized width={640} height={420} src={offer.imageUrl} alt="" className={styles.offerImage} />}<div className={styles.offerBody}><span className={styles.offerLabel}><Gift aria-hidden="true" />{offer.discountPercent != null ? `خصم ${offer.discountPercent}%` : "عرض من الصالون"}</span><h3>{offer.title}</h3><p>{offer.description}</p>{offer.code && <div className={styles.offerCode}>رمز العرض <b dir="ltr">{offer.code}</b></div>}{offer.productId && services.some(p => p.id === offer.productId) && <button className={styles.textLink} onClick={() => choose(offer.productId!)}>احجز الخدمة<ArrowUpLeft aria-hidden="true" /></button>}</div></article>)}
         {announcements.map(ad => <article className={`${styles.offer} ${styles.announcement}`} key={ad.id}><Sparkles className={styles.adIcon} aria-hidden="true" /><div className={styles.offerBody}><span className={styles.offerLabel}>جديد الصالون</span><h3>{ad.title}</h3><p>{ad.description}</p>{ad.service_id && services.some(p => p.id === ad.service_id) && <button className={styles.textLink} onClick={() => choose(ad.service_id!)}>احجز الخدمة<ArrowUpLeft aria-hidden="true" /></button>}</div></article>)}
       </div></section>}
-      {menu.loyaltyEnabled && <BrandLoyaltyEntry id="loyalty" className={styles.loyaltyEntry} slug={menu.slug} name={menu.name} logoUrl={menu.logoUrl} source="salon" eyebrow="لأن رجعتك تسعدنا" palette={{ background: "var(--panel)", foreground: "var(--paper)", muted: "var(--copy)", cardBackground: "var(--card-background,#4a281d)", cardForeground: "var(--card-foreground,#fff)", cardBack: "var(--gold)", actionBackground: "var(--paper)", actionForeground: "var(--ink)" }} />}
+      {menu.loyaltyEnabled && <BrandLoyaltyEntry id="loyalty" className={styles.loyaltyEntry} slug={menu.slug} name={menu.name} logoUrl={logo} source="salon" eyebrow="لأن رجعتك تسعدنا" palette={{ background: "var(--panel)", foreground: "var(--paper)", muted: "var(--copy)", cardBackground: "var(--card-background,#4a281d)", cardForeground: "var(--card-foreground,#fff)", cardBack: "var(--gold)", actionBackground: "var(--paper)", actionForeground: "var(--ink)" }} />}
       <section className={styles.bookingTeaser}><div><p className={styles.eyebrow}>وقت خاص لك</p><h2>جاهز لإطلالتك القادمة</h2></div><button className={styles.primary} onClick={() => setBookingOpen(true)}>احجز موعدك<ArrowUpLeft aria-hidden="true" /></button></section>
       <dialog ref={dialog} className={styles.bookingDialog} aria-labelledby="booking-heading" onCancel={event => { if (pending) event.preventDefault(); else setBookingOpen(false); }} onClose={() => setBookingOpen(false)}>
         <div className={styles.modalHeader}><span><Scissors aria-hidden="true" />{menu.name}</span><button type="button" aria-label="إغلاق نافذة الحجز" disabled={pending} onClick={() => setBookingOpen(false)}><X aria-hidden="true" /></button></div>
@@ -131,8 +143,8 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
           <div className={styles.formHeading}><CalendarDays aria-hidden="true" /><div><h3>احجز موعدك</h3><p>{menu.loyaltyEnabled ? "حجزك وبطاقة ولائك في خطوة واحدة" : "خطوة بسيطة لعناية تستحقها"}</p></div></div>
           <label className={styles.field}>اسمك<input name="name" autoComplete="name" placeholder="كيف نناديك" minLength={2} maxLength={120} required disabled={pending} /></label>
           <label className={styles.field}>جوال واتساب<input name="phone" autoComplete="tel" inputMode="tel" dir="ltr" placeholder="05xxxxxxxx" maxLength={30} required disabled={pending} /></label>
-          <label className={`${styles.field} ${styles.full}`}>الخدمة<select value={serviceId} onChange={e => setServiceId(e.target.value)} disabled={pending}><option value="">أحدد الخدمة مع الصالون</option>{services.map(p => <option key={p.id} value={p.id}>{p.name} — {money(p.price)} ر س</option>)}</select></label>
-          {selected && <div className={`${styles.selectedService} ${styles.full}`} role="status"><span><Scissors aria-hidden="true" />{selected.name}</span><strong>{money(selected.price)} <small>ر س</small></strong></div>}
+          <label className={`${styles.field} ${styles.full}`}>الخدمة<select value={serviceId} onChange={e => setServiceId(e.target.value)} disabled={pending}><option value="">أحدد الخدمة مع الصالون</option>{services.map(p => <option key={p.id} value={p.id}>{p.name} — {servicePrice(p)}</option>)}</select></label>
+          {selected && <div className={`${styles.selectedService} ${styles.full}`} role="status"><span><Scissors aria-hidden="true" />{selected.name}</span><strong>{servicePrice(selected)}</strong></div>}
           <label className={styles.field}>التاريخ<input ref={dateInput} type="date" name="date" dir="ltr" lang="en" min={salonToday()} required disabled={pending} /></label><label className={styles.field}>الوقت<input type="time" name="time" dir="ltr" lang="en" required disabled={pending} /></label>
           {error && <p role="alert" className={`${styles.error} ${styles.full}`}>{error}</p>}
           <button className={`${styles.submit} ${styles.full}`} disabled={pending}>{pending ? "جارٍ إرسال طلبك" : "إرسال طلب الحجز"}<ArrowUpLeft aria-hidden="true" /></button>
@@ -140,7 +152,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
         </form>
         </div>
       </dialog>
-      <footer className={styles.footer}><a href={`/salon/${menu.slug}`} className={styles.footerBrand}>{menu.logoUrl && <Image unoptimized width={44} height={44} src={menu.logoUrl} alt="" />}<span>{menu.name}<small>تفاصيل تعكس أناقتك</small></span></a><div>{menu.contacts.instagramUrl && <a href={menu.contacts.instagramUrl} target="_blank" rel="noreferrer">إنستغرام</a>}{menu.contacts.location && <a href={menu.contacts.location.googleUrl} target="_blank" rel="noreferrer">موقع الصالون</a>}<a href="https://barndaksa.com">بواسطة برندة<ArrowUpLeft aria-hidden="true" /></a></div></footer>
+      <footer className={styles.footer}><a href={`/salon/${menu.slug}`} className={styles.footerBrand}>{logo && <Image unoptimized width={44} height={44} src={logo} alt="" />}<span>{menu.name}<small>تفاصيل تعكس أناقتك</small></span></a><div>{menu.contacts.instagramUrl && <a href={menu.contacts.instagramUrl} target="_blank" rel="noreferrer">إنستغرام</a>}{menu.contacts.location && <a href={menu.contacts.location.googleUrl} target="_blank" rel="noreferrer">موقع الصالون</a>}<a href="https://barndaksa.com">بواسطة برندة<ArrowUpLeft aria-hidden="true" /></a></div></footer>
     </div>
     <nav className={styles.dock} aria-label="الوصول السريع"><a href="#services"><Scissors aria-hidden="true" /><span>الخدمات</span></a>{menu.loyaltyEnabled && <a href={`/loyalty/${menu.slug}`}><Gift aria-hidden="true" /><span>ولائي</span></a>}<button className={styles.dockBooking} onClick={() => setBookingOpen(true)}><CalendarDays aria-hidden="true" />احجز موعدك<ArrowUpLeft aria-hidden="true" /></button></nav>
   </main>;

@@ -1,4 +1,5 @@
 import { isHospitalStore } from "@/lib/commerce/hospital-profile";
+import { DEGREES_SALON_ID } from "@/lib/salon/degrees";
 import "server-only";
 import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 import { signatureBrand } from "@/lib/menu/signature-brands";
@@ -88,7 +89,7 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
   const [categoryResult, settingsResult, rawRows, identityResult] = await Promise.all([
     branchId ? categoryQuery.eq("branch_id", branchId) : categoryQuery.is("branch_id", null),
     admin.from("cafe_settings").select("logo_url,logo_storage_path,description,instagram,whatsapp").eq("cafe_id", cafe.id).maybeSingle(),
-    readMenuProducts(admin, String(cafe.id), branchId, isCommerceBusinessCategory(cafe.business_category) || hospitalMenu),
+    readMenuProducts(admin, String(cafe.id), branchId, isCommerceBusinessCategory(cafe.business_category) || hospitalMenu || cafe.id === DEGREES_SALON_ID),
     defaultPresentation ? admin.from("cafe_custom_identity").select("palette,logo_storage_path,logo_url,background_storage_path,background_url").eq("cafe_id", cafe.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
   if (categoryResult.error) throw categoryResult.error;
