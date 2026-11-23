@@ -1,10 +1,8 @@
 import { z } from "zod";
 import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
-import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { AVAILABLE_BUSINESS_CATEGORY_IDS } from "@/lib/platform/business-categories";
 
 const optionalName = z.union([z.literal(""), z.string().trim().min(2).max(120)]);
-const optionalPhone = z.string().trim().max(24).transform(value => value ? normalizeSaudiPhone(value) : "").refine((value): value is string => value !== null);
 const optionalPassword = z.union([z.literal(""), z.string().min(8).max(72).regex(/^\S+$/u)]);
 const optionalEmail = z.union([z.literal(""), z.string().trim().email().max(254)]).transform(value => value.toLowerCase());
 export const adminBrandAccountSchema = z.object({
@@ -14,9 +12,18 @@ export const adminBrandAccountSchema = z.object({
   slug: z.union([z.literal(""), z.string().trim().toLowerCase().min(3).max(60).regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)]),
   category: z.enum(AVAILABLE_BUSINESS_CATEGORY_IDS),
   ownerName: optionalName,
-  phone: optionalPhone,
+  phone: z.string().trim().max(24),
   email: optionalEmail,
   password: optionalPassword,
+  phoneCountry: z.enum(["SA", "PS"]).optional(),
+}).check(ctx => {
+  if (!ctx.value.phone) return;
+  const phone = normalizeBrandPhone(ctx.value.phone, ctx.value.phoneCountry ?? "SA");
+  if (phone === null) {
+    ctx.issues.push({ code: "custom", input: ctx.value.phone, path: ["phone"], message: "أدخل جوالًا صحيحًا لدولة الحساب المختارة" });
+  } else {
+    ctx.value = { ...ctx.value, phone };
+  }
 });
 export type AdminBrandAccountInput = z.input<typeof adminBrandAccountSchema>;
 /** Packages the administrator picks for a new account; the trial clock still starts at the login handoff */

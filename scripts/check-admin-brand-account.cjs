@@ -6,9 +6,9 @@ const ts = require("typescript");
 
 function load(file, stubs = {}) {
   const exports = {};
-  const code = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
+  const code = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   new Function("require", "exports", "console", code)(name => {
-    if (name === "server-only") return {};
+    if (name === "server-only" || name.endsWith(".css")) return {};
     if (name in stubs) return stubs[name];
     if (name.startsWith("@/")) return load(`${name.slice(2)}.ts`, stubs);
     return require(name);
@@ -81,6 +81,77 @@ const ownerInput = { requestId: draft.requestId, cafeId: cafe, ownerName: "Owner
 const profileInput = { cafeId: cafe, brandName: "Brand", brandNameEn: "", slug: "brand-one", category: "cafes_coffee" };
 
 (async () => {
+  // Submit the real country control and package selection to the same server path used in the dialog.
+  const calls = [];
+  const onboarding = load("lib/data/admin-brand-onboarding.ts", {
+    "@/lib/data/cafes": { requirePlatformAdmin: async () => ({id: "admin"}) },
+    "@/lib/data/brand-phone-country": {},
+    "@/lib/auth/brand-welcome-secret": { accountFingerprint: value => value, sealWelcomePassword: () => "fixture" },
+    "@/lib/whatsapp/green-api": {},
+    "@/lib/supabase/admin": { createAdminClient: () => ({
+      rpc: async (name, args) => { assert.equal(name,"admin_prepare_brand_account"); calls.push(args); return {data: {cafeId: cafe}}; },
+    }) },
+  });
+  const states = [];
+  let index = 0;
+  const hooks = {
+    useRef: value => ({current: value}),
+    useState: initial => {
+      const slot = index++;
+      if (!(slot in states)) states[slot] = initial;
+      return [states[slot], next => { states[slot] = typeof next === "function" ? next(states[slot]) : next; }];
+    },
+  };
+  const c = account({activePlans:["menu"]});
+  const { BrandAccountCreate } = load("components/admin/brand-account-create.tsx", {
+    react: hooks, "./brand-details-dialog": {},
+    "@/app/actions/admin-brand-onboarding": { createAdminBrandAccountAction: async input => {
+      await c.api.createAdminBrandAccountWithPlans(input);
+      await onboarding.createAdminBrandAccount(c.created.at(-1));
+      return {ok: true, data: {cafe, plansApplied: true}};
+    } },
+  });
+  function renderFields() {
+    index = 0;
+    const fields = [];
+    function walk(node) {
+      if (Array.isArray(node)) { node.forEach(walk); return; }
+      if (!node?.props) return;
+      fields.push(node);
+      walk(node.props.children);
+    }
+    walk(BrandAccountCreate({plans: [{id: "menu", name: "Menu", active: true}], close() {}, onCreated() {}}));
+    return fields;
+  }
+  const fields = renderFields();
+  const country = fields.find(n => n.props.name === "phoneCountry");
+  assert.equal(country.props.value, "SA");
+  assert.deepEqual(country.props.children.map(o => o.props.value), ["SA","PS"]);
+  country.props.onChange({target: {value: "PS"}});
+  fields.find(n => n.props.name === "planIds").props.onChange({target: {checked: true}});
+  const FormData = global.FormData;
+  try {
+    global.FormData = class { constructor(form) { return new Map(Object.entries(form)); } };
+    await renderFields().find(n => n.type === "form").props.onSubmit({preventDefault() {}, currentTarget: {...draft, phone: "٠٥٩١٢٣٤٥٦٧"}});
+  } finally { global.FormData = FormData; }
+  assert.equal(renderFields().find(n => n.props.role === "alert")?.props.children,undefined);
+  assert.deepEqual(c.replaced, [[cafe,["menu"]]]);
+  assert.equal(calls[0].p_draft.phoneCountry, "PS");
+  assert.equal(calls[0].p_draft.phone, "970591234567");
+  checks++;
+  for (const phoneCountry of ["PS","SA"]) {
+    await onboarding.createAdminBrandAccount({...draft,phoneCountry});
+    assert.equal(calls.at(-1).p_draft.phoneCountry,phoneCountry);
+    assert.equal(calls.at(-1).p_draft.phone,"");
+    await assert.rejects(() => onboarding.createAdminBrandAccount({...draft,phoneCountry,phone:phoneCountry === "PS" ? "+966512345678" : "+970591234567"}));
+    checks++;
+  }
+  const explicitSaudi = calls.at(-1).p_fingerprint;
+  await onboarding.createAdminBrandAccount(draft);
+  assert.equal(calls.at(-1).p_fingerprint, explicitSaudi);
+  assert.equal(calls.at(-1).p_fingerprint, JSON.stringify(draft));
+  await assert.rejects(() => onboarding.createAdminBrandAccount({...draft,phoneCountry:"XX"}));
+  checks++;
   // New account: the picked packages are required, verified before anything is created and applied afterwards
   for (const planIds of [[], ["Bad Id"]]) { const c = account(); await assert.rejects(() => c.api.createAdminBrandAccountWithPlans({ ...draft, planIds }), /اختر باقة واحدة/); assert.equal(c.created.length, 0); checks++; }
   { const c = account({ activePlans: ["menu"] }); await assert.rejects(() => c.api.createAdminBrandAccountWithPlans({ ...draft, planIds: ["menu", "retired"] }), /لم تعد متاحة/); assert.equal(c.created.length, 0); checks++; }

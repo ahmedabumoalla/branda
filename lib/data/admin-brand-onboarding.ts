@@ -34,13 +34,18 @@ function accountError(code: string): never {
 export async function createAdminBrandAccount(input: AdminBrandAccountInput) {
   const actor = await requirePlatformAdmin();
   const parsed = adminBrandAccountSchema.safeParse(input);
-  if (!parsed.success) throw new Error("راجع الاسم والرابط والجوال وكلمة المرور يجب أن تكون ٨ أحرف على الأقل بدون مسافات");
+  if (!parsed.success) {
+    if (parsed.error.issues.some(issue => issue.path[0] === "phone")) throw new Error("أدخل جوالًا صحيحًا لدولة الحساب المختارة أو اترك الحقل فارغًا");
+    throw new Error("راجع الاسم والرابط والجوال وكلمة المرور يجب أن تكون ٨ أحرف على الأقل بدون مسافات");
+  }
   const { password: suppliedPassword, requestId, ...fields } = parsed.data;
   const password = suppliedPassword || randomBytes(32).toString("base64url");
-  const draft = { ...fields, slug: fields.slug || `brand-${requestId.replaceAll("-", "").slice(0, 12)}`, passwordReady: Boolean(suppliedPassword) };
+  const draft = { ...fields, phoneCountry: fields.phoneCountry ?? "SA", slug: fields.slug || `brand-${requestId.replaceAll("-", "").slice(0, 12)}`, passwordReady: Boolean(suppliedPassword) };
+  // Saudi requests existed before the country picker. Preserve their replay fingerprint.
+  const fingerprintInput = draft.phoneCountry === "SA" ? { ...parsed.data, phoneCountry: undefined } : parsed.data;
   const admin = createAdminClient();
   const args = { p_id: requestId, p_actor: actor.id, p_draft: draft,
-    p_fingerprint: accountFingerprint(JSON.stringify(parsed.data)), p_ciphertext: sealWelcomePassword(password, requestId) };
+    p_fingerprint: accountFingerprint(JSON.stringify(fingerprintInput)), p_ciphertext: sealWelcomePassword(password, requestId) };
   const prepared = await admin.rpc("admin_prepare_brand_account", args);
   if (prepared.error) accountError(prepared.error.message);
   if (prepared.data?.cafeId) return String(prepared.data.cafeId);
