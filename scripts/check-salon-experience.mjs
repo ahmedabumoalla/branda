@@ -23,6 +23,8 @@ async function load(file, stubs = {}) {
   return exports;
 }
 const originalFetch = globalThis.fetch;
+const originalEnvironment = [process.env.VERCEL, process.env.VERCEL_ENV];
+process.env.VERCEL = "1"; process.env.VERCEL_ENV = "production";
 globalThis.fetch = async () => { throw new Error("Real network disabled in salon tests"); };
 try {
   let publicBrand = null, directBrand = { id: "salon", status: "active", business_category: "hair_salons" }, adminReads = 0;
@@ -54,10 +56,15 @@ try {
   const cafeId = "22222222-2222-4222-8222-222222222222";
   let category = "hair_salons", featureList = ["menu", "pager", "offers", "loyalty"], rpcCalls = [];
   const rows = { cafes: { id: cafeId, name: "صالون الاختبار", slug: "salon-test", business_category: category }, salon_bookings: { id, cafe_id: cafeId, customer_name: "عميل اختبار", phone: "966500000001", status: "confirmed", version: 1, requested_start: "2030-05-10T11:30:00Z", scheduled_start: "2030-05-10T11:30:00Z", service_snapshot: { name: "حلاقة شعر", price: 40 }, portal_hash: "secret", client_key: "private" } };
+  let staffCafe = cafeId;
+  const queueFilters = [];
   function builder(table) {
     const result = () => ({ data: table === "cafes" ? { ...rows.cafes, business_category: category } : rows[table], error: null });
     const b = { then: (resolve, reject) => Promise.resolve(result()).then(resolve, reject) };
     for (const method of ["select", "eq", "is", "gte", "maybeSingle", "single", "order", "limit"]) b[method] = () => b;
+    b.in = (field, values) => { queueFilters.push([field, values]); return b; };
+    b.or = expression => { queueFilters.push(expression); return b; };
+    b.range = async () => ({ data: [rows.salon_bookings], count: 1, error: null });
     return b;
   }
   const signing = { "@/lib/barndaksa/env": { getSupabaseServiceRoleKey: () => "test-secret-only-never-production" } };
@@ -69,7 +76,9 @@ try {
   });
   const digits = await load("lib/auth/input-digits.ts");
   const ownerPhone = await load("lib/auth/owner-phone.ts", { "@/lib/auth/input-digits": digits });
+  const degrees = await load("lib/salon/degrees.ts");
   const data = await load("lib/data/salon.ts", {
+    "@/lib/salon/degrees": degrees,
     "@/lib/auth/brand-phone": await load("lib/auth/brand-phone.ts", { "@/lib/auth/owner-phone": ownerPhone }),
     "@/lib/data/brand-phone-country": { getBrandPhoneCountry: async () => "SA" },
     "@/lib/salon/loyalty-link": loyaltyLink,
@@ -79,7 +88,7 @@ try {
     "@/lib/supabase/server": { getSessionUser: async () => ({ id }) },
     "@/lib/barndaksa/env": { getSupabaseServiceRoleKey: () => "test-secret-only-never-production" },
     "@/lib/data/cafes": { requireOwnerCafeContext: async () => ({ id: cafeId, role: "owner", businessCategory: category }) },
-    "@/lib/data/cashier": { requireCashierPermission: async () => ({ cafeId, cashierId: id }) },
+    "@/lib/data/cashier": { requireCashierPermission: async () => ({ cafeId: staffCafe, cashierId: id }) },
     "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async () => featureList },
     "@/lib/salon/types": types,
   });
@@ -110,6 +119,12 @@ try {
   ok(rpcCalls[0].args.p_actor === id && rpcCalls[0].args.p_cafe === cafeId && rpcCalls[0].args.p_actor_kind === "staff", "actor and tenant derive from verified staff context");
   await data.commandSalonBooking(id, 1, "propose", "2030-05-11T11:30:00.000Z", "staff");
   ok(rpcCalls[1].args.p_action === "propose" && rpcCalls[1].args.p_actor_kind === "staff", "staff rescheduling uses verified pager actor");
+  staffCafe = degrees.DEGREES_SALON_ID;
+  const staffQueue = await data.getSalonBookings({status:"active"}, "staff", true);
+  ok(queueFilters.at(-1)[1].includes("pending") && !staffQueue.bookings[0].phone, "100 Degrees staff queue includes new requests without exposing private phone");
+  staffCafe = cafeId;
+  await data.getSalonBookings({status:"active"}, "staff", true);
+  ok(typeof queueFilters.at(-1) === "string" && !queueFilters.at(-1).includes("pending"), "other salons retain the confirmed queue");
   rpcCalls = [];
   await data.createSalonBooking({ id, slug: "salon-test", name: "عميل اختبار", phone: "٠٥٠٠٠٠٠٠٠١", serviceId: null, start: "2030-05-10T11:30:00.000Z" });
   ok(rpcCalls[0].name === "salon_create_booking_with_loyalty" && rpcCalls[0].args.p_loyalty_hash !== rpcCalls[0].args.p_portal_hash, "booking enrollment is atomic with independent hashed card capability");
@@ -118,20 +133,23 @@ try {
 
   async function workerHarness(options = {}) {
     let queue = options.kinds ?? ["call"], sent = [], finished = [], claims = 0, authorizations = 0;
-    const db = { from: builder, rpc: async (name, args) => {
-      if (name === "salon_claim_messages_v3") { claims++; const jobs = queue.map(kind => ({ id: kind, kind, cafe_id: cafeId, booking_id: id, phone: "966500000001", lease_token: "lease" })); queue = []; return { data: jobs, error: null }; }
+    const db = { from: table => table === "salon_message_jobs" ? { select() { return this; }, eq() { return this; }, in() { return this; }, async limit() { return { data: options.degrees ? [{id}] : [], error: null }; } } : builder(table), rpc: async (name, args) => {
+      if (name === "salon_claim_routed_messages") { claims++; if (options.degrees && !args.p_notifications_ready) return { data: [], error: null }; const jobs = queue.map(kind => ({ id: kind, kind, cafe_id: options.degrees ? degrees.DEGREES_SALON_ID : cafeId, booking_id: id, phone: "966500000001", lease_token: "lease" })); queue = []; return { data: jobs, error: null }; }
       if (name === "salon_authorize_dispatch") { authorizations++; return { data: options.authorized ?? true, error: null }; }
       if (name === "salon_finish_message") { finished.push(args); if (options.finishError) throw new Error("private db error"); return { data: true, error: null }; }
       throw new Error(name);
     } };
-    const worker = await load("lib/salon/worker.ts", { "./loyalty-link": loyaltyLink,
+    const worker = await load("lib/salon/worker.ts", { "./loyalty-link": loyaltyLink, "./degrees": degrees,
+      "@/lib/whatsapp/notification-sender": { selectNotificationSender: async () => options.offline ? null : { idInstance: "notice" } },
       "@/lib/supabase/admin": { createAdminClient: () => db }, "@/lib/data/salon": { salonPortalToken: () => token },
       "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async () => options.features ?? ["menu", "pager", "loyalty"] },
-      "@/lib/whatsapp/green-api": { isGreenApiConfigured: () => options.configured ?? true, sendGreenApiPagerMessage: async input => { sent.push(input); if (options.sendError) throw new Error("secret-provider-error"); return { providerMessageId: "provider-id" }; } }, "./types": types,
+      "@/lib/whatsapp/green-api": { isGreenApiBackupOnly: () => false, isPlatformAccessOnly: () => options.accessOnly ?? false, sendGreenApiCustomerMessage: async (sender, input) => { assert.equal(sender.idInstance, "notice"); sent.push(input); return { status: "queued", providerMessageId: "notice-id" }; }, isGreenApiConfigured: () => options.configured ?? true, sendGreenApiPagerMessage: async input => { sent.push(input); if (options.sendError) throw new Error("secret-provider-error"); return { providerMessageId: "provider-id" }; } }, "./types": types,
     });
     return { worker, sent, finished, counts: () => ({ claims, authorizations }) };
   }
   let h = await workerHarness({ configured: false }); await h.worker.runSalonMessageJobs(); ok(h.counts().claims === 0, "unconfigured transport never claims jobs");
+  h = await workerHarness({ degrees: true, accessOnly: true }); await Promise.all([h.worker.runSalonMessageJobs(), h.worker.runSalonMessageJobs()]); ok(h.sent.length === 1 && h.sent[0].message.includes("اقترب موعدك") && h.finished[0].p_provider_id === "notice-id", "one 100 Degrees recall through verified notification sender");
+  h = await workerHarness({ degrees: true, offline: true, accessOnly: true }); await h.worker.runSalonMessageJobs(); ok(h.counts().authorizations === 0 && h.sent.length === 0, "offline sender leaves notification pending");
   h = await workerHarness({ authorized: false }); await h.worker.runSalonMessageJobs(); ok(h.sent.length === 0, "stale or cancelled job never sends");
   h = await workerHarness(); await Promise.all([h.worker.runSalonMessageJobs(), h.worker.runSalonMessageJobs()]); ok(h.sent.length === 1 && h.finished.length === 1, "overlapping workers do not repeat call");
   ok(h.sent[0].message.includes("دورك جاء") && !h.sent[0].message.includes("الفاتورة"), "salon call names customer without cafe order semantics");
@@ -168,8 +186,9 @@ try {
   ok(text(rendered.find(n=>n.props?.id==='booking-heading')).includes('القادم يبدأ'),"booking heading preserves word separation across responsive layout");
   const consoleUi = await load("components/salon/booking-console.tsx", { "@/components/ui/design-system": { DashboardPageShell: ({ title, children }) => React.createElement("section", null, React.createElement("h1", null, title), children) }, "@/app/actions/salon": {}, "@/lib/salon/types": types });
   const baseBooking = { ...portal.booking, phone: "966500000001", proposedStart: null, calledAt: null, completedAt: null, rating: null, review: "" };
-  const degreesHtml = renderToStaticMarkup(React.createElement(publicUi.PublicSalon, { ...props, menu: { ...props.menu, cafeId: degreesImports["@/lib/salon/degrees"].DEGREES_SALON_ID, products: [...props.menu.products, { id:"vip", categoryId:"hair", name:"خدمات VIP", price:0, catalogKind:"service", commerceDetails:{quoteOnly:true}, images:[] }] } }));
+  const degreesHtml = renderToStaticMarkup(React.createElement(publicUi.PublicSalon, { ...props, menu: { ...props.menu, loyaltyEnabled: true, cafeId: degreesImports["@/lib/salon/degrees"].DEGREES_SALON_ID, products: [...props.menu.products, { id:"vip", categoryId:"hair", name:"خدمات VIP", price:0, catalogKind:"service", commerceDetails:{quoteOnly:true}, images:[] }] } }));
   ok(degreesHtml.includes('data-salon-presentation="100-degrees"') && degreesHtml.includes('/salon/100-degrees/wordmark.webp') && degreesHtml.includes('شاملة ضريبة القيمة المضافة'), '100 Degrees scoped branding and tax-inclusive service list');
+  ok(/<section class="degreesCover"[^>]*>[\s\S]*?<img[^>]+editorial-portrait-v1[\s\S]*?<header class="degreesHeader">/.test(degreesHtml) && degreesHtml.indexOf('<section id="loyalty"') > 0 && degreesHtml.indexOf('<section id="loyalty"') < degreesHtml.indexOf('id="services"'), "unified portrait hero followed by loyalty before services");
   ok(degreesHtml.includes('احجز خدمات VIP — يُحدّد مع الصالون') && !degreesHtml.includes('احجز خدمات VIP — ٠ ر س'), 'unpriced booking is shown as a quote');
   const fineCutHtml = renderToStaticMarkup(React.createElement(publicUi.PublicSalon, { menu: { cafeId: "b21a113d-918c-4934-ad47-7c60fa0f4aa9", name: "Fine Cut", slug: "fine-cut", products: [], contacts: {}, loyaltyEnabled: false }, announcements: [], colors: { background: "#10120f", foreground: "#f5f1e7", accent: "#d4b780" } }));
   ok(fineCutHtml.includes("fineCut") && fineCutHtml.includes("/salon/fine-cut/portrait-gold.webp") && fineCutHtml.includes("حضور يُتقن"), "commissioned Fine Cut identity renders only for its immutable tenant");
@@ -190,10 +209,14 @@ try {
   ok(barberHtml.includes('data-loyalty-layout="compact"') && barberHtml.includes('/loyalty/barber-55?source=salon') && !fineCutHtml.includes('data-loyalty-entry'), "Barber55 shares the compact entry while disabled Fine Cut loyalty stays hidden");
   const ownerHtml = renderToStaticMarkup(React.createElement(consoleUi.BookingConsole, { initial: { bookings: [{ ...baseBooking, status: "pending" }], total: 1, page: 0 } }));
   ok(ownerHtml.includes("تأكيد الموعد") && ownerHtml.includes("إرسال الموعد للعميل") && ownerHtml.includes("الحجوزات المرفوضة"), "owner supports confirmation, alternative proposal and rejected archive");
+  const confirmedOwner = renderToStaticMarkup(React.createElement(consoleUi.BookingConsole, { initial: { bookings: [{ ...baseBooking, status: "confirmed" }], total: 1, page: 0 } }));
+  ok(confirmedOwner.includes("تقديم أو تغيير الموعد") && !confirmedOwner.includes("رفض الحجز"), "owner can move confirmed appointment");
   const cashierUi = await load("components/salon/salon-cashier.tsx", { "@/app/actions/salon": {}, "@/app/actions/cashier": { logoutCashierAction: async () => {} }, "@/lib/salon/types": types, "@/components/rast-loyalty/loyalty-theme": loyaltyTheme });
   const pagerHtml = renderToStaticMarkup(React.createElement(cashierUi.SalonCashier, { identity: { name: "صالون الاختبار", slug: "salon-test" }, initial: { bookings: [baseBooking, { ...baseBooking, id: cafeId, status: "in_service" }], total: 2, page: 0 } }));
   ok(pagerHtml.includes("استدعاء العميل") && pagerHtml.includes("إنهاء الخدمة") && !pagerHtml.includes("تقييمات العملاء") && !pagerHtml.includes("الخدمات المكتملة") && !pagerHtml.includes("تأكيد الموعد") && !pagerHtml.includes("رقم الفاتورة"), "cashier has call/completion only and no reviews or archive");
   ok(pagerHtml.includes("تغيير الموعد") && pagerHtml.includes('aria-labelledby="reschedule-title"'), "cashier exposes accessible date proposal dialog");
+  const requestedHtml = renderToStaticMarkup(React.createElement(cashierUi.SalonCashier, { showRequests:true, identity:{name:"100 درجة",slug:"degrees"}, initial:{bookings:[{...baseBooking,status:"pending",scheduledStart:null}],total:1,page:0} }));
+  ok(requestedHtml.includes("بانتظار تأكيد المالك") && requestedHtml.includes(types.salonTime(baseBooking.requestedStart)) && !requestedHtml.includes("استدعاء العميل"), "cashier sees requested time before confirmation without recall controls");
   const awaitingHtml = renderToStaticMarkup(React.createElement(cashierUi.SalonCashier, { identity: { name: "صالون الاختبار", slug: "salon-test" }, initial: { bookings: [{ ...baseBooking, status: "proposed", proposedStart: "2030-05-11T11:30:00Z" }], total: 1, page: 0 } }));
   ok(awaitingHtml.includes("بانتظار موافقة العميل") && !awaitingHtml.includes("استدعاء العميل") && !awaitingHtml.includes("إنهاء الخدمة"), "pending confirmed-time proposal cannot be called or completed");
   await reject(() => data.getSalonBookings({ status: "reviews" }, "staff", true), /الكاشير/);
@@ -204,4 +227,7 @@ try {
   const doneHtml = renderToStaticMarkup(React.createElement(portalUi.BookingPortal, { token, booking: { ...baseBooking, status: "completed", rating: 5, review: "تقييم محفوظ" }, brandName: "صالون الاختبار", slug: "salon-test", loyaltyEnabled: true }));
   ok(doneHtml.includes("تقييم محفوظ") && !doneHtml.includes("إرسال التقييم"), "submitted review is immutable in customer UI");
   console.log(`PASS ${checks} salon server, worker, capability, Saudi time, grooming icons and public rendering checks`);
-} finally { globalThis.fetch = originalFetch; }
+} finally {
+  globalThis.fetch = originalFetch;
+  ["VERCEL","VERCEL_ENV"].forEach((key,i) => { if (originalEnvironment[i] === undefined) delete process.env[key]; else process.env[key] = originalEnvironment[i]; });
+}

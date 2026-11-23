@@ -22,4 +22,4 @@ export function salonInputTime(value: string) {
   if (!Number.isFinite(date.getTime()) || new Date(date.getTime() + 3 * 3600000).toISOString().slice(0, 16) !== value) throw new Error("الموعد غير صحيح");
   return date.toISOString();
 }
-export function salonToday() { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
+export function salonToday(date = new Date()) { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit" }).format(date); }

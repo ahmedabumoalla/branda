@@ -271,7 +271,7 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
       else if (/\.tsx?$/.test(entry.name) && /whatsapp\/notification-sender"/.test(fs.readFileSync(file, 'utf8'))) users.push(file);
     });
     ['app', 'lib', 'components'].forEach(walk);
-    assert.deepEqual(users.sort(), ['lib/commerce/meram-notifications.ts', 'lib/loyalty/read-card-links.ts', 'lib/whatsapp/customer-routing.ts', 'lib/whatsapp/green-api.ts']);
+    assert.deepEqual(users.sort(), ['lib/commerce/meram-notifications.ts', 'lib/loyalty/read-card-links.ts', 'lib/salon/worker.ts', 'lib/whatsapp/customer-routing.ts', 'lib/whatsapp/green-api.ts']);
     checks++;
   }
 

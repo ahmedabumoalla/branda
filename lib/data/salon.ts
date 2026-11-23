@@ -12,6 +12,7 @@ import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
 import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
 import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { salonLoyaltyToken } from "@/lib/salon/loyalty-link";
+import { DEGREES_SALON_ID } from "@/lib/salon/degrees";
 import { bookingStatuses, type SalonBooking, type SalonCommand, type SalonFilter, type SalonMode, type SalonPage, type SalonAnnouncement } from "@/lib/salon/types";
 
 const uuid = z.string().uuid();
@@ -108,7 +109,8 @@ export async function getSalonBookings(input: SalonFilter = {}, mode: SalonMode 
   const filter = z.object({ status: z.enum(["all", "active", "reviews", ...bookingStatuses]).default("all"), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), page: z.number().int().min(0).max(100000).default(0), booking: uuid.optional() }).parse(input);
   if (mode === "staff" && (filter.status !== "active" || filter.booking)) throw new Error("الكاشير يعرض المواعيد المؤكدة والاستدعاء فقط");
   let query = createAdminClient().from("salon_bookings").select(columns, { count: "exact" }).eq("cafe_id", ctx.cafeId);
-  if (filter.status === "active") query = query.or("status.in.(confirmed,in_service),and(status.eq.proposed,scheduled_start.not.is.null)");
+  if (filter.status === "active" && mode === "staff" && ctx.cafeId === DEGREES_SALON_ID) query = query.in("status", ["pending", "proposed", "confirmed", "in_service"]);
+  else if (filter.status === "active") query = query.or("status.in.(confirmed,in_service),and(status.eq.proposed,scheduled_start.not.is.null)");
   else if (filter.status === "reviews") query = query.not("rating", "is", null);
   else if (filter.status !== "all") query = query.eq("status", filter.status);
   if (filter.booking) query = query.eq("id", filter.booking);
