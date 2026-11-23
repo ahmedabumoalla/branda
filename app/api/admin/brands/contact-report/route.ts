@@ -15,6 +15,9 @@ export async function GET() {
       "Content-Disposition": `attachment; filename="${filename}"` } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
+    if (message === "Brand contact report not installed") {
+      return Response.json({ ok: false, code: "report_not_installed" }, { status: 503, headers });
+    }
     const status = message === "Unauthorized" ? 401 : message.startsWith("Forbidden") ? 403 : 503;
     const userMessage = status === 401 ? "انتهت الجلسة سجل الدخول مجددًا"
       : status === 403 ? "تقرير متابعة التفعيل متاح لمدير المنصة فقط" : "تعذر تجهيز تقرير متابعة التفعيل حاول مجددًا";

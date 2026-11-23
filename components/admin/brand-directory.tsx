@@ -133,7 +133,14 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
         setExportMessage({ kind: "error", text: "تعذر التصدير لعدم توفر صلاحية الإدارة، أعد تسجيل الدخول وحاول مرة أخرى" });
         return;
       }
-      if (!response.ok || response.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== excelMime) {
+      if (!response.ok) {
+        const payload = kind === "contact" && response.status === 503 ? await response.json().catch(() => null) : null;
+        setExportMessage({ kind: "error", text: payload?.code === "report_not_installed"
+          ? "تقرير التواصل والمتابعة بانتظار التفعيل في قاعدة البيانات"
+          : `تعذر تجهيز ${reportName} حاول مجددًا` });
+        return;
+      }
+      if (response.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== excelMime) {
         throw new Error("Invalid export response");
       }
       const file = await response.blob();

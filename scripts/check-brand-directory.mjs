@@ -298,6 +298,11 @@ await test(() => downloadHarness(async runtime => {
   }
   assert.equal(runtime.anchors.length, 0);
   assert.equal(runtime.blobs.length, 0);
+    runtime.setResponse(async () => Response.json({ code: "report_not_installed" }, { status: 503 }));
+    const contact = harness("BrandDirectory", props);
+    await byLabel(contact, contactLabel).props.onClick();
+    assert(html(contact).includes("بانتظار التفعيل في قاعدة البيانات"));
+    assert.equal(runtime.anchors.length, 0);
 }));
 await test(() => downloadHarness(async runtime => {
   const filenames = [

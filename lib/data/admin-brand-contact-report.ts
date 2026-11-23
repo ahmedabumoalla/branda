@@ -34,6 +34,7 @@ export async function getBrandContactReport(): Promise<BrandContactReport> {
     if (cursor !== null) query = query.gt("brand_id", cursor);
     const result = await query;
     if (result.error?.code === "42501") throw new Error("Forbidden: active platform admin required");
+    if (result.error?.code === "PGRST202") throw new Error("Brand contact report not installed");
     if (result.error) throw new Error("Unable to read brand contact report");
     const batch = z.array(rowSchema).parse(result.data);
     if (!batch.length) return { exportedAt, rows };

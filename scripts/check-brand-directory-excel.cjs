@@ -245,6 +245,14 @@ async function main() {
       '@/lib/data/admin-brand-contact-report':dal,'@/lib/export/brand-contact-excel':workbook,'@/lib/export/brand-directory-excel':excel,
     });
     const response = await endpoint(data).GET();
+    const missing = load('lib/data/admin-brand-contact-report.ts',{
+      ...stubs, '@/lib/supabase/server':{createClient:async()=>({rpc:()=>({
+        lte(){return this;}, order(){return this;}, limit(){return {error:{code:'PGRST202'}};}
+      })})}
+    });
+    const unavailable = await endpoint(missing).GET();
+    assert.equal(unavailable.status,503);
+    assert.equal((await unavailable.json()).code,'report_not_installed');
     assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'private, no-store');
     assert.match(response.headers.get('Content-Disposition'),/branda-activation-follow-up-/);
     assert.equal(cursors.length,2);
