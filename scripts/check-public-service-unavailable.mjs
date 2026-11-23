@@ -26,7 +26,11 @@ function load(file, stubs = {}) {
     if (name === "react") return { ...React, cache: (fn) => fn };
     if (name.startsWith("@/")) {
       const relative = name.slice(2);
-      return load(`${relative}${fs.existsSync(path.join(root, `${relative}.tsx`)) ? ".tsx" : ".ts"}`, stubs);
+      let resolved;
+      return new Proxy({}, { get(_, key) {
+        resolved ??= load(`${relative}${fs.existsSync(path.join(root, `${relative}.tsx`)) ? ".tsx" : ".ts"}`, stubs);
+        return resolved[key];
+      } });
     }
     return dependency(name);
   }, exports);
@@ -42,15 +46,25 @@ const assertUnavailable = (html) => {
 let checks = 0;
 async function check(name, fn) { await fn(); checks++; console.log(`PASS ${name}`); }
 
-await check("Menu loyalty card and cashier failures share generic recovery with no billing disclosure", () => {
-  for (const file of ["app/menu/[slug]/not-found.tsx", "app/loyalty/[slug]/not-found.tsx", "app/loyalty-card/[cardCode]/not-found.tsx"]) {
+await check("Menu and cashier failures keep generic recovery with no billing disclosure", () => {
+  for (const file of ["app/menu/[slug]/not-found.tsx"]) {
     assertUnavailable(render(React.createElement(load(file).default)));
   }
   assertUnavailable(render(React.createElement(load("components/cashier/cashier-unavailable.tsx").CashierServiceUnavailable)));
 });
 
+await check("Loyalty enrollment, QR and card failures offer a same-link retry without exposing billing", () => {
+  for (const file of ["app/loyalty/[slug]/not-found.tsx", "app/loyalty-card/[cardCode]/not-found.tsx"]) {
+    const html = render(React.createElement(load(file).default));
+    assert(html.includes("بطاقة الولاء غير متاحة حاليًا"));
+    assert(html.includes("إعادة محاولة فتح البطاقة"));
+    assert(!/تعذر التحميل|اشتراك|باقة/.test(html));
+  }
+});
+
 await check("Unavailable menu still follows the server guarded not-found path", async () => {
   const { default: Page } = load("app/menu/[slug]/page.tsx", {
+    "@/lib/data/loyalty-landing": { getPublicLoyaltyLanding: async () => null },
     "@/lib/data/standalone-menu": { getStandaloneMenu: async () => null },
     "@/components/menu/bistro-menu": { BistroMenu: () => { throw new Error("must not render private content"); } },
     "@/components/analytics/public-page-analytics": { PublicPageAnalytics: () => null },
@@ -63,7 +77,7 @@ await check("Unavailable menu still follows the server guarded not-found path", 
 await check("Unavailable loyalty cannot render membership or enrollment", async () => {
   const forbidden = () => { throw new Error("must not load protected membership"); };
   const { default: Page } = load("app/loyalty/[slug]/page.tsx", {
-    "@/lib/data/loyalty-experience": { getLoyaltyBrand: async () => null, getLoyaltyMembership: forbidden },
+    "@/lib/data/loyalty-experience": { getBranchLoyaltyBrand: async () => null, getLoyaltyMembership: forbidden },
     "@/lib/auth/rast-loyalty-session": { getLoyaltyCustomerProfile: async () => null },
     "@/lib/wallet": { getWalletReadiness: forbidden },
     "@/components/rast-loyalty/rast-enrollment": { RastEnrollment: forbidden },
@@ -83,7 +97,7 @@ const cashier = (overrides = {}) => load("app/cashier/page.tsx", {
     ...overrides,
   },
   "@/lib/data/loyalty-experience": { getLoyaltyBrand: async () => null },
-  "@/components/rast-loyalty/rast-cashier": { RastCashier: () => React.createElement("div", null, "authorized-cashier") },
+  "@/components/cashier/staff-workspace": { StaffWorkspace: () => React.createElement("div", null, "authorized-cashier") },
 }).default;
 await check("Legacy loyalty card links deny missing entitlement before rendering customer content", async () => {
   const { default: Page } = load("app/loyalty-card/[cardCode]/page.tsx", {
@@ -104,7 +118,7 @@ await check("Invalid staff sessions and anonymous visits retain secure login han
   await assert.rejects(cashier({ ...invalidSession, getCashierToken: async () => null })(), /redirect:\/cashier\/login/);
 });
 await check("Authorized cashier and pager continue to their existing services", async () => {
-  assert(render(await cashier({ getCashierConsole: async () => ({ cafe: { slug: "test" } }) })()).includes("authorized-cashier"));
+  assert(render(await cashier({ getCashierConsole: async () => ({ cashier: {}, cafe: { slug: "test" } }) })()).includes("authorized-cashier"));
   await assert.rejects(cashier({ getCashierLandingPath: async () => "/pager" })(), /redirect:\/pager/);
 });
 await check("Cashier login with valid service-disabled session reaches guarded cashier page", async () => {
@@ -112,6 +126,6 @@ await check("Cashier login with valid service-disabled session reaches guarded c
     "@/lib/data/cashier": { getCashierLandingPath: async () => "/cashier" },
     "@/components/cashier/cashier-login-form": { CashierLoginForm: () => assert.fail("valid session must not re-login") },
   });
-  await assert.rejects(Login({ searchParams: Promise.resolve({}) }), /redirect:\/cashier$/);
+  await assert.rejects(Login({ searchParams: Promise.resolve({ type: "loyalty" }) }), /redirect:\/cashier$/);
 });
 console.log(`Public service unavailable checks passed (${checks} groups)`);

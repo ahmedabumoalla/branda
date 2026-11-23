@@ -1,5 +1,5 @@
-import { PublicServiceUnavailable } from "@/components/public-service-unavailable";
+import { LoyaltyCardUnavailable } from "@/components/loyalty/loyalty-card-unavailable";
 
 export default function LoyaltyCardNotFound() {
-  return <PublicServiceUnavailable />;
+  return <LoyaltyCardUnavailable />;
 }
