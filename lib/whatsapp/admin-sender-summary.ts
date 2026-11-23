@@ -1,4 +1,4 @@
-import { LOCO_CAFE_ID, WAHED_MASOUB_CAFE_ID } from "./brand-connection-types";
+import { LOCO_CAFE_ID, supportsBrandWhatsAppConnection } from "./brand-connection-types";
 import type { MarketingConnectionStatus } from "@/lib/marketing/types";
 
 /** Deliberately excludes credentials, webhook secrets and provider response bodies */
@@ -32,14 +32,14 @@ export function mapAdminWhatsAppSummary(cafeId: string, row: AdminWhatsAppConnec
     return { source: "unavailable", sendingPaused, platformFallback: false, connection: null };
   }
   const loco = cafeId === LOCO_CAFE_ID;
-  const wahed = cafeId === WAHED_MASOUB_CAFE_ID;
-  const optedIn = Boolean(row?.transactional_requested_at) && (loco || wahed);
+  const optional = !loco && supportsBrandWhatsAppConnection(cafeId);
+  const optedIn = Boolean(row?.transactional_requested_at) && (loco || optional);
   const verified = Boolean(optedIn && row?.status === "connected" && row.instance_id
     && /^9665\d{8}$/.test(row.requested_phone) && row.verified_phone === row.requested_phone);
   return {
-    source: loco || (wahed && verified) ? "private" : "branda",
+    source: loco || (optional && verified) ? "private" : "branda",
     sendingPaused,
-    platformFallback: wahed && verified,
+    platformFallback: optional && verified,
     connection: row ? {
       status: row.status,
       purpose: optedIn ? "customers" : "campaigns",

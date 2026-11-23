@@ -1,3 +1,4 @@
+import { MERAM_CAFE_ID, MERAM_SLUG } from "@/lib/commerce/meram-profile";
 import type { MarketingConnectionStatus } from "@/lib/marketing/types";
 
 export const LOCO_CAFE_ID = "321fd305-1883-48df-ab69-829cf7d1bc48";
@@ -8,8 +9,11 @@ export const WAHED_MASOUB_BRAND_SLUG = "brand-3c0437f1733a";
 export function supportsPrivateWhatsApp(cafeId: string | null | undefined) {
   return cafeId === LOCO_CAFE_ID || cafeId === WAHED_MASOUB_CAFE_ID;
 }
+export function supportsBrandWhatsAppConnection(cafeId: string | null | undefined) {
+  return supportsPrivateWhatsApp(cafeId) || cafeId === MERAM_CAFE_ID;
+}
 export function supportsPrivateWhatsAppSlug(slug: string | null | undefined) {
-  return slug === LOCO_BRAND_SLUG || slug === WAHED_MASOUB_BRAND_SLUG;
+  return slug === LOCO_BRAND_SLUG || slug === WAHED_MASOUB_BRAND_SLUG || slug === MERAM_SLUG;
 }
 
 export type BrandWhatsAppDashboard = {
@@ -18,6 +22,7 @@ export type BrandWhatsAppDashboard = {
   configured: boolean;
   transactionalEnabled: boolean;
   platformFallback: boolean;
+  orderNotificationsOnly?: true;
   connection: {
     status: MarketingConnectionStatus;
     phone: string;

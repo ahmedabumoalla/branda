@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, Check, CreditCard, ExternalLink, Gift, Leaf, PackageCheck, RefreshCw, Search, Settings2, ShoppingBag, Truck } from "lucide-react";
 import { fetchOwnerGiftOrdersAction, saveGiftStoreSettingsAction, updateGiftOrderAction } from "@/app/actions/gift-orders";
 import { Modal } from "@/components/dashboard/ui/modal";
@@ -51,6 +51,33 @@ export function GiftOrdersPage({ initialOrders, initialSettings, cafe, initialHa
   const pending = orders.filter(item => item.status === "pending" || item.status === "quote_requested").length;
   const preparing = orders.filter(item => item.status === "accepted" || item.status === "preparing" || item.status === "ready").length;
   const visible = orders.filter(item => (filter === "all" || item.status === filter) && `${item.number} ${item.customerName} ${item.phone} ${item.items.map(line => line.name).join(" ")}`.toLocaleLowerCase("ar").includes(query.trim().toLocaleLowerCase("ar")));
+
+  useEffect(() => {
+    if (!meram || busy || selected || tab !== "orders") return;
+    let inactive = false;
+    let loading = false;
+    async function poll() {
+      if (loading || document.visibilityState !== "visible" || !navigator.onLine) return;
+      loading = true;
+      try {
+        const result = await fetchOwnerGiftOrdersAction(page);
+        if (!inactive && result.ok && result.cafe.slug === cafe.slug) {
+          setOrders(result.orders);
+          setHasMore(result.hasMore);
+        }
+      } catch { /* Retry when the dashboard is visible again or on the next interval. */ }
+      finally { loading = false; }
+    }
+    const interval = window.setInterval(poll, 15000);
+    document.addEventListener("visibilitychange", poll);
+    window.addEventListener("online", poll);
+    return () => {
+      inactive = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", poll);
+      window.removeEventListener("online", poll);
+    };
+  }, [meram, busy, selected, tab, page, cafe.slug]);
 
   async function load(nextPage: number) {
     const result = await fetchOwnerGiftOrdersAction(nextPage);

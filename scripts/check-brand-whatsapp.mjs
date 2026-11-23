@@ -81,10 +81,13 @@ try {
     for(const secret of ['7103999999','private-test-token','encrypted_credentials','secret-provider-value','webhook_token_hash'])assert(!JSON.stringify(d).includes(secret));
     assert.equal(h.counts().stateReads,0);assert.equal(h.counts().provisions,0);assert(!h.calls.some(x=>x.rpc));
   });
-  await test('Meram order notifications do not provision a private connection',async()=>{
-    const h=harness({contextCafe:'98fd33d5-522d-46e7-adeb-34b04a665f4f'});
-    await assert.rejects(()=>h.runBrandWhatsAppAction({action:'connect',phone:'0500000001'}),e=>e.status===403);
+  await test('Meram owner can opt in her verified order sender using the existing pairing flow',async()=>{
+    const meram='98fd33d5-522d-46e7-adeb-34b04a665f4f',h=harness({contextCafe:meram});
+    const dash=await h.getBrandWhatsAppDashboard();assert.equal(dash.orderNotificationsOnly,true);
     assert.equal(h.counts().provisions,0);
+    const paired=await h.runBrandWhatsAppAction({action:'connect',phone:'0500000001'});
+    assert.equal(paired.dashboard.transactionalEnabled,true);assert.equal(h.row().cafe_id,meram);
+    assert.equal(h.calls.find(x=>x.rpc==='loco_claim_whatsapp_connection').args.p_cafe,meram);
   });
   await test('Wahed connection is optional, scoped and never provisioned on read',async()=>{
     const h=harness({contextCafe:WAHED});

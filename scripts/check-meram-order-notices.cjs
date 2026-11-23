@@ -33,6 +33,7 @@ async function run(opts={}) {
   };
   const api=load("lib/commerce/meram-notifications.ts",{
     "@/lib/supabase/admin":{createAdminClient:()=>({rpc})},
+    "@/lib/whatsapp/customer-routing":{selectVerifiedBrandWhatsAppSender:async id=>{assert.equal(id,"98fd33d5-522d-46e7-adeb-34b04a665f4f");return opts.privateSender??null;}},
     "@/lib/whatsapp/notification-sender":{selectNotificationSender:async()=>opts.offline?null:sender},
     "@/lib/whatsapp/green-api":{isGreenApiBackupOnly:()=>Boolean(opts.paused),sendGreenApiCustomerMessage:async (account,payload)=>{sends.push([account,payload]);if(opts.throws)throw Error("timeout");return {status:opts.status??"queued"};}},
   },opts.env??active);
@@ -49,5 +50,10 @@ async function run(opts={}) {
     assert.deepEqual(calls.find(([fn])=>fn==="meram_order_notice_claim")[1],undefined);
     assert.deepEqual(calls.find(([fn])=>fn==="meram_order_notice_finish")[1],{p_id:job.id,p_attempt:job.attempt,p_state:expected});
   }
+  const privateSender={idInstance:"meram-private"};
+  const privateResult=await run({privateSender,offline:true});
+  assert.equal(privateResult.sends[0][0],privateSender);
+  assert(!privateResult.sends[0][1].message.includes("من برندة"));
+  const ambiguous=await run({privateSender,status:"unknown"});assert.equal(ambiguous.sends.length,1);
   console.log("Meram location, checkout and rejection transport checks passed (mocked provider)");
 })().catch(err=>{console.error(err);process.exitCode=1});

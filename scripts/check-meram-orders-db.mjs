@@ -17,6 +17,10 @@ const suite = String.raw`
  await db.exec(await readFile('supabase/migrations/20261123020000_meram_order_workflow.sql','utf8'));
  eq((await scalar('SELECT gift_store_config($1)',[meramSlug])).enabled,true,'Meram checkout active');
  await db.exec(await readFile('supabase/migrations/20261123041500_meram_branda_order_notifications.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261124001500_meram_private_order_sender.sql','utf8'));
+ eq(await scalar('SELECT loco_whatsapp_actor_allowed($1,$2)',[meram,owner]),true,'Meram owner may link an order sender');
+ eq(await scalar('SELECT loco_whatsapp_actor_allowed($1,$2)',[meram,outsider]),false,'Other owner may not link a Meram sender');
+ eq(await scalar('SELECT EXISTS(SELECT 1 FROM brand_marketing_connections WHERE cafe_id=$1)',[meram]),false,'Enabling access does not provision or opt in a number');
  const payload=(quantity)=>body([item(flower,quantity,[])],quantity*60,{paymentMethod:'bank_transfer',city:'Riyadh',address:'https://maps.app.goo.gl/Example',giftMessage:'With love',notes:'No ribbon'});
  const place=(p,k=crypto.randomUUID())=>scalar('SELECT gift_order_submit($1,$2,$3,$4)',[meramSlug,k,p,'e'.repeat(64)]);
  const manage=(id,action,note={},k=crypto.randomUUID())=>scalar('SELECT gift_order_manage($1,$2,$3,$4,$5)',[meram,id,k,action,note]);

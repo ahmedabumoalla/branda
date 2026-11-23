@@ -51,7 +51,7 @@ export function MeramOrderWorkflow({ order, busy, command }: Props) {
       <h3>سبب رفض الطلب</h3><p className={styles.pre}>{order.rejectionReason || "لم يُسجّل سبب لهذا الطلب"}</p>
       {order.notificationStatus && <p className={styles.hint}>{
         order.notificationStatus === "sent" ? "قبل واتساب إشعار الرفض للإرسال" :
-        order.notificationStatus === "pending" ? "إشعار الرفض بانتظار الإرسال من رقم إشعارات برندة" :
+        order.notificationStatus === "pending" ? "إشعار الرفض بانتظار الإرسال" :
         order.notificationStatus === "failed" ? "رفض واتساب إرسال الإشعار" : "تعذر تأكيد إرسال إشعار واتساب"
       }</p>}
     </section>;

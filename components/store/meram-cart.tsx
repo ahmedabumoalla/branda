@@ -125,10 +125,10 @@ export function MeramTracking({slug,token,receipt,close}:{slug:string;token:stri
       try {
         const response = await trackGiftOrderAction({slug,trackingToken:token});
         if (!live) return;
-        if (!response.ok) { setError(response.error); return; }
+        if (!response.ok) { setError(response.error); timer = setTimeout(refresh,30000); return; }
         setOrder(response.order); setError("");
         if (!["completed","cancelled","refunded"].includes(response.order.status)) timer = setTimeout(refresh,30000);
-      } catch { if (live) setError("تعذر تحديث حالة طلبك"); }
+      } catch { if (live) { setError("تعذر تحديث حالة طلبك"); timer = setTimeout(refresh,30000); } }
     }
     void refresh();
     return () => { live = false; clearTimeout(timer); };

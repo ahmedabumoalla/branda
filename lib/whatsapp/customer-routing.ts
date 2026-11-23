@@ -18,6 +18,10 @@ export function isBrandCustomerOtp(cafeId: string | null | undefined, purpose: s
 export async function selectBrandLoyaltySender(cafeId: string): Promise<GreenApiCustomerSender | null> {
   if (cafeId === LOCO_CAFE_ID) return selectLocoLoyaltySender(cafeId);
   if (!supportsPrivateWhatsApp(cafeId)) return null;
+  return selectVerifiedBrandWhatsAppSender(cafeId);
+}
+
+export async function selectVerifiedBrandWhatsAppSender(cafeId: string): Promise<GreenApiCustomerSender | null> {
   try {
     const linked = await getBrandCustomerWhatsAppCredentials(cafeId);
     if (linked && (await getGreenApiMarketingAccount(linked)).phone === linked.expectedPhone) return linked;
