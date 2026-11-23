@@ -53,7 +53,7 @@ export function signatureBrand(slug: string, branchSlug?: string): SignatureBran
 
 export function signatureAsset(name: string, mobile = false) {
   if (name === "dabab-hospital-logo") return "/menu-art/dabab/dabab-hospital-logo-v1.webp";
-  if (name === "arabi-hero") return `/menu-art/five-restaurants/${name}${mobile ? "-mobile" : ""}-v2.webp`;
+  if (name === "arabi-hero") return `/menu-art/five-restaurants/arabi-dallah-hero${mobile ? "-mobile" : ""}-v3.webp`;
   if (name === "dabab-coffee-hero" || name === "dabab-hospital-hero") return `/menu-art/dabab/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (name.startsWith("dabab-")) return `/menu-art/dabab/${name}${mobile ? "-mobile" : ""}-v2.webp`;
   if (name.startsWith("et1-")) return `/menu-art/et1/${name}${mobile ? "-mobile" : ""}-v1.webp`;

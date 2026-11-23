@@ -256,7 +256,7 @@ async function main() {
     const brand = signatureBrand(slug);
     equal(brand.key, key, 'Each imported restaurant resolves only its verified tenant identity');
     equal(signatureAsset(brand.logo), `/menu-art/five-restaurants/${key}-logo-v1.webp`, 'Original color logo uses the imported identity assets');
-    equal(signatureAsset(brand.hero, true), `/menu-art/five-restaurants/${key}-hero-mobile-v${key === 'arabi' ? 2 : 1}.webp`, 'Mobile hero resolves to dedicated artwork');
+    equal(signatureAsset(brand.hero, true), key === 'arabi' ? '/menu-art/five-restaurants/arabi-dallah-hero-mobile-v3.webp' : `/menu-art/five-restaurants/${key}-hero-mobile-v1.webp`, 'Mobile hero resolves to dedicated artwork');
     const loading = renderToStaticMarkup(React.createElement(SignatureMenuLoading, { brand }));
     check(loading.includes(brand.welcome), 'New restaurant loading carries its own welcome');
     const html = render({ menu: { ...menu, slug, name: brand.name, logoUrl: '/owner-updated-logo.webp' }, brand });
