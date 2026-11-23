@@ -235,10 +235,19 @@ await test(() => {
   const h = harness("BrandDirectory", props);
   assert(byLabel(h, exportLabel).props.title.includes("جميع العلامات"));
   assert(html(h).includes("تصدير إكسل"));
+  assert(html(h).includes("تقرير متابعة التفعيل"));
   nodes(h.render()).find(node => node.type === "input").props.onChange({ target: { value: "no matching brand" } });
   assert.equal(rows(h).length, 0);
   assert.equal(byLabel(h, exportLabel).props.disabled, false, "Empty filtered results must not disable all-brand export");
 });
+await test(() => downloadHarness(async runtime => {
+  const h = harness("BrandDirectory", props);
+  runtime.setResponse(async () => exportReply('attachment; filename="contact.xlsx"'));
+  const contact = nodes(h.render()).find(node => node.type === "button" && node.props.children?.includes("تقرير متابعة التفعيل"));
+  await contact.props.onClick();
+  assert.equal(runtime.calls[0][0],"/api/admin/brands/contact-report");
+  assert.equal(runtime.anchors.at(-1).download,"contact.xlsx");
+}));
 await test(() => downloadHarness(async runtime => {
   let resolve;
   runtime.setResponse(() => new Promise(done => { resolve = done; }));

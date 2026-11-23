@@ -44,8 +44,7 @@ function BrandCounts({ cafe }: { cafe: PlatformCafe }) {
   ].map(([label, value]) => <div key={String(label)}><dt>{label}</dt><dd>{typeof value === "number" && Number.isFinite(value) ? number.format(value) : "—"}</dd></div>)}</dl>;
 }
 
-function exportFilename(disposition: string | null) {
-  const fallback = "branda-brands.xlsx";
+function exportFilename(disposition: string | null, fallback: string) {
   const extended = disposition?.match(/(?:^|;)\s*filename\*\s*=\s*UTF-8'[^']*'([^;]+)/i)?.[1];
   const plain = disposition?.match(/(?:^|;)\s*filename\s*=\s*(?:"([^"]*)"|([^;\s]+))/i);
   try {
@@ -101,7 +100,7 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
   const [subscription, setSubscription] = useState("all");
   const [sort, setSort] = useState("default");
   const [page, setPage] = useState(1);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<"directory" | "contact" | null>(null);
   const [exportMessage, setExportMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const exportPending = useRef(false);
   const active = cafes.filter(cafe => cafe.status === "نشط").length;
@@ -120,13 +119,13 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
   const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const hasFilters = Boolean(query || status !== "all" || subscription !== "all");
   const reset = () => { setQuery(""); setStatus("all"); setSubscription("all"); setPage(1); };
-  const exportBrands = async () => {
+  const exportBrands = async (kind: "directory" | "contact") => {
     if (exportPending.current || configError || cafes.length === 0) return;
     exportPending.current = true;
-    setExporting(true);
+    setExporting(kind);
     setExportMessage(null);
     try {
-      const response = await fetch("/api/admin/brands/export", {
+      const response = await fetch(kind === "contact" ? "/api/admin/brands/contact-report" : "/api/admin/brands/export", {
         method: "GET", credentials: "same-origin", cache: "no-store", headers: { Accept: excelMime },
       });
       if (response.status === 401 || response.status === 403) {
@@ -142,7 +141,7 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
       const anchor = document.createElement("a");
       try {
         anchor.href = objectUrl;
-        anchor.download = exportFilename(response.headers.get("content-disposition"));
+        anchor.download = exportFilename(response.headers.get("content-disposition"), kind === "contact" ? "branda-activation-follow-up.xlsx" : "branda-brands.xlsx");
         anchor.hidden = true;
         document.body.appendChild(anchor);
         anchor.click();
@@ -150,12 +149,12 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
         anchor.remove();
         setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
       }
-      setExportMessage({ kind: "success", text: "تم تجهيز ملف جميع العلامات وبدء تنزيله" });
+      setExportMessage({ kind: "success", text: kind === "contact" ? "تم تجهيز تقرير متابعة التفعيل وبدء تنزيله" : "تم تجهيز ملف جميع العلامات وبدء تنزيله" });
     } catch {
-      setExportMessage({ kind: "error", text: "تعذر تنزيل ملف العلامات، تحقق من الاتصال ثم حاول مرة أخرى" });
+      setExportMessage({ kind: "error", text: kind === "contact" ? "تعذر تنزيل تقرير متابعة التفعيل تحقق من الاتصال وحاول مجددًا" : "تعذر تنزيل ملف العلامات، تحقق من الاتصال ثم حاول مرة أخرى" });
     } finally {
       exportPending.current = false;
-      setExporting(false);
+      setExporting(null);
     }
   };
   const stats = [
@@ -166,7 +165,12 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
   ];
 
   return <div className={s.directory} dir="rtl">
-    <header className={s.header}><div><p className={s.eyebrow}><span aria-hidden="true" />إدارة المنصة</p><h1>العلامات التجارية</h1><p className={s.subtitle}>كل علامة بتفاصيلها من الاشتراك إلى الخدمات والصيانة</p></div><div className={s.headerActions}><div className={s.headerNote}><ShieldCheck aria-hidden="true" /><span>إدارة موحدة<br /><strong>لكل علاماتك</strong></span></div>{!configError && <button type="button" className={s.exportButton} onClick={exportBrands} disabled={exporting || cafes.length === 0} aria-busy={exporting} aria-label="تصدير جميع العلامات التجارية إلى إكسل" title="يشمل جميع العلامات دون تطبيق البحث أو التصفية">{exporting ? <LoaderCircle className={s.exportSpinner} aria-hidden="true" /> : <Download aria-hidden="true" />}{exporting ? "جارٍ تجهيز الملف" : "تصدير إكسل"}</button>}{onCreate && !configError && <button type="button" className={s.createButton} onClick={onCreate} aria-haspopup="dialog"><Plus size={19} aria-hidden="true" />إنشاء حساب علامة</button>}</div></header>
+    <header className={s.header}><div><p className={s.eyebrow}><span aria-hidden="true" />إدارة المنصة</p><h1>العلامات التجارية</h1><p className={s.subtitle}>كل علامة بتفاصيلها من الاشتراك إلى الخدمات والصيانة</p></div><div className={s.headerActions}><div className={s.headerNote}><ShieldCheck aria-hidden="true" /><span>إدارة موحدة<br /><strong>لكل علاماتك</strong></span></div>
+      {!configError && <>
+        <button type="button" className={s.exportButton} onClick={() => exportBrands("directory")} disabled={!!exporting || cafes.length === 0} aria-busy={exporting === "directory"} aria-label="تصدير جميع العلامات التجارية إلى إكسل" title="يشمل جميع العلامات دون تطبيق البحث أو التصفية">{exporting === "directory" ? <LoaderCircle className={s.exportSpinner} aria-hidden="true" /> : <Download aria-hidden="true" />}{exporting === "directory" ? "جارٍ تجهيز الملف" : "تصدير إكسل"}</button>
+        <button type="button" className={s.exportButton} onClick={() => exportBrands("contact")} disabled={!!exporting || cafes.length === 0} aria-busy={exporting === "contact"}>{exporting === "contact" ? <LoaderCircle className={s.exportSpinner} aria-hidden="true" /> : <Download aria-hidden="true" />}{exporting === "contact" ? "جارٍ تجهيز التقرير" : "تقرير متابعة التفعيل"}</button>
+      </>}
+      {onCreate && !configError && <button type="button" className={s.createButton} onClick={onCreate} aria-haspopup="dialog"><Plus size={19} aria-hidden="true" />إنشاء حساب علامة</button>}</div></header>
     {!configError && exportMessage && <p className={s.exportFeedback} data-state={exportMessage.kind} role={exportMessage.kind === "error" ? "alert" : "status"}>{exportMessage.text}</p>}
     {configError ? <section className={s.error} role="alert"><Building2 aria-hidden="true" /><h2>تعذر تحميل العلامات التجارية</h2><p>{configError}</p><button type="button" className={s.manage} onClick={() => window.location.reload()}>إعادة المحاولة<ArrowLeft aria-hidden="true" /></button></section> : <>
       <section className={s.stats} aria-label="ملخص العلامات التجارية">{stats.map(({ label, value, hint, icon: Icon, currency }) => <article key={label}><div><span>{label}</span><Icon aria-hidden="true" /></div><strong><bdi>{number.format(value)}</bdi>{currency && <small>ريال</small>}</strong><p>{hint}</p></article>)}</section>
