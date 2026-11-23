@@ -202,7 +202,8 @@ await test(() => {
   assert(css.includes(".desktopTable { display: none; }"));
   assert(css.includes(".mobileCards { display: grid;"));
 });
-const exportLabel = "تصدير جميع العلامات التجارية إلى إكسل";
+const exportLabel = "تنزيل تقرير بيانات العلامات";
+const contactLabel = "تنزيل تقرير التواصل والمتابعة";
 const excelMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const exportReply = (filename = 'attachment; filename="branda-brands-2026-11-06.xlsx"') => new Response(new Uint8Array([80, 75, 3, 4]), {
   headers: { "content-type": `${excelMime}; charset=binary`, "content-disposition": filename },
@@ -234,8 +235,8 @@ await test(() => {
   assert.equal(byLabel(harness("BrandDirectory", { ...props, configError: "تعذر الاتصال" }), exportLabel), undefined);
   const h = harness("BrandDirectory", props);
   assert(byLabel(h, exportLabel).props.title.includes("جميع العلامات"));
-  assert(html(h).includes("تصدير إكسل"));
-  assert(html(h).includes("تقرير متابعة التفعيل"));
+  assert(byLabel(h, exportLabel).props.children.includes("تقرير بيانات العلامات"));
+  assert(byLabel(h, contactLabel).props.children.includes("تقرير التواصل والمتابعة"));
   nodes(h.render()).find(node => node.type === "input").props.onChange({ target: { value: "no matching brand" } });
   assert.equal(rows(h).length, 0);
   assert.equal(byLabel(h, exportLabel).props.disabled, false, "Empty filtered results must not disable all-brand export");
@@ -243,7 +244,7 @@ await test(() => {
 await test(() => downloadHarness(async runtime => {
   const h = harness("BrandDirectory", props);
   runtime.setResponse(async () => exportReply('attachment; filename="contact.xlsx"'));
-  const contact = nodes(h.render()).find(node => node.type === "button" && node.props.children?.includes("تقرير متابعة التفعيل"));
+  const contact = byLabel(h, contactLabel);
   await contact.props.onClick();
   assert.equal(runtime.calls[0][0],"/api/admin/brands/contact-report");
   assert.equal(runtime.anchors.at(-1).download,"contact.xlsx");
@@ -261,7 +262,7 @@ await test(() => downloadHarness(async runtime => {
   assert.deepEqual(runtime.calls[0], ["/api/admin/brands/export", { method: "GET", credentials: "same-origin", cache: "no-store", headers: { Accept: excelMime } }]);
   assert.equal(byLabel(h, exportLabel).props.disabled, true);
   assert.equal(byLabel(h, exportLabel).props["aria-busy"], true);
-  assert(html(h).includes("جارٍ تجهيز الملف"));
+  assert(byLabel(h, exportLabel).props.children.includes("تقرير بيانات العلامات"));
   assert.equal(runtime.anchors.length, 0);
   resolve(exportReply());
   await pending;
@@ -271,7 +272,7 @@ await test(() => downloadHarness(async runtime => {
   assert(runtime.anchors[0].clicked && runtime.anchors[0].appended && runtime.anchors[0].removed);
   assert.equal(byLabel(h, exportLabel).props.disabled, false);
   assert.equal(withClass(h, "exportFeedback")[0].props.role, "status");
-  assert(html(h).includes("جميع العلامات وبدء تنزيله"));
+  assert(html(h).includes("بدأ تنزيل تقرير بيانات العلامات"));
   assert.deepEqual(runtime.revoked, []);
   assert.equal(runtime.timers.length, 1);
   assert(runtime.timers[0].delay >= 1000, "Blob must remain alive until download has started");

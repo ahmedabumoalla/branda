@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowLeft, Building2, Check, ChevronLeft, ChevronRight, CircleDollarSign, Download, Layers3, LoaderCircle, Search, Settings2, ShieldCheck, Plus } from "lucide-react";
+import { ArrowLeft, Building2, Check, ChevronLeft, ChevronRight, CircleDollarSign, ContactRound, FileSpreadsheet, Layers3, LoaderCircle, Search, Settings2, ShieldCheck, Plus } from "lucide-react";
 import type { PlatformCafe, PlatformPlan } from "@/lib/platform/admin-data";
 import type { MarketingConnectionStatus } from "@/lib/marketing/types";
 import s from "./brand-directory.module.css";
@@ -124,6 +124,7 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
     exportPending.current = true;
     setExporting(kind);
     setExportMessage(null);
+    const reportName = kind === "contact" ? "تقرير التواصل والمتابعة" : "تقرير بيانات العلامات";
     try {
       const response = await fetch(kind === "contact" ? "/api/admin/brands/contact-report" : "/api/admin/brands/export", {
         method: "GET", credentials: "same-origin", cache: "no-store", headers: { Accept: excelMime },
@@ -149,9 +150,9 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
         anchor.remove();
         setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
       }
-      setExportMessage({ kind: "success", text: kind === "contact" ? "تم تجهيز تقرير متابعة التفعيل وبدء تنزيله" : "تم تجهيز ملف جميع العلامات وبدء تنزيله" });
+      setExportMessage({ kind: "success", text: `بدأ تنزيل ${reportName}` });
     } catch {
-      setExportMessage({ kind: "error", text: kind === "contact" ? "تعذر تنزيل تقرير متابعة التفعيل تحقق من الاتصال وحاول مجددًا" : "تعذر تنزيل ملف العلامات، تحقق من الاتصال ثم حاول مرة أخرى" });
+      setExportMessage({ kind: "error", text: `تعذر تنزيل ${reportName} تحقق من الاتصال وحاول مجددًا` });
     } finally {
       exportPending.current = false;
       setExporting(null);
@@ -167,8 +168,18 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
   return <div className={s.directory} dir="rtl">
     <header className={s.header}><div><p className={s.eyebrow}><span aria-hidden="true" />إدارة المنصة</p><h1>العلامات التجارية</h1><p className={s.subtitle}>كل علامة بتفاصيلها من الاشتراك إلى الخدمات والصيانة</p></div><div className={s.headerActions}><div className={s.headerNote}><ShieldCheck aria-hidden="true" /><span>إدارة موحدة<br /><strong>لكل علاماتك</strong></span></div>
       {!configError && <>
-        <button type="button" className={s.exportButton} onClick={() => exportBrands("directory")} disabled={!!exporting || cafes.length === 0} aria-busy={exporting === "directory"} aria-label="تصدير جميع العلامات التجارية إلى إكسل" title="يشمل جميع العلامات دون تطبيق البحث أو التصفية">{exporting === "directory" ? <LoaderCircle className={s.exportSpinner} aria-hidden="true" /> : <Download aria-hidden="true" />}{exporting === "directory" ? "جارٍ تجهيز الملف" : "تصدير إكسل"}</button>
-        <button type="button" className={s.exportButton} onClick={() => exportBrands("contact")} disabled={!!exporting || cafes.length === 0} aria-busy={exporting === "contact"}>{exporting === "contact" ? <LoaderCircle className={s.exportSpinner} aria-hidden="true" /> : <Download aria-hidden="true" />}{exporting === "contact" ? "جارٍ تجهيز التقرير" : "تقرير متابعة التفعيل"}</button>
+        <button type="button" className={s.exportButton} onClick={() => exportBrands("directory")}
+          disabled={!!exporting || cafes.length === 0} aria-busy={exporting === "directory"}
+          aria-label="تنزيل تقرير بيانات العلامات" title="تنزيل بيانات جميع العلامات والباقات والاشتراكات">
+          {exporting === "directory" ? <LoaderCircle className={s.exportSpinner} aria-hidden="true" /> : <FileSpreadsheet aria-hidden="true" />}
+          تقرير بيانات العلامات
+        </button>
+        <button type="button" className={s.exportButton} onClick={() => exportBrands("contact")}
+          disabled={!!exporting || cafes.length === 0} aria-busy={exporting === "contact"}
+          aria-label="تنزيل تقرير التواصل والمتابعة" title="تنزيل أرقام الملاك وحالة التفعيل وآخر نشاط">
+          {exporting === "contact" ? <LoaderCircle className={s.exportSpinner} aria-hidden="true" /> : <ContactRound aria-hidden="true" />}
+          تقرير التواصل والمتابعة
+        </button>
       </>}
       {onCreate && !configError && <button type="button" className={s.createButton} onClick={onCreate} aria-haspopup="dialog"><Plus size={19} aria-hidden="true" />إنشاء حساب علامة</button>}</div></header>
     {!configError && exportMessage && <p className={s.exportFeedback} data-state={exportMessage.kind} role={exportMessage.kind === "error" ? "alert" : "status"}>{exportMessage.text}</p>}
