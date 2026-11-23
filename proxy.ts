@@ -7,8 +7,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { recoverExpiredCashierAction } from "@/lib/cashier/session-recovery";
 import { hospitalAccountLoginPath, hospitalAccountRouteHeader, isHospitalAccountRoute, isLegacyHospitalAccountLogin } from "@/lib/commerce/hospital-account-routing";
 
-const MIND_PRINTED_QR_START = Date.parse("2026-11-23T20:00:00+03:00");
-
 const AUTH_REFRESH_PREFIXES = [
   "/brands",
   "/dashboard",
@@ -55,7 +53,7 @@ export async function proxy(incoming: NextRequest) {
   if (request.method === "GET" || request.method === "HEAD") {
     // The MIND counter sign carries this exact legacy enrollment URL.
     if (pathname === "/loyalty/brand-8ad185ee82e3" && host === rootDomain &&
-        request.nextUrl.search === "?source=qr" && Date.now() >= MIND_PRINTED_QR_START) {
+        request.nextUrl.search === "?source=qr") {
       const target = request.nextUrl.clone();
       target.pathname = "/loyalty/mind-hospital";
       return NextResponse.redirect(target, { status: 307, headers: { "Cache-Control": "no-store" } });

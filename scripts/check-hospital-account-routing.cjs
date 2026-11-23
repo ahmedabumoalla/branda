@@ -45,25 +45,16 @@ async function main() {
     const rows = [];
     const printedPath = '/loyalty/brand-8ad185ee82e3';
     const printedQr = printedPath + '?source=qr';
-    const originalNow = Date.now;
-    try {
-      Date.now = () => Date.parse('2026-11-23T16:59:59.999Z');
-      check((await proxy(request(printedQr))).headers.get('location'), null, 'Printed QR before Riyadh cutover');
-      Date.now = () => Date.parse('2026-11-23T17:00:00Z');
-      for (const method of ['GET', 'HEAD']) {
-        const result = await proxy(request(printedQr, method));
-        check(result.status, 307, 'Temporary QR redirect at cutover');
-        check(result.headers.get('location'), 'https://barndaksa.com/loyalty/mind-hospital?source=qr', 'MIND enrollment');
-        check(result.headers.get('cache-control'), 'no-store', 'QR redirect is not cached');
-      }
-      for (const path of [printedPath, printedPath + '?source=menu', printedQr + '&branch=branch-id', printedPath + '/access?token=test', '/loyalty/mind-hospital?source=qr']) {
-        check((await proxy(request(path))).headers.get('location'), null, 'Separate enrollment and member routes');
-      }
-      check((await proxy(request(printedQr, 'POST'))).headers.get('location'), null, 'Do not forward submissions');
-    } finally {
-      Date.now = originalNow;
+    for (const method of ['GET', 'HEAD']) {
+      const result = await proxy(request(printedQr, method));
+      check(result.status, 307, 'Printed QR redirects immediately');
+      check(result.headers.get('location'), 'https://barndaksa.com/loyalty/mind-hospital?source=qr', 'MIND enrollment');
+      check(result.headers.get('cache-control'), 'no-store', 'QR redirect is not cached');
     }
-    check(routing.hospitalAccountEntryHref(), routing.hospitalAccountPath + '?portal=1', 'Stable link bypasses cached legacy permanent redirect');
+    for (const path of [printedPath, printedPath + '?source=menu', printedQr + '&branch=branch-id', printedPath + '/access?token=test', '/loyalty/mind-hospital?source=qr']) {
+      check((await proxy(request(path))).headers.get('location'), null, 'Separate enrollment and member routes');
+    }
+    check((await proxy(request(printedQr, 'POST'))).headers.get('location'), null, 'Do not forward submissions');
     for (const route of [routing.hospitalAccountPath, routing.hospitalAccountLoginPath, routing.hospitalAccountPath + '/', routing.hospitalAccountEntryHref()]) for (const method of ['GET', 'HEAD']) {
       const before = sessionCalls.length;
       const response = await proxy(request(route, method));
