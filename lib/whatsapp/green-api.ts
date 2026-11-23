@@ -356,18 +356,64 @@ export async function sendGreenApiCustomerMessage(sender: GreenApiCustomerSender
   if (isGreenApiBackupOnly() && kind === "other") throw new Error("MESSAGING_TEMPORARILY_PAUSED");
   // A sender the brand connected itself keeps working; only Branda's own numbers are held to access messages
   if (isPlatformAccessOnly() && kind === "other" && isGreenApiPlatformSender(sender)) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
-  const config = validateOtpSender(sender);
+  return postCustomerText(validateOtpSender(sender), input, timeoutMs);
+}
+
+async function postCustomerText(config: OtpSender, input: { phone: string; message: string }, timeoutMs: number,
+  isRefusal = (status: number) => status >= 400 && status < 500 && status !== 408,
+): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
   try {
     const response = await fetch(otpEndpoint(config, "sendMessage"), {
       method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
       signal: AbortSignal.timeout(Math.max(1000, Math.min(25_000, timeoutMs))),
       body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: input.message }),
     });
-    if (!response.ok) return { status: response.status >= 400 && response.status < 500 && response.status !== 408 ? "rejected" : "unknown" };
+    if (!response.ok) return { status: isRefusal(response.status) ? "rejected" : "unknown" };
     const data = await response.json() as GreenApiSendResponse;
     return typeof data?.idMessage === "string" && data.idMessage.length > 0 && data.idMessage.length <= 200
       ? { status: "queued", providerMessageId: data.idMessage } : { status: "unknown" };
   } catch { return { status: "unknown" }; }
+}
+
+export type BrandPasswordLane = "notifications" | "primary" | "standby";
+type BrandPasswordAttempt = { status: "accepted"; providerMessageId: string } | { status: "rejected" | "unknown" };
+
+/** One attempt on the lane claimed by the admin reset worker. All retry timing lives in its durable job. */
+export async function sendBrandPasswordAttempt(input: {
+  lane: BrandPasswordLane; phone: string; password: string; authorize?: () => Promise<boolean>;
+}): Promise<BrandPasswordAttempt> {
+  if (!supportedMobile.test(input.phone) || !/^[\x21-\x7e]{8,128}$/.test(input.password)) return { status: "rejected" };
+  if (isGreenApiBackupOnly()) return { status: "rejected" };
+  let config: OtpSender;
+  try {
+    let sender: OtpSender | null;
+    switch (input.lane) {
+      case "notifications":
+        sender = await selectNotificationSender();
+        break;
+      case "primary":
+        sender = requireGreenApiConfig();
+        break;
+      case "standby":
+        sender = backupOtpSender({ idInstance: process.env.GREEN_API_ID_INSTANCE?.trim() ?? "" });
+        break;
+      default:
+        return { status: "rejected" };
+    }
+    if (!sender) return { status: "rejected" };
+    config = validateOtpSender(sender);
+    if (!(await probeSenderReady(config)) || (input.authorize && !(await input.authorize()))) return { status: "rejected" };
+  } catch { return { status: "rejected" }; }
+  const message = [
+    "كلمة المرور الجديدة لحسابك في برندة",
+    input.password,
+    "رابط الدخول https://barndaksa.com/login",
+    "للمساعدة رد على هذه الرسالة دون مشاركة كلمة المرور",
+  ].join("\n");
+  const receipt = await postCustomerText(config, { phone: input.phone, message }, greenApiTimeoutMs(),
+    status => [400, 401, 403, 404, 422, 429, 466].includes(status));
+  if (receipt.status === "queued" && receipt.providerMessageId) return { status: "accepted", providerMessageId: receipt.providerMessageId };
+  return { status: receipt.status === "rejected" ? "rejected" : "unknown" };
 }
 
 function validateOtpSender(sender: OtpSender): OtpSender {
@@ -381,7 +427,7 @@ function validateOtpSender(sender: OtpSender): OtpSender {
   return { ...sender, apiUrl: url.origin };
 }
 
-function backupOtpSender(primary: OtpSender): OtpSender | null {
+function backupOtpSender(primary: Pick<OtpSender, "idInstance">): OtpSender | null {
   const apiUrl = process.env.GREEN_API_OTP_BACKUP_API_URL?.trim();
   const idInstance = process.env.GREEN_API_OTP_BACKUP_ID_INSTANCE?.trim();
   const apiTokenInstance = process.env.GREEN_API_OTP_BACKUP_API_TOKEN_INSTANCE?.trim();

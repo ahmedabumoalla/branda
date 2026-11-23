@@ -25,6 +25,7 @@ function context(options = {}) {
     if (options.timeout) throw Error('fixture');
     if (options.primaryStatus && url.includes('waInstance111')) return new Response('', {status:options.primaryStatus});
     if (options.status) return new Response('', {status:options.status});
+    if (options.malformedReceipt) return Response.json({});
     return Response.json({idMessage:'fixture-ack'});
   };
   function load(file, imports = {}) {
@@ -33,12 +34,51 @@ function context(options = {}) {
     new Function('require','exports','process','fetch','setTimeout',code)(n=>n==='server-only'||n.includes('green-api-partner')?{}:imports[n]??(n.startsWith('@/')?load(n.slice(2)+'.ts',imports):require(n)),exports,{env:config},fetcher,(fn,ms)=>{delays.push(ms);now+=ms;fn();return 0;});
     return exports;
   }
-  const api=load('lib/whatsapp/green-api.ts');
+  const api=load('lib/whatsapp/green-api.ts', options.notifications ? {
+    '@/lib/whatsapp/notification-sender': { selectNotificationSender: async () => options.notifications },
+  } : {});
   const campaign=load('lib/whatsapp/green-api-platform-campaigns.ts',{'./green-api':api});
   return {api,campaign,calls,delays,sends:()=>calls.filter(c=>c.method==='POST'),recover:()=>{primaryState='authorized';}};
 }
 (async()=>{
   let checks=0;
+  const passwordInput = { phone:'970599000001', password:'fixture-password-only' };
+  const notifications = { apiUrl:'https://api.greenapi.com', idInstance:'333', apiTokenInstance:'fixture-notifications' };
+  for (const [lane, instance] of [['notifications','333'], ['primary','111'], ['standby','222']]) {
+    const test = context({ notifications, env:{ BRANDA_ACCESS_MESSAGES_ONLY:'true' } });
+    const result = await test.api.sendBrandPasswordAttempt({ ...passwordInput, lane });
+    assert.deepEqual(result, {status:'accepted', providerMessageId:'fixture-ack'});
+    assert.equal(test.sends().length, 1);
+    assert.ok(test.calls.every(call => call.url.includes('waInstance'+instance+'/')));
+    const body = JSON.parse(test.sends()[0].body);
+    assert.equal(body.chatId, passwordInput.phone+'@c.us');
+    assert.ok(body.message.includes(passwordInput.password));
+    assert.deepEqual(test.delays, []);
+    checks++;
+  }
+  for (const [options, status] of [
+    [{status:403},'rejected'], [{status:429},'rejected'], [{status:408},'unknown'],
+    [{status:499},'unknown'], [{status:500},'unknown'], [{timeout:true},'unknown'], [{malformedReceipt:true},'unknown'],
+  ]) {
+    const test = context(options);
+    assert.deepEqual(await test.api.sendBrandPasswordAttempt({...passwordInput,lane:'primary'}), {status});
+    assert.equal(test.sends().length, 1);
+    assert.deepEqual(test.delays, []);
+    checks++;
+  }
+  for (const [options, input] of [
+    [{}, {lane:'notifications'}], [{primary:'notAuthorized'}, {lane:'primary'}],
+    [{env:{GREEN_API_OTP_BACKUP_ID_INSTANCE:'111'}}, {lane:'standby'}],
+    [{env:{GREEN_API_TEMPORARY_BACKUP_ONLY:'true'}}, {lane:'primary'}],
+    [{}, {lane:'primary',phone:'invalid'}], [{}, {lane:'primary',authorize:async()=>false}],
+    [{}, {lane:'standby',authorize:async()=>{throw Error('revoked');}}],
+  ]) {
+    const test = context(options);
+    assert.deepEqual(await test.api.sendBrandPasswordAttempt({...passwordInput,...input}), {status:'rejected'});
+    assert.equal(test.sends().length, 0);
+    assert.deepEqual(test.delays, []);
+    checks++;
+  }
   for (const method of ['sendGreenApiPagerMessage','sendGreenApiFinanceShiftAlert','sendGreenApiLoyaltyWelcome','sendGreenApiSupabaseOtp','sendGreenApiOwnerWelcome']) {
     for (const transientFailures of [1,2]) {
       const c=context({transientFailures});

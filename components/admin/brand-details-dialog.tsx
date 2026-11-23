@@ -19,6 +19,7 @@ import { BrandDeletionControl } from "./brand-deletion-control";
 import type { BrandDeletionResult } from "@/lib/data/brand-deletion";
 import { lockPageScroll } from "@/lib/ui/page-scroll-lock";
 import { BrandOwnerWelcome } from "./brand-owner-welcome";
+import { BrandPasswordDelivery } from "./brand-password-delivery";
 import { BrandArchiveFiles } from "./brand-archive-files";
 import { SubscriptionDeadlineEditor } from "./subscription-deadline-editor";
 import { formatSaudiDeadline } from "@/lib/platform/subscription-deadline";
@@ -233,8 +234,9 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         <div className={s.panelIntro}><span className={s.tileIcon}><selectedSection.icon aria-hidden="true" /></span><div><h2>{selectedSection.title}</h2><p>{selectedSection.description}</p></div></div>
         {section === "account" && <>
           <SectionHeading icon={UserRound}>بيانات الحساب والمالك</SectionHeading>
-          <DataList items={[["اسم العلامة", cafe.name], ["الاسم بالإنجليزية", cafe.nameEn], ["الرابط المختصر", cafe.slug], ["نوع النشاط", cafe.businessCategoryLabel], ["اسم المالك", cafe.ownerName], ["البريد الإلكتروني", cafe.ownerEmail], ["بريد الدخول", cafe.ownerLoginEmail], ["الوصول لكلمة المرور", cafe.passwordAccessNote], ["جوال المالك", cafe.ownerPhone], ["تاريخ الانضمام", cafe.createdAt]]} />
+          <DataList items={[["اسم العلامة", cafe.name], ["الاسم بالإنجليزية", cafe.nameEn], ["الرابط المختصر", cafe.slug], ["نوع النشاط", cafe.businessCategoryLabel], ["اسم المالك", cafe.ownerName], ["البريد الإلكتروني", cafe.ownerEmail], ["بريد الدخول", cafe.ownerLoginEmail], ["جوال المالك", cafe.ownerPhone], ["تاريخ الانضمام", cafe.createdAt]]} />
           {!cafe.cancellation && <BrandAccountEditors cafe={cafe} disabled={statusPending || deletionPending} onBusyChange={setAccountPending} onUpdated={onUpdated} />}
+          {!cafe.cancellation && <BrandPasswordDelivery key={cafe.id} cafeId={cafe.id} disabled={statusPending || deletionPending || accountPending} />}
           {!cafe.cancellation && <><button type="button" className={s.primaryButton} style={{ marginTop: 22 }} disabled={statusPending || deletionPending || accountPending} onClick={async () => { setStatusPending(true); try { await toggleStatus(); } finally { setStatusPending(false); } }}>{statusPending ? "جارٍ تحديث الحالة…" : cafe.status === "نشط" ? "إيقاف العلامة" : "تفعيل العلامة"}</button>
           <BrandDeletionControl cafeId={cafe.id} name={cafe.name} slug={cafe.slug} disabled={statusPending} onBusyChange={setDeletionPending} onDeleted={onDeleted} /></>}
         </>}
