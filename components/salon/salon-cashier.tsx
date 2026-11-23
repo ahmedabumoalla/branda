@@ -7,6 +7,7 @@ import { salonTime, salonInputTime, salonToday, type SalonBooking, type SalonPag
 import { loyaltyTheme } from "@/components/rast-loyalty/loyalty-theme";
 import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
 import loyalty from "@/components/rast-loyalty/rast-loyalty.module.css";
+import { BookingPrice } from "./booking-price";
 import styles from "./salon-cashier.module.css";
 
 /** Cashier sees the active queue only; history and customer reviews belong to the dashboard. */
@@ -34,11 +35,11 @@ export function SalonCashier({ initial, identity, canUseLoyalty, showRequests = 
     element.showModal();
     return () => { element.close(); document.body.style.overflow = overflow; };
   }, [reschedule]);
-  function command(booking: SalonBooking, action: "call" | "complete" | "propose", start: string | null = null) {
+  function command(booking: SalonBooking, action: "call" | "complete" | "propose" | "confirm" | "reject", start: string | null = null) {
     if (lock.current) return; lock.current = true; setError(""); setNotice("");
     transition(async () => {
       try { const result = await commandSalonBookingAction(booking.id, booking.version, action, start, "staff");
-        if (result.ok) { setReschedule(null); setNotice(action === "propose" ? "أضيف اقتراح الموعد للإرسال وننتظر موافقة العميل" : action === "call" ? "تم تسجيل النداء وإضافة رسالة واحدة للإرسال" : "اكتملت الخدمة وأضيف رابط التقييم وبطاقة الولاء للإرسال"); await refresh(data.page); }
+        if (result.ok) { setReschedule(null); setNotice(action === "confirm" ? "تم تأكيد الحجز" : action === "reject" ? "تم رفض الحجز" : action === "propose" ? "أضيف اقتراح الموعد للإرسال وننتظر موافقة العميل" : action === "call" ? "تم تسجيل النداء وإضافة رسالة واحدة للإرسال" : "اكتملت الخدمة وأضيف رابط التقييم وبطاقة الولاء للإرسال"); await refresh(data.page); }
         else setError(result.error);
       } catch { setError("تعذر الاتصال حاول مجددًا");
       } finally { lock.current = false; }
@@ -52,13 +53,14 @@ export function SalonCashier({ initial, identity, canUseLoyalty, showRequests = 
     <div className={styles.heading}><h2>{showRequests ? "طلبات الحجز والمواعيد" : "المواعيد المؤكدة"}</h2><span className={styles.count}><b>{data.total}</b> موعد للخدمة</span></div>
     <div className={styles.list}>{data.bookings.length ? data.bookings.map(booking => <article key={booking.id} className={styles.appointment}>
       <div className={styles.details}><h3 title={booking.customerName}>{booking.customerName}</h3><div className={styles.meta}><time dateTime={booking.scheduledStart || booking.requestedStart}><Clock3 aria-hidden="true" />{salonTime(booking.scheduledStart || booking.requestedStart)}</time>{booking.status === "in_service" && <span className={styles.called}>تم النداء</span>}</div>
+      {showRequests && <><p>{booking.service.name}</p><BookingPrice booking={booking} mode="staff" refresh={() => refresh(data.page)} /></>}
       {booking.status === "proposed" && <p className={styles.awaiting}>بانتظار موافقة العميل على {salonTime(booking.proposedStart)}</p>}</div>
-      <div className={styles.actions}>{booking.status === "confirmed" ? <><button className={styles.action} aria-label={`استدعاء العميل ${booking.customerName}`} disabled={pending} onClick={() => command(booking, "call")}><BellRing aria-hidden="true" /> استدعاء</button><button className={`${styles.action} ${styles.complete}`} aria-label={`تقديم أو تغيير موعد ${booking.customerName}`} disabled={pending} onClick={() => { setError(""); setReschedule(booking); }}><CalendarClock aria-hidden="true" /> تقديم أو تغيير الموعد</button></> : booking.status === "in_service" ? <button className={`${styles.action} ${styles.complete}`} aria-label={`إنهاء الخدمة ${booking.customerName}`} disabled={pending} onClick={() => command(booking, "complete")}><Check aria-hidden="true" /> إنهاء</button> : <span className={styles.called}>{booking.status === "pending" ? "بانتظار تأكيد المالك" : "بانتظار الرد"}</span>}</div>
+      <div className={styles.actions}>{showRequests && booking.status === "pending" ? <><button className={styles.action} disabled={pending} onClick={() => command(booking, "confirm")}>تأكيد الحجز</button><button className={styles.complete} disabled={pending} onClick={() => setReschedule(booking)}>اقتراح موعد بديل</button><button className={styles.complete} disabled={pending} onClick={() => command(booking, "reject")}>رفض الحجز</button></> : booking.status === "confirmed" ? <><button className={styles.action} aria-label={`استدعاء العميل ${booking.customerName}`} disabled={pending} onClick={() => command(booking, "call")}><BellRing aria-hidden="true" /> استدعاء</button><button className={`${styles.action} ${styles.complete}`} aria-label={`تقديم أو تغيير موعد ${booking.customerName}`} disabled={pending} onClick={() => { setError(""); setReschedule(booking); }}><CalendarClock aria-hidden="true" /> تقديم أو تغيير الموعد</button></> : booking.status === "in_service" ? <button className={`${styles.action} ${styles.complete}`} aria-label={`إنهاء الخدمة ${booking.customerName}`} disabled={pending} onClick={() => command(booking, "complete")}><Check aria-hidden="true" /> إنهاء</button> : <span className={styles.called}>{booking.status === "pending" ? "بانتظار تأكيد المالك" : "بانتظار الرد"}</span>}</div>
     </article>) : <div className={styles.empty}><CalendarCheck aria-hidden="true" /><div><h3>{showRequests ? "لا توجد حجوزات حاليًا" : "لا توجد مواعيد مؤكدة"}</h3><p>{showRequests ? "تظهر الحجوزات هنا عند تقديم الطلب" : "تظهر المواعيد هنا بمجرد تأكيدها من الصالون"}</p></div></div>}</div>
     <dialog ref={dialog} className={styles.dialog} aria-labelledby="reschedule-title" onCancel={e => { if (pending) e.preventDefault(); else setReschedule(null); }} onClose={() => setReschedule(null)}>
       <header><h2 id="reschedule-title">اقتراح موعد بديل</h2><button className={styles.tool} aria-label="إغلاق" disabled={pending} onClick={() => setReschedule(null)}><X aria-hidden="true" /></button></header>
       {reschedule && <form onSubmit={e => { e.preventDefault(); const values = new FormData(e.currentTarget); try { command(reschedule, "propose", salonInputTime(`${values.get("date")}T${values.get("time")}`)); } catch { setError("حدد تاريخ الموعد ووقته"); } }}>
-        <strong>{reschedule.customerName}</strong><p>الموعد الحالي: {salonTime(reschedule.scheduledStart)}</p><p>إذا توفر وقت أبكر اقترحه على العميل عبر واتساب ويبقى موعده الحالي حتى يوافق</p>
+        <strong>{reschedule.customerName}</strong><p>الموعد الحالي: {salonTime(reschedule.scheduledStart || reschedule.requestedStart)}</p><p>إذا توفر وقت أبكر اقترحه على العميل عبر واتساب ويبقى موعده الحالي حتى يوافق</p>
         <div className={styles.dateFields}><label>التاريخ<input type="date" name="date" defaultValue={salonToday(new Date(reschedule.scheduledStart || reschedule.requestedStart))} min={salonToday()} required disabled={pending} dir="ltr" /></label><label>الوقت<input type="time" name="time" required disabled={pending} dir="ltr" /></label></div>
         {error && <p role="alert" className={styles.error}>{error}</p>}<button className={styles.action} disabled={pending}>{pending ? "جارٍ إرسال الاقتراح" : "إرسال الموعد المقترح"}</button>
       </form>}

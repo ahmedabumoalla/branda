@@ -244,3 +244,12 @@
   .degreesTitle div {gap:16px;font-size:.9rem;}
   .degreesMenu {grid-template-columns:1fr;gap:28px;}
 }
+
+.serviceChoices { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
+.serviceChoices legend { margin-block-end: .5rem; font-weight: 700; }
+.choiceList { display: grid; max-block-size: 14rem; overflow-y: auto; border: 1px solid #c8bba9; border-radius: .7rem; }
+.choiceList label { display: flex; align-items: center; gap: .65rem; min-block-size: 2.75rem; padding: .5rem .75rem; cursor: pointer; }
+.choiceList label + label { border-block-start: 1px solid #e5ddd2; }
+.choiceList input { inline-size: 1.125rem; block-size: 1.125rem; accent-color: #785036; }
+.choiceList small { margin-inline-start: auto; }
+.choiceTotal { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .4rem; padding-block: .7rem; }

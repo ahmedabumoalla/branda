@@ -22,8 +22,8 @@ export function DegreesOpening({ book, loyalty }: { book: () => void; loyalty: b
   </section>;
 }
 
-export function DegreesService({ name, price, book }: { name: string; price: string; book: () => void }) {
-  return <button type="button" className={styles.degreesService} onClick={book} aria-label={`احجز ${name} — ${price}`}>
+export function DegreesService({ name, price, book, unavailable }: { name: string; price: string; book: () => void; unavailable?: boolean }) {
+  return <button type="button" className={styles.degreesService} onClick={book} disabled={unavailable} aria-label={unavailable ? `${name} غير متاحة للحجز` : `احجز ${name} — ${price}`}>
     <span>{name}</span><span>{price}</span><ArrowUpLeft size={17} aria-hidden="true" />
   </button>;
 }

@@ -23,7 +23,8 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
   const servicePrice = (product: StandaloneMenuProduct) => degrees && product.price === 0 && product.commerceDetails?.quoteOnly ? "يُحدّد مع الصالون" : money(product.price) + " ر س";
   const [bookingOpen, setBookingOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
-  const [serviceId, setServiceId] = useState("");
+  const [serviceIds, setServiceIds] = useState<string[]>([]);
+  const serviceId = serviceIds[0] ?? "";
   const [category, setCategory] = useState("");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -34,6 +35,8 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
   const categories = (menu.categories ?? []).filter(c => services.some(p => p.categoryId === c.id));
   const visibleServices = category ? services.filter(p => p.categoryId === category) : services;
   const selected = services.find(p => p.id === serviceId);
+  const chosen = services.filter(p => serviceIds.includes(p.id));
+  const quoted = chosen.some(p => p.commerceDetails?.quoteOnly && p.price === 0);
   const offers = menu.highlights?.items ?? [];
   const hasOffers = offers.length > 0 || announcements.length > 0;
   const brandStyle = salonTheme({ name: menu.name, slug: menu.slug, logoUrl: menu.logoUrl, cardBackground: colors.background, cardForeground: colors.foreground, cardAccent: colors.accent });
@@ -48,7 +51,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
   }, [bookingOpen]);
 
   function choose(id: string) {
-    setServiceId(id);
+    setServiceIds([id]);
     requestId.current = null;
     setBookingOpen(true);
   }
@@ -60,10 +63,11 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
     let start: string;
     try { start = salonInputTime(`${form.get("date")}T${form.get("time")}`); }
     catch { setError("حدد تاريخ الموعد ووقته"); return; }
+    if (Date.parse(start) <= Date.now()) { setError("اختر وقتًا لاحقًا للحجز بتوقيت السعودية"); return; }
     requestId.current ??= crypto.randomUUID();
     startTransition(async () => {
       try {
-        const result = await createSalonBookingAction({ id: requestId.current!, slug: menu.slug, name: String(form.get("name")), phone: String(form.get("phone")), serviceId: serviceId || null, start });
+        const result = await createSalonBookingAction({ id: requestId.current!, slug: menu.slug, name: String(form.get("name")), phone: String(form.get("phone")), ...(degrees ? { serviceIds } : { serviceId: serviceId || null }), start });
         if (result.ok) window.location.assign(result.data.url);
         else setError(result.error);
       } catch { setError("تعذر إرسال الطلب تحقق من اتصالك وحاول مرة أخرى"); }
@@ -125,7 +129,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
           {[...categories, { id: "", name: "خدمات أخرى" }].map(group => {
             const items = visibleServices.filter(p => (p.categoryId || "") === group.id);
             return items.length > 0 && <section className={styles.degreesGroup} key={group.id}><h3>{group.name}</h3>
-              {items.map(p => <DegreesService key={p.id} name={p.name} price={servicePrice(p)} book={() => choose(p.id)} />)}
+              {items.map(p => <DegreesService key={p.id} name={p.name} price={servicePrice(p)} unavailable={p.available === false} book={() => choose(p.id)} />)}
             </section>;
           })}
         </div> : services.length ? <div className={styles.serviceGrid}>{visibleServices.map(p => item(p, true))}</div> : <div className={styles.emptyServices}><div className={styles.emptyMark} aria-hidden="true"><Scissors /></div><div><p className={styles.eyebrow}>نبدأ بموعد يناسبك</p><h3>لكل إطلالة تفاصيلها</h3><p>قائمة الخدمات تُجهّز لك<br />يمكنك حجز موعد وتحديد عنايتك مع الصالون</p></div><button className={styles.outline} onClick={() => setBookingOpen(true)}>احجز موعدك<ArrowUpLeft aria-hidden="true" /></button></div>}
@@ -145,8 +149,16 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
           <div className={styles.formHeading}><CalendarDays aria-hidden="true" /><div><h3>احجز موعدك</h3><p>{menu.loyaltyEnabled ? "حجزك وبطاقة ولائك في خطوة واحدة" : "خطوة بسيطة لعناية تستحقها"}</p></div></div>
           <label className={styles.field}>اسمك<input name="name" autoComplete="name" placeholder="كيف نناديك" minLength={2} maxLength={120} required disabled={pending} /></label>
           <label className={styles.field}>جوال واتساب<input name="phone" autoComplete="tel" inputMode="tel" dir="ltr" placeholder="05xxxxxxxx" maxLength={30} required disabled={pending} /></label>
-          <label className={`${styles.field} ${styles.full}`}>الخدمة<select value={serviceId} onChange={e => setServiceId(e.target.value)} disabled={pending}><option value="">أحدد الخدمة مع الصالون</option>{services.map(p => <option key={p.id} value={p.id}>{p.name} — {servicePrice(p)}</option>)}</select></label>
-          {selected && <div className={`${styles.selectedService} ${styles.full}`} role="status"><span><Scissors aria-hidden="true" />{selected.name}</span><strong>{servicePrice(selected)}</strong></div>}
+          {degrees ? <fieldset className={`${styles.serviceChoices} ${styles.full}`} disabled={pending}>
+            <legend>الخدمات المطلوبة</legend>
+            <div className={styles.choiceList}>{services.filter(p => p.available !== false).map(p =>
+              <label key={p.id}><input type="checkbox" checked={serviceIds.includes(p.id)} onChange={e => {
+                const checked = e.currentTarget.checked;
+                setServiceIds(ids => checked ? [...ids, p.id] : ids.filter(id => id !== p.id));
+              }} /><span>{p.name}</span><small>{servicePrice(p)}</small></label>)}</div>
+            <div className={styles.choiceTotal} role="status">{chosen.length ? <><span>عدد الخدمات {chosen.length}</span><strong>{quoted ? "يُحدّد الإجمالي مع الصالون" : `الإجمالي ${money(chosen.reduce((total, p) => total + p.price, 0))} ر س`}</strong></> : "يمكنك تحديد الخدمات مع الصالون"}</div>
+          </fieldset> : <label className={`${styles.field} ${styles.full}`}>الخدمة<select value={serviceId} onChange={e => setServiceIds(e.target.value ? [e.target.value] : [])} disabled={pending}><option value="">أحدد الخدمة مع الصالون</option>{services.map(p => <option key={p.id} value={p.id}>{p.name} — {servicePrice(p)}</option>)}</select></label>}
+          {!degrees && selected && <div className={`${styles.selectedService} ${styles.full}`} role="status"><span><Scissors aria-hidden="true" />{selected.name}</span><strong>{servicePrice(selected)}</strong></div>}
           <label className={styles.field}>التاريخ<input ref={dateInput} type="date" name="date" dir="ltr" lang="en" min={salonToday()} required disabled={pending} /></label><label className={styles.field}>الوقت<input type="time" name="time" dir="ltr" lang="en" required disabled={pending} /></label>
           {error && <p role="alert" className={`${styles.error} ${styles.full}`}>{error}</p>}
           <button className={`${styles.submit} ${styles.full}`} disabled={pending}>{pending ? "جارٍ إرسال طلبك" : "إرسال طلب الحجز"}<ArrowUpLeft aria-hidden="true" /></button>

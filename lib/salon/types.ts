@@ -3,7 +3,7 @@ export type BookingStatus = typeof bookingStatuses[number];
 export type SalonBooking = {
   id: string; customerName: string; phone: string; status: BookingStatus; version: number;
   requestedStart: string; scheduledStart: string | null; proposedStart: string | null;
-  service: { name?: string; price?: number; durationMinutes?: number }; createdAt: string;
+  service: { name?: string; price?: number | null; durationMinutes?: number | null; agreedPrice?: number; priceRevision?: number; items?: { id: string; name: string; price: number | null }[] }; createdAt: string;
   calledAt: string | null; completedAt: string | null; rating: number | null; review: string;
 };
 export type SalonMode = "owner" | "staff";

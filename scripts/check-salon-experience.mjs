@@ -14,6 +14,7 @@ async function load(file, stubs = {}) {
   const exports = {};
   new Function("require", "exports", code)(name => {
     if (name === "server-only") return {};
+
     if (name === "next/image") return { __esModule: true, default: (input) => { const props = { ...input }; delete props.unoptimized; delete props.priority; return React.createElement("img", props); } };
     if (name in stubs) return stubs[name];
     if (name.endsWith(".module.css")) return { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) };
@@ -88,7 +89,7 @@ try {
     "@/lib/supabase/server": { getSessionUser: async () => ({ id }) },
     "@/lib/barndaksa/env": { getSupabaseServiceRoleKey: () => "test-secret-only-never-production" },
     "@/lib/data/cafes": { requireOwnerCafeContext: async () => ({ id: cafeId, role: "owner", businessCategory: category }) },
-    "@/lib/data/cashier": { requireCashierPermission: async () => ({ cafeId: staffCafe, cashierId: id }) },
+    "@/lib/data/cashier": { requireCashierSessionContext: async () => ({cafeId: staffCafe, cashierId: id, canUsePager: true}), requireCashierPermission: async () => ({ cafeId: staffCafe, cashierId: id }) },
     "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async () => featureList },
     "@/lib/salon/types": types,
   });
@@ -129,6 +130,11 @@ try {
   await data.createSalonBooking({ id, slug: "salon-test", name: "عميل اختبار", phone: "٠٥٠٠٠٠٠٠٠١", serviceId: null, start: "2030-05-10T11:30:00.000Z" });
   ok(rpcCalls[0].name === "salon_create_booking_with_loyalty" && rpcCalls[0].args.p_loyalty_hash !== rpcCalls[0].args.p_portal_hash, "booking enrollment is atomic with independent hashed card capability");
   ok(rpcCalls[0].args.p_phone === "966500000001", "Arabic phone digits normalized");
+  rows.cafes.id = degrees.DEGREES_SALON_ID;
+  const serviceIds = ["3813d208-75ea-23d8-5502-2ce9f77ad015", id];
+  await data.createSalonBooking({id, slug:"salon-test", name:"عميل اختبار", phone:"0500000001", serviceIds, start:"2030-05-10T11:30:00.000Z"});
+  ok(rpcCalls.at(-1).name === "degrees_create_booking" && rpcCalls.at(-1).args.p_services.length === 2,"real imported haircut ID and multiple services accepted");
+  rows.cafes.id = cafeId;
   ok(!rpcCalls[0].args.p_client_key.includes("127.0.0.1") && rpcCalls[0].args.p_portal_hash !== token, "IP and capabilities hashed before storage");
 
   async function workerHarness(options = {}) {
@@ -171,7 +177,7 @@ try {
   ok(html.includes('type="date"') && html.includes('type="time"') && !html.includes("نحضّر لك المنيو"), "direct booking without cafe loading or barber selector");
   ok(html.includes("خدمة جديدة") && html.includes("/loyalty/salon-test"), "announcements and original loyalty flow rendered");
   const slots = []; let cursor = 0;
-  const hookReact = { ...React, useState: initial => { const i=cursor++; if (!(i in slots)) slots[i]=initial; return [slots[i],next=>{slots[i]=next;}]; }, useRef: initial => { const i=cursor++; return slots[i] ?? (slots[i]={current:initial}); }, useEffect:()=>{}, useTransition:()=>[false,fn=>fn()] };
+  const hookReact = { ...React, useState: initial => { const i=cursor++; if (!(i in slots)) slots[i]=initial; return [slots[i],next=>{slots[i]=typeof next === "function" ? next(slots[i]) : next;}]; }, useRef: initial => { const i=cursor++; return slots[i] ?? (slots[i]={current:initial}); }, useEffect:()=>{}, useTransition:()=>[false,fn=>fn()] };
   const interactive = await load("components/salon/public-salon.tsx", { ...degreesImports, react: hookReact, "@/app/actions/salon": {}, "@/lib/salon/types": types, "./salon-theme": salonTheme, "@/components/menu/brand-loyalty-entry": loyaltyEntry });
   const props = {menu:{name:"صالون الاختبار",slug:"salon-test",contacts:{},categories:[{id:"hair",name:"الشعر"},{id:"beard",name:"اللحية"}],products:[{id,name:"حلاقة شعر",categoryId:"hair",catalogKind:"service",price:40,images:[]},{id:cafeId,name:"تهذيب اللحية",categoryId:"beard",catalogKind:"service",price:25,images:[]}]},announcements:[],colors:{background:"#112211",foreground:"#ffffff",accent:"#aabbcc"}};
   const walk = tree => Array.isArray(tree) ? tree.flatMap(walk) : tree && typeof tree==='object' ? [tree,...walk(tree.props?.children)] : [];
@@ -184,9 +190,19 @@ try {
   rendered.find(n=>n.type==='button'&&n.props['aria-label']==='احجز خدمة تهذيب اللحية').props.onClick(); rendered=render();
   ok(rendered.find(n=>n.type==='select').props.value===cafeId && slots[0]===true,"service booking opens modal with correct selected service");
   ok(text(rendered.find(n=>n.props?.id==='booking-heading')).includes('القادم يبدأ'),"booking heading preserves word separation across responsive layout");
-  const consoleUi = await load("components/salon/booking-console.tsx", { "@/components/ui/design-system": { DashboardPageShell: ({ title, children }) => React.createElement("section", null, React.createElement("h1", null, title), children) }, "@/app/actions/salon": {}, "@/lib/salon/types": types });
+  slots.length = 0;
+  const renderDegrees = () => {cursor=0;return walk(interactive.PublicSalon({...props,menu:{...props.menu,cafeId:degrees.DEGREES_SALON_ID}}));};
+  const boxes = () => renderDegrees().filter(n=>n.props?.type === "checkbox");
+  boxes()[0].props.onChange({currentTarget:{checked:true}});
+  boxes()[1].props.onChange({currentTarget:{checked:true}});
+  ok(boxes().every(n=>n.props.checked) && text(renderDegrees().find(n=>n.props?.role==='status')).includes('٦٥'),"select two services in the same appointment and recalculate total");
+  boxes()[0].props.onChange({currentTarget:{checked:false}});
+  ok(!boxes()[0].props.checked && boxes()[1].props.checked,"remove one service without clearing remaining selection");
+  const priceEditor = await load("components/salon/booking-price.tsx", { "@/app/actions/salon": {} });
+  const consoleUi = await load("components/salon/booking-console.tsx", { "./booking-price": priceEditor, "@/components/ui/design-system": { DashboardPageShell: ({ title, children }) => React.createElement("section", null, React.createElement("h1", null, title), children) }, "@/app/actions/salon": {}, "@/lib/salon/types": types });
   const baseBooking = { ...portal.booking, phone: "966500000001", proposedStart: null, calledAt: null, completedAt: null, rating: null, review: "" };
   const degreesHtml = renderToStaticMarkup(React.createElement(publicUi.PublicSalon, { ...props, menu: { ...props.menu, loyaltyEnabled: true, cafeId: degreesImports["@/lib/salon/degrees"].DEGREES_SALON_ID, products: [...props.menu.products, { id:"vip", categoryId:"hair", name:"خدمات VIP", price:0, catalogKind:"service", commerceDetails:{quoteOnly:true}, images:[] }] } }));
+  ok(degreesHtml.includes("الخدمات المطلوبة") && (degreesHtml.match(/type="checkbox"/g) ?? []).length === 3, "grouped booking service choices rendered");
   ok(degreesHtml.includes('data-salon-presentation="100-degrees"') && degreesHtml.includes('/salon/100-degrees/wordmark.webp') && degreesHtml.includes('شاملة ضريبة القيمة المضافة'), '100 Degrees scoped branding and tax-inclusive service list');
   ok(/<section class="degreesCover"[^>]*>[\s\S]*?<img[^>]+editorial-portrait-v1[\s\S]*?<header class="degreesHeader">/.test(degreesHtml) && degreesHtml.indexOf('<section id="loyalty"') > 0 && degreesHtml.indexOf('<section id="loyalty"') < degreesHtml.indexOf('id="services"'), "unified portrait hero followed by loyalty before services");
   ok(degreesHtml.includes('احجز خدمات VIP — يُحدّد مع الصالون') && !degreesHtml.includes('احجز خدمات VIP — ٠ ر س'), 'unpriced booking is shown as a quote');
@@ -211,12 +227,12 @@ try {
   ok(ownerHtml.includes("تأكيد الموعد") && ownerHtml.includes("إرسال الموعد للعميل") && ownerHtml.includes("الحجوزات المرفوضة"), "owner supports confirmation, alternative proposal and rejected archive");
   const confirmedOwner = renderToStaticMarkup(React.createElement(consoleUi.BookingConsole, { initial: { bookings: [{ ...baseBooking, status: "confirmed" }], total: 1, page: 0 } }));
   ok(confirmedOwner.includes("تقديم أو تغيير الموعد") && !confirmedOwner.includes("رفض الحجز"), "owner can move confirmed appointment");
-  const cashierUi = await load("components/salon/salon-cashier.tsx", { "@/app/actions/salon": {}, "@/app/actions/cashier": { logoutCashierAction: async () => {} }, "@/lib/salon/types": types, "@/components/rast-loyalty/loyalty-theme": loyaltyTheme });
+  const cashierUi = await load("components/salon/salon-cashier.tsx", { "./booking-price": priceEditor, "@/app/actions/salon": {}, "@/app/actions/cashier": { logoutCashierAction: async () => {} }, "@/lib/salon/types": types, "@/components/rast-loyalty/loyalty-theme": loyaltyTheme });
   const pagerHtml = renderToStaticMarkup(React.createElement(cashierUi.SalonCashier, { identity: { name: "صالون الاختبار", slug: "salon-test" }, initial: { bookings: [baseBooking, { ...baseBooking, id: cafeId, status: "in_service" }], total: 2, page: 0 } }));
   ok(pagerHtml.includes("استدعاء العميل") && pagerHtml.includes("إنهاء الخدمة") && !pagerHtml.includes("تقييمات العملاء") && !pagerHtml.includes("الخدمات المكتملة") && !pagerHtml.includes("تأكيد الموعد") && !pagerHtml.includes("رقم الفاتورة"), "cashier has call/completion only and no reviews or archive");
   ok(pagerHtml.includes("تغيير الموعد") && pagerHtml.includes('aria-labelledby="reschedule-title"'), "cashier exposes accessible date proposal dialog");
   const requestedHtml = renderToStaticMarkup(React.createElement(cashierUi.SalonCashier, { showRequests:true, identity:{name:"100 درجة",slug:"degrees"}, initial:{bookings:[{...baseBooking,status:"pending",scheduledStart:null}],total:1,page:0} }));
-  ok(requestedHtml.includes("بانتظار تأكيد المالك") && requestedHtml.includes(types.salonTime(baseBooking.requestedStart)) && !requestedHtml.includes("استدعاء العميل"), "cashier sees requested time before confirmation without recall controls");
+  ok(requestedHtml.includes("تأكيد الحجز") && requestedHtml.includes("حفظ السعر") && requestedHtml.includes("اقتراح موعد بديل") && requestedHtml.includes(types.salonTime(baseBooking.requestedStart)) && !requestedHtml.includes("استدعاء العميل"), "cashier sees requested time before confirmation without recall controls");
   const awaitingHtml = renderToStaticMarkup(React.createElement(cashierUi.SalonCashier, { identity: { name: "صالون الاختبار", slug: "salon-test" }, initial: { bookings: [{ ...baseBooking, status: "proposed", proposedStart: "2030-05-11T11:30:00Z" }], total: 1, page: 0 } }));
   ok(awaitingHtml.includes("بانتظار موافقة العميل") && !awaitingHtml.includes("استدعاء العميل") && !awaitingHtml.includes("إنهاء الخدمة"), "pending confirmed-time proposal cannot be called or completed");
   await reject(() => data.getSalonBookings({ status: "reviews" }, "staff", true), /الكاشير/);

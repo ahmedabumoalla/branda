@@ -1,7 +1,7 @@
 "use server";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
-import { commandSalonBooking, createSalonBooking, getSalonBookings, respondSalonBooking, reviewSalonBooking, saveSalonAnnouncement } from "@/lib/data/salon";
+import { commandSalonBooking, createSalonBooking, getSalonBookings, respondSalonBooking, reviewSalonBooking, saveSalonAnnouncement, setSalonBookingPrice } from "@/lib/data/salon";
 import { runSalonMessageJobs } from "@/lib/salon/worker";
 import type { SalonCommand, SalonFilter, SalonMode } from "@/lib/salon/types";
 async function mutation<T>(work: () => Promise<T>, messages = true) {
@@ -18,6 +18,9 @@ export async function createSalonBookingAction(input: unknown) { return mutation
 export async function fetchSalonBookingsAction(input: SalonFilter, mode: SalonMode, pager: boolean) { return mutation(() => getSalonBookings(input, mode, pager), false); }
 export async function commandSalonBookingAction(id: string, version: number, action: SalonCommand, start: string | null, mode: SalonMode) {
   return mutation(() => commandSalonBooking(id, version, action, start, mode));
+}
+export async function setSalonBookingPriceAction(id: string, version: number, revision: number, price: number, mode: SalonMode) {
+  return mutation(() => setSalonBookingPrice(id, version, revision, price, mode), false);
 }
 export async function respondSalonBookingAction(token: string, version: number, accept: boolean) {
   return mutation(async () => { await respondSalonBooking(token, version, accept); revalidatePath(`/salon/booking/${token}`); });

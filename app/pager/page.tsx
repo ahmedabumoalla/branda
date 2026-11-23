@@ -4,7 +4,7 @@ import { cashierWorkspaceKey } from "@/lib/cashier/workspace-session";
 import { getPagerPage, getStaffPagerContext } from "@/lib/data/pager";
 import { getCashierToken } from "@/lib/data/cashier";
 import { CashierServiceUnavailable } from "@/components/cashier/cashier-unavailable";
-import { getSalonBookings, isSalonCafe, getSalonDisplayIdentity } from "@/lib/data/salon";
+import { getDegreesBookingStaff, getSalonBookings, isSalonCafe, getSalonDisplayIdentity } from "@/lib/data/salon";
 import { DEGREES_SALON_ID } from "@/lib/salon/degrees";
 import { SalonCashier } from "@/components/salon/salon-cashier";
 
@@ -16,6 +16,8 @@ export const metadata = { title: "نداء برندة", robots: { index: false, 
 export default async function PagerPage() {
   const token = await getCashierToken();
   if (!token) redirect("/cashier/login?next=pager");
+  const degrees = await getDegreesBookingStaff().catch(() => null);
+  if (degrees) return <SalonCashier showRequests initial={await getSalonBookings({ status: "active" }, "staff", true)} identity={await getSalonDisplayIdentity(degrees.cafeId)} canUseLoyalty={degrees.canUseLoyalty} />;
   const context = await getStaffPagerContext().catch(() => null);
   if (!context) return <CashierServiceUnavailable />;
   if (await isSalonCafe(context.cafeId)) return <SalonCashier showRequests={context.cafeId === DEGREES_SALON_ID} initial={await getSalonBookings({ status: "active" }, "staff", true)} identity={await getSalonDisplayIdentity(context.cafeId)} canUseLoyalty={context.canUseLoyalty} />;

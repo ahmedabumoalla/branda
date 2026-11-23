@@ -179,5 +179,36 @@ ok(await v("SELECT state FROM salon_message_jobs WHERE id=$1",[job.id])==='uncer
 await db.exec('RESET ROLE;SET ROLE anon');await denied(()=>routed(true),/permission denied/);await denied(()=>q('SELECT * FROM salon_claim_messages_v3(1)'),/permission denied/);
 await db.exec('RESET ROLE;SET ROLE authenticated');await denied(()=>command(700,'propose',7,tomorrow,id(4),'staff'),/permission denied/);
 await db.exec('RESET ROLE');
+const degrees='59606e0a-ac48-4d3a-b92d-4e53246468be', haircut='3813d208-75ea-23d8-5502-2ce9f77ad015';
+await db.exec(`ALTER TABLE cafe_cashiers ADD COLUMN pager_station text, ADD COLUMN owner_user_id uuid;
+ ALTER TABLE menu_products ADD COLUMN commerce_details jsonb DEFAULT '{}';
+ INSERT INTO cafes VALUES('${degrees}','degrees','100 درجة','hair_salons','active',null,'${id(1)}');
+ INSERT INTO feature_access VALUES('${degrees}','menu',true),('${degrees}','pager',false);
+ INSERT INTO cafe_cashiers(id,cafe_id,active,can_use_pager) VALUES('${id(900)}','${degrees}',true,true),('9d827704-d6cf-4d54-b2b6-2bdbfe65b989','${degrees}',true,false);
+ INSERT INTO menu_products(id,cafe_id,name,price,available,catalog_kind) VALUES
+ ('${haircut}','${degrees}','قص شعر',25,true,'service'),('${id(903)}','${degrees}','حلاقة ذقن',20,true,'service');`);
+await db.exec(await readFile('supabase/migrations/20261123221000_degrees_booking_services.sql','utf8'));
+await db.exec('SET ROLE service_role');
+const multi=(services, n=901)=>v('select to_jsonb(degrees_create_booking($1,$2,$3,$4,$5,$6,$7,$8,$9))',
+ [id(n),degrees,'عميل اختبار','966500000777',services,tomorrow,hash(n),hash(9900),hash(9999)]);
+ok(await v("select can_use_pager from cafe_cashiers where id='9d827704-d6cf-4d54-b2b6-2bdbfe65b989'"),'existing Degrees cashier enabled');
+const list=[haircut,id(903)],b=await multi(list);
+ok(b.status==='pending'&&b.service_snapshot.price===45&&b.service_snapshot.items.length===2,'one appointment for both services with catalog prices');
+await multi(list);
+ok(await v("select count(*) from salon_message_jobs where booking_id=$1 and kind='owner_new'",[b.id])===1,'one new booking notice after replay');
+await denied(()=>multi([haircut]),/REQUEST_CHANGED/);
+await denied(()=>multi([haircut,id(20)],902),/SERVICE_UNAVAILABLE/);
+ok(await v("select count(*) from salon_bookings where id=$1",[id(902)])===0,'failed selection rolled back');
+const price=(actor,kind,rev,amount)=>q('select degrees_set_booking_price($1,$2,$3,$4,0,$5,$6)',[degrees,b.id,actor,kind,rev,amount]);
+await price(id(1),'owner',0,42.5);
+await denied(()=>price(id(900),'staff',0,41),/BOOKING_CHANGED/);
+await denied(()=>price(id(4),'staff',1,40),/STAFF_REQUIRED/);
+await price(id(900),'staff',1,40);
+const adjusted=await v('select to_jsonb(b) from salon_bookings b where id=$1',[b.id]);
+ok(adjusted.service_snapshot.agreedPrice===40 && adjusted.service_snapshot.price===45 && adjusted.version===0,'cashier and owner price edits preserve original total and pending notification');
+await command(901,'confirm',0,null,id(900),'staff',degrees);
+await command(901,'propose',1,later,id(900),'staff',degrees);
+await respond(901,2,true);
+ok(await v("select scheduled_start=$2 from salon_bookings where id=$1",[b.id,later]),'customer accepts cashier appointment');
 console.log(`PASS ${checks} salon SQL checks: tenant isolation, cashier reschedule/accept/decline, owner-only phone notification, replay protection and existing lifecycle`);
 }finally{await db.close();}

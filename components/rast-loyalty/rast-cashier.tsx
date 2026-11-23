@@ -86,7 +86,7 @@ export function RastCashierRewardDetails({ reward }: { reward: CashierRewardPrev
   </div>;
 }
 
-export function RastCashier({ initialData, identity: suppliedIdentity, embedded = false, active = true, displayName = name => name }: { initialData: CashierConsole; identity?: LoyaltyIdentity; embedded?: boolean; active?: boolean; displayName?: (name: string) => string }) {
+export function RastCashier({ initialData, identity: suppliedIdentity, embedded = false, active = true, salonBookings = false, displayName = name => name }: { initialData: CashierConsole; identity?: LoyaltyIdentity; embedded?: boolean; active?: boolean; salonBookings?: boolean; displayName?: (name: string) => string }) {
   const { t, errorText, locale, dir } = useCashierLanguage();
   const identity = suppliedIdentity ?? { name: initialData.cafe.name, slug: initialData.cafe.slug, logoUrl: null };
   const [kind, setKind] = useState<"stamp" | "redeem">("stamp");
@@ -221,6 +221,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
         <div className={layout.identity}>{identity.slug === "rast" ? <p className="text-xs tracking-widest" dir="ltr">KAWAKIB · LOYALTY</p> : <RastBrand identity={identity} locale={locale} />}<h1 className="sr-only">{t("كل زيارة تستاهل")}</h1></div>
         <div className={layout.tools}>
         <CashierLanguageSwitch />
+            {salonBookings && <Link href="/pager" className={layout.logout}>{locale === "en" ? "Appointments" : "حجوزات الصالون"}</Link>}
             <form action={logoutCashierAction}><button disabled={pending} aria-label={t("تسجيل الخروج")} title={t("تسجيل الخروج")} className={layout.logout}><LogOut size={18} aria-hidden="true" /><span className={layout.logoutLabel}>{t("تسجيل الخروج")}</span></button></form>
         </div>
       <div className={layout.greeting}><p>{t({ text: points ? "أهلًا {name} هنا تسجّل نقاط الفواتير وتصرف المكافآت" : "أهلًا {name} هنا تسجّل الأختام وتصرف المكافآت", values: { name: initialData.cashier.fullName } })}</p><CashierGuideButton /></div>

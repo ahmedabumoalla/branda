@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getLoyaltyBrand, getBranchLoyaltyBrand } from "@/lib/data/loyalty-experience";
 import { getCashierConsole, getCashierToken, getCashierLandingPath, requireCashierSessionContext } from "@/lib/data/cashier";
+import { DEGREES_SALON_ID } from "@/lib/salon/degrees";
+import { getDegreesBookingStaff } from "@/lib/data/salon";
 import { RastCashier } from "@/components/rast-loyalty/rast-cashier";
 import { PublicServiceUnavailable } from "@/components/public-service-unavailable";
 import { StaffWorkspace } from "@/components/cashier/staff-workspace";
@@ -29,7 +31,8 @@ export default async function CashierPage() {
 
   const brand = data.cashier.loyaltyBranchId ? await getBranchLoyaltyBrand(data.cafe.slug, data.cashier.loyaltyBranchId) : await getLoyaltyBrand(data.cafe.slug);
   const initialData = { ...data, pointsProgram: brand?.program.pointsProgram };
-  if (data.cafe.businessCategory === "hair_salons") return <><CashierSessionGuard /><RastCashier initialData={initialData} identity={brand?.identity} /></>;
+  const salonBookings = data.cafe.id === DEGREES_SALON_ID && Boolean(await getDegreesBookingStaff().catch(() => null));
+  if (data.cafe.businessCategory === "hair_salons") return <><CashierSessionGuard /><RastCashier salonBookings={salonBookings} initialData={initialData} identity={brand?.identity} /></>;
   const token = await getCashierToken();
   if (!token) redirect("/cashier/login");
   return <StaffWorkspace key={cashierWorkspaceKey(token)} sessionKey={cashierWorkspaceKey(token)} initial={{ screen: "loyalty", data: initialData, identity: brand?.identity }} />;
