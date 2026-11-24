@@ -150,7 +150,9 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
     }
 
     setPasswordSaving(true);
-    const result = await changeOwnerPasswordAction(passwordForm);
+    const result = await changeOwnerPasswordAction(passwordForm).catch(() => ({
+      ok: false, message: "تعذر تأكيد تغيير كلمة المرور تحقق من الاتصال وحاول مرة أخرى",
+    }));
     setPasswordSaving(false);
     setPasswordMessage({
       type: result.ok ? "success" : "error",

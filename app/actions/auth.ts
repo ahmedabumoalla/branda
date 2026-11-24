@@ -524,17 +524,25 @@ export async function changeOwnerPasswordAction(input: {
     }
   );
 
-  const { data: verified, error: verifyError } = await verifyClient.auth.signInWithPassword(
-    user.email
-      ? { email: user.email, password: currentPassword }
-      : { phone: user.phone!, password: currentPassword },
-  );
+  const identity = user.email && user.email_confirmed_at ? { email: user.email }
+    : user.phone && user.phone_confirmed_at ? { phone: user.phone } : null;
+  if (!identity) return { ok: false, message: "تحتاج إلى بريد أو رقم جوال مؤكّد لتغيير كلمة المرور" };
 
-  await verifyClient.auth.signOut({ scope: "local" });
-
-  if (verifyError || !verified.user || verified.user.id !== user.id) {
-    if (verifyError) logAuthError("[changeOwnerPasswordAction:verifyCurrentPassword]", verifyError);
-    return { ok: false as const, message: "كلمة المرور الحالية غير صحيحة" };
+  const { data: verified, error: verifyError } = await verifyClient.auth.signInWithPassword({
+    ...identity, password: currentPassword,
+  });
+  if (verified.session) await verifyClient.auth.signOut({ scope: "local" });
+  if (verifyError) {
+    logAuthError("[changeOwnerPasswordAction:verifyCurrentPassword]", verifyError);
+    if (verifyError.code === "invalid_credentials") return { ok: false, message: "كلمة المرور الحالية غير صحيحة" };
+    if (verifyError.status === 429) return { ok: false, message: "محاولات التحقق كثيرة انتظر قليلًا ثم حاول مجددًا" };
+    if (verifyError.code === "email_not_confirmed" || verifyError.code === "phone_not_confirmed") {
+      return { ok: false, message: "تحتاج إلى تأكيد وسيلة الدخول لتغيير كلمة المرور" };
+    }
+    return { ok: false, message: "تعذر التحقق من كلمة المرور الآن حاول مرة أخرى" };
+  }
+  if (verified.user?.id !== user.id || !verified.session) {
+    return { ok: false, message: "تعذر التحقق من هوية الحساب" };
   }
 
   const admin = createAdminClient();

@@ -157,19 +157,60 @@ for(const options of [{noMarker:true},{unconfirmed:true},{phoneMismatch:true},{a
 for(const serviceError of [{status:402},{status:503},{name:"AuthRetryableFetchError"},{status:429}])await test(async()=>{const c=loginContext({serviceError});const result=await c.api.loginOwnerAction(valid.email,"password");assert(!result.ok);assert.equal(result.redirectTo,null);assert.equal(c.calls.length,1,"Service failure must not retry other login identities");assert.notEqual(result.message,"invalid_credentials");assert(result.message.includes(serviceError.status===429?String.fromCodePoint(1603,1579,1610,1585,1577):String.fromCodePoint(1594,1610,1585,32,1605,1578,1575,1581,1577)));});
 
 function changePasswordContext(options={}) {
-  const calls=[]; const user={id:"owner",phone:options.noIdentity?undefined:"+966511111111",email:options.email?valid.email:undefined};
-  const profile={role:"cafe_owner",status:"active"};
+  const calls=[];
+  const user={
+    id:"owner", email:options.email ? valid.email : undefined, phone:options.noPhone ? undefined : "+966511111111",
+    phone_confirmed_at:options.noPhone || options.unconfirmedPhone ? null : "2026-11-24",
+    email_confirmed_at:options.email && !options.unconfirmedEmail ? "2026-11-24" : null,
+  };
+  let password="oldPassword";
+  const profile={role:options.role ?? "cafe_owner",status:options.status ?? "active"};
   const chain=new Proxy({}, {get:(_,key)=>key==="maybeSingle"?async()=>({data:profile,error:null}):()=>chain});
-  const stubs=Object.fromEntries([...fs.readFileSync(path.join(root,"app/actions/auth.ts"),"utf8").matchAll(/from "(@\/[^\"]+)"/g)].map(match=>[match[1],{}]));
+  const stubs=Object.fromEntries([...fs.readFileSync(path.join(root,"app/actions/auth.ts"),"utf8").matchAll(/from "(@\/[^"]+)"/g)].map(match=>[match[1],{}]));
+  async function signIn(input){
+    calls.push({name:"verify",input});
+    const matched = input.email ? input.email===user.email && user.email_confirmed_at : input.phone===user.phone && user.phone_confirmed_at;
+    const error=options.verifyError || ((!matched || input.password!==password) && {code:"invalid_credentials",status:400});
+    return error ? {data:{user:null,session:null},error}
+      : {data:{user:{id:options.foreignUser?"foreign":"owner"},session:options.noSession?null:{}},error:null};
+  }
   Object.assign(stubs,{
     "next/headers":{},"next/navigation":{},
     "@/lib/barndaksa/env":{requireSupabaseUrl:()=>"https://example.invalid",requireSupabaseAnonKey:()=>"test"},
     "@/lib/supabase/server":{createClient:async()=>({auth:{getUser:async()=>({data:{user},error:null})},from:()=>chain})},
-    "@supabase/supabase-js":{createClient:()=>({auth:{signInWithPassword:async input=>{calls.push({name:"verify",input});return {data:{user:{id:options.foreignUser?"foreign":"owner"}},error:null};},signOut:async()=>{calls.push({name:"verifySignOut"});}}})},
-    "@/lib/supabase/admin":{createAdminClient:()=>({auth:{admin:{updateUserById:async(id,input)=>{calls.push({name:"update",id,input});return {error:null};}}}})},
+    "@supabase/supabase-js":{createClient:()=>({auth:{signInWithPassword:signIn,signOut:async({scope})=>{calls.push({name:"verifySignOut",scope});}}})},
+    "@/lib/supabase/admin":{createAdminClient:()=>({auth:{admin:{updateUserById:async(id,input)=>{calls.push({name:"update",id});assert.equal(id,user.id);password=input.password;return {error:null};}}}})},
   });
-  return {api:load("app/actions/auth.ts",stubs),calls};
+  const api=load("app/actions/auth.ts",stubs);
+  return {calls, signIn, change:(currentPassword="oldPassword",confirmPassword="newPassword")=>
+    api.changeOwnerPasswordAction({currentPassword,newPassword:"newPassword",confirmPassword})};
 }
-for(const email of [false,true]) await test(async()=>{const c=changePasswordContext({email});const result=await c.api.changeOwnerPasswordAction({currentPassword:"oldPassword",newPassword:"newPassword",confirmPassword:"newPassword"});assert(result.ok);assert.deepEqual(c.calls[0].input,email?{email:valid.email,password:"oldPassword"}:{phone:"+966511111111",password:"oldPassword"});assert.equal(c.calls[1].name,"verifySignOut");assert.equal(c.calls[2].id,"owner");});
-for(const options of [{foreignUser:true},{noIdentity:true}]) await test(async()=>{const c=changePasswordContext(options);const result=await c.api.changeOwnerPasswordAction({currentPassword:"oldPassword",newPassword:"newPassword",confirmPassword:"newPassword"});assert(!result.ok);assert(!c.calls.some(call=>call.name==="update"));});
+for(const [options,via] of [[{email:true,noPhone:true},"email"],[{},"phone"],[{email:true},"email"],[{email:true,unconfirmedEmail:true},"phone"]]) {
+  await test(async()=>{
+    const c=changePasswordContext(options);
+    assert((await c.change()).ok);
+    const input=c.calls[0].input;
+    assert.equal(input[via],via==="email"?valid.email:"+966511111111");
+    assert.equal(c.calls[1].scope,"local");
+    assert.equal(c.calls[2].name,"update");
+    assert.equal((await c.signIn(input)).error.code,"invalid_credentials");
+    assert.equal((await c.signIn({...input,password:"newPassword"})).data.user.id,"owner");
+  });
+}
+for(const options of [{foreignUser:true},{noSession:true},{noPhone:true},{email:true,unconfirmedEmail:true,noPhone:true},{status:"suspended"},{role:"customer"}]) {
+  await test(async()=>{const c=changePasswordContext(options);assert(!(await c.change()).ok);assert(!c.calls.some(call=>call.name==="update"));});
+}
+await test(async()=>{
+  const c=changePasswordContext();
+  assert.equal((await c.change("wrongPassword")).message,"كلمة المرور الحالية غير صحيحة");
+  assert(!(await c.change("oldPassword","different")).ok);
+  assert(!c.calls.some(call=>call.name==="update"));
+});
+for(const error of [{code:"email_not_confirmed",status:400},{status:429},{status:503}]) {
+  await test(async()=>{
+    const c=changePasswordContext({verifyError:error});const result=await c.change();
+    assert(!result.ok);assert.notEqual(result.message,"كلمة المرور الحالية غير صحيحة");
+    assert(!c.calls.some(call=>call.name==="update"));
+  });
+}
 console.log(`PASS owner onboarding: ${checks} isolated actual server/SSR checks; no live provider messages.`);
