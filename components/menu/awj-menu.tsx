@@ -12,7 +12,9 @@ export function AwjMenu({ menu, loyalty }: { menu: StandaloneMenu; loyalty: bool
     <section className={s.hero} aria-labelledby="awj-title">
       <Image className={s.cover} src={AWJ_ASSETS + "/hero.webp"} alt="" fill preload unoptimized />
       <div className={s.heroInner}>
-        <Image className={s.mark} src={logo} alt={menu.name} width={118} height={104} unoptimized />
+        <div className={s.brandArea}>
+          <Image className={s.mark} src={logo} alt={menu.name} width={118} height={104} loading="eager" unoptimized />
+        </div>
         <div className={s.intro}><h1 id="awj-title">قهوتك<br /><em>على القمّة</em></h1>
           <a className={s.cta} href="#awj-menu">تصفّح المنيو <ArrowDownLeft size={19} aria-hidden /></a>
         </div>

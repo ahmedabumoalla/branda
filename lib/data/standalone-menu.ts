@@ -12,6 +12,7 @@ import { getKathMenuAssets } from "@/lib/data/kath-menu-assets";
 import { menuContacts } from "@/lib/menu/contacts";
 import { getStandaloneHighlights } from "@/lib/data/standalone-highlights";
 import { standaloneLogoVariant } from "@/lib/menu/logo-variants";
+import { AWJ_ASSETS, AWJ_ID } from "@/lib/menu/awj";
 import { publishedMenuLogo } from "@/lib/cafe/published-logo";
 import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
 import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
@@ -124,6 +125,8 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
       return urls;
     })(),
     (async () => {
+      const currentPath = identity?.logo_storage_path || settings?.logo_storage_path;
+      if (cafe.id === AWJ_ID && currentPath === `${AWJ_ID}/identity/awj-71c6e27bfced7184.png`) return `${AWJ_ASSETS}/logo.png`;
       const variant = standaloneLogoVariant(cafe.id, settings?.logo_storage_path || settings?.logo_url);
       if (variant) return variant;
       let url = safeMediaUrl(identity?.logo_url) || safeMediaUrl(settings?.logo_url);
