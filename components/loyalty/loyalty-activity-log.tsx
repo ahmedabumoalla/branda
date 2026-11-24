@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowUpLeft, Check, ChevronLeft, ChevronRight, CircleAlert, Clock3, CreditCard, Gift, History, LoaderCircle, RefreshCw, ScanLine, Search, SlidersHorizontal, Stamp, X } from "lucide-react";
@@ -11,7 +12,7 @@ type Props = { initialResult: LoyaltyActivityResult; initialFilters: LoyaltyActi
 const dateFormat = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { timeZone: "Asia/Riyadh", day: "numeric", month: "short", year: "numeric" });
 const timeFormat = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { timeZone: "Asia/Riyadh", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
 const numberFormat = new Intl.NumberFormat("ar-SA-u-nu-latn");
-const kindLabels: Record<LoyaltyActivityKind, string> = { scan: "قراءة بطاقة", stamp: "إضافة ختم", redeem: "استبدال مكافأة", void: "إلغاء عملية" };
+const kindLabels: Record<LoyaltyActivityKind, string> = { issue: "إصدار بطاقة", download: "تحميل أو حفظ بطاقة آبل", save_link: "إنشاء رابط حفظ جوجل", scan: "قراءة بطاقة", stamp: "إضافة ختم", redeem: "استبدال مكافأة", void: "إلغاء عملية" };
 const outcomeLabels: Record<LoyaltyActivityOutcome, string> = { success: "ناجحة", denied: "مرفوضة", failed: "تعذّر تنفيذها", duplicate: "مكررة" };
 const reasonLabels: Record<string, string> = {
   session_invalid: "انتهت جلسة الموظف أو لم تعد صالحة يلزم تسجيل الدخول مجددًا",
@@ -45,6 +46,7 @@ function actorName(event: LoyaltyActivityEvent) { return event.actorName || (eve
 function eventLabel(event: LoyaltyActivityEvent) { return event.kind === "scan" && event.rewardSuffix ? "قراءة مكافأة" : kindLabels[event.kind]; }
 
 function EventIcon({ kind }: { kind: LoyaltyActivityKind }) {
+  if (kind === "issue" || kind === "download" || kind === "save_link") return <CreditCard aria-hidden="true" />;
   if (kind === "stamp") return <Stamp aria-hidden="true" />;
   if (kind === "redeem") return <Gift aria-hidden="true" />;
   if (kind === "void") return <History aria-hidden="true" />;
@@ -59,6 +61,9 @@ function eventSummary(event: LoyaltyActivityEvent) {
   if (event.outcome === "duplicate") return "تكرار طلب سابق؛ لم تُضف عملية جديدة";
   if (event.outcome === "denied") return "لم تُنفّذ العملية لعدم استيفاء شروطها";
   if (event.outcome === "failed") return "تعذر إتمام العملية";
+  if (event.kind === "issue") return "صدرت بطاقة العميل ويُحسب الإصدار حتى لو لم يحمّلها";
+  if (event.kind === "save_link") return "أُنشئ رابط حفظ جوجل ولا يؤكد ذلك فتحه أو حفظ البطاقة";
+  if (event.kind === "download") return "سُجّل تحميل أو تثبيت لبطاقة آبل";
   if (event.kind === "scan") return event.rewardSuffix ? "تمت قراءة المكافأة وعرض بياناتها للموظف" : "تمت قراءة البطاقة وعرض بياناتها للموظف";
   if (event.kind === "stamp") return event.rewardsDelta > 0 ? "أُضيف الختم واكتمل رصيد مكافأة جديدة" : "أُضيف الختم إلى بطاقة العميل";
   if (event.kind === "redeem") return "تم تسجيل استبدال المكافأة للعميل";
@@ -87,6 +92,7 @@ function EventDetails({ event, onClose }: { event: LoyaltyActivityEvent; onClose
     </div>
     <div className={s.dialogOutcome}><Outcome outcome={event.outcome} />{event.origin === "historical" ? <span className={s.historyBadge}><History aria-hidden="true" />عملية سابقة</span> : null}<p id="loyalty-event-description">{eventSummary(event)}</p></div>
     <dl className={s.detailGrid}>
+      <div><dt>الفرع</dt><dd>{event.branchName || "الفرع غير مسجل"}</dd></div>
       <div><dt>الموظف المنفّذ</dt><dd>{actorName(event)}</dd></div>
       <div><dt>صفة المنفّذ</dt><dd>{event.actorType === "cashier" ? "موظف الكاشير" : event.actorType === "owner" ? "مالك الحساب" : "غير مسجلة"}</dd></div>
       <div><dt>العميل</dt><dd>{event.customerName || "غير مسجل"}</dd></div>
@@ -183,17 +189,19 @@ export function LoyaltyActivityLog({ initialResult, initialFilters }: Props) {
   const pageCount = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
   const firstRow = data?.total ? (data.page - 1) * data.pageSize + 1 : 0;
   const lastRow = data ? Math.min(data.page * data.pageSize, data.total) : 0;
-  const hasExtraFilters = Boolean(applied.cashierId || applied.kind || applied.outcome || applied.search);
+  const hasExtraFilters = Boolean(applied.branchId || applied.cashierId || applied.kind || applied.outcome || applied.search);
 
   return <section className={s.root} dir="rtl" aria-labelledby="loyalty-activity-title">
     <header className={s.header}>
-      <div><span className={s.eyebrow}>متابعة فريق العمل</span><h2 id="loyalty-activity-title">كل عملية بتفاصيلها</h2><p>من قراءة البطاقة إلى استبدال المكافأة تابع كل خطوة اعرف من نفّذ العملية ولمن ومتى</p></div>
+      <div><span className={s.eyebrow}>متابعة فريق العمل</span><h2 id="loyalty-activity-title">كل عملية بتفاصيلها</h2><p>ميّز إصدار البطاقة عن تحميلها وإضافة الختم وصرف المكافأة واعرف الفرع والموظف لكل عملية</p></div>
       <button type="button" className={s.refresh} onClick={() => void load(applied)} disabled={pending}><RefreshCw aria-hidden="true" className={pending ? s.spinner : undefined} />{pending ? "جارٍ التحديث" : "تحديث السجل"}</button>
     </header>
     <p className={s.coverage}>{data?.recordingStartedAt ? <>تُسجّل قراءات البطاقات والمكافآت والمحاولات منذ {dateLabel(data.recordingStartedAt)} {timeLabel(data.recordingStartedAt)} بتوقيت الرياض العمليات السابقة تعرض تفاصيل الأختام والمكافآت المتاحة</> : "تظهر الأختام والمكافآت المسجلة سابقًا تظهر القراءات والمحاولات بعد بدء التسجيل التفصيلي؛ لا تتوفر لها سجلات سابقة"}</p>
 
     {summary ? <>
       <div className={s.metrics} aria-label="إجماليات جميع العمليات المطابقة للفلاتر">
+        <div className={s.metric}><span className={s.metricLabel}><CreditCard aria-hidden="true" />البطاقات الصادرة</span><strong className={s.metricValue}>{count(summary.issuedCards)}</strong><span className={s.metricNote}>تشمل من أضافهم الكاشير ولم يحمّلوا البطاقة</span></div>
+        <div className={s.metric}><span className={s.metricLabel}><CreditCard aria-hidden="true" />بطاقات آبل المحمّلة أو المحفوظة</span><strong className={s.metricValue}>{count(summary.downloadedCards)}</strong><span className={s.metricNote}>تحميل أو تثبيت مسجّل دون تكرار البطاقة</span></div>
         <div className={s.metric}><span className={s.metricLabel}><ScanLine aria-hidden="true" />قراءات ناجحة</span><strong className={s.metricValue}>{count(summary.scans)}</strong><span className={s.metricNote}>بطاقات ومكافآت خلال الفترة</span></div>
         <div className={s.metric}><span className={s.metricLabel}><Stamp aria-hidden="true" />الأختام المضافة</span><strong className={s.metricValue}>{count(summary.stamps)}</strong><span className={s.metricNote}>{count(summary.rewardsIssued)} مكافأة صدرت</span></div>
         <div className={s.metric} data-tone="success"><span className={s.metricLabel}><Gift aria-hidden="true" />المكافآت المستبدلة</span><strong className={s.metricValue}>{count(summary.redemptions)}</strong><span className={s.metricNote}>عمليات استبدال ناجحة</span></div>
@@ -202,6 +210,7 @@ export function LoyaltyActivityLog({ initialResult, initialFilters }: Props) {
       <div className={s.summaryFoot}><span>{rangeLabel(applied)}</span><span>{count(summary.denied)} مرفوضة · {count(summary.failed)} تعذّر تنفيذها · {count(summary.duplicates)} مكررة</span></div>
     </> : null}
 
+    {data?.branches.length ? <section className={s.team} aria-labelledby="loyalty-branches-title"><div className={s.sectionHeading}><h3 id="loyalty-branches-title">نشاط الفروع</h3><p>ملخص الفروع حسب الفترة فقط</p></div><div className={s.employees}>{data.branches.map(branch => <article className={s.employeeCard} key={branch.id ?? "unassigned"}><h4 className={s.employeeName}>{branch.name}</h4><div className={`${s.employeeStats} ${s.branchStats}`}><span><strong>{count(branch.issuedCards)}</strong>بطاقة صادرة</span><span><strong>{count(branch.downloadedCards)}</strong>تحميل أو حفظ آبل</span><span><strong>{count(branch.stamps)}</strong>ختم</span><span><strong>{count(branch.redemptions)}</strong>مكافأة مصروفة</span></div><p className={s.employeeFoot}>روابط جوجل المنشأة {count(branch.googleSaveLinks)} ولا تؤكد حفظ البطاقة</p><Link className={s.detailsButton} href={`/dashboard/loyalty/branches/${branch.id ?? "unassigned"}/customers`}>تفاصيل عملاء الفرع<ArrowUpLeft aria-hidden="true" /></Link></article>)}</div></section> : null}
     {data ? <section className={s.team} aria-labelledby="loyalty-team-title">
       <div className={s.sectionHeading}><h3 id="loyalty-team-title">نشاط الموظفين</h3><p>يتبع الفترة والفلاتر العامة · اختر موظفًا لعرض عملياته</p></div>
       {employees.length ? <div className={s.employees}>{visibleEmployees.map((employee) => <button key={employee.id} type="button" className={s.employeeCard} aria-pressed={applied.cashierId === employee.id} disabled={pending} onClick={() => selectEmployee(employee.id)}>
@@ -216,6 +225,7 @@ export function LoyaltyActivityLog({ initialResult, initialFilters }: Props) {
     <form className={s.filters} onSubmit={submit} aria-label="تصفية سجل العمليات">
       <div className={s.filterHeading}><SlidersHorizontal aria-hidden="true" />ابحث في السجل</div>
       <div className={s.filterGrid}>
+        <label className={s.field}><span>الفرع</span><select value={draft.branchId ?? ""} onChange={event => setDraft({ ...draft, branchId: event.target.value })}><option value="">جميع الفروع</option>{data?.branches.map(branch => <option key={branch.id ?? "unassigned"} value={branch.id ?? "unassigned"}>{branch.name}</option>)}</select></label>
         <label className={s.field}><span>العميل أو نهاية رقم البطاقة</span><input type="search" maxLength={80} placeholder="اسم العميل أو آخر أرقام البطاقة" value={draft.search} onChange={(event) => setDraft({ ...draft, search: event.target.value })} /></label>
         <label className={s.field}><span>الموظف</span><select value={draft.cashierId} onChange={(event) => setDraft({ ...draft, cashierId: event.target.value })}><option value="">جميع الموظفين</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}{employee.active ? "" : " — غير نشط"}</option>)}</select></label>
         <label className={s.field}><span>نوع العملية</span><select value={draft.kind} onChange={(event) => setDraft({ ...draft, kind: event.target.value as LoyaltyActivityFilters["kind"] })}><option value="">جميع العمليات</option>{Object.entries(kindLabels).map(([value, label]) => <option key={value} value={value}>{value === "scan" ? "قراءة بطاقة أو مكافأة" : label}</option>)}</select></label>
@@ -231,8 +241,9 @@ export function LoyaltyActivityLog({ initialResult, initialFilters }: Props) {
     <div ref={resultsRef} className={s.results} tabIndex={-1} aria-busy={pending} aria-labelledby="loyalty-results-title">
       <div className={s.resultsHeading}><div><h3 id="loyalty-results-title">سجل العمليات</h3><p aria-live="polite">{pending ? "جارٍ تحميل العمليات…" : data ? `${count(data.total)} عملية · ${rangeLabel(applied)}${applied.cashierId ? ` · ${employees.find((employee) => employee.id === applied.cashierId)?.name || "الموظف المحدد"}` : ""}` : "السجل غير متاح حاليًا"}</p></div><span className={s.timezone}><Clock3 aria-hidden="true" />جميع الأوقات بتوقيت الرياض</span></div>
       {!data ? pending ? <div className={s.loading} role="status"><LoaderCircle aria-hidden="true" />جارٍ تحميل سجل العمليات</div> : <div className={s.empty}><CircleAlert aria-hidden="true" /><h3>تعذر عرض السجل</h3><p>أعد المحاولة لتحميل العمليات وملخصات الموظفين</p><button type="button" className={s.secondary} onClick={() => void load(applied)}>إعادة المحاولة</button></div> : data.events.length ? <>
-        <div className={s.tableWrap}><table className={s.table}><caption className={s.srOnly}>عمليات الولاء مرتبة من الأحدث إلى الأقدم؛ كل الأوقات بتوقيت الرياض</caption><thead><tr><th scope="col">العملية</th><th scope="col">الموظف</th><th scope="col">العميل والبطاقة</th><th scope="col">التاريخ والوقت</th><th scope="col">النتيجة</th><th scope="col"><span className={s.srOnly}>التفاصيل</span></th></tr></thead><tbody>{data.events.map((event) => <tr key={event.id}>
+        <div className={s.tableWrap}><table className={s.table}><caption className={s.srOnly}>عمليات الولاء مرتبة من الأحدث إلى الأقدم؛ كل الأوقات بتوقيت الرياض</caption><thead><tr><th scope="col">العملية</th><th scope="col">الفرع</th><th scope="col">الموظف</th><th scope="col">العميل والبطاقة</th><th scope="col">التاريخ والوقت</th><th scope="col">النتيجة</th><th scope="col"><span className={s.srOnly}>التفاصيل</span></th></tr></thead><tbody>{data.events.map((event) => <tr key={event.id}>
           <td><span className={s.eventType}><EventIcon kind={event.kind} />{eventLabel(event)}</span><span className={s.cellSub}>{event.kind === "redeem" ? event.rewardName || "المكافأة المسجلة" : event.kind === "stamp" && event.outcome === "success" ? `${count(event.stampsDelta)} ختم${event.rewardsDelta > 0 ? " · صدرت مكافأة" : ""}` : event.origin === "historical" ? "من السجل السابق" : "سجل تفصيلي"}</span></td>
+          <td><span className={s.cellTitle}>{event.branchName || "غير مسجل"}</span></td>
           <td><span className={s.cellTitle}>{actorName(event)}</span><span className={s.cellSub}>{event.actorType === "owner" ? "مالك الحساب" : event.actorType === "cashier" ? "موظف الكاشير" : "الصفة غير مسجلة"}</span></td>
           <td><span className={s.cellTitle}>{event.customerName || "عميل غير محدد"}</span><span className={s.cellSub}>{event.cardSuffix ? <>بطاقة تنتهي بـ <bdi>{event.cardSuffix}</bdi></> : "البطاقة غير محددة"}</span></td>
           <td><time dateTime={event.occurredAt} className={s.date}>{dateLabel(event.occurredAt)}<span className={s.cellSub}>{timeLabel(event.occurredAt)}</span></time></td>
@@ -241,7 +252,7 @@ export function LoyaltyActivityLog({ initialResult, initialFilters }: Props) {
         </tr>)}</tbody></table></div>
         <div className={s.mobileEvents}>{data.events.map((event) => <article key={event.id} className={s.mobileEvent}>
           <div className={s.mobileEventHeader}><div><span className={s.eventType}><EventIcon kind={event.kind} />{eventLabel(event)}</span>{event.rewardName ? <span className={s.cellSub}>{event.rewardName}</span> : null}</div><Outcome outcome={event.outcome} /></div>
-          <dl className={s.mobileEventInfo}><div><dt>الموظف</dt><dd>{actorName(event)}</dd></div><div><dt>العميل</dt><dd>{event.customerName || "غير محدد"}</dd></div><div><dt>نهاية رقم البطاقة</dt><dd>{event.cardSuffix ? <bdi>{event.cardSuffix}</bdi> : "غير محددة"}</dd></div><div><dt>التاريخ</dt><dd>{dateLabel(event.occurredAt)}</dd></div></dl>
+          <dl className={s.mobileEventInfo}><div><dt>الفرع</dt><dd>{event.branchName || "غير مسجل"}</dd></div><div><dt>الموظف</dt><dd>{actorName(event)}</dd></div><div><dt>العميل</dt><dd>{event.customerName || "غير محدد"}</dd></div><div><dt>نهاية رقم البطاقة</dt><dd>{event.cardSuffix ? <bdi>{event.cardSuffix}</bdi> : "غير محددة"}</dd></div><div><dt>التاريخ</dt><dd>{dateLabel(event.occurredAt)}</dd></div></dl>
           <div className={s.mobileEventFooter}><time dateTime={event.occurredAt}>{timeLabel(event.occurredAt)}</time><button type="button" className={s.detailsButton} onClick={() => setSelected(event)} aria-label={`تفاصيل ${eventLabel(event)} بواسطة ${actorName(event)}`}>تفاصيل العملية<ArrowUpLeft aria-hidden="true" /></button></div>
         </article>)}</div>
       </> : <div className={s.empty}><History aria-hidden="true" /><h3>{hasExtraFilters ? "لا توجد عمليات تطابق بحثك" : "لا توجد عمليات في هذه الفترة"}</h3><p>{hasExtraFilters ? "جرّب موظفًا آخر أو وسّع الفترة وأزل بعض الفلاتر للوصول إلى العملية" : "عندما تُقرأ بطاقة أو يُضاف ختم أو تُستبدل مكافأة تظهر العملية هنا مع اسم الموظف ووقتها"}</p><button type="button" className={s.secondary} onClick={resetFilters} disabled={pending}>عرض آخر ٣٠ يومًا</button></div>}

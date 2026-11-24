@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { loyaltyActivityKinds, loyaltyActivityOutcomes, type LoyaltyActivityFilters } from "./activity-types";
+import { branchReportBranchSchema, branchSelectionSchema } from "./branch-report-validation";
 
 const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   const date = new Date(`${value}T00:00:00.000Z`);
@@ -10,6 +11,7 @@ const filtersSchema = z.object({
   from: calendarDate,
   to: calendarDate,
   cashierId: z.union([z.string().uuid(), z.literal("")]),
+  branchId: branchSelectionSchema.default(""),
   kind: z.union([z.enum(loyaltyActivityKinds), z.literal("")]),
   outcome: z.union([z.enum(loyaltyActivityOutcomes), z.literal("")]),
   search: z.string().trim().max(80),
@@ -34,6 +36,7 @@ const eventSchema = z.object({
   id: z.string().uuid(), occurredAt: dateTime, recordedAt: dateTime,
   kind: z.enum(loyaltyActivityKinds), outcome: z.enum(loyaltyActivityOutcomes),
   origin: z.enum(["live", "historical"]), cashierId: z.string().uuid().nullable(),
+  branchId: z.string().uuid().nullable(), branchName: z.string().max(1000).nullable(),
   actorName: z.string().max(240), actorType: z.enum(["cashier", "owner", "unknown"]),
   cardId: z.string().uuid().nullable(), cardSuffix: z.string().max(8).nullable(),
   customerName: z.string().max(240).nullable(), stampsDelta: z.number().int(), rewardsDelta: z.number().int(),
@@ -49,7 +52,9 @@ export const loyaltyActivityPageSchema = z.object({
   events: z.array(eventSchema).max(50), total: nonnegative,
   page: z.number().int().positive(), pageSize: z.number().int().min(1).max(50),
   recordingStartedAt: dateTime.nullable(),
+  branches: z.array(branchReportBranchSchema),
   summary: z.object({
+    issuedCards: nonnegative, downloadedCards: nonnegative,
     total: nonnegative, scans: nonnegative, stamps: nonnegative, rewardsIssued: nonnegative,
     redemptions: nonnegative, denied: nonnegative, failed: nonnegative, duplicates: nonnegative,
     uniqueCards: nonnegative, activeCashiers: nonnegative,

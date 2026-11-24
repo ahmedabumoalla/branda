@@ -13,7 +13,7 @@ export const maxDuration = 300;
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-export default async function DashboardReadOperationsPage() {
+export default async function DashboardReadOperationsPage({ searchParams }: { searchParams: Promise<{ branch?: string }> }) {
   const features = await getOwnerFeatureCodes().catch(() => null);
   if (!features) {
     return <ReadOperationsPage initialData={null} initialError="تعذر تحميل سجل عمليات القراءة حاول التحديث" />;
@@ -22,12 +22,14 @@ export default async function DashboardReadOperationsPage() {
     return <DashboardFeatureBlockedState title="سجل عمليات القراءة" />;
   }
   const filters = defaultLoyaltyActivityFilters();
+  const { branch } = await searchParams;
+  if (branch === "unassigned" || (branch && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(branch))) filters.branchId = branch;
   const [data, activity] = await Promise.all([getOwnerLoyaltyReads({ page: 1 }).catch((error: unknown) => {
     console.error("[DashboardReadOperationsPage]", error);
     return null;
   }), loadLoyaltyActivityAction(filters)]);
   return <div className="space-y-6">
-    {activity && <section className="px-4 pt-6 sm:px-6" dir="rtl" aria-label="عمليات كاشير الولاء"><h1 className="mb-4 text-2xl font-bold">عمليات الكاشير</h1><LoyaltyActivityLog initialResult={activity} initialFilters={filters} /></section>}
+    {activity && <section className="px-4 pt-6 sm:px-6" dir="rtl" aria-label="عمليات كاشير الولاء"><h1 className="mb-4 text-2xl font-bold">عمليات الكاشير</h1><LoyaltyActivityLog key={filters.branchId} initialResult={activity} initialFilters={filters} /></section>}
     {activity ? <details className="group mx-4 rounded-2xl border border-[#e6d9ca] bg-white sm:mx-6">
       <summary className="flex min-h-12 cursor-pointer flex-wrap items-center justify-between gap-3 px-5 py-4 font-bold text-[#3a2418] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b67a30]">
         <span className="inline-flex items-center gap-2"><ChevronDown size={18} className="group-open:rotate-180" aria-hidden="true" />قراءات البطاقات والمزامنة</span>

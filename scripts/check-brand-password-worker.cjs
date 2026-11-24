@@ -70,6 +70,7 @@ async function main() {
   assert.equal(sendCount, 1);
   assert.equal(receipts.length, 3);
   assert(receipts.every(r => r.p_outcome === "accepted" && r.p_claim === token));
+  assert.match(sentPassword, /^[1-9][0-9]{7}$/, "Temporary password must contain exactly eight digits");
   assert(await compare(sentPassword, hash));
   assert(!enclosed.includes(sentPassword));
   assert.throws(() => secrets.openWelcomePassword(enclosed, randomUUID()));

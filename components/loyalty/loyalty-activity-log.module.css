@@ -40,7 +40,10 @@
 .primary { color: var(--log-paper); background: var(--log-wine); border: 1px solid var(--log-wine); }
 .primary:not(:disabled):hover { background: var(--log-red); }
 .coverage { color: var(--log-muted); padding-inline-start: 13px; border-inline-start: 2px solid var(--log-border); margin-top: 20px !important; font-size: var(--log-small); }
-.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--log-border); border-radius: var(--log-radius); background: var(--log-paper); margin-top: 26px; overflow: hidden; }
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--log-border); border-radius: var(--log-radius); background: var(--log-paper); margin-top: 26px; overflow: hidden; }
+.metric:nth-child(n + 4) { border-top: 1px solid var(--log-border); }
+.metric:nth-child(3n + 1) { border-inline-start: 0; }
+.branchStats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 .metric { padding: 22px 24px; border-inline-start: 1px solid var(--log-border); }
 .metric:first-child { border-inline-start: 0; }
 .metricLabel { color: var(--log-muted); display: flex; align-items: center; gap: 8px; font-size: var(--log-small); }
@@ -159,7 +162,8 @@
   .filterGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .filterHint { width: 100%; margin-inline-start: 0 !important; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .metric:nth-child(3) { border-inline-start: 0; }
+  .metric:nth-child(odd) { border-inline-start: 0; }
+  .metric:nth-child(even) { border-inline-start: 1px solid var(--log-border); }
   .metric:nth-child(n + 3) { border-top: 1px solid var(--log-border); }
 }
 @media (max-width: 540px) {

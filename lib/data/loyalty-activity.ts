@@ -12,9 +12,11 @@ export async function getOwnerLoyaltyActivity(input: LoyaltyActivityFilters): Pr
   if (!featureCodesAllow(await getOwnerFeatureCodes(), "loyalty")) throw new Error("Loyalty unavailable");
   const { filters, from, to } = parseLoyaltyActivityFilters(input);
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_owner_loyalty_activity", {
+  const { data, error } = await supabase.rpc("get_owner_loyalty_activity_v2", {
     p_cafe_id: cafe.id, p_from: from, p_to: to,
     p_cashier_id: filters.cashierId || null,
+    p_branch_id: filters.branchId && filters.branchId !== "unassigned" ? filters.branchId : null,
+    p_unassigned: filters.branchId === "unassigned",
     p_kind: filters.kind || null, p_outcome: filters.outcome || null,
     p_search: filters.search, p_page: filters.page, p_page_size: 25,
   });

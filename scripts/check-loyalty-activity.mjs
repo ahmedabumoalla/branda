@@ -36,16 +36,16 @@ const cardId = "30000000-0000-4000-8000-000000000001";
 const eventId = "40000000-0000-4000-8000-000000000001";
 const requestId = "50000000-0000-4000-8000-000000000001";
 const timestamp = "2026-10-04T12:00:00.000Z";
-const filters = { from: "2026-10-04", to: "2026-10-04", cashierId: "", kind: "", outcome: "", search: "", page: 1 };
+const filters = { from: "2026-10-04", to: "2026-10-04", cashierId: "", branchId: "", kind: "", outcome: "", search: "", page: 1 };
 function fixture() {
   return {
     events: [{ id: eventId, occurredAt: timestamp, recordedAt: timestamp, kind: "stamp", outcome: "success", origin: "live",
-      cashierId, actorName: "Test employee", actorType: "cashier", cardId, cardSuffix: "1234", customerName: "Test customer",
+      cashierId, branchId: null, branchName: null, actorName: "Test employee", actorType: "cashier", cardId, cardSuffix: "1234", customerName: "Test customer",
       stampsDelta: 1, rewardsDelta: 0, stampsBefore: 2, stampsAfter: 3, rewardsBefore: 0, rewardsAfter: 0,
       rewardName: null, rewardSuffix: null, rewardKind: null, rewardDiscountPercent: null, rewardExpiresAt: null,
       rewardTerms: null, reasonCode: null }],
-    total: 1, page: 1, pageSize: 25, recordingStartedAt: timestamp,
-    summary: { total: 1, scans: 0, stamps: 1, rewardsIssued: 0, redemptions: 0, denied: 0, failed: 0, duplicates: 0, uniqueCards: 1, activeCashiers: 1 },
+    total: 1, page: 1, pageSize: 25, recordingStartedAt: timestamp, branches: [],
+    summary: { issuedCards: 0, downloadedCards: 0, total: 1, scans: 0, stamps: 1, rewardsIssued: 0, redemptions: 0, denied: 0, failed: 0, duplicates: 0, uniqueCards: 1, activeCashiers: 1 },
     employees: [{ id: cashierId, name: "Test employee", active: true, scans: 0, stamps: 1, redemptions: 0, denied: 0, failed: 0, duplicates: 0, lastActivityAt: timestamp }],
   };
 }
@@ -98,9 +98,10 @@ function readerFixture() {
 for (const role of ["owner", "manager", "platform_admin"]) await test(`authorized ${role} keeps session tenant and RPC filters`, async () => {
   const ctx = readerFixture(); ctx.state.role = role;
   assert.deepEqual(await ctx.getOwnerLoyaltyActivity({ ...filters, cashierId, search: "  Test  ", kind: "stamp", outcome: "success", page: 2 }), fixture());
-  assert.deepEqual(ctx.state.calls, [{ name: "get_owner_loyalty_activity", args: {
+  assert.deepEqual(ctx.state.calls, [{ name: "get_owner_loyalty_activity_v2", args: {
     p_cafe_id: cafeId, p_from: "2026-10-03T21:00:00.000Z", p_to: "2026-10-04T21:00:00.000Z", p_cashier_id: cashierId,
     p_kind: "stamp", p_outcome: "success", p_search: "Test", p_page: 2, p_page_size: 25,
+    p_branch_id: null, p_unassigned: false,
   } }]);
 });
 for (const [name, mutate] of [
@@ -153,9 +154,12 @@ function scannerFixture() {
   const state = { token: "session-token", active: true, slug: "rast", session: true, features: ["loyalty"],
     featureError: null, sessionError: null, rpcError: null, preview, operation: { ok: true, status: "stamped", cardCode: "CARD123" },
     revokedAt: null, ownerUserId: null, authUser: null, cafeOwnerId: null, profileStatus: "active", cafeStatus: "active", deletedAt: null,
-    calls: [], reads: [], wallet: [], walletError: null, after: [], afterError: null };
+    calls: [], guards: [], guardAllowed: true, reads: [], wallet: [], walletError: null, after: [], afterError: null };
   const db = {
-    rpc: async (name, args) => { state.calls.push({ name, args }); return { data: name === "preview_loyalty_card" ? state.preview : state.operation, error: state.rpcError }; },
+    rpc: async (name, args) => {
+      if (name === "brand_finance_loyalty_session_guard") { state.guards.push({ name, args }); return { data: { allowed: state.guardAllowed, linked: false }, error: null }; }
+      state.calls.push({ name, args }); return { data: name === "preview_loyalty_card" ? state.preview : state.operation, error: state.rpcError };
+    },
     from: (table) => {
       assert(["cafe_cashier_sessions", "cafe_cashiers", "cafes", "profiles"].includes(table), "Preview must not bypass audited RPC with a privileged customer read");
       const calls = []; state.reads.push({ table, calls });
@@ -182,7 +186,9 @@ function scannerFixture() {
     "@/lib/data/feature-entitlements": { getPublicCafeFeatureCodesBySlug: getFeatures, getCafeFeatureCodes: getFeatures },
     "@/lib/data/settings": {}, "@/lib/data/loyalty-cards": {}, "@/lib/auth/rast-loyalty-session": {}, "@/lib/data/customer-rewards": {},
     "@/lib/supabase/admin": { createAdminClient: () => db },
-    "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: state.authUser }, error: null }) } }) },
+    "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: state.authUser }, error: null }) },
+      rpc: async (name, args) => { assert(["current_account_active", "brand_finance_bind_loyalty_session"].includes(name)); state.guards.push({ name, args }); return { data: true, error: null }; },
+    }) },
     "@/lib/data/operation-events": {}, "@/lib/data/notifications": {}, "@/lib/notifications/whatsapp": {},
     "@/lib/wallet": { syncWalletCardByCode: async (code) => { state.wallet.push(code); if (state.walletError) throw state.walletError; } },
   };
@@ -191,6 +197,14 @@ function scannerFixture() {
   return { state, ...load("lib/data/loyalty-experience.ts", stubs, cache), ...load("app/actions/loyalty-experience.ts", stubs, cache) };
 }
 const { createBarndaksaQrPayload } = load("lib/loyalty/secure-qr-payload.ts");
+await test("finance session guard denial blocks preview and mutation before customer operations", async () => {
+  for (const operation of ["preview", "stamp"]) {
+    const ctx = scannerFixture(); ctx.state.guardAllowed = false;
+    await assert.rejects(() => operation === "preview" ? ctx.lookupRastCashierCard("CARD123") : ctx.scanLoyaltyExperienceAction({ value: "CARD123", requestId, kind: "stamp" }));
+    assert.equal(ctx.state.calls.length, 0); assert.equal(ctx.state.wallet.length, 0);
+    assert.equal(ctx.state.guards.at(-1).name, "brand_finance_loyalty_session_guard");
+  }
+});
 await test("preview audits normalized signed card and strips extra RPC fields", async () => {
   const ctx = scannerFixture(); ctx.state.preview.cardCode = "SECRET"; ctx.state.preview.sessionToken = "SECRET";
   assert.deepEqual(await ctx.lookupRastCashierCard(createBarndaksaQrPayload("loyalty-card", "CARD123")), {
@@ -235,7 +249,7 @@ for (const kind of ["stamp", "redeem"]) await test(`${kind} invokes audit wrappe
   await ctx.scanLoyaltyExperienceAction({ value: `  ${code.toLowerCase()}  `, requestId, kind });
   assert.deepEqual(ctx.state.calls, [{ name: "execute_loyalty_audited_operation", args: { p_session_token: "session-token", p_code: code, p_request_id: requestId, p_operation: kind } }]);
   assert.deepEqual(ctx.state.wallet, [], "committed scan responds before wallet provider work");
-  assert.equal(ctx.state.after.length, 1);
+  assert.equal(ctx.state.after.length, kind === "redeem" ? 2 : 1);
   await ctx.state.after[0]();
   assert.deepEqual(ctx.state.wallet, ["CARD123"]);
 });

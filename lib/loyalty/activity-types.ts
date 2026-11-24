@@ -1,4 +1,6 @@
-export const loyaltyActivityKinds = ["scan", "stamp", "redeem", "void"] as const;
+import type { LoyaltyBranchReportBranch } from "./branch-report-types";
+
+export const loyaltyActivityKinds = ["issue", "download", "save_link", "scan", "stamp", "redeem", "void"] as const;
 export const loyaltyActivityOutcomes = ["success", "denied", "failed", "duplicate"] as const;
 export type LoyaltyActivityKind = (typeof loyaltyActivityKinds)[number];
 export type LoyaltyActivityOutcome = (typeof loyaltyActivityOutcomes)[number];
@@ -7,6 +9,7 @@ export type LoyaltyActivityFilters = {
   from: string;
   to: string;
   cashierId: string;
+  branchId: string;
   kind: LoyaltyActivityKind | "";
   outcome: LoyaltyActivityOutcome | "";
   search: string;
@@ -21,6 +24,8 @@ export type LoyaltyActivityEvent = {
   outcome: LoyaltyActivityOutcome;
   origin: "live" | "historical";
   cashierId: string | null;
+  branchId: string | null;
+  branchName: string | null;
   actorName: string;
   actorType: "cashier" | "owner" | "unknown";
   cardId: string | null;
@@ -55,6 +60,8 @@ export type LoyaltyActivityEmployee = {
 };
 
 export type LoyaltyActivitySummary = {
+  issuedCards: number;
+  downloadedCards: number;
   total: number;
   scans: number;
   stamps: number;
@@ -74,6 +81,7 @@ export type LoyaltyActivityPage = {
   pageSize: number;
   summary: LoyaltyActivitySummary;
   employees: LoyaltyActivityEmployee[];
+  branches: LoyaltyBranchReportBranch[];
   recordingStartedAt: string | null;
 };
 
@@ -85,5 +93,5 @@ export function defaultLoyaltyActivityFilters(now = new Date()): LoyaltyActivity
   const today = new Date(now.getTime() + 3 * 60 * 60 * 1000);
   const from = new Date(today);
   from.setUTCDate(from.getUTCDate() - 29);
-  return { from: from.toISOString().slice(0, 10), to: today.toISOString().slice(0, 10), cashierId: "", kind: "", outcome: "", search: "", page: 1 };
+  return { from: from.toISOString().slice(0, 10), to: today.toISOString().slice(0, 10), cashierId: "", branchId: "", kind: "", outcome: "", search: "", page: 1 };
 }

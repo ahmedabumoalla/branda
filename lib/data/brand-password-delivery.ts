@@ -1,5 +1,5 @@
 import "server-only";
-import { randomBytes } from "node:crypto";
+import { randomInt } from "node:crypto";
 import { hash } from "bcryptjs";
 import { after } from "next/server";
 import { z } from "zod";
@@ -56,7 +56,7 @@ function scheduleAttempt(id: string) {
 }
 
 export async function requestBrandPasswordDelivery(cafeId: string, requestId: string, actorId: string) {
-  const password = "Aa1!" + randomBytes(18).toString("base64url");
+  const password = randomInt(10_000_000, 100_000_000).toString();
   const { data, error } = await createAdminClient().rpc("brand_password_reset_enqueue", {
     p_actor: actorId, p_cafe: cafeId, p_request: requestId,
     p_ciphertext: sealWelcomePassword(password, "brand-password-reset:" + requestId),

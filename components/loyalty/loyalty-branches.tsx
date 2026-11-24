@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { prepareLoyaltyLogoAction } from "@/app/actions/loyalty-logo";
 import { useState, type FormEvent } from "react";
@@ -63,6 +64,7 @@ export function LoyaltyBranches({ initial, error }: { initial: LoyaltyBranchesDa
   }
   return <div className={styles.page} dir="rtl">
     <header className={styles.header}><div><span>{data.brandName} · الولاء</span><h1>فروع الولاء</h1><p>شعار وموقع لكل فرع ورصيد وأختام مشتركة بين الفروع</p></div><button className={styles.primary} disabled={busy || Boolean(error)} onClick={() => { setEditing(newBranch()); setMapsUrl(""); setNotice(null); }}><Plus size={18} />إضافة فرع</button></header>
+    {!error && <a href="/api/loyalty/branches/export" className={styles.secondary}>تصدير تقرير الفروع التفصيلي</a>}
     {error && <p role="alert" className={styles.error}>{error}</p>}
     {notice && <p role={notice.error ? "alert" : "status"} className={notice.error ? styles.error : styles.success}>{notice.text}</p>}
     {editing && <form className={styles.editor} onSubmit={save}>
@@ -95,6 +97,7 @@ export function LoyaltyBranches({ initial, error }: { initial: LoyaltyBranchesDa
       const path = branchEnrollmentPath(data.slug, branch.id), link = `https://barndaksa.com${path}`, ready = branch.active && branch.enabled;
       return <article className={styles.branch} key={branch.id}>
         <div className={styles.branchHeading}>{branch.logo ? <img src={branch.logo} alt="" /> : <Store />}<div><h2>{branch.name}</h2><span>{ready ? "التسجيل متاح" : "التسجيل متوقف"}</span></div></div>
+        <Link className={styles.secondary} href={`/dashboard/loyalty/branches/${encodeURIComponent(branch.id)}/customers`}>تفاصيل عملاء الفرع</Link>
         <p><MapPin size={16} />{branch.latitude === null ? "الموقع لم يحدد بعد" : branch.address || "موقع الفرع محفوظ"}</p>
         {branch.latitude !== null && branch.longitude !== null && <a target="_blank" rel="noreferrer" href={`https://www.google.com/maps?q=${branch.latitude},${branch.longitude}`}>عرض الموقع</a>}
         {ready ? <div className={styles.qr}><RastQrCode value={link} label={`باركود ولاء ${branch.name}`} /><a href={path} target="_blank" rel="noreferrer">فتح بطاقة الفرع</a><button className={styles.secondary} onClick={() => void navigator.clipboard.writeText(link).then(() => setNotice({ text: "تم نسخ رابط الفرع" })).catch(() => setNotice({ text: "تعذر النسخ افتح رابط الفرع وانسخه", error: true }))}>نسخ رابط الفرع</button></div> : <p className={styles.hint}>أكمل الشعار وفعل بطاقة الفرع لإظهار الباركود</p>}
