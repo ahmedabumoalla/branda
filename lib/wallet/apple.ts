@@ -5,6 +5,7 @@ import { PKPass, PassType } from "passkit-generator";
 import { createBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { describePointsRewards, nextPointsReward, POINTS_MAP_VERSION } from "@/lib/loyalty/reward-path";
 import { appleConfig } from "./config";
+import { appleWalletLinkFields } from "@/lib/loyalty/wallet-links";
 import { WALLET_ART_VERSION, walletStampArtwork } from "./art";
 import { walletColors, walletAppleLocations } from "./payload";
 import type { WalletMember } from "./types";
@@ -102,6 +103,7 @@ export async function issueApplePass(member: WalletMember, options: { standalone
   if (points?.mode !== "points") style.backFields.push({ key: "validity", label: "صلاحية المكافأة", value: `${member.experience.rewardValidityDays} يوماً من إصدار المكافأة` });
   style.backFields.push({ key: "offer", label: member.cafeName, value: [member.experience.offerTitle, member.experience.offerBody].filter(Boolean).join("\n"), changeMessage: "%@" });
   pass.setBarcodes({ format: "PKBarcodeFormatQR", message: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), messageEncoding: "iso-8859-1", altText: member.card.displayNumber || member.card.cardCode });
+  style.backFields.push(...appleWalletLinkFields(member.walletLinks));
   // setLocations replaces the array; pass all branch locations in one call
   pass.setLocations(...walletAppleLocations(member));
   return pass.getAsBuffer();

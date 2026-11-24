@@ -15,6 +15,7 @@ const baseStubs = {
   "next/image": { __esModule: true, default: ({ unoptimized, ...props }) => React.createElement("img", props) },
   "next/navigation": { useRouter: () => ({ refresh: noMutation }) },
   "@/app/actions/loyalty-experience": new Proxy({}, { get: () => noMutation }),
+  "@/app/actions/wallet-links": { saveWalletLinksAction: noMutation },
   "@/app/actions/cashier": { logoutCashierAction: "/test-logout" },
   "@/app/actions/cashier-loyalty-phone": { lookupCashierLoyaltyPhoneAction: noMutation },
   "@/components/cashier/analytics-coupon-redemption": { AnalyticsCouponRedemption: () => null },

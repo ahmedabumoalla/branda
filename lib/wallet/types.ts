@@ -1,5 +1,6 @@
 import type { LoyaltyBrandCard, LoyaltyCardProgram } from "@/lib/data/loyalty-cards";
 import type { WalletBranchLocation } from "./branch-locations";
+import type { WalletLink } from "@/lib/loyalty/wallet-links";
 
 export type WalletMember = {
   card: LoyaltyBrandCard;
@@ -11,6 +12,7 @@ export type WalletMember = {
   bannerUrl?: string | null;
   /** undefined keeps the legacy single location; [] explicitly clears locations */
   branchLocations?: WalletBranchLocation[];
+  walletLinks?: WalletLink[];
   experience: {
     rewardValidityDays: number;
     nearbyMessage: string;

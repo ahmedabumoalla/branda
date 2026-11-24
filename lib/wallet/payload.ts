@@ -4,6 +4,7 @@ import { walletArtifactKey } from "./artifact-cache";
 import { isMqas77Wallet, MQAS77_WALLET_COLORS, MQAS77_WALLET_VERSION, MQAS77_WALLET_NAME } from "./mqas77-design";
 import { normalizeWalletLocations, walletLocationText } from "./branch-locations";
 import { describePointsRewards, nextPointsReward } from "@/lib/loyalty/reward-path";
+import { walletLinksSchema } from "@/lib/loyalty/wallet-links";
 
 export function googleClassId(issuerId: string, cafeId: string, branchId?: string) {
   if (branchId) return `${issuerId}.branda_${cafeId.replace(/-/g, "")}_branch_${branchId.replace(/-/g, "")}`;
@@ -59,7 +60,9 @@ export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl
     textModulesData: [points?.mode === "points"
       ? { id: "reward", header: "احتساب النقاط", body: `كل ${points.rateSar} ر.س تمنحك ${points.rateQuantity} نقطة` }
       : { id: "reward", header: member.program.rewardName, body: member.program.terms }, { id: "nearby", header: member.cafeName, body: member.experience.nearbyMessage }],
-    linksModuleData: { uris: [{ id: "brand", uri: `${baseUrl}/menu/${encodeURIComponent(member.cafeSlug)}`, description: member.cafeName }] },
+    linksModuleData: { uris: member.walletLinks?.length ? walletLinksSchema.parse(member.walletLinks).map(link => ({
+      id: `wallet_link_${link.id}`, uri: link.url, description: link.label,
+    })) : [{ id: "brand", uri: `${baseUrl}/menu/${encodeURIComponent(member.cafeSlug)}`, description: member.cafeName }] },
   };
 }
 

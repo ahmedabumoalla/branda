@@ -106,6 +106,29 @@ try {
   assert(!art.verifyWalletArtToken(member.card.id, apple.appleAuthToken(member.card.cardCode)));
   const entries = unpackStoredZip(await apple.issueApplePass(member));
   const pass = JSON.parse(entries["pass.json"]);
+  const walletLinks = [
+    { id: "instagram", label: "إنستغرام", url: "https://instagram.com/example" },
+    { id: "menu", label: '<Menu & "offers">', url: "https://example.com/menu?a=1&b=2" },
+    { id: "phone", label: "اتصل بنا", url: "tel:+966501234567" },
+  ];
+  const linkedEntries = unpackStoredZip(await apple.issueApplePass({ ...member, walletLinks }));
+  const linkedPass = JSON.parse(linkedEntries["pass.json"]);
+  const linkFields = linkedPass.storeCard.backFields.filter(field => field.key.startsWith("wallet_link_"));
+  assert.equal(linkFields.length, 3, "Native pass generator retains all managed links");
+  assert.equal(linkFields[0].attributedValue, '<a href="https://instagram.com/example">إنستغرام</a>');
+  assert.equal(linkFields[1].attributedValue, '<a href="https://example.com/menu?a=1&amp;b=2">&lt;Menu &amp; &quot;offers&quot;&gt;</a>');
+  assert.equal(linkFields[2].attributedValue, '<a href="tel:+966501234567">اتصل بنا</a>');
+  assert.deepEqual(linkFields.map(field => field.value), walletLinks.map(link => link.url), "Plain fallback keeps usable destinations");
+  assert.deepEqual(linkedPass.barcodes, pass.barcodes);
+  assert.equal(linkedPass.serialNumber, pass.serialNumber);
+  assert.deepEqual(linkedPass.storeCard.backFields.filter(field => !field.key.startsWith("wallet_link_")), pass.storeCard.backFields);
+  const clearedPass = JSON.parse(unpackStoredZip(await apple.issueApplePass({ ...member, walletLinks: [] }))["pass.json"]);
+  assert.deepEqual(clearedPass.storeCard.backFields, pass.storeCard.backFields, "Removing links clears only configured fields");
+  for (const [name, hash] of Object.entries(JSON.parse(linkedEntries["manifest.json"]))) assert.equal(createHash("sha1").update(linkedEntries[name]).digest("hex"), hash);
+  const linkedSignedData = forge.asn1.fromDer(linkedEntries.signature.toString("binary")).value[1].value[0];
+  const linkedSigner = linkedSignedData.value.at(-1).value[0];
+  const linkedAttributes = forge.asn1.create(forge.asn1.Class.UNIVERSAL, forge.asn1.Type.SET, true, linkedSigner.value[3].value);
+  assert(verify("RSA-SHA1", Buffer.from(forge.asn1.toDer(linkedAttributes).getBytes(), "binary"), applePublicKey, Buffer.from(linkedSigner.value[5].value, "binary")), "Linked pass retains a valid detached signature");
   assert.equal(pass.logoText, member.cafeName, "Native identity remains visible independently of logo artwork");
   const sharp = requireDependency("sharp");
   const tiers = [{ points: 200, reward: "قهوة" }, { points: 500, reward: "قهوة وحلا" }];
