@@ -1,3 +1,4 @@
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import "server-only";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -20,7 +21,7 @@ export async function requirePlatformMarketingContext() {
 const filters = { brandId: z.uuid().optional(), search: z.string().trim().max(100).default("") };
 const audienceSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("filtered"), ...filters }).strict(),
-  z.object({ mode: z.literal("selected"), phones: z.array(z.string().regex(/^(?:9665\d{8}|9705[69]\d{7})$/)).min(1).max(10_000), ...filters }).strict(),
+  z.object({ mode: z.literal("selected"), phones: z.array(z.string().regex(canonicalBrandMobile)).min(1).max(10_000), ...filters }).strict(),
 ]);
 const inputSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("createCampaign"), idempotencyKey: z.uuid(), title: z.string().trim().min(1).max(100), body: z.string().trim().min(1).max(3000), mediaId: z.uuid().optional(), scheduledAt: z.iso.datetime({ offset: true }).optional(), audience: audienceSchema }).strict(),

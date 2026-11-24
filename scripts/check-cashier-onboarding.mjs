@@ -94,14 +94,21 @@ try {
     assert(!JSON.stringify(result).includes(password));
     assert(!Object.hasOwn(result.cashier, "password")); assert(!Object.hasOwn(result.cashier, "temporaryPassword"));
   });
-  await check("Palestinian staff retain their national identity and reject foreign phones", async () => {
+  await check("staff local phones use account country and explicit Arab phones keep their country", async () => {
     brandCountry = "PS";
     const { cashier } = await createOwnerCashier({ ...input, phone: "٠٥٩١٢٣٤٥٦٧" });
     assert.equal(cashier.phone, "+970591234567");
     const before = calls.length;
-    await assert.rejects(createOwnerCashier({ ...input, phone: "+966591234567" }));
-    assert.equal(calls.length, before);
+    assert.equal((await createOwnerCashier({ ...input, phone: "+966591234567" })).cashier.phone, "+966591234567");
+    assert.equal(calls.length, before + 1);
     brandCountry = "SA";
+  });
+  for (const country of load("lib/auth/brand-phone.ts", {}).ARAB_COUNTRIES) await check(`staff identity country ${country.code}`, async () => {
+    brandCountry = country.code;
+    const local = (await createOwnerCashier({ ...input, phone: country.placeholder })).cashier.phone;
+    assert.equal(local, `+${country.callingCode}${country.example}`);
+    brandCountry = "SA";
+    assert.equal((await createOwnerCashier({ ...input, phone: `+${country.callingCode}${country.example}` })).cashier.phone, local);
   });
   await check("database failure never sends or leaks raw credentials", async () => {
     const before = sent.length;

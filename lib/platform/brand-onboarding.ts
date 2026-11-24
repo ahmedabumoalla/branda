@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { normalizeBrandPhone, inferPhoneCountry, isBrandPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { AVAILABLE_BUSINESS_CATEGORY_IDS } from "@/lib/platform/business-categories";
 
 const optionalName = z.union([z.literal(""), z.string().trim().min(2).max(120)]);
@@ -15,14 +15,15 @@ export const adminBrandAccountSchema = z.object({
   phone: z.string().trim().max(24),
   email: optionalEmail,
   password: optionalPassword,
-  phoneCountry: z.enum(["SA", "PS"]).optional(),
+  phoneCountry: z.custom<BrandPhoneCountry>(isBrandPhoneCountry).optional(),
 }).check(ctx => {
   if (!ctx.value.phone) return;
-  const phone = normalizeBrandPhone(ctx.value.phone, ctx.value.phoneCountry ?? "SA");
+  const phoneCountry = ctx.value.phoneCountry ?? inferPhoneCountry(ctx.value.phone) ?? "SA";
+  const phone = normalizeBrandPhone(ctx.value.phone, phoneCountry);
   if (phone === null) {
     ctx.issues.push({ code: "custom", input: ctx.value.phone, path: ["phone"], message: "أدخل جوالًا صحيحًا لدولة الحساب المختارة" });
   } else {
-    ctx.value = { ...ctx.value, phone };
+    ctx.value = { ...ctx.value, phone, phoneCountry };
   }
 });
 export type AdminBrandAccountInput = z.input<typeof adminBrandAccountSchema>;

@@ -1,10 +1,11 @@
 import "server-only";
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import { cashierGuideFilename, cashierGuideUrl } from "@/lib/cashier/guide";
 import { ownerGuideFilename, ownerGuideUrl, ownerCompanionGuides, type OwnerCompanionGuide } from "@/lib/whatsapp/owner-guide";
 import { queueOwnerCompanionGuides } from "@/lib/whatsapp/owner-guide-delivery";
 import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
 
-const supportedMobile = /^(?:9665\d{8}|9705[69]\d{7})$/;
+const supportedMobile = canonicalBrandMobile;
 const DEFAULT_GREEN_API_TIMEOUT_MS = 10_000;
 
 type GreenApiSendResponse = {
@@ -240,7 +241,7 @@ export async function sendGreenApiCashierWelcome(input: {
   fullName: string;
   brandName: string;
 }) {
-  if (!/^\+(?:9665\d{8}|9705[69]\d{7})$/.test(input.phone)) throw new Error("INVALID_CASHIER_RECIPIENT");
+  if (!input.phone.startsWith("+") || !supportedMobile.test(input.phone.slice(1))) throw new Error("INVALID_CASHIER_RECIPIENT");
   const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendFileByUrl/${apiTokenInstance}`, {
     method: "POST",

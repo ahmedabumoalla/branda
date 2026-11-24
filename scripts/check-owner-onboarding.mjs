@@ -55,6 +55,16 @@ for (const [accountCountry, expected] of [["SA","966591234567"],["PS","970591234
   assert.equal(p_draft.accountCountry, accountCountry);
   assert.equal(p_phone, expected);
 });
+for (const country of load("lib/auth/brand-phone.ts").ARAB_COUNTRIES) await test(async () => {
+  for (const input of [{ accountCountry: country.code, phone: country.placeholder }, { phone: `+${country.callingCode}${country.example}` }]) {
+    const c = context();
+    assert((await c.api.requestOwnerOnboarding({ ...valid, ...input })).ok);
+    const draft = c.events.find(event => event.name === "begin_owner_onboarding").args.p_draft;
+    assert.equal(draft.accountCountry, country.code);
+    assert.equal(draft.phone, `${country.callingCode}${country.example}`);
+    assert.equal(draft.planChoice, "loyalty");
+  }
+});
 for (const [accountCountry, phone] of [["SA","+970591234567"],["PS","+966591234567"]]) await test(async () => {
   const c = context();
   assert(!(await c.api.requestOwnerOnboarding({...valid, accountCountry, phone})).ok);
@@ -85,7 +95,7 @@ await test(async()=>{
   assert(!JSON.stringify(logs).includes('private-provider-error'));assert(!JSON.stringify(logs).includes('966511111111'));
 });
 await test(async()=>{const phone="970561234567", c=context({verifiedPhone:phone}); assert((await c.api.requestOwnerOnboarding({...valid,phone:"+٩٧٠ ٥٦ ١٢٣ ٤٥٦٧"})).ok);assert.equal(c.events.find(e=>e.name==="begin_owner_onboarding").args.p_phone,phone);assert((await c.api.verifyOwnerOnboarding(c.code)).ok);assert((await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"})).ok);assert.equal(c.events.find(e=>e.name==="createUser").input.phone,"+"+phone);});
-for(const [field,value,expected] of [["brandNameAr","Test","بالعربية"],["brandNameEn","علامة","بالإنجليزية"],["ownerName","x","المسؤول"],["email","invalid","البريد الإلكتروني"],["phone","05111","رقم جوال سعودي"]])
+for(const [field,value,expected] of [["brandNameAr","Test","بالعربية"],["brandNameEn","علامة","بالإنجليزية"],["ownerName","x","المسؤول"],["email","invalid","البريد الإلكتروني"],["phone","05111","رقم جوال صحيح"]])
   await test(async()=>{const c=context();const result=await c.api.requestOwnerOnboarding({...valid,[field]:value});assert(!result.ok);assert(result.message.includes(expected));if(field!=="phone")assert(!result.message.includes("سعودي"));assert.equal(c.events.length,0);});
 for(const phone of ["٠٥١١١١١١١١", "\u2066+۹۶۶ ۵۱ ۱۱۱ ۱۱۱۱\u2069", "+966 (0)51 111 1111"])
   await test(async()=>{const c=context();assert((await c.api.requestOwnerOnboarding({...valid,phone,email:"",mapsUrl:""})).ok);assert.equal(c.events.find(e=>e.name==="begin_owner_onboarding").args.p_phone,"966511111111");const arabicCode=c.code.replace(/\d/g,d=>String.fromCharCode(0x660+Number(d)));assert((await c.api.verifyOwnerOnboarding(arabicCode)).ok);assert((await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"})).ok);assert.equal(c.events.find(e=>e.name==="createUser").input.phone,"+966511111111");});
@@ -103,7 +113,7 @@ await test(async()=>{const c=context();await c.api.requestOwnerOnboarding(valid)
 await test(async()=>{const c=context();await c.api.requestOwnerOnboarding(valid);await c.api.verifyOwnerOnboarding(c.code);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"});assert(result.ok);assert.equal(result.redirectTo,"/dashboard");const creation=c.events.find(e=>e.name==="createUser").input;assert.equal(creation.phone_confirm,true);assert.equal(creation.email_confirm,false);assert.equal(creation.email,undefined);assert.equal(creation.app_metadata.owner_onboarding_proof.length,64);assert(!creation.user_metadata.primary_branch_name);assert.equal(c.jar.size,0);assert.equal(c.events.find(e=>e.name==="signIn").input.phone,"+966511111111");});
 await test(async()=>{const c=context({createError:true});await c.api.requestOwnerOnboarding(valid);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"});assert(!result.ok);assert(!c.events.some(e=>e.name==="signIn"));});
 await test(async()=>{const c=context({signInError:true});await c.api.requestOwnerOnboarding(valid);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"});assert(result.ok);assert.equal(result.redirectTo,"/login");});
-await test(()=>{const Page=load("app/register/page.tsx",{"next/link":{__esModule:true,default:"a"},"@/app/actions/auth":{},"@/components/ui/barndaksa-logo":{BarndaksaLogo:()=>React.createElement("span",null,"brand")}}).default;const html=renderToStaticMarkup(React.createElement(Page));assert.equal((html.match(/<input/g)||[]).length,8);assert(!html.includes('type="password"'));assert(!html.includes("Mapbox"));assert(!html.includes('type="url"')&&!html.includes('<iframe')&&!html.includes('موقع الفرع الأساسي'));assert(!html.match(/<input[^>]*type="email"[^>]*>/)[0].includes('required'));assert(html.includes('البريد الإلكتروني (اختياري)'));assert(html.match(/<input[^>]*type="tel"[^>]*>/)[0].includes('required'));assert(html.includes("تحقق واتساب"));assert(html.includes("الولاء والمنيو"));assert(html.includes("شهر مجاني"));assert.equal((html.match(/type="radio"/g)||[]).length,2);});
+await test(()=>{const Page=load("app/register/page.tsx",{"next/link":{__esModule:true,default:"a"},"@/app/actions/auth":{},"@/components/ui/barndaksa-logo":{BarndaksaLogo:()=>React.createElement("span",null,"brand")}}).default;const html=renderToStaticMarkup(React.createElement(Page));assert.equal((html.match(/<input/g)||[]).length,6);assert(!html.includes('type="password"'));assert(!html.includes("Mapbox"));assert(!html.includes('type="url"')&&!html.includes('<iframe')&&!html.includes('موقع الفرع الأساسي'));assert(!html.match(/<input[^>]*type="email"[^>]*>/)[0].includes('required'));assert(html.includes('البريد الإلكتروني (اختياري)'));assert(html.match(/<input[^>]*type="tel"[^>]*>/)[0].includes('required'));assert(html.includes("تحقق واتساب"));assert(html.includes("باقة ولاء برندة"));assert(!html.includes("الولاء والمنيو"));assert(html.includes("شهر مجاني"));assert.equal((html.match(/type="radio"/g)||[]).length,0);});
 for(const email of ['', '   ', undefined, null]) await test(async()=>{
   const input={...valid,email};delete input.mapsUrl;
   const c=context({draft:input});assert((await c.api.requestOwnerOnboarding(input)).ok);
@@ -119,7 +129,7 @@ await test(async()=>{const c=context();assert((await c.api.requestOwnerOnboardin
 for(const email of ['invalid', 'owner@', 'a'.repeat(255)+'@example.invalid'])await test(async()=>{const c=context();assert(!(await c.api.requestOwnerOnboarding({...valid,email})).ok);assert.equal(c.events.length,0);});
 
 
-for(const planChoice of ['loyalty','menu_loyalty'])await test(async()=>{const c=context();assert((await c.api.requestOwnerOnboarding({...valid,planChoice})).ok);assert.equal(c.events.find(e=>e.name==='begin_owner_onboarding').args.p_draft.planChoice,planChoice);});
+for(const planChoice of [undefined,'loyalty','menu_loyalty'])await test(async()=>{const c=context();assert((await c.api.requestOwnerOnboarding({...valid,planChoice})).ok);assert.equal(c.events.find(e=>e.name==='begin_owner_onboarding').args.p_draft.planChoice,'loyalty');});
 for(const planChoice of ['finance','pro',null])await test(async()=>{const c=context();assert(!(await c.api.requestOwnerOnboarding({...valid,planChoice})).ok);assert.equal(c.events.length,0);});
 
 function loginContext(options={}) {

@@ -5,6 +5,8 @@ import { ArrowLeft, Building2, Check, ChevronLeft, ChevronRight, CircleDollarSig
 import type { PlatformCafe, PlatformPlan } from "@/lib/platform/admin-data";
 import type { MarketingConnectionStatus } from "@/lib/marketing/types";
 import s from "./brand-directory.module.css";
+import { BrandCountryOptions } from "@/components/admin/brand-country-options";
+import { brandCountryName } from "@/lib/admin/brand-country-label";
 
 type Props = { cafes: PlatformCafe[]; plans: PlatformPlan[]; onManage: (cafe: PlatformCafe) => void; onCreate?: () => void; configError?: string };
 const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
@@ -65,6 +67,7 @@ function BrandIdentity({ cafe, onManage }: { cafe: PlatformCafe; onManage: Props
       : <img src="/brand/barndaksa-logo-brown.png" alt="شعار برندة" loading="lazy" width={44} height={44} />}</span>
     <div className={s.identityText}><button type="button" className={s.name} onClick={() => onManage(cafe)} aria-haspopup="dialog" aria-label={`فتح ملف ${cafe.name}`}><bdi>{cafe.name}</bdi></button>
       <bdi className={s.slug}>/{cafe.slug}</bdi><span className={s.account}><span>رقم الصيانة</span><bdi>{cafe.maintenanceAccountNumber || "غير مضاف"}</bdi></span>
+      <span className={s.account}>دولة العلامة: {brandCountryName(cafe.phoneCountry)}</span>
       <BrandWhatsAppStatus cafe={cafe} />
     </div>
   </div>;
@@ -96,6 +99,7 @@ function ManageButton({ cafe, onManage }: { cafe: PlatformCafe; onManage: Props[
 
 export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }: Props) {
   const [query, setQuery] = useState("");
+  const [country, setCountry] = useState("");
   const [status, setStatus] = useState("all");
   const [subscription, setSubscription] = useState("all");
   const [sort, setSort] = useState("default");
@@ -103,12 +107,13 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
   const [exporting, setExporting] = useState<"directory" | "contact" | null>(null);
   const [exportMessage, setExportMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const exportPending = useRef(false);
-  const active = cafes.filter(cafe => cafe.status === "نشط").length;
-  const cancelled = cafes.filter(cafe => Boolean(cafe.cancellation)).length;
-  const subscribed = cafes.filter(cafe => cafe.hasActivePlan).length;
-  const revenue = cafes.reduce((sum, cafe) => sum + cafe.totalRevenue, 0);
+  const countryCafes = cafes.filter(cafe => !country || (cafe.phoneCountry ?? "SA") === country);
+  const active = countryCafes.filter(cafe => cafe.status === "نشط").length;
+  const cancelled = countryCafes.filter(cafe => Boolean(cafe.cancellation)).length;
+  const subscribed = countryCafes.filter(cafe => cafe.hasActivePlan).length;
+  const revenue = countryCafes.reduce((sum, cafe) => sum + cafe.totalRevenue, 0);
   const term = query.trim().toLocaleLowerCase();
-  const filtered = cafes.filter(cafe => {
+  const filtered = countryCafes.filter(cafe => {
     const matchesQuery = !term || [cafe.name, cafe.ownerName, cafe.ownerPhone, cafe.ownerEmail, cafe.slug, cafe.maintenanceAccountNumber].some(value => value?.toLocaleLowerCase().includes(term));
     return matchesQuery && (status === "all" || cafe.status === status) && (subscription === "all" || (subscription === "active" ? Boolean(cafe.hasActivePlan) : !cafe.hasActivePlan));
   });
@@ -117,8 +122,8 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, pages);
   const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const hasFilters = Boolean(query || status !== "all" || subscription !== "all");
-  const reset = () => { setQuery(""); setStatus("all"); setSubscription("all"); setPage(1); };
+  const hasFilters = Boolean(country || query || status !== "all" || subscription !== "all");
+  const reset = () => { setCountry(""); setQuery(""); setStatus("all"); setSubscription("all"); setPage(1); };
   const exportBrands = async (kind: "directory" | "contact") => {
     if (exportPending.current || configError || cafes.length === 0) return;
     exportPending.current = true;
@@ -126,7 +131,8 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
     setExportMessage(null);
     const reportName = kind === "contact" ? "تقرير التواصل والمتابعة" : "تقرير بيانات العلامات";
     try {
-      const response = await fetch(kind === "contact" ? "/api/admin/brands/contact-report" : "/api/admin/brands/export", {
+      const endpoint = kind === "contact" ? "/api/admin/brands/contact-report" : "/api/admin/brands/export";
+      const response = await fetch(`${endpoint}${country ? `?country=${encodeURIComponent(country)}` : ""}`, {
         method: "GET", credentials: "same-origin", cache: "no-store", headers: { Accept: excelMime },
       });
       if (response.status === 401 || response.status === 403) {
@@ -166,10 +172,10 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
     }
   };
   const stats = [
-    { label: "إجمالي العلامات", value: cafes.length, hint: "علامة مسجلة على المنصة", icon: Building2 },
-    { label: "العلامات النشطة", value: active, hint: `${number.format(cafes.length - active)} علامة غير نشطة`, icon: Check },
-    { label: "الاشتراكات الفعالة", value: subscribed, hint: `${number.format(cafes.length - subscribed)} بدون اشتراك فعال`, icon: Layers3 },
-    { label: "إجمالي إيراد الطلبات", value: revenue, hint: "عبر جميع العلامات", icon: CircleDollarSign, currency: true },
+    { label: "إجمالي العلامات", value: countryCafes.length, hint: country ? brandCountryName(country) : "علامة مسجلة على المنصة", icon: Building2 },
+    { label: "العلامات النشطة", value: active, hint: `${number.format(countryCafes.length - active)} علامة غير نشطة`, icon: Check },
+    { label: "الاشتراكات الفعالة", value: subscribed, hint: `${number.format(countryCafes.length - subscribed)} بدون اشتراك فعال`, icon: Layers3 },
+    { label: "إجمالي إيراد الطلبات", value: revenue, hint: country ? `علامات ${brandCountryName(country)}` : "عبر جميع العلامات", icon: CircleDollarSign, currency: true },
   ];
 
   return <div className={s.directory} dir="rtl">
@@ -195,11 +201,12 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
       <section className={s.panel} aria-labelledby="brand-directory-title">
         <div className={s.panelHeading}><div><h2 id="brand-directory-title">دليل العلامات</h2><p>راجع حالة العلامة وافتح ملفها لإدارة التفاصيل</p></div><span className={s.resultCount} role="status">{number.format(filtered.length)} علامة</span></div>
         <div className={s.toolbar}>
+          <label className={s.select}><span>دولة العلامة</span><select aria-label="دولة العلامة" value={country} onChange={event => { setCountry(event.target.value); setPage(1); }}><BrandCountryOptions /></select></label>
           <label className={s.search}><Search aria-hidden="true" /><span className={s.srOnly}>البحث عن علامة تجارية</span><input type="search" placeholder="ابحث عن علامة أو مالك أو رقم صيانة" value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>
           <label className={s.select}><span>الاشتراك</span><select aria-label="حالة الاشتراك" value={subscription} onChange={event => { setSubscription(event.target.value); setPage(1); }}><option value="all">كل الاشتراكات</option><option value="active">اشتراك فعال</option><option value="inactive">بدون اشتراك فعال</option></select></label>
           <label className={s.select}><span>الترتيب</span><select aria-label="ترتيب العلامات" value={sort} onChange={event => { setSort(event.target.value); setPage(1); }}><option value="default">الترتيب الافتراضي</option><option value="name">حسب الاسم</option><option value="products">الأكثر منتجات</option></select></label>
         </div>
-        <div className={s.filterRow}><div className={s.statusFilters} role="group" aria-label="حالة العلامة">{[["all", "كل العلامات", cafes.length], ["نشط", "النشطة", active], ["موقوف", "الموقوفة", cafes.length - active - cancelled], ["ملغى بطلب المستخدم", "الملغاة والمؤرشفة", cancelled]].map(([value, label, count]) => <button key={value} type="button" aria-pressed={status === value} onClick={() => { setStatus(String(value)); setPage(1); }}>{label}<span>{number.format(Number(count))}</span></button>)}</div>{hasFilters && <button type="button" className={s.reset} onClick={reset}>مسح التصفية</button>}</div>
+        <div className={s.filterRow}><div className={s.statusFilters} role="group" aria-label="حالة العلامة">{[["all", "كل العلامات", countryCafes.length], ["نشط", "النشطة", active], ["موقوف", "الموقوفة", countryCafes.length - active - cancelled], ["ملغى بطلب المستخدم", "الملغاة والمؤرشفة", cancelled]].map(([value, label, count]) => <button key={value} type="button" aria-pressed={status === value} onClick={() => { setStatus(String(value)); setPage(1); }}>{label}<span>{number.format(Number(count))}</span></button>)}</div>{hasFilters && <button type="button" className={s.reset} onClick={reset}>مسح التصفية</button>}</div>
         {visible.length > 0 ? <>
           <div className={s.desktopTable} role="region" aria-label="جدول العلامات التجارية" tabIndex={0}><table><caption className={s.srOnly}>العلامات التجارية وباقاتها ومؤشرات نشاطها</caption><thead><tr>{["العلامة ورقم الصيانة", "الباقة والاشتراك", "البطاقات والأختام والمنتجات", "النشاط والخدمات", "حالة العلامة", "الإدارة"].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{visible.map(cafe => <tr key={cafe.id}>
             <td><BrandIdentity cafe={cafe} onManage={onManage} /></td><td><BrandPlanSummary cafe={cafe} plans={plans} /></td><td><BrandCounts cafe={cafe} /></td><td><BrandActivity cafe={cafe} /></td><td><BrandStatus cafe={cafe} /></td><td><ManageButton cafe={cafe} onManage={onManage} /></td>

@@ -6,6 +6,7 @@ import { getEffectiveBrandFeatureCodes, type BrandFeatureOverride } from "@/lib/
 import { getPlatformFeatureDefinition } from "@/lib/platform/feature-registry";
 import { emptyCampaignMetrics } from "@/lib/analytics/marketing-report";
 import { getAdminCampaignReport } from "@/lib/data/marketing-report";
+import { getAdminBrandCountries } from "@/lib/data/admin-brand-countries";
 
 const rawReportSchema = operationsReportSchema.extend({
   brands: z.array(operationsReportSchema.shape.brands.element.omit({ features: true }).extend({
@@ -36,6 +37,7 @@ export async function getAdminOperationsReport(input: ReportPeriod = { from: "",
   ]);
   if (result.error) throw new Error("Operations report unavailable");
   const raw = rawReportSchema.parse(result.data);
+  const countries = await getAdminBrandCountries(supabase, raw.brands.map(brand => brand.id));
   if (accessResult.error) throw new Error("Operations access report unavailable");
   const access = accessReportSchema.parse(accessResult.data);
   if (access.from !== (filters.from || null) || access.to !== (filters.to || null)) throw new Error("Access report period mismatch");
@@ -48,6 +50,6 @@ export async function getAdminOperationsReport(input: ReportPeriod = { from: "",
     // Standalone-menu publication is independent of package subscription.
     if (featureOverrides.some(item => item.featureId === "standalone_menu" && item.enabled)) features.push("standalone_menu");
     if (!accessMetrics.has(brand.id)) throw new Error("Incomplete access report");
-    return { ...brand, features, metrics: { ...brand.metrics, ...accessMetrics.get(brand.id), ...(campaignMetrics.get(brand.id) ?? emptyCampaignMetrics) } };
+    return { ...brand, phoneCountry: countries.get(brand.id), features, metrics: { ...brand.metrics, ...accessMetrics.get(brand.id), ...(campaignMetrics.get(brand.id) ?? emptyCampaignMetrics) } };
   }) });
 }

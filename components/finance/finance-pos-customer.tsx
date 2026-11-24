@@ -1,4 +1,5 @@
 "use client";
+import { getBrandCountry } from "@/lib/auth/brand-phone";
 
 import { useEffect, useRef, useState } from "react";
 import { BellRing, Gift, RefreshCw, WalletCards } from "lucide-react";
@@ -68,7 +69,7 @@ export function FinancePosCustomerField({ state, disabled }: { state: ReturnType
   const { t, displayName } = useFinancePosLocale();
   const customer = state.customer;
   return <section className={s.customer} aria-label={t("جوال العميل والولاء")}>
-    <label className={s.phoneLabel}><span>{t("رقم جوال العميل")} <small>{t("اختياري")}</small></span><input name="posCustomerPhone" type="tel" inputMode="tel" autoComplete="off" dir="ltr" maxLength={24} placeholder={state.country === "PS" ? "059xxxxxxx" : "05xxxxxxxx"} value={state.phone} disabled={disabled} onChange={(event) => state.changePhone(event.target.value)} aria-describedby="pos-customer-help" aria-invalid={!!state.phone.trim() && !state.normalized} /></label>
+    <label className={s.phoneLabel}><span>{t("رقم جوال العميل")} <small>{t("اختياري")}</small></span><input name="posCustomerPhone" type="tel" inputMode="tel" autoComplete="off" dir="ltr" maxLength={24} placeholder={getBrandCountry(state.country).placeholder} value={state.phone} disabled={disabled} onChange={(event) => state.changePhone(event.target.value)} aria-describedby="pos-customer-help" aria-invalid={!!state.phone.trim() && !state.normalized} /></label>
     <p className={s.hint} id="pos-customer-help">{t("بدون رقم تُصدر الفاتورة كالمعتاد")}</p>
     {!!state.phone.trim() && !state.normalized && <p className={s.error}>{t("أدخل رقم جوال صحيحًا")}</p>}
     <div aria-live="polite" aria-busy={state.loading}>

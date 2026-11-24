@@ -6,7 +6,7 @@ import { createAdminBrandAccountAction } from "@/app/actions/admin-brand-onboard
 import type { PlatformCafe, PlatformPlan } from "@/lib/platform/admin-data";
 import { AVAILABLE_BUSINESS_CATEGORY_IDS, BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
 import type { AdminBrandAccountInput } from "@/lib/platform/brand-onboarding";
-import type { BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { ARAB_COUNTRIES, getBrandCountry, inferPhoneCountry, isBrandPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import s from "./brand-onboarding.module.css";
 import d from "./brand-details.module.css";
 
@@ -16,6 +16,7 @@ export function BrandAccountCreate({ plans = [], close, onCreated }: { plans?: P
   const [showPassword, setShowPassword] = useState(false);
   const [slug, setSlug] = useState("");
   const [phoneCountry, setPhoneCountry] = useState<BrandPhoneCountry>("SA");
+  const countryChosen = useRef(false);
   const [planIds, setPlanIds] = useState<string[]>([]);
   const activePlans = plans.filter(plan => plan.active);
   const slugEdited = useRef(false);
@@ -45,7 +46,7 @@ export function BrandAccountCreate({ plans = [], close, onCreated }: { plans?: P
       <div className={s.note}>صلاحيات الباقات المختارة متاحة فور الإنشاء وتبدأ مدة التجربة بعد إرسال تفاصيل الدخول عبر واتساب</div>
       <fieldset disabled={pending} className={s.fields}>
         <legend>بيانات العلامة</legend>
-        <label><span className={s.fieldTitle}>دولة الحساب</span><select name="phoneCountry" value={phoneCountry} onChange={event => setPhoneCountry(event.target.value === "PS" ? "PS" : "SA")}><option value="SA">السعودية (+966)</option><option value="PS">فلسطين (+970)</option></select></label>
+        <label><span className={s.fieldTitle}>دولة الحساب</span><select name="phoneCountry" value={phoneCountry} onChange={event => { if (isBrandPhoneCountry(event.target.value)) { countryChosen.current = true; setPhoneCountry(event.target.value); } }}>{ARAB_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.name} (+{country.callingCode})</option>)}</select></label>
         <label><span className={s.fieldTitle}>اسم العلامة</span><input name="brandName" required minLength={2} maxLength={120} autoFocus autoComplete="organization" /></label>
         <label><span className={s.fieldTitle}>الاسم بالإنجليزية <small>اختياري</small></span><input name="brandNameEn" dir="ltr" maxLength={120} onChange={event => { if (!slugEdited.current) setSlug(event.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)); }} /></label>
         <label><span className={s.fieldTitle}>الرابط المختصر <small>اختياري</small></span><input name="slug" dir="ltr" minLength={3} maxLength={60} pattern="[a-z0-9]+(-[a-z0-9]+)*" value={slug} onChange={event => { slugEdited.current = true; setSlug(event.target.value.toLowerCase()); }} aria-describedby="new-brand-slug-hint" /><small id="new-brand-slug-hint" className={s.fieldHint}>نجهّز رابطًا تلقائيًا إذا تركته فارغًا أو اكتب مثل <bdi>my-brand</bdi></small></label>
@@ -61,7 +62,7 @@ export function BrandAccountCreate({ plans = [], close, onCreated }: { plans?: P
         <legend>بيانات المالك والدخول</legend>
         <p className={s.sectionHint}>كل بيانات المالك اختيارية الآن تقدر تكملها لاحقًا من بطاقة العلامة قبل الإرسال</p>
         <label><span className={s.fieldTitle}>اسم المالك <small>لاحقًا</small></span><input name="ownerName" minLength={2} maxLength={120} autoComplete="name" /></label>
-        <label><span className={s.fieldTitle}>جوال الدخول والواتساب <small>لاحقًا</small></span><input name="phone" type="tel" dir="ltr" inputMode="tel" maxLength={24} placeholder={phoneCountry === "PS" ? "+970 59 XXX XXXX" : "+966 5X XXX XXXX"} autoComplete="tel" /></label>
+        <label><span className={s.fieldTitle}>جوال الدخول والواتساب <small>لاحقًا</small></span><input name="phone" type="tel" dir="ltr" inputMode="tel" maxLength={24} placeholder={getBrandCountry(phoneCountry).placeholder} onChange={event => { const detected = inferPhoneCountry(event.target.value); if (!countryChosen.current && detected) setPhoneCountry(detected); }} autoComplete="tel" /></label>
         <label><span className={s.fieldTitle}>البريد الإلكتروني <small>اختياري</small></span><input name="email" type="email" dir="ltr" maxLength={254} autoComplete="email" /></label>
         <div className={s.field}><label htmlFor="new-brand-password" className={s.fieldTitle}>كلمة المرور <small>لاحقًا</small></label><div className={s.password}><input id="new-brand-password" name="password" type={showPassword ? "text" : "password"} dir="ltr" minLength={8} maxLength={72} pattern="\S+" autoComplete="new-password" aria-describedby="new-brand-password-hint" /><button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}>{showPassword ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></div><small id="new-brand-password-hint" className={s.fieldHint}>تقدر تحددها الآن أو لاحقًا ٨ أحرف على الأقل بدون مسافات</small></div>
       </fieldset>

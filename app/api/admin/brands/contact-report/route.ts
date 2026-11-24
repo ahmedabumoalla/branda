@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 
-export async function GET() {
+export async function GET(request?: Request) {
   try {
-    const report = await getBrandContactReport();
+    const report = await getBrandContactReport(request ? new URL(request.url).searchParams.get("country") ?? "" : "");
     const excel = await buildBrandContactExcel(report);
     const filename = `branda-activation-follow-up-${report.exportedAt.slice(0, 10)}.xlsx`;
     return new Response(excel, { headers: { ...headers, "Content-Type": BRAND_EXCEL_MIME,

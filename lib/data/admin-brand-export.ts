@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
+import { brandCountryFilterSchema } from "@/lib/admin/brand-country-filter";
 
 export type AdminBrandExportSubscription = {
   id: string;
@@ -55,8 +56,9 @@ function nullableText(value: unknown): string | null {
 }
 
 /** Fresh, minimal administrative export. No owner/customer payloads or mutation side effects. */
-export async function getAdminBrandExportSnapshot(): Promise<AdminBrandExportSnapshot> {
+export async function getAdminBrandExportSnapshot(countryInput = ""): Promise<AdminBrandExportSnapshot> {
   const actor = await requirePlatformAdmin();
+  const country = brandCountryFilterSchema.parse(countryInput);
   const client = await createClient();
   // The shared role guard does not currently check suspended administrator profiles.
   const profile = await client.from("profiles").select("role,status").eq("id", actor.id).maybeSingle();
@@ -73,6 +75,7 @@ export async function getAdminBrandExportSnapshot(): Promise<AdminBrandExportSna
       .lte("created_at", exportedAt).order("created_at", { ascending: false })
       .order("id", { ascending: false }).limit(PAGE_SIZE);
     if (cursor) query = query.or(cursorFilter(cursor));
+    if (country) query = query.eq("phone_country", country);
     const result = await query;
     if (result.error || !Array.isArray(result.data)) throw new Error("Unable to read brand export data");
     if (!result.data.length) break;

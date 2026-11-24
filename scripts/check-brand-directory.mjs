@@ -7,6 +7,14 @@ import ts from "typescript";
 import { transform } from "lightningcss";
 
 const require = createRequire(import.meta.url);
+function loadAlias(name) {
+  const base = new URL(`../${name.slice(2)}`,import.meta.url);
+  const file = fs.existsSync(new URL(`${base.href}.tsx`)) ? new URL(`${base.href}.tsx`) : new URL(`${base.href}.ts`);
+  const result = {};
+  const output = ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
+  new Function('require','exports',output)(dependency=>dependency.startsWith('@/')?loadAlias(dependency):require(dependency),result);
+  return result;
+}
 const source = fs.readFileSync(new URL("../components/admin/brand-directory.tsx", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../components/admin/brand-directory.module.css", import.meta.url), "utf8");
 const compiled = transform({ filename: "brand-directory.module.css", code: Buffer.from(css), cssModules: true });
@@ -34,7 +42,7 @@ function harness(component, props, input = source, overrides = {}) {
   };
   const output = ts.transpileModule(input, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const exports = {};
-  new Function("require", "exports", output)(name => Object.hasOwn(stubs, name) ? stubs[name] : require(name), exports);
+  new Function("require", "exports", output)(name => Object.hasOwn(stubs, name) ? stubs[name] : name.startsWith('@/') ? loadAlias(name) : require(name), exports);
   return { render() { cursor = 0; return exports[component](props); } };
 }
 function nodes(tree) {
@@ -51,6 +59,18 @@ const props = { cafes, plans: [], onManage() {} };
 const rows = h => nodes(withClass(h, "desktopTable")[0]).filter(node => node.type === "tbody")[0]?.props.children ?? [];
 let checks = 1;
 async function test(run) { await run(); checks++; }
+await test(() => {
+  const { ARAB_COUNTRIES } = loadAlias('@/lib/auth/brand-phone');
+  const international = cafes.map((cafe,index)=>({...cafe,phoneCountry:ARAB_COUNTRIES[index%22].code}));
+  const h = harness('BrandDirectory',{...props,cafes:international});
+  for (const country of ARAB_COUNTRIES) {
+    byLabel(h,'دولة العلامة').props.onChange({target:{value:country.code}});
+    assert.deepEqual(rows(h).map(row=>row.key),international.filter(cafe=>cafe.phoneCountry===country.code).map(cafe=>cafe.id));
+    assert.equal(byLabel(h,'الصفحة السابقة').props.disabled,true);
+  }
+  withClass(h,'reset')[0].props.onClick();
+  assert.equal(rows(h).length,12);
+});
 
 await test(() => {const output=html(harness('BrandDirectory',props));assert(output.includes('بطاقات الولاء'));assert(output.includes('الأختام المسجلة'));assert(output.includes('4,567'));assert(output.includes('123'));});
 
@@ -229,6 +249,13 @@ async function downloadHarness(run) {
     URL.revokeObjectURL = original.revokeObjectURL;
   }
 }
+await test(() => downloadHarness(async runtime => {
+  const h=harness('BrandDirectory',props);
+  byLabel(h,'دولة العلامة').props.onChange({target:{value:'EG'}});
+  await byLabel(h,exportLabel).props.onClick();
+  await byLabel(h,contactLabel).props.onClick();
+  assert.deepEqual(runtime.calls.map(call=>call[0]),['/api/admin/brands/export?country=EG','/api/admin/brands/contact-report?country=EG']);
+}));
 
 await test(() => {
   assert.equal(byLabel(harness("BrandDirectory", { ...props, cafes: [] }), exportLabel).props.disabled, true);

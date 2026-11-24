@@ -6,6 +6,7 @@ import { loadBrandCustomerDetailAction, loadBrandCustomersAction } from "@/app/a
 import type { BrandCustomer, BrandCustomerBrand, BrandCustomerDetail, BrandCustomerEvent, BrandCustomerFilters, BrandCustomerResult, BrandCustomerSegment, BrandCustomersPage } from "@/lib/admin/brand-customer-types";
 import s from "./brand-customers.module.css";
 import { CustomerSections } from "@/components/pager/customer-directory-ui";
+import { BrandCountryOptions } from "@/components/admin/brand-country-options";
 
 const numbers = new Intl.NumberFormat("ar-SA-u-nu-latn");
 const dates = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { timeZone: "Asia/Riyadh", year: "numeric", month: "short", day: "numeric" });
@@ -103,7 +104,7 @@ function CustomerDialog({ selected, detail, pending, error, onClose, onLoad, onS
 export function BrandCustomersPage({ initialResult }: { initialResult: BrandCustomerResult<BrandCustomersPage> }) {
   const [data, setData] = useState<BrandCustomersPage | null>(initialResult.ok ? initialResult.data : null);
   const [knownBrands, setKnownBrands] = useState<BrandCustomerBrand[]>(initialResult.ok ? initialResult.data.brands : []);
-  const [draft, setDraft] = useState<BrandCustomerFilters>({ search: "", brandId: "", segment: "all", sort: "recent", page: 1 });
+  const [draft, setDraft] = useState<BrandCustomerFilters>({ country: "", search: "", brandId: "", segment: "all", sort: "recent", page: 1 });
   const [applied, setApplied] = useState(draft);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(initialResult.ok ? "" : initialResult.message);
@@ -125,7 +126,9 @@ export function BrandCustomersPage({ initialResult }: { initialResult: BrandCust
       if (request !== listRequest.current) return;
       if (!result.ok) { setError(result.message); requestAnimationFrame(() => errorRef.current?.focus()); return; }
       setData(result.data); setApplied(filters); setDraft(filters);
-      setKnownBrands((previous) => [...new Map([...previous, ...result.data.brands].map((brand) => [brand.id, brand])).values()]);
+      setKnownBrands(previous => filters.country === applied.country
+        ? [...new Map([...previous, ...result.data.brands].map(brand => [brand.id, brand])).values()]
+        : result.data.brands);
       if (focus) requestAnimationFrame(() => resultsRef.current?.focus());
     } catch { if (request === listRequest.current) { setError("تعذر الاتصال أعد المحاولة لتحميل بيانات العملاء"); requestAnimationFrame(() => errorRef.current?.focus()); } }
     finally { if (request === listRequest.current) setPending(false); }
@@ -146,7 +149,7 @@ export function BrandCustomersPage({ initialResult }: { initialResult: BrandCust
   function closeCustomer() { detailRequest.current += 1; setSelected(null); setDetail(null); setDetailError(""); setDetailPending(false); }
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void load({ ...draft, page: 1 }, true); }
   const summary = data?.summary;
-  const dirty = draft.search !== applied.search || draft.brandId !== applied.brandId || draft.sort !== applied.sort;
+  const dirty = draft.country !== applied.country || draft.search !== applied.search || draft.brandId !== applied.brandId || draft.sort !== applied.sort;
 
   return <section className={s.page} dir="rtl" aria-labelledby="brand-customers-heading">
     <header className={s.heading}><div><span className={s.eyebrow}><ShieldCheck aria-hidden="true" />خاص بالسوبر أدمن</span><h1 id="brand-customers-heading">عملاء العلامات التجارية</h1><p>كل عميل كل علامة وكل زيارة تابع الأختام والمكافآت وافهم علاقة عملائك بالعلامات من مكان واحد</p></div><button type="button" className={s.button} disabled={pending} onClick={() => void load(applied)}><RefreshCw aria-hidden="true" />{pending ? "جارٍ التحديث…" : "تحديث البيانات"}</button></header>
@@ -166,6 +169,7 @@ export function BrandCustomersPage({ initialResult }: { initialResult: BrandCust
       <div className={s.registerHeader}><div className={s.sectionHeader}><div><h2 id="brand-customer-register">سجل العملاء</h2><p>كل صف يمثّل عضوية عميل لدى علامة تجارية</p></div><span className={s.muted} role="status">{pending ? "جارٍ التحميل…" : data ? `${n(data.total)} عضوية` : ""}</span></div>
         <div className={s.tabs} aria-label="فئة العملاء">{segments.map(([segment, label]) => <button key={segment} type="button" className={s.tab} disabled={pending} aria-pressed={(applied.segment ?? "all") === segment} onClick={() => void load({ ...applied, segment, page: 1 }, true)}>{label}</button>)}</div>
         <form onSubmit={submit} className={s.filters} aria-label="تصفية سجل العملاء">
+          <label className={s.field}>دولة العلامة<select disabled={pending} value={draft.country ?? ""} onChange={event => setDraft({ ...draft, country: event.target.value, brandId: "", page: 1 })}><BrandCountryOptions /></select></label>
           <label className={s.field}>البحث عن عميل<input disabled={pending} value={draft.search ?? ""} maxLength={80} placeholder="الاسم أو الجوال أو البريد الإلكتروني" onChange={(event) => setDraft({ ...draft, search: event.target.value })} /></label>
           <label className={s.field}>العلامة التجارية<select disabled={pending} value={draft.brandId ?? ""} onChange={(event) => setDraft({ ...draft, brandId: event.target.value })}><option value="">كل العلامات</option>{knownBrands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
           <label className={s.field}>ترتيب العملاء<select disabled={pending} value={draft.sort ?? "recent"} onChange={(event) => setDraft({ ...draft, sort: event.target.value as BrandCustomerFilters["sort"] })}><option value="recent">الأحدث نشاطًا</option><option value="stamps">الأكثر أختامًا</option><option value="rewards">الأكثر مكافآت</option></select></label>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { getBrandCountry, inferPhoneCountry } from "@/lib/auth/brand-phone";
 import { Field } from "./finance-ui";
 import { EmployeePermissionFields, readEmployeePermissions } from "./employee-permission-fields";
 import { cashierPermissionsFromEmployeePolicy } from "@/lib/finance/employee-permissions";
@@ -14,6 +15,8 @@ export function SalesCashierForm({ snapshot, pending, error, onCancel, onSubmit 
 }) {
   const [visible, setVisible] = useState(false);
   const [localError, setLocalError] = useState("");
+  const [phone, setPhone] = useState("");
+  const detectedCountry = inferPhoneCountry(phone);
   const busy = useRef(false);
   return <form className={styles.form} onSubmit={async event => {
     event.preventDefault(); if (pending || busy.current) return;
@@ -34,7 +37,7 @@ export function SalesCashierForm({ snapshot, pending, error, onCancel, onSubmit 
     <fieldset disabled={pending} className={styles.form} style={{ border: 0, padding: 0, margin: 0 }}>
       <div className={styles.fields}>
         <Field label="اسم كاشير المبيعات"><input name="name" required minLength={2} maxLength={100} autoComplete="off" /></Field>
-        <Field label="رقم الجوال" hint="يستخدمه الموظف للدخول إلى نقطة البيع"><input name="phone" type="tel" inputMode="tel" dir="ltr" required maxLength={30} autoComplete="off" placeholder={snapshot.cafe.phoneCountry === "PS" ? "059xxxxxxx" : "05xxxxxxxx"} /></Field>
+        <Field label="رقم الجوال" hint={detectedCountry ? `دولة الرقم ${getBrandCountry(detectedCountry).name}` : `الرقم المحلي يتبع ${getBrandCountry(snapshot.cafe.phoneCountry ?? "SA").name} أو أدخل الرقم مع مفتاح الدولة`}><input name="phone" type="tel" inputMode="tel" dir="ltr" required maxLength={30} autoComplete="off" value={phone} onChange={event => setPhone(event.target.value)} placeholder={getBrandCountry(snapshot.cafe.phoneCountry ?? "SA").placeholder} /></Field>
       </div>
       <Field label="كلمة المرور" hint={`${SALES_CASHIER_PASSWORD_HINT} — للحساب الجديد فقط ولا تستبدل كلمة مرور العميل المسجل`}><input name="password" type={visible ? "text" : "password"} dir="ltr" required minLength={8} maxLength={128} pattern={SALES_CASHIER_PASSWORD_PATTERN} title={SALES_CASHIER_PASSWORD_HINT} autoComplete="new-password" /></Field>
       <label className={styles.check}><input type="checkbox" checked={visible} onChange={event => setVisible(event.target.checked)} />إظهار كلمة المرور</label>

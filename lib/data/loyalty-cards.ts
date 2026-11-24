@@ -10,7 +10,7 @@ import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import type { LoyaltyCardDesign } from "@/lib/loyalty/types";
 import { readPointsProgram, type PointsProgram } from "@/lib/loyalty/points-program";
-import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { normalizeInternationalPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { isGreenApiConfigured, sendGreenApiCashierWelcome } from "@/lib/whatsapp/green-api";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
@@ -466,8 +466,8 @@ export async function createOwnerCashier(input: {
 
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
-  const normalized = normalizeBrandPhone(parsed.phone, await getBrandPhoneCountry(cafe.id));
-  if (!normalized) throw new Error("أدخل رقم جوال صحيحًا لدولة العلامة");
+  const normalized = normalizeInternationalPhone(parsed.phone, await getBrandPhoneCountry(cafe.id));
+  if (!normalized) throw new Error("أدخل رقمًا محليًا لدولة الحساب أو رقمًا دوليًا مع مفتاح الدولة");
   const phone = `+${normalized}`;
   const { data: cashierId, error } = await supabase.rpc("create_cafe_staff_whatsapp", {
     p_cafe_id: cafe.id,

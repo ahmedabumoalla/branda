@@ -1,5 +1,6 @@
 export type BrandCustomerSegment = "all" | "shared" | "frequent" | "rewarded" | "expired";
 export type BrandCustomerFilters = {
+  country?: string;
   search?: string;
   brandId?: string;
   segment?: BrandCustomerSegment;

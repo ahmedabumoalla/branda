@@ -5,9 +5,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 
-export async function GET() {
+export async function GET(request?: Request) {
   try {
-    const snapshot = await getAdminBrandExportSnapshot();
+    const snapshot = await getAdminBrandExportSnapshot(request ? new URL(request.url).searchParams.get("country") ?? "" : "");
     const bytes = await buildBrandDirectoryExcel(snapshot);
     const filename = `branda-brands-${snapshot.exportedAt.slice(0, 10)}.xlsx`;
     return new Response(bytes, { headers: { ...headers, "Content-Type": BRAND_EXCEL_MIME, "Content-Disposition": `attachment; filename="${filename}"` } });

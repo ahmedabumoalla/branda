@@ -8,7 +8,7 @@ import { enrollLoyaltyAction } from "@/app/actions/loyalty-experience";
 import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
 import type { LoyaltyCardProgram } from "@/lib/data/loyalty-cards";
 import { RastHeader } from "./rast-brand";
-import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { getBrandCountry, normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { RastStampCard } from "./rast-stamp-card";
 import { PointsRewardPath } from "@/components/loyalty/points-reward-path";
 import s from "./rast-loyalty.module.css";
@@ -45,7 +45,7 @@ export function RastEnrollment({ identity, program, authenticated = false, phone
     if (pendingRef.current) return;
     const digits = normalizeBrandPhone(phone, phoneCountry);
     if (name.trim().length < 2 || name.trim().length > 120) { setError("اكتب اسمك من حرفين إلى 120 حرفًا"); return; }
-    if (!digits) { setError(phoneCountry === "PS" ? "أدخل رقم جوال فلسطيني يبدأ بـ 056 أو 059" : "أدخل رقم جوال سعودي صحيح يبدأ بـ 05"); return; }
+    if (!digits) { setError(`أدخل رقم جوال صحيح لدولة الحساب ${getBrandCountry(phoneCountry).name} (+${getBrandCountry(phoneCountry).callingCode})`); return; }
     if (asksBirthDate) {
       const today = new Date();
       const limit = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -75,7 +75,7 @@ export function RastEnrollment({ identity, program, authenticated = false, phone
         {stage === "done" ? <div className={s.welcome} role="status"><Check aria-hidden="true" /><h2>{returning ? `يا هلا برجعتك ${name.trim()}` : `يا هلا فيك يا ${name.trim()}`}</h2><p>بطاقتك تجمع لحظاتك الحلوة معنا</p><button type="button" className={s.primary} disabled={opening} aria-busy={opening} onClick={openCard}><span role="status">{opening ? "جار فتح بطاقتك" : "عرض بطاقتي"}</span>{opening ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <ArrowLeft aria-hidden="true" />}</button></div> : <form className={s.enrollmentForm} onSubmit={enroll} aria-busy={pending}>
           <div className={s.formHeading}><h2>انضم إلى {loyaltyCommunityName(identity)}</h2></div>
             <label className={s.field} htmlFor="rast-name"><span>اسمك</span><input id="rast-name" name="name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} placeholder="الاسم اللي نناديك فيه" required disabled={pending} /></label>
-            <label className={s.field} htmlFor="rast-phone"><span>رقم الجوال</span><input id="rast-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder={phoneCountry === "PS" ? "059xxxxxxx" : "05xxxxxxxx"} dir="ltr" maxLength={20} required disabled={pending} aria-describedby="rast-phone-hint" /></label>
+            <label className={s.field} htmlFor="rast-phone"><span>رقم الجوال — {getBrandCountry(phoneCountry).name} (+{getBrandCountry(phoneCountry).callingCode})</span><input id="rast-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder={getBrandCountry(phoneCountry).placeholder} dir="ltr" maxLength={30} required disabled={pending} aria-describedby="rast-phone-hint" /></label>
             {asksBirthDate ? <label className={s.field} htmlFor="rast-birth"><span>تاريخ ميلادك</span><input id="rast-birth" name="birthDate" type="date" autoComplete="bday" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} min="1900-01-01" required disabled={pending} /></label> : null}
             <p className={s.fieldHint} id="rast-phone-hint">إذا عندك بطاقة استخدم الاسم ورقم الجوال المسجّلين لفتحها</p>
           {error ? <p ref={errorRef} tabIndex={-1} className={s.error} role="alert">{error}</p> : null}

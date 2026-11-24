@@ -307,7 +307,7 @@ const customerRegisterSchema = z.object({
 
   fullName: z.string().min(1),
 
-  phone: z.string().min(8),
+  phone: z.string().min(7).max(64),
 });
 
 const customerLoginSchema = z.object({

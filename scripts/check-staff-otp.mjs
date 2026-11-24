@@ -6,7 +6,7 @@ const require=createRequire(import.meta.url);
 function load(file,mocks) {
  const exports={};
  const js=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
- new Function('require','exports',js)(name=>name in mocks?mocks[name]:require(name),exports);return exports;
+ new Function('require','exports',js)(name=>name in mocks?mocks[name]:name.startsWith('@/')?load(`${name.slice(2)}.ts`,mocks):require(name),exports);return exports;
 }
 let count=0;async function test(label,fn){try{await fn();count++;}catch(e){throw new Error(label,{cause:e});}}
 const jar=new Map(),writes=[],calls=[],sent=[];
@@ -49,6 +49,9 @@ await test('database errors are generic',async()=>{rpcFail='begin_staff_otp';ass
 
 await test('Palestinian WhatsApp code keeps the explicit country',async()=>{
  const before=sent.length;assert.equal((await api.requestCashierOtp('+970 59 123 4567')).ok,true);assert.equal(sent[before].phoneNormalized,'970591234567');
+});
+for (const country of load('lib/auth/brand-phone.ts',mocks).ARAB_COUNTRIES) await test(`staff OTP country ${country.code}`,async()=>{
+ const before=sent.length;assert.equal((await api.requestCashierOtp(`+${country.callingCode}${country.example}`)).ok,true);assert.equal(sent[before].phoneNormalized,`${country.callingCode}${country.example}`);
 });
 const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
 const dictionary=load('lib/cashier/messages.ts',{}).cashierEnglish;

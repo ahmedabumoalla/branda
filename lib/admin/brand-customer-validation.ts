@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { brandCountryFilterSchema } from "@/lib/admin/brand-country-filter";
 import type { BrandCustomerFilters } from "./brand-customer-types";
 
 const count = z.number().int().nonnegative();
@@ -38,6 +39,7 @@ export const brandCustomerDetailSchema = z.object({
 });
 
 const filtersSchema = z.object({
+  country: brandCountryFilterSchema,
   search: z.string().trim().max(100).default(""),
   brandId: z.union([z.uuid(), z.literal("")]).default(""),
   segment: z.enum(["all", "shared", "frequent", "rewarded", "expired"]).default("all"),

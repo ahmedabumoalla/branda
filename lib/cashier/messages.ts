@@ -1,6 +1,9 @@
 /** Interface copy; customer-written catalog content is localized separately */
 export const cashierEnglish: Record<string, string> = {
   "دولة رقم الجوال": "Phone country", "السعودية": "Saudi Arabia", "فلسطين": "Palestine", "أدخل رقم جوال صحيحًا": "Enter a valid mobile number",
+  "الإمارات": "United Arab Emirates", "البحرين": "Bahrain", "الكويت": "Kuwait", "عُمان": "Oman", "قطر": "Qatar", "اليمن": "Yemen",
+  "الأردن": "Jordan", "لبنان": "Lebanon", "سوريا": "Syria", "العراق": "Iraq", "مصر": "Egypt", "السودان": "Sudan",
+  "ليبيا": "Libya", "تونس": "Tunisia", "الجزائر": "Algeria", "المغرب": "Morocco", "موريتانيا": "Mauritania", "الصومال": "Somalia", "جيبوتي": "Djibouti", "جزر القمر": "Comoros",
   "عرض الطلبات": "Order view",
   "الطلبات الحالية": "Current orders",
   "بانتظار الاستدعاء": "Awaiting call",

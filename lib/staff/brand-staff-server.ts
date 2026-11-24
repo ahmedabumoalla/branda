@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { normalizeInternationalPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
 import { brandStaffAccessFromPermissions, brandStaffLandingPath } from "@/lib/staff/brand-staff-access";
@@ -36,7 +36,7 @@ function toLatinDigits(value: string) {
 
 /** International phone for the employee identity */
 export function normalizeStaffPhone(value: string | null | undefined, country: BrandPhoneCountry = "SA") {
-  const digits = normalizeBrandPhone(toLatinDigits(String(value ?? "")), country);
+  const digits = normalizeInternationalPhone(toLatinDigits(String(value ?? "")), country);
   return digits ? `+${digits}` : null;
 }
 
@@ -125,7 +125,7 @@ export async function addBrandEmployee(input: z.input<typeof employeeSchema> & O
   if (!parsed.success) return { ok: false, message: firstIssue(parsed.error) };
   const cafe = await requireLocoOwner();
   const phone = normalizeStaffPhone(parsed.data.phone, await getBrandPhoneCountry(cafe.id));
-  if (!phone) return { ok: false, message: "رقم الجوال غير صحيح اكتبه بصيغة 05XXXXXXXX" };
+  if (!phone) return { ok: false, message: "أدخل رقمًا محليًا لدولة الحساب أو رقمًا دوليًا مع مفتاح الدولة" };
   const admin = createAdminClient();
   const created = await admin.from("brand_staff_accounts")
     .insert({ cafe_id: cafe.id, full_name: parsed.data.name, phone })

@@ -1,6 +1,6 @@
 "use client";
 
-import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { normalizeInternationalPhone, getBrandCountry, inferPhoneCountry } from "@/lib/auth/brand-phone";
 
 import Link from "next/link";
 import {
@@ -164,8 +164,8 @@ export function OperationalCashierPageClient({
       setFormError("أدخل اسمًا واضحًا للموظف");
       return;
     }
-    if (!normalizeBrandPhone(phone, dashboard.phoneCountry ?? "SA")) {
-      setFormError("أدخل رقم جوال صحيحًا لدولة العلامة مرتبطًا بواتساب");
+    if (!normalizeInternationalPhone(phone, dashboard.phoneCountry ?? "SA")) {
+      setFormError("أدخل رقم جوال محليًا لدولة الحساب أو مع مفتاح الدولة مرتبطًا بواتساب");
       return;
     }
 
@@ -362,7 +362,7 @@ export function OperationalCashierPageClient({
             <fieldset disabled={pendingId === "create"} className="mt-5 space-y-4 disabled:opacity-60">
               {!editingId ? <>
               <label className="block text-sm font-black">الاسم<input required minLength={2} maxLength={80} value={fullName} onChange={(event) => setFullName(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" autoComplete="name" /></label>
-              <label className="block text-sm font-black">جوال الموظف المرتبط بواتساب<input required type="tel" inputMode="tel" dir="ltr" maxLength={20} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="05xxxxxxxx" aria-describedby="cashier-phone-help" className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" autoComplete="tel" /><span id="cashier-phone-help" className="mt-1 block text-xs font-bold text-[#806A5E]">{dashboard.phoneCountry === "PS" ? "رقم فلسطيني يبدأ بـ ٠٥٦ أو ٠٥٩ أو بمفتاح ٩٧٠" : "رقم سعودي يبدأ بـ ٠٥ أو بمفتاح الدولة ٩٦٦"}</span></label>
+              <label className="block text-sm font-black">جوال الموظف المرتبط بواتساب<input required type="tel" inputMode="tel" dir="ltr" maxLength={30} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder={getBrandCountry(dashboard.phoneCountry ?? "SA").placeholder} aria-describedby="cashier-phone-help" className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" autoComplete="tel" /><span id="cashier-phone-help" className="mt-1 block text-xs font-bold text-[#806A5E]" role="status">{inferPhoneCountry(phone) ? `دولة الرقم ${getBrandCountry(inferPhoneCountry(phone)!).name}` : `الرقم المحلي يتبع ${getBrandCountry(dashboard.phoneCountry ?? "SA").name} ويمكنك إدخال رقم دولي مع مفتاحه`}</span></label>
               <label className="block text-sm font-black">الرقم الوظيفي <span className="text-[#806A5E]">(اختياري)</span><input maxLength={40} value={employeeNumber} onChange={(event) => setEmployeeNumber(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" /></label>
               </> : null}
               <label className="block text-sm font-black">صلاحيات الموظف<select value={permission} onChange={(event) => setPermission(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] bg-white px-4 focus-visible:outline-2 focus-visible:outline-[#6B3A25]">

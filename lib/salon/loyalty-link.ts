@@ -1,3 +1,4 @@
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import "server-only";
 import { createHash, createHmac } from "node:crypto";
 import { z } from "zod";
@@ -9,7 +10,7 @@ export function salonLoyaltyToken(id: string) {
   return createHmac("sha256", getSupabaseServiceRoleKey()).update(`branda:salon:loyalty:v1:${id}`).digest("hex");
 }
 
-const context = z.object({ cafe_id: z.uuid(), profile_id: z.uuid(), slug: z.string().regex(/^[a-z0-9-]{1,80}$/), phone: z.string().regex(/^(?:9665\d{8}|9705[69]\d{7})$/) });
+const context = z.object({ cafe_id: z.uuid(), profile_id: z.uuid(), slug: z.string().regex(/^[a-z0-9-]{1,80}$/), phone: z.string().regex(canonicalBrandMobile) });
 
 export async function salonLoyaltySession(token: string) {
   if (!/^[0-9a-f]{64}$/.test(token)) return null;

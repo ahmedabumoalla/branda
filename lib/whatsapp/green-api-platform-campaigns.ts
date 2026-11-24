@@ -1,3 +1,4 @@
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import "server-only";
 import { selectGreenApiPlatformSender } from "./green-api";
 
@@ -51,7 +52,7 @@ export async function getBrandaCampaignSender() {
 
 /** Exactly one request, body unchanged. Acceptance does not mean delivery. */
 export async function sendBrandaCampaignMessage(input: { phone: string; body: string; media?: { url: string; fileName: string } | null }) {
-  if (!/^(?:9665\d{8}|9705[69]\d{7})$/.test(input.phone) || !input.body.trim() || input.body.length > (input.media ? 1024 : 3000)) throw new PlatformCampaignProviderError("INVALID_CAMPAIGN_MESSAGE");
+  if (!canonicalBrandMobile.test(input.phone) || !input.body.trim() || input.body.length > (input.media ? 1024 : 3000)) throw new PlatformCampaignProviderError("INVALID_CAMPAIGN_MESSAGE");
   let payload: Record<string, unknown>;
   if (input.media) {
     let url: URL, origin: URL;

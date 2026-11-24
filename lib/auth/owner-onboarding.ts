@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { after } from "next/server";
 import { z } from "zod";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
-import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { normalizeBrandPhone, inferPhoneCountry, isBrandPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { normalizeInputDigits } from "@/lib/auth/input-digits";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -23,8 +23,9 @@ const mapsUrl = z.string().trim().max(1000).url().refine((value) => {
   );
 }, "أدخل رابطًا صحيحًا من خرائط Google");
 export const ownerOnboardingSchema = z.object({
-  accountCountry: z.enum(["SA", "PS"]).optional(),
-  planChoice: z.enum(["loyalty", "menu_loyalty"]).default("menu_loyalty"),
+  accountCountry: z.custom<BrandPhoneCountry>(isBrandPhoneCountry).optional(),
+  // Accept older open registration forms, but all new self-signups receive loyalty
+  planChoice: z.enum(["loyalty", "menu_loyalty"]).default("loyalty").transform(() => "loyalty" as const),
   brandNameAr: z.string().trim().min(2).max(120).regex(/[\u0600-\u06ff]/),
   brandNameEn: z.string().trim().min(2).max(120).regex(/^[A-Za-z0-9 &'().-]+$/).regex(/[A-Za-z]/),
   ownerName: z.string().trim().min(2).max(120),
@@ -41,7 +42,7 @@ export const ownerOnboardingSchema = z.object({
     return z.NEVER;
   }
   // Older registration forms sent the selected calling code as part of the phone.
-  return { ...draft, phone, accountCountry: draft.accountCountry ?? (phone.startsWith("970") ? "PS" as const : "SA" as const) };
+  return { ...draft, phone, accountCountry: draft.accountCountry ?? inferPhoneCountry(phone) ?? "SA" };
 });
 export type OwnerOnboardingInput = z.input<typeof ownerOnboardingSchema>;
 export type OwnerOnboardingResult = { ok: boolean; message: string; retryAfterSeconds?: number; redirectTo?: string | null };
@@ -69,11 +70,12 @@ export async function requestOwnerOnboarding(input: OwnerOnboardingInput): Promi
       brandNameAr: "اكتب اسم العلامة بالعربية من حرفين إلى ١٢٠ حرفًا",
       brandNameEn: "اكتب اسم العلامة بالإنجليزية من حرفين إلى ١٢٠ حرفًا دون رموز خاصة",
       ownerName: "اكتب اسم المسؤول من حرفين إلى ١٢٠ حرفًا",
-      phone: "أدخل رقم جوال سعودي أو فلسطيني صحيح مع مفتاح الدولة",
+      phone: "أدخل رقم جوال صحيحًا لدولة الحساب أو اكتبه مع مفتاح الدولة",
+      accountCountry: "اختر دولة الحساب من الدول العربية المتاحة",
       email: "البريد الإلكتروني غير صحيح صححه أو اتركه فارغًا فهو اختياري",
       mapsUrl: "أدخل رابطًا صحيحًا من خرائط Google أو اتركه فارغًا",
       couponCode: "كوبون الخصم يجب ألا يتجاوز ٣٠ حرفًا",
-      planChoice: "اختر باقة الولاء أو باقة الولاء والمنيو",
+      planChoice: "باقة التسجيل المتاحة هي ولاء برندة",
     };
     return { ok: false, message: messages[String(parsed.error.issues[0]?.path[0])] ?? "راجع بيانات التسجيل وأكمل الحقول المطلوبة" };
   }
@@ -158,7 +160,7 @@ export async function completeOwnerOnboarding(input: { password: string; confirm
     });
     (await cookies()).delete(COOKIE);
     const signedIn = await (await createClient()).auth.signInWithPassword({ phone: `+${phone}`, password: password.data });
-    if (signedIn.error || !signedIn.data.session) return { ok: true, message: "تم إنشاء حسابك وتفعيل تجربتك المجانية سجّل الدخول للمتابعة", redirectTo: "/login" };
-    return { ok: true, message: "حسابك جاهز وبدأت تجربتك المجانية", redirectTo: tutorialsInApp ? "/dashboard/loyalty/guide?start=1" : "/dashboard" };
+    if (signedIn.error || !signedIn.data.session) return { ok: true, message: "تم إنشاء حسابك وتفعيل باقة الولاء سجّل الدخول للمتابعة", redirectTo: "/login" };
+    return { ok: true, message: "حسابك جاهز وباقة الولاء مفعلة", redirectTo: tutorialsInApp ? "/dashboard/loyalty/guide?start=1" : "/dashboard" };
   } catch { return unavailable(); }
 }

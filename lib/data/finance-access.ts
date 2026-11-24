@@ -16,7 +16,7 @@ import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getBrandFinanceSnapshot } from "@/lib/data/brand-finance";
 import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
-import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { normalizeBrandPhone, normalizeInternationalPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { getBrandPhoneCountry, getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
 import { getSupabaseServiceRoleKey, requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
 import { isSalesCashierPassword, SALES_CASHIER_PASSWORD_HINT } from "@/lib/finance/sales-cashier-password";
@@ -176,7 +176,7 @@ export async function resetSalesCashierPassword(phone: string, code: string, pas
 /** Owner may link an existing customer; its personal credentials and profile stay unchanged. */
 export async function provisionSalesCashier(input: { name: string; phone: string; password: string; posPermissions?: unknown; employeePermissions?: unknown }) {
   const cafe = await requireOwnerCafeContext();
-  const phone = normalizeBrandPhone(input.phone, await getBrandPhoneCountry(cafe.id));
+  const phone = normalizeInternationalPhone(input.phone, await getBrandPhoneCountry(cafe.id));
   const parsed = salesCashierSchema.parse({ ...input, phone: phone ?? "" });
   const maintenance = cafe.role === "platform_admin" ? await getFinanceCashierMaintenance(cafe.id) : null;
   if (cafe.role !== "owner" && !maintenance) throw new SalesCashierCreationError("owner_required");
@@ -262,7 +262,7 @@ export async function signInFinance(slug: string, identity: string, password: st
   const isEmail = value.includes("@");
   const alias = isEmail ? null : ownerLoginAliasEmail(value);
   const country = isEmail || alias ? "SA" : await getBrandPhoneCountryBySlug(safeSlug);
-  const phone = isEmail || alias ? null : normalizeBrandPhone(value, country);
+  const phone = isEmail || alias ? null : normalizeInternationalPhone(value, country);
   if (!isEmail && !alias && !phone) return { ok: false as const, message: "تعذر تسجيل الدخول تحقق من بياناتك" };
   const hospitalContactEmail = await hospitalOwnerContactEmail(safeSlug, value, country);
   const credentials = hospitalContactEmail
@@ -333,7 +333,7 @@ async function requirePhoneStaffOwner() {
 /** Phone identities belong to this employer and never replace an existing customer identity. */
 export async function provisionFinancePhoneStaff(input: z.input<typeof phoneStaffSchema>) {
   const { cafe, supabase } = await requirePhoneStaffOwner();
-  const phone = normalizeBrandPhone(input.phone, await getBrandPhoneCountry(cafe.id));
+  const phone = normalizeInternationalPhone(input.phone, await getBrandPhoneCountry(cafe.id));
   const parsed = phoneStaffSchema.parse({ ...input, phone: phone ?? "" });
   const admin = createAdminClient();
   const created = await admin.auth.admin.createUser({

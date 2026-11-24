@@ -6,10 +6,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeGoogleReviewLink } from "@/lib/pager/google-review-link";
 import { pagerPeriodRange } from "@/lib/pager/customer-period";
 import type { PagerBrand, PagerCustomer, PagerDirectoryFilters, PagerReview, PagerReviewFilters, PagerSlice, PagerVisit } from "@/lib/pager/customer-types";
+import { brandCountryFilterSchema } from "@/lib/admin/brand-country-filter";
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 
 const page = z.number().int().min(0).max(100000).default(0);
 const query = z.string().trim().max(120).default("");
-const directorySchema = z.object({ cafeId: z.uuid().optional(), phone: z.string().regex(/^(?:9665\d{8}|9705[69]\d{7})$/).optional(), query, page, period: z.enum(["all", "today", "yesterday", "7d", "30d", "365d"]).default("all") });
+const directorySchema = z.object({ country: brandCountryFilterSchema, cafeId: z.uuid().optional(), phone: z.string().regex(canonicalBrandMobile).optional(), query, page, period: z.enum(["all", "today", "yesterday", "7d", "30d", "365d"]).default("all") });
 
 export async function getPagerCustomerDirectory(input: PagerDirectoryFilters) {
   await requirePlatformAdmin();
@@ -17,7 +19,7 @@ export async function getPagerCustomerDirectory(input: PagerDirectoryFilters) {
   if (filters.phone && !filters.cafeId) throw new Error("العلامة مطلوبة لعرض سجل العميل");
   const db = createAdminClient();
   const range = pagerPeriodRange(filters.period);
-  const { data, error } = await db.rpc("pager_customer_directory_range", { p_cafe: filters.cafeId ?? null, p_phone: filters.phone ?? null, p_query: filters.query, p_page: filters.page, p_from: range.from, p_to: range.to });
+  const { data, error } = await db.rpc("pager_customer_directory_country", { p_country: filters.country || null, p_cafe: filters.cafeId ?? null, p_phone: filters.phone ?? null, p_query: filters.query, p_page: filters.page, p_from: range.from, p_to: range.to });
   if (error) throw new Error("تعذر تحميل عملاء البيجر حاول مجددًا");
   let brandName = "";
   if (filters.cafeId) {

@@ -25,6 +25,7 @@ import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
 import { mapAdminWhatsAppSummary, type AdminWhatsAppConnectionRow } from "@/lib/whatsapp/admin-sender-summary";
 import { normalizeErpModules } from "@/lib/platform/erp-modules";
 import { getAdminBrandLogos } from "@/lib/data/admin-brand-logos";
+import { getAdminDirectoryRows } from "@/lib/data/admin-directory-rows";
 
 
 function normalizeCafeStatus(status: unknown): PlatformCafe["status"] {
@@ -108,12 +109,16 @@ async function getCafeFeatureOverridesByCafeIds(cafeIds: string[]) {
   if (!cafeIds.length) return new Map<string, BrandFeatureOverride[]>();
 
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("brand_feature_overrides")
-    .select("cafe_id, feature_id, enabled")
-    .in("cafe_id", cafeIds);
-
-  if (error) throw error;
+  const data: Record<string, unknown>[] = [];
+  for (let batch = 0; batch < cafeIds.length; batch += 100) {
+    for (let offset = 0; ; offset += 500) {
+      const result = await admin.from("brand_feature_overrides").select("cafe_id, feature_id, enabled")
+        .in("cafe_id", cafeIds.slice(batch, batch + 100)).order("cafe_id").order("feature_id").range(offset, offset + 499);
+      if (result.error) throw result.error;
+      data.push(...(result.data ?? []));
+      if ((result.data?.length ?? 0) < 500) break;
+    }
+  }
 
   const map = new Map<string, BrandFeatureOverride[]>();
   for (const row of (data ?? []) as Record<string, unknown>[]) {
@@ -552,39 +557,32 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
   await requirePlatformAdmin();
   const supabase = await createClient();
 
-  let cafeQuery = supabase
-    .from("cafes")
-    .select(`
-      *,
-      cafe_settings(*),
-      cafe_members(user_id, role, profiles(email, full_name))
-    `)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
-
-  if (cafeIdFilter) cafeQuery = cafeQuery.eq("id", cafeIdFilter);
-  const [{ data: cafes, error }, onboarding] = await Promise.all([
-    cafeQuery, supabase.rpc("admin_brand_onboarding_status"),
+  const [rows, onboarding] = await Promise.all([
+    getAdminDirectoryRows(supabase, cafeIdFilter), supabase.rpc("admin_brand_onboarding_status"),
   ]);
   if (onboarding.error) throw onboarding.error;
   const deliveryByCafe = new Map<string, PlatformCafe["ownerDelivery"]>(
     (Array.isArray(onboarding.data) ? onboarding.data : []).map((row: { cafeId: string } & NonNullable<PlatformCafe["ownerDelivery"]>) => [row.cafeId, { state: row.state, sentAt: row.sentAt, detailsReady: row.detailsReady, passwordReady: row.passwordReady }]),
   );
 
-  if (error) throw error;
-
-  const rows = (cafes ?? []) as Record<string, unknown>[];
   const cafeIds = rows.map((row) => String(row.id)).filter(Boolean);
   const [featureOverridesByCafeId, subscriptionStates, metricsByCafeId, cancellations, whatsAppByCafeId, logosByCafeId] = await Promise.all([
     getCafeFeatureOverridesByCafeIds(cafeIds),
     getAdminBrandSubscriptionStates(cafeIds),
     getBrandDirectoryMetrics(supabase, cafeIds),
-    supabase.from("brand_account_cancellations").select("cafe_id,actor_id,actor_name,cancelled_at,origin,reason").in("cafe_id", cafeIds),
+    (async () => {
+      const data: Array<{ cafe_id: string; actor_id: string; actor_name: string; cancelled_at: string; origin: string; reason: string }> = [];
+      for (let offset = 0; offset < cafeIds.length; offset += 100) {
+        const result = await supabase.from("brand_account_cancellations").select("cafe_id,actor_id,actor_name,cancelled_at,origin,reason").in("cafe_id", cafeIds.slice(offset, offset + 100));
+        if (result.error) throw result.error;
+        data.push(...(result.data ?? []));
+      }
+      return data;
+    })(),
     getBrandDirectoryWhatsApp(cafeIds),
     getAdminBrandLogos(supabase, rows),
   ]);
-  if (cancellations.error) throw cancellations.error;
-  const cancellationByCafe = new Map((cancellations.data ?? []).map(row => [row.cafe_id, { actorId: row.actor_id, actorName: row.actor_name, cancelledAt: row.cancelled_at, origin: "user" as const, reason: row.reason }]));
+  const cancellationByCafe = new Map(cancellations.map(row => [row.cafe_id, { actorId: row.actor_id, actorName: row.actor_name, cancelledAt: row.cancelled_at, origin: "user" as const, reason: row.reason }]));
 
   return Promise.all(
     rows.map(async (row) => {
@@ -624,6 +622,7 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
         ownerName: String(settings?.owner_name ?? ownerProfile?.full_name ?? ""),
         ownerEmail: String(settings?.owner_email ?? ownerProfile?.email ?? ""),
         ownerPhone: String(settings?.owner_phone ?? ""),
+        phoneCountry: (row.phone_country ?? "SA") as import("@/lib/auth/brand-phone").BrandPhoneCountry,
         ownerDelivery: deliveryByCafe.get(cafeId),
         ownerLoginEmail: String(ownerProfile?.email ?? settings?.owner_email ?? ""),
         passwordAccessNote: "لا يمكن عرض كلمة المرور الأصلية؛ استخدم رابط إعادة التعيين أو تحديثها من لوحة الصيانة الآمنة",

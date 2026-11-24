@@ -29,7 +29,7 @@ function load(file, env, fetcher, stubs = {}) {
 function api(env, { primary = 'authorized', backup = 'authorized' } = {}) {
   const calls = [];
   const module = load('lib/whatsapp/green-api.ts', env, async (url, init = {}) => {
-    calls.push({ url, method: init.method ?? 'GET' });
+    calls.push({ url, method: init.method ?? 'GET', body: init.body ? JSON.parse(init.body) : null });
     if (url.includes('getStateInstance')) return Response.json({ stateInstance: url.includes('waInstance222') ? backup : url.includes('waInstance111') ? primary : 'authorized' });
     return Response.json({ idMessage: 'ack' });
   });
@@ -42,6 +42,18 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
 
 (async () => {
   let checks = 0;
+
+  // Validate every supported country at the final provider boundary, with network fully mocked
+  const countries = load('lib/auth/arab-phone-rules.ts', paused, () => { throw new Error('Unexpected network'); }).default;
+  for (const country of countries) {
+    const recipient = country.callingCode + country.example;
+    const x = api(paused);
+    await x.module.sendGreenApiOtp({ phoneNormalized: recipient, code: '123456', brandName: 'Example' });
+    assert.equal(x.posts().length, 1);
+    assert.equal(x.posts()[0].body.chatId, recipient+'@c.us'); checks++;
+    await assert.rejects(() => x.module.sendGreenApiOwnerSignupWelcome({phone:recipient,brandName:'Example'}), /MESSAGING_TEMPORARILY_PAUSED/);
+    assert.equal(x.posts().length, 1); checks++;
+  }
 
   // Verification codes still go out, from the primary and from the standby when the primary is restricted
   for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp']) {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowUpLeft, Eye, EyeOff, Fingerprint, Gift, LayoutGrid, LoaderCircle, LockKeyhole, Mail, ShieldCheck, Store, X } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import { loginOwnerAction, requestPasswordResetAction } from "@/app/actions/auth";
-import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { normalizeInternationalPhone, ARAB_COUNTRIES, inferPhoneCountry, isBrandPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { normalizeInputDigits } from "@/lib/auth/input-digits";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import styles from "./login.module.css";
@@ -16,7 +16,8 @@ export default function LoginPage() {
   const resetTrigger = useRef<HTMLButtonElement>(null);
   const [email, setEmail] = useState("");
   const [phoneCountry, setPhoneCountry] = useState<BrandPhoneCountry>("SA");
-  const localPhone = /^0?5[0-9]{1,8}$/.test(normalizeInputDigits(email).replace(/[\s()-]/g, ""));
+  const phoneIdentity = /^\+?\d+$/.test(normalizeInputDigits(email).replace(/[\s()-]/g, ""));
+  const detectedCountry = inferPhoneCountry(email);
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -31,9 +32,9 @@ export default function LoginPage() {
     setLoading(true);
     setLoginMessage("");
     try {
-      const identity = localPhone && phoneCountry === "PS" ? normalizeBrandPhone(email, phoneCountry) : email;
+      const identity = phoneIdentity ? normalizeInternationalPhone(email, phoneCountry) : email;
       if (!identity) {
-        setLoginMessage("تحقق من رقم الجوال الفلسطيني");
+        setLoginMessage("تحقق من رقم الجوال ومفتاح الدولة");
         setLoading(false);
         return;
       }
@@ -114,9 +115,9 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} aria-busy={loading}>
             <fieldset disabled={loading} className={styles.fields}>
               <div className={styles.field}>
-                {localPhone && <><label htmlFor="login-country">دولة رقم الجوال</label>
-                  <select className={styles.country} id="login-country" value={phoneCountry} onChange={event => setPhoneCountry(event.target.value === "PS" ? "PS" : "SA")}>
-                    <option value="SA">السعودية (+966)</option><option value="PS">فلسطين (+970)</option>
+                {phoneIdentity && <><label htmlFor="login-country">دولة رقم الجوال</label>
+                  <select className={styles.country} id="login-country" value={detectedCountry ?? phoneCountry} onChange={event => { if (isBrandPhoneCountry(event.target.value)) setPhoneCountry(event.target.value); }} disabled={Boolean(detectedCountry)}>
+                    {ARAB_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.name} (+{country.callingCode})</option>)}
                   </select></>}
                 <label htmlFor="login-identity">البريد الإلكتروني أو الجوال أو اسم الدخول</label>
                 <div className={styles.inputWrap}>

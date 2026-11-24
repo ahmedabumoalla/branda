@@ -170,7 +170,18 @@ try {
   check(current.events.filter((e) => e.kind === "save_link").length === 1 && current.customer.walletProviders.length === 2, "Google save link never claims installation");
   const exports = {};
   const validationSource = ts.transpileModule(await readFile("lib/admin/brand-customer-validation.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
-  new Function("require", "exports", validationSource)(createRequire(import.meta.url), exports);
+  const dependency = createRequire(import.meta.url);
+  async function loadValidationModule(file) {
+    const result = {};
+    const source = await readFile(file,'utf8');
+    const aliases = [...source.matchAll(/from "(@\/[^\"]+)"/g)];
+    const imported = new Map();
+    for (const [,name] of aliases) imported.set(name,await loadValidationModule(`${name.slice(2)}.ts`));
+    new Function('require','exports',ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(name=>imported.has(name)?imported.get(name):dependency(name),result);
+    return result;
+  }
+  const countryValidation = await loadValidationModule('lib/admin/brand-country-filter.ts');
+  new Function("require", "exports", validationSource)(name => name === '@/lib/admin/brand-country-filter' ? countryValidation : dependency(name), exports);
   check(exports.brandCustomersPageSchema.safeParse(await listing()).success, "real PostgreSQL list matches runtime DTO schema");
   check(exports.brandCustomerDetailSchema.safeParse(current).success, "real PostgreSQL timeline matches runtime DTO schema");
   await db.exec("RESET ROLE");
@@ -195,5 +206,38 @@ try {
   const plan = await query("EXPLAIN SELECT * FROM loyalty_audit_private.brand_customer_rows WHERE id=$1", [id(20)]);
   check(plan.rows.length > 0, "planner accepts membership query with production indexes");
   await db.exec(await readFile("supabase/tests/brand_customers_postflight.sql", "utf8")); checks++;
+  await db.exec("ALTER TABLE public.cafes ADD COLUMN phone_country text NOT NULL DEFAULT 'SA'");
+  await db.exec(await readFile("supabase/migrations/20261124125215_admin_brand_customer_country_filter.sql", "utf8"));
+  const countryList = country => value("SELECT public.get_admin_brand_customers_by_country(p_country=>$1,p_page_size=>1)",[country]);
+  const allCount = Number(await value("SELECT count(*) FROM loyalty_audit_private.brand_customer_rows"));
+  const betaCount = Number(await value("SELECT count(*) FROM loyalty_audit_private.brand_customer_rows WHERE brand_id=$1",[id(11)]));
+  for (const country of ['SA','PS','AE','BH','KW','QA','OM','YE','JO','LB','SY','IQ','EG','SD','LY','TN','DZ','MA','MR','SO','DJ','KM']) {
+    await db.exec('RESET ROLE');
+    await query('UPDATE cafes SET phone_country=$1 WHERE id=$2',[country,id(11)]);
+    await asUser(1);
+    const result = await countryList(country);
+    check(result.total === (country === 'SA' ? allCount : betaCount), 'country filters every membership before pagination');
+    check(result.summary.memberships === result.total && result.customers.length === Math.min(1,result.total),'country summary covers all matching pages');
+    check(country === 'SA' || result.brands.every(brand=>brand.id===id(11)),'country uses brand identity rather than shared customer phone');
+  }
+  check((await countryList(null)).total === allCount,'all countries preserve existing totals');
+  check((await countryList('EG')).total === 0,'country without brands returns an empty result');
+  await rejects(()=>countryList('ZZ'));
+  await asUser(3);await rejects(()=>countryList('SA'));
+  await db.exec('RESET ROLE');
+  check(!await value("SELECT has_function_privilege('anon','public.get_admin_brand_customers_by_country(text,uuid,text,text,integer,integer,text)','EXECUTE') OR has_function_privilege('service_role','public.get_admin_brand_customers_by_country(text,uuid,text,text,integer,integer,text)','EXECUTE')"),'customer country RPC keeps admin-session boundary');
+  await db.exec(`CREATE TABLE public.pager_orders(id uuid,cafe_id uuid,phone text,created_at timestamptz);
+    CREATE FUNCTION public.pager_customer_directory_range(uuid,text,text,integer,timestamptz,timestamptz) RETURNS jsonb LANGUAGE sql AS $$SELECT '{"delegated":true}'::jsonb$$;
+    GRANT SELECT ON public.cafes,public.pager_orders TO service_role;`);
+  await query("INSERT INTO pager_orders VALUES($1,$2,'966500000001',now()),($3,$4,'966500000001',now())",[id(900),id(10),id(901),id(11)]);
+  await db.exec('SET ROLE service_role');
+  const pager = (country,brand=null) => value("SELECT public.pager_customer_directory_country(p_country=>$1,p_cafe=>$2)",[country,brand]);
+  check((await pager('SA')).total===1 && (await pager('KM')).total===1,'pager country totals filter before page slicing');
+  check((await pager('EG')).total===0,'pager country empty result');
+  check((await pager('SA',id(11))).total===0,'pager rejects foreign-country brand scope');
+  check((await pager('KM',id(11))).delegated===true && (await pager(null)).delegated===true,'pager existing validated flow is reused');
+  await rejects(()=>pager('ZZ'));
+  await db.exec('RESET ROLE');
+  check(!await value("SELECT has_function_privilege('anon','public.pager_customer_directory_country(uuid,text,text,integer,timestamptz,timestamptz,text)','EXECUTE') OR has_function_privilege('authenticated','public.pager_customer_directory_country(uuid,text,text,integer,timestamptz,timestamptz,text)','EXECUTE')"),'pager remains service-only');
   console.log(`PASS brand customers PostgreSQL: ${checks} checks (${((performance.now() - started) / 1000).toFixed(2)}s)`);
 } finally { await db.close(); }

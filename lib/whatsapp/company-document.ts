@@ -1,3 +1,4 @@
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import "server-only";
 import { selectBrandCustomerSender } from "./customer-routing";
 import { supportsPrivateWhatsApp } from "./brand-connection-types";
@@ -20,7 +21,7 @@ export async function selectCompanyDocumentSender(cafeId: string) {
 /** One submission only, including when the provider acknowledgement is uncertain */
 export async function sendCompanyDocument(sender: GreenApiCustomerSender, input: { phone: string; pdf: Uint8Array; draftId: string }) {
   if (isGreenApiBackupOnly() || (isPlatformAccessOnly() && isGreenApiPlatformSender(sender))) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
-  if (!/^(?:9665\d{8}|9705[69]\d{7})$/.test(input.phone) || !/^[a-f0-9-]{36}$/i.test(input.draftId)
+  if (!canonicalBrandMobile.test(input.phone) || !/^[a-f0-9-]{36}$/i.test(input.draftId)
     || !input.pdf.length || input.pdf.length > 8_000_000 || new TextDecoder().decode(input.pdf.slice(0, 5)) !== "%PDF-") throw new Error("INVALID_COMPANY_DOCUMENT");
   const { primary } = getGreenApiCustomerPlatformSenders();
   const configured = primary?.idInstance === sender.idInstance ? process.env.GREEN_API_MEDIA_URL?.trim() : undefined;

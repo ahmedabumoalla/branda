@@ -1,4 +1,4 @@
-import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { normalizeBrandPhone, inferPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 
 /** Human-facing numbers are brand scoped and never public card credentials. */
 export function normalizeLoyaltyDigits(input: string): string {
@@ -20,6 +20,6 @@ export function normalizeLoyaltyReadPhone(input: string, country: BrandPhoneCoun
 export function resolveReadMethod(method: "code" | "phone", input: string, country: BrandPhoneCountry = "SA"): "code" | "phone" {
   const value = normalizeLoyaltyDigits(input.trim());
   if (value.startsWith("BARNDAKSA_QR:") || /^[a-f\d]{16}$/i.test(value) || isLoyaltyDisplayNumber(value)) return "code";
-  if (normalizeLoyaltyReadPhone(value, country) || /^(?:\+|00)?(?:966|970)0?5\d{8}$/.test(value.replace(/[\s()-]/g, "")) || (country === "PS" && /^0?5\d{8}$/.test(value))) return "phone";
+  if (normalizeLoyaltyReadPhone(value, country) || inferPhoneCountry(value) || /^(?:\+|00)\d{7,15}$/.test(value.replace(/[\s()-]/g, "")) || (country === "PS" && /^0?5\d{8}$/.test(value))) return "phone";
   return method;
 }

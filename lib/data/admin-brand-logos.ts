@@ -10,9 +10,12 @@ export async function getAdminBrandLogos(
 ): Promise<Map<string, Logo>> {
   const logos = new Map<string, Logo>();
   if (!rows.length) return logos;
-  const { data } = await supabase.from("cafe_custom_identity")
-    .select("cafe_id,logo_storage_path,logo_url").in("cafe_id", rows.map(row => String(row.id)));
-  const identities = new Map((data ?? []).map(row => [row.cafe_id, row]));
+  const identities = new Map<string, { logo_storage_path: string | null; logo_url: string | null }>();
+  for (let offset = 0; offset < rows.length; offset += 100) {
+    const { data } = await supabase.from("cafe_custom_identity")
+      .select("cafe_id,logo_storage_path,logo_url").in("cafe_id", rows.slice(offset, offset + 100).map(row => String(row.id)));
+    for (const row of data ?? []) identities.set(row.cafe_id, row);
+  }
   for (const row of rows) {
     const id = String(row.id);
     const settings = row.cafe_settings as Record<string, unknown> | null;

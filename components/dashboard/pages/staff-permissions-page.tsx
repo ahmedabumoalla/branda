@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Gift, KeyRound, LoaderCircle, Megaphone, Package, ScanLine, Trash2, UserPlus, UserRound } from "lucide-react";
 import { addBrandEmployeeAction, removeBrandEmployeeAction, saveBrandStaffAccessAction } from "@/app/actions/brand-staff";
 import type { BrandStaffMember } from "@/lib/staff/brand-staff-server";
+import { getBrandCountry, inferPhoneCountry } from "@/lib/auth/brand-phone";
 
 type Access = { canLogin: boolean; menu: boolean; messages: boolean; rewards: boolean };
 type Notice = { tone: "ok" | "error"; text: string } | null;
@@ -131,8 +132,9 @@ function MemberCard({ member, onNotice }: { member: BrandStaffMember; onNotice: 
       {needsPhone && access.canLogin && (
         <div className="mb-3">
           <label htmlFor={`${member.key}-phone`} className="mb-1.5 block text-xs font-semibold text-[#5B4336]">رقم جوال الكاشير للدخول</label>
-          <input id={`${member.key}-phone`} inputMode="tel" dir="ltr" value={phone} onChange={event => setPhone(event.target.value)} placeholder="05XXXXXXXX"
+          <input id={`${member.key}-phone`} type="tel" inputMode="tel" dir="ltr" maxLength={30} value={phone} onChange={event => setPhone(event.target.value)} placeholder="05XXXXXXXX" aria-describedby={`${member.key}-phone-country`}
             className="h-11 w-full rounded-xl border border-[#E4D6C6] bg-white px-3 text-right text-sm outline-none focus:border-[#B0894A]" />
+          <p id={`${member.key}-phone-country`} className="mt-1 text-xs text-[#806A5E]" role="status">{inferPhoneCountry(phone) ? `دولة الرقم ${getBrandCountry(inferPhoneCountry(phone)!).name}` : "الرقم المحلي يتبع دولة الحساب أو أدخل الرقم مع مفتاح الدولة"}</p>
         </div>
       )}
       <AccessEditor access={access} setAccess={setAccess} password={password} setPassword={setPassword} hasLogin={member.hasLogin} idPrefix={member.key} />
@@ -192,8 +194,9 @@ function AddEmployee({ onNotice }: { onNotice: (notice: Notice) => void }) {
           </div>
           <div>
             <label htmlFor="new-staff-phone" className="mb-1.5 block text-xs font-semibold text-[#5B4336]">رقم الجوال</label>
-            <input id="new-staff-phone" required inputMode="tel" dir="ltr" value={phone} onChange={event => setPhone(event.target.value)} placeholder="05XXXXXXXX"
+            <input id="new-staff-phone" required type="tel" inputMode="tel" dir="ltr" maxLength={30} value={phone} onChange={event => setPhone(event.target.value)} placeholder="05XXXXXXXX" aria-describedby="new-staff-phone-country"
               className="h-11 w-full rounded-xl border border-[#E4D6C6] bg-white px-3 text-right text-sm outline-none focus:border-[#B0894A]" />
+            <p id="new-staff-phone-country" className="mt-1 text-xs text-[#806A5E]" role="status">{inferPhoneCountry(phone) ? `دولة الرقم ${getBrandCountry(inferPhoneCountry(phone)!).name}` : "الرقم المحلي يتبع دولة الحساب أو أدخل الرقم مع مفتاح الدولة"}</p>
           </div>
         </div>
         <AccessEditor access={access} setAccess={setAccess} password={password} setPassword={setPassword} hasLogin={false} idPrefix="new-staff" />

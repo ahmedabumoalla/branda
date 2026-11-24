@@ -1,4 +1,4 @@
-import type { BrandPhoneCountry } from "../auth/brand-phone";
+import { getBrandCountry, normalizeBrandPhone, type BrandPhoneCountry } from "../auth/brand-phone";
 import type { LoyaltyReadOperation } from "./read-operation-types";
 import { parseBarndaksaQrPayload } from "./secure-qr-payload";
 import { normalizeLoyaltyDigits, resolveReadMethod } from "./read-identifier";
@@ -98,7 +98,13 @@ export function createReadOutbox(options: {
     if (!clean || clean.length > (method === "phone" ? 30 : 500)) throw new Error("invalid_identifier");
     const digits = normalizeLoyaltyDigits(clean);
     let canonical = method === "code" ? parseBarndaksaQrPayload(digits, "loyalty-card") ?? digits.toUpperCase() : digits.replace(/\D/g, "");
-    if (method === "phone") canonical = canonical.replace(options.phoneCountry === "PS" ? /^(?:00970|970|0)/ : /^(?:00966|966|0)/, "");
+    if (method === "phone") {
+      const country = options.phoneCountry ?? "SA";
+      const rule = getBrandCountry(country);
+      const phone = normalizeBrandPhone(clean, country);
+      // Retain the national-number fingerprint used by existing Saudi/Palestinian queues
+      canonical = phone ? phone.slice(rule.callingCode.length) : canonical.replace(new RegExp(`^(?:00${rule.callingCode}|${rule.callingCode}${rule.prefix ? "|" + rule.prefix : ""})`), "");
+    }
     const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${key}:${method}:${canonical}`));
     const identifierKey = Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join("");
     const row: LocalRead = { requestId: uuid(), scope: key, method, value: clean, identifierKey, identifierHint: `••••${canonical.slice(-4)}`, createdAt: new Date(now()).toISOString(), attempts: 0, nextAttemptAt: 0, leaseUntil: 0 };

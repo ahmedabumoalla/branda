@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getBrandCountry, inferPhoneCountry } from "@/lib/auth/brand-phone";
 
 // Loyalty points: one balance per customer phone across all branches, spent as a discount on a cashier sale.
 export const pointsSettingsSchema = z.object({
@@ -12,7 +13,7 @@ export const pointsSettingsSchema = z.object({
 });
 export type PointsSettings = z.infer<typeof pointsSettingsSchema>;
 export const pointsAdjustSchema = z.object({
-  phone: z.string().trim().min(9).max(25), points: z.number().int().refine(value => value !== 0 && Math.abs(value) <= 1000000, "عدد النقاط يجب ألا يكون صفرًا"),
+  phone: z.string().trim().min(7).max(25), points: z.number().int().refine(value => value !== 0 && Math.abs(value) <= 1000000, "عدد النقاط يجب ألا يكون صفرًا"),
   note: z.string().trim().min(5, "اكتب سبب التعديل بوضوح").max(500), branchId: z.uuid().nullable().optional(),
 });
 
@@ -30,7 +31,12 @@ export type PointsSnapshot = {
   customer: { phone: string; balance: number } | null; ledger: PointsEntry[];
 };
 export const pointsKindLabels = { earn: "اكتساب", redeem: "استبدال", reverse: "تسوية مرتجع", adjust: "تعديل إداري" } as const;
-export const localPhone = (phone: string) => /^(?:966|970)/.test(phone) ? `0${phone.slice(3)}` : phone;
+export const localPhone = (phone: string) => {
+  const country = inferPhoneCountry(phone);
+  if (!country) return phone;
+  const rule = getBrandCountry(country);
+  return `${rule.prefix ?? ""}${phone.replace(/^(?:\+|00)/, "").slice(rule.callingCode.length)}`;
+};
 
 const round = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 export const pointsDiscount = (points: number, info: PointsBalance) => info.enabled && points > 0 ? round(points * (info.pointValue ?? 0)) : 0;

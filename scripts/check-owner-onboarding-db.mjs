@@ -174,5 +174,19 @@ try {
   check((await begin(83,'966599887773',{...draft,email:null,slug:'invalid-choice',planChoice:'finance'},'6'.repeat(64))).ok,'service fixture staged');
   await q('SELECT public.mark_owner_onboarding_sent($1,$2,true)',[id(83),proof]);await verify(83);
   await assert.rejects(()=>create(183,83,null,'966599887773'),/Invalid signup plan choice/);checks++;
+  // Match the live loyalty package; earlier legacy-policy fixtures omit its features
+  await q("UPDATE platform_plans SET features='[\"loyalty\"]'::jsonb WHERE id='pro'");
+  const beforePackages = (await q('SELECT * FROM subscriptions ORDER BY cafe_id NULLS FIRST')).rows;
+  await db.exec(await readFile('supabase/migrations/20261124105436_self_signup_loyalty_package.sql','utf8'));
+  assert.deepEqual((await q('SELECT * FROM subscriptions ORDER BY cafe_id NULLS FIRST')).rows,beforePackages);checks++;
+  for (const [i,choice] of [[0,undefined],[1,'loyalty'],[2,'menu_loyalty']]) {
+    const challenge=300+i, phone='96659988788'+i;
+    check((await begin(challenge,phone,{...draft,email:null,slug:'loyalty-default-'+i,...(choice ? {planChoice:choice} : {})},String(i+6).repeat(64))).ok,'new or older form registration accepted');
+    await q('SELECT public.mark_owner_onboarding_sent($1,$2,true)',[id(challenge),proof]);await verify(challenge);
+    await create(challenge+100,challenge,null,phone);
+    check(await v("SELECT s.plan_id='pro' AND s.status='trialing' AND s.amount_sar=0 AND s.expires_at-s.started_at=interval '30 days' FROM subscriptions s JOIN cafes c ON c.id=s.cafe_id WHERE c.owner_user_id=$1",[id(challenge+100)]),'self signup receives loyalty with existing free period');
+  }
+  await assert.rejects(()=>create(183,83,null,'966599887773'),/Invalid signup plan choice/);checks++;
+  check(!await v("SELECT has_function_privilege('anon','public.handle_new_user()','EXECUTE') OR has_function_privilege('authenticated','public.handle_new_user()','EXECUTE') OR has_function_privilege('service_role','public.handle_new_user()','EXECUTE')"),'auth trigger remains private');
   console.log(`PASS owner onboarding SQL: ${checks} real PostgreSQL checks; no provider or production mutation.`);
 } finally { await db.close(); }

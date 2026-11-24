@@ -132,10 +132,10 @@ try {
   const auth = { user: { id: id(1) }, profile: { role: "platform_admin", status: "active" }, result: period };
   const client = {
     auth: { getUser: async () => ({ data: { user: auth.user }, error: null }) },
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: auth.profile, error: null }) }) }) }),
+    from: table => ({ select: () => table === "cafes" ? { in: async (_column,ids) => ({data:ids.map(id=>({id,phone_country:"SA"})),error:null}) } : ({ eq: () => ({ maybeSingle: async () => ({ data: auth.profile, error: null }) }) }) }),
     rpc: async (name, args) => { rpcCalls++; return { data: name === "get_admin_operations_access_report" ? await accessReport(args.p_from,args.p_to) : name === "get_admin_marketing_campaign_report" ? { from: args.p_from, to: args.p_to, metrics: [], history: null } : auth.result, error: null }; },
   };
-  for (const file of ["lib/platform/feature-registry.ts", "lib/platform/feature-access.ts", "lib/analytics/marketing-report.ts", "lib/analytics/operations-report.ts", "lib/data/marketing-report.ts", "lib/data/operations-report.ts", "app/actions/operations-report.ts"]) {
+  for (const file of ["lib/auth/input-digits.ts", "lib/auth/arab-phone-rules.ts", "lib/auth/brand-phone.ts", "lib/admin/brand-country-filter.ts", "lib/data/admin-brand-countries.ts", "lib/platform/feature-registry.ts", "lib/platform/feature-access.ts", "lib/analytics/marketing-report.ts", "lib/analytics/operations-report.ts", "lib/data/marketing-report.ts", "lib/data/operations-report.ts", "app/actions/operations-report.ts"]) {
     const exports = {};
     const requireMock = name => name === "server-only" ? {} : name === "@/lib/supabase/server" ? { createClient: async () => client }
       : name.startsWith("@/") ? modules.get(name.slice(2)) : realRequire(name);

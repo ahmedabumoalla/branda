@@ -1,6 +1,6 @@
 "use client";
 
-import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { normalizeInternationalPhone, ARAB_COUNTRIES, getBrandCountry, inferPhoneCountry, isBrandPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -25,6 +25,8 @@ export function SalesCashierLogin({ slug, phoneCountry }: { slug?: string; phone
   const router = useRouter();
   const busyRef = useRef(false);
   const [country, setCountry] = useState<BrandPhoneCountry>(phoneCountry ?? "SA");
+  const [phoneInput, setPhoneInput] = useState("");
+  const detectedCountry = inferPhoneCountry(phoneInput);
   const [busy, setBusy] = useState(false);
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState("");
@@ -38,7 +40,7 @@ export function SalesCashierLogin({ slug, phoneCountry }: { slug?: string; phone
     const form = event.currentTarget, fields = new FormData(form);
     busyRef.current = true; setBusy(true); setError("");
     try {
-      const phone = otpPhone || normalizeBrandPhone(String(fields.get("phone") ?? ""), country);
+      const phone = otpPhone || normalizeInternationalPhone(String(fields.get("phone") ?? ""), country);
       if (!phone) { setError("أدخل رقم جوال صحيحًا"); return; }
       if (mode !== "password" && !otpPhone) {
         const requested = await requestSalesCashierOtpAction(phone);
@@ -87,8 +89,8 @@ export function SalesCashierLogin({ slug, phoneCountry }: { slug?: string; phone
       <h1 id="sales-login-title" className={styles.heading}>{t(mode === "reset" ? "تعيين كلمة مرور الكاشير" : "دخول كاشير المبيعات")}</h1>
       {!brands.length && <div className={styles.loginModes} role="group" aria-label={t("طريقة دخول كاشير المبيعات")}>{([['password', 'كلمة المرور'], ['otp', 'رمز واتساب']] as const).map(([value, label]) => <button type="button" key={value} aria-pressed={mode === value} disabled={busy} onClick={() => { setMode(value); setOtpPhone(""); setVisible(false); setNotice(""); setError(""); }}>{t(label)}</button>)}</div>}
       {brands.length ? <div className={styles.accessChoices}><p className={styles.hint}>{t("اختر العلامة لبدء العمل")}</p>{brands.map(brand => <Link className={styles.accessChoice} key={brand.slug} href={salesCashierBrandDestination(brand.slug, { brands: [brand] }) ?? `/finance/${encodeURIComponent(brand.slug)}/pos`}><strong>{brand.name}</strong><ArrowUpLeft aria-hidden="true" /></Link>)}</div> : <form className={styles.form} onSubmit={submit} aria-busy={busy}>
-        {!slug && <label>{t("دولة رقم الجوال")}<select value={country} onChange={event => setCountry(event.target.value === "PS" ? "PS" : "SA")} disabled={busy || Boolean(otpPhone)}><option value="SA">{t("السعودية")} (+966)</option><option value="PS">{t("فلسطين")} (+970)</option></select></label>}
-        <label>{t("رقم الجوال")}<input name="phone" type="tel" inputMode="tel" autoComplete="username" required maxLength={30} dir="ltr" placeholder={country === "PS" ? "059xxxxxxx" : "05xxxxxxxx"} disabled={busy} readOnly={Boolean(otpPhone)} /></label>
+        {!slug && <label>{t("دولة رقم الجوال")}<select value={detectedCountry ?? country} onChange={event => { if (isBrandPhoneCountry(event.target.value)) setCountry(event.target.value); }} disabled={busy || Boolean(otpPhone) || Boolean(detectedCountry)}>{ARAB_COUNTRIES.map(item => <option key={item.code} value={item.code}>{t(item.name)} (+{item.callingCode})</option>)}</select></label>}
+        <label>{t("رقم الجوال")}<input name="phone" type="tel" inputMode="tel" autoComplete="username" required maxLength={30} dir="ltr" placeholder={getBrandCountry(country).placeholder} onChange={event => setPhoneInput(event.target.value)} disabled={busy} readOnly={Boolean(otpPhone)} /></label>
         {mode === "password" && <label>{t("كلمة المرور")}<div className={styles.password}><input name="password" type={visible ? "text" : "password"} autoComplete="current-password" required maxLength={128} dir="ltr" disabled={busy} /><button type="button" disabled={busy} aria-label={t(visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور")} aria-pressed={visible} onClick={() => setVisible(!visible)}>{visible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}</button></div></label>}
         {mode === "password" && <button type="button" className={styles.switchLink} disabled={busy} onClick={() => { setMode("reset"); setOtpPhone(""); setVisible(false); setNotice(""); setError(""); }}>{t("نسيت كلمة المرور أو تريد تعيينها؟")}</button>}
         {mode !== "password" && otpPhone && <label>{t("رمز الدخول")}<input name="code" inputMode="numeric" autoComplete="one-time-code" dir="ltr" required minLength={6} maxLength={6} pattern="[0-9٠-٩۰-۹]{6}" disabled={busy} /></label>}

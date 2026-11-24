@@ -19,7 +19,9 @@ function load(relative, stubs) {
   const exports = {};
   new Function("require", "exports", code)((name) => {
     if (Object.hasOwn(stubs, name)) return stubs[name];
+    if (name === "@/components/admin/pages/pager-brand-customers-page") return { PagerBrandCustomersPage: () => null };
     if (name.endsWith(".module.css")) return new Proxy({}, { get: (_, key) => String(key) });
+    if (name.startsWith("@/")) { const base=name.slice(2); return load(fs.existsSync(path.join(root,`${base}.tsx`)) ? `${base}.tsx` : `${base}.ts`,stubs); }
     return dependency(name);
   }, exports);
   return exports;
@@ -249,7 +251,7 @@ await test("route denies non-admins before fetching the privileged customer list
     "@/lib/data/cafes": { requirePlatformAdmin: async () => { throw new Error("Denied"); } },
     "@/app/actions/brand-customers": { loadBrandCustomersAction: async () => { reads++; return { ok: true, data: fixture() }; } },
   });
-  await assert.rejects(route.default, /Redirect/); assert.equal(reads, 0);
+  await assert.rejects(()=>route.default({searchParams:Promise.resolve({})}), /Redirect/); assert.equal(reads, 0);
   assert.equal(route.dynamic, "force-dynamic"); assert.equal(route.fetchCache, "force-no-store");
 });
 await test("authorized route loads once and returns real server data", async () => {
@@ -260,7 +262,7 @@ await test("authorized route loads once and returns real server data", async () 
     "@/lib/data/cafes": { requirePlatformAdmin: async () => ({ id: "fixture-admin" }) },
     "@/app/actions/brand-customers": { loadBrandCustomersAction: async () => { reads++; return { ok: true, data: fixture() }; } },
   });
-  const element = await route.default(); assert.equal(reads, 1); assert.deepEqual(element.props.initialResult.data, fixture());
+  const element = await route.default({searchParams:Promise.resolve({})}); assert.equal(reads, 1); assert.deepEqual(element.props.initialResult.data, fixture());
 });
 await test("CSS keeps mobile data labels, target sizes, focus indication, motion opt-out and readable colors", () => {
   const css = dependency("postcss").parse(fs.readFileSync(path.join(root, "components/admin/pages/brand-customers.module.css"), "utf8"));

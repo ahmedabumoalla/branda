@@ -1,3 +1,4 @@
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import { z } from "zod";
 import { analyticsCouponConfigSchema } from "@/lib/analytics/analytics-coupons";
 
@@ -28,7 +29,7 @@ export const brandAnalyticsCampaignAudienceSchema = z.object({
   generatedAt: timestamp, brandId: z.uuid(), segment: brandAnalyticsCampaignSegmentSchema,
   inactiveDays: z.number().int().min(1).max(365), matched: count, total: count, excluded: count,
   digest: z.string().regex(/^[a-f0-9]{64}$/),
-  items: z.array(z.object({ id: z.uuid(), name: z.string(), phone: z.string().regex(/^(?:9665\d{8}|9705[69]\d{7})$/),
+  items: z.array(z.object({ id: z.uuid(), name: z.string(), phone: z.string().regex(canonicalBrandMobile),
     lastVisitAt: timestamp.nullable(), inactiveDays: z.number().nonnegative(), visitDays: count,
     averageVisitGapDays: z.number().nonnegative().nullable() })).max(25),
   page: z.number().int().positive(), pageSize: z.literal(25),

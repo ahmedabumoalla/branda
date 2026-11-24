@@ -38,6 +38,7 @@ export const integratedSystemGroups: SystemGroup[] = [
   { id: "customers", label: "العملاء", icon: Users, items: [{ label: "إدارة العملاء", href: "/dashboard/system/customers" }, { label: "إضافة عميل", href: "/dashboard/system/customers/new" }, { label: "المواعيد", href: "/dashboard/system/customers/appointments" }, { label: "قائمة الاتصال", href: "/dashboard/system/customers/contacts" }, { label: "إدارة علاقات العملاء", href: "/dashboard/system/customers/crm" }, { label: "إعدادات العملاء", href: "/dashboard/system/customers/settings" }, { label: "العملاء والموردون", section: "parties" }] },
   { id: "credits", label: "النقاط والأرصدة", icon: Coins, items: [{ label: "إدارة شحن الأرصدة", href: "/dashboard/system/credits/charges" }, { label: "إدارة استهلاك الأرصدة", href: "/dashboard/system/credits/usages" }, { label: "إدارة الباقات", href: "/dashboard/system/credits/packages" }, { label: "أنواع الرصيد", href: "/dashboard/system/credits/types" }] },
   { id: "loyalty", label: "الولاء", icon: Star, items: [
+    { label: "دليل نظام الولاء", href: "/dashboard/loyalty/guide", feature: "loyalty" },
     { label: "إدارة المكافآت", href: "/dashboard/loyalty", feature: "loyalty" },
     { label: "هوية الفروع", href: "/dashboard/loyalty/branches", feature: "branches" },
     { label: "إدارة الكاشير", href: "/dashboard/cashier", feature: "cashier" },
@@ -46,7 +47,6 @@ export const integratedSystemGroups: SystemGroup[] = [
     { label: "سجل عمليات الكاشير", href: "/dashboard/read-operations", feature: "loyalty" },
     { label: "إدارة رسائل الولاء", href: "/dashboard/loyalty/messages", feature: "loyalty" },
     { label: "إعدادات الولاء", href: "/dashboard/loyalty/settings", feature: "loyalty", financeOnly: true },
-    { label: "دليل نظام الولاء", href: "/dashboard/loyalty/guide", feature: "loyalty" },
   ] },
   { id: "memberships", label: "العضويات", icon: BadgeCheck, items: [{ label: "إدارة العضويات", href: "/dashboard/system/memberships" }, { label: "إدارة الاشتراكات", href: "/dashboard/system/memberships/renewals" }, { label: "سياسة العضويات", href: "/dashboard/system/memberships/policy" }] },
   { id: "inventory", label: "المخزون", icon: Boxes, items: [{ label: "المنتجات والخدمات", href: "/dashboard/system/inventory/items" }, { label: "المستودعات", href: "/dashboard/system/inventory/warehouses" }, { label: "جرد المخزون", href: "/dashboard/system/inventory/stocktaking" }, { label: "إعدادات المخزون والمنتجات", href: "/dashboard/system/inventory/settings" }] },

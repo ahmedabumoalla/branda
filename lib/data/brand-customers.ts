@@ -15,7 +15,8 @@ async function requireActivePlatformAdmin() {
 export async function getAdminBrandCustomers(input: BrandCustomerFilters = {}): Promise<BrandCustomersPage> {
   const supabase = await requireActivePlatformAdmin();
   const filters = parseBrandCustomerFilters(input);
-  const { data, error } = await supabase.rpc("get_admin_brand_customers", {
+  const { data, error } = await supabase.rpc("get_admin_brand_customers_by_country", {
+    p_country: filters.country || null,
     p_search: filters.search, p_brand_id: filters.brandId || null, p_segment: filters.segment,
     p_sort: filters.sort, p_page: filters.page, p_page_size: 25,
   });

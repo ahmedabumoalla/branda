@@ -24,6 +24,7 @@ function load(file, stubs = {}, modules = cache) {
 const api = load(path.resolve("lib/analytics/operations-report.ts"));
 const { OperationsReportPage } = load(path.resolve("components/admin/pages/operations-report-page.tsx"));
 const { defaultReportFilters: defaults, filterReportBrands: filter, reportMetrics, reportPeriodSchema } = api;
+const { ARAB_COUNTRIES } = load(path.resolve("lib/auth/brand-phone.ts"));
 const brands = Array.from({ length: 31 }, (_, index) => ({ id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`, name: index === 0 ? "مَقْهَى ألوان" : `Brand ${String(index).padStart(2, "0")}`, slug: `brand-${index}`, status: "active", subscriptionStatus: index % 2 ? "expired" : "active", planName: "Pro", subscribed: index % 2 === 0, expiresAt: null, features: index % 2 ? ["menu"] : ["loyalty", "menu"], lastStorefrontVisit: null, lastMenuVisit: null, periodLastStorefrontVisit: null, periodLastMenuVisit: null, metrics: Object.fromEntries(reportMetrics.map(metric => [metric, index])) }));
 assert.equal(filter(brands, { ...defaults, query: "مقهي الوان" })[0].id, brands[0].id);
 assert.equal(filter(brands, { ...defaults, query: "brand Pro", subscription: "subscribed", feature: "loyalty", conditions: [{ metric: "pagerUses", operator: "gte", value: 10 }, { metric: "loyaltyCards", operator: "lte", value: 16 }] }).length, 4);
@@ -32,6 +33,12 @@ assert.equal(filter(brands, { ...defaults, sort: "appleCards", direction: "desc"
 assert.equal(filter(brands, { ...defaults, conditions: [{ metric: "rewardOperations", operator: "eq", value: 21 }] })[0].id, brands[21].id);
 assert.equal(filter(brands, { ...defaults, query: "<script>" }).length, 0);
 assert.equal(api.totalReportMetrics(brands).loyaltyCards, 465);
+for (const country of ARAB_COUNTRIES) {
+  const international = brands.map((brand,index) => ({ ...brand, phoneCountry: index % 2 ? country.code : "SA" }));
+  assert.equal(filter(international,{...defaults,country:country.code}).length,country.code === "SA" ? 31 : 15);
+}
+assert.equal(filter(brands,{...defaults,country:"SA"}).length,31);
+assert.equal(filter(brands,{...defaults,country:"EG"}).length,0);
 assert.equal(reportPeriodSchema.safeParse({ from: "2026-02-30", to: "" }).success, false);
 assert.equal(reportPeriodSchema.safeParse({ from: "2026-10-10", to: "2026-10-09" }).success, false);
 assert.equal(reportPeriodSchema.safeParse({ from: "2026-10-09", to: "2026-10-09" }).success, true);

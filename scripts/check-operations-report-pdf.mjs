@@ -49,7 +49,8 @@ assert.ok(content.filterRows.some(row => row[0] === injection));
 assert.ok(content.filterRows.some(row => row[0] === "المنيو المستقل"));
 assert.ok(content.filterRows.some(row => row[0] === "المشتركة فقط"));
 assert.ok(content.filterRows.some(row => row[1] === reportMetricLabels.loyaltyCards && row[0].includes("أكبر من أو يساوي")));
-assert.match(content.filterRows[0][0], /١٠|10/); // UTC date is October 9; Riyadh is October 10.
+assert.match(content.filterRows.find(row => row[1].startsWith("وقت إعداد البيانات"))[0], /١٠|10/); // UTC date is October 9; Riyadh is October 10.
+assert.ok(content.filterRows.some(row => row[1] === "دولة العلامة" && row[0] === "كل الدول"));
 assert.equal(content.brands[0].visits.length, 2);
 assert.match(content.brands[0].visits[0][0], /لا توجد/);
 assert.ok(content.notes.some(note => note.includes("لا تثبت حفظ")));

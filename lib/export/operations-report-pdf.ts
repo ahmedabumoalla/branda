@@ -5,6 +5,7 @@ import {
   type OperationsReport, type ReportBrand, type ReportFilters,
 } from "@/lib/analytics/operations-report";
 import { getPlatformFeatureDefinition } from "@/lib/platform/feature-registry";
+import { brandCountryName } from "@/lib/admin/brand-country-label";
 
 type ReportFonts = { regular: string; bold: string };
 type ReportRow = [string, string];
@@ -26,6 +27,7 @@ export function buildOperationsReportContent(report: OperationsReport, brands: R
   const sortLabel = filters.sort === "name" ? "اسم العلامة" : filters.sort === "lastMenuVisit" ? "آخر زيارة للمنيو"
     : reportMetricLabels[filters.sort];
   const filterRows: ReportRow[] = [
+    [filters.country ? brandCountryName(filters.country) : "كل الدول", "دولة العلامة"],
     [saudiDate(report.generatedAt), "وقت إعداد البيانات — بتوقيت الرياض"],
     [`${report.from ?? "بداية السجل"} — ${report.to ?? "نهاية السجل"}`, "الفترة — أيام شاملة بتوقيت الرياض"],
     [number(brands.length), "عدد العلامات المطابقة"],

@@ -36,8 +36,8 @@ let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks++; };
 const rejects = async (operation) => { await assert.rejects(operation); checks++; };
 const validation = load("lib/admin/brand-customer-validation.ts");
-assert.deepEqual(validation.parseBrandCustomerFilters({}), { search: "", brandId: "", segment: "all", sort: "recent", page: 1 }); checks++;
-for (const invalid of [{ search: "x".repeat(101) }, { brandId: "not-a-uuid" }, { segment: "staff" }, { page: 0 }, { page: 1.1 }, { sort: "name" }]) {
+assert.deepEqual(validation.parseBrandCustomerFilters({}), { country: "", search: "", brandId: "", segment: "all", sort: "recent", page: 1 }); checks++;
+for (const invalid of [{ country: "ZZ" }, { search: "x".repeat(101) }, { brandId: "not-a-uuid" }, { segment: "staff" }, { page: 0 }, { page: 1.1 }, { sort: "name" }]) {
   assert.throws(() => validation.parseBrandCustomerFilters(invalid)); checks++;
 }
 const sensitive = fixture();
@@ -78,7 +78,7 @@ profileError = new Error("profile-down"); await rejects(() => data.getAdminBrand
 check(rpcCalls.length === 0, "all unauthorized requests denied before customer SQL");
 const result = await data.getAdminBrandCustomers({ brandId: id, search: "  customer  ", segment: "shared", sort: "stamps", page: 2 });
 check(result.customers.length === 1, "active admin data load");
-assert.deepEqual(rpcCalls[0], { name: "get_admin_brand_customers", args: { p_search: "customer", p_brand_id: id, p_segment: "shared", p_sort: "stamps", p_page: 2, p_page_size: 25 } }); checks++;
+assert.deepEqual(rpcCalls[0], { name: "get_admin_brand_customers_by_country", args: { p_country: null, p_search: "customer", p_brand_id: id, p_segment: "shared", p_sort: "stamps", p_page: 2, p_page_size: 25 } }); checks++;
 payload = { customer: fixture().customers[0], memberships: fixture().customers, events: [], total: 0, page: 1, pageSize: 25 };
 await data.getAdminBrandCustomerDetail(id, 2);
 check(rpcCalls[1].args.p_customer_id === id && rpcCalls[1].args.p_page === 2, "detail uses validated profile identifier");

@@ -126,7 +126,7 @@ const profileInput = { cafeId: cafe, brandName: "Brand", brandNameEn: "", slug: 
   const fields = renderFields();
   const country = fields.find(n => n.props.name === "phoneCountry");
   assert.equal(country.props.value, "SA");
-  assert.deepEqual(country.props.children.map(o => o.props.value), ["SA","PS"]);
+  assert.deepEqual(country.props.children.map(o => o.props.value), load("lib/auth/brand-phone.ts").ARAB_COUNTRIES.map(item => item.code));
   country.props.onChange({target: {value: "PS"}});
   fields.find(n => n.props.name === "planIds").props.onChange({target: {checked: true}});
   const FormData = global.FormData;
@@ -152,6 +152,14 @@ const profileInput = { cafeId: cafe, brandName: "Brand", brandNameEn: "", slug: 
   assert.equal(calls.at(-1).p_fingerprint, JSON.stringify(draft));
   await assert.rejects(() => onboarding.createAdminBrandAccount({...draft,phoneCountry:"XX"}));
   checks++;
+  for (const country of load("lib/auth/brand-phone.ts").ARAB_COUNTRIES) {
+    await onboarding.createAdminBrandAccount({...draft,phoneCountry:country.code,phone:country.placeholder});
+    assert.equal(calls.at(-1).p_draft.phoneCountry,country.code);
+    assert.equal(calls.at(-1).p_draft.phone,`${country.callingCode}${country.example}`);
+    await onboarding.createAdminBrandAccount({...draft,phone:`+${country.callingCode}${country.example}`});
+    assert.equal(calls.at(-1).p_draft.phoneCountry,country.code);
+    checks++;
+  }
   // New account: the picked packages are required, verified before anything is created and applied afterwards
   for (const planIds of [[], ["Bad Id"]]) { const c = account(); await assert.rejects(() => c.api.createAdminBrandAccountWithPlans({ ...draft, planIds }), /اختر باقة واحدة/); assert.equal(c.created.length, 0); checks++; }
   { const c = account({ activePlans: ["menu"] }); await assert.rejects(() => c.api.createAdminBrandAccountWithPlans({ ...draft, planIds: ["menu", "retired"] }), /لم تعد متاحة/); assert.equal(c.created.length, 0); checks++; }

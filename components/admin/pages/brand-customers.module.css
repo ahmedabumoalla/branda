@@ -45,7 +45,7 @@
 .customerSection[aria-current="page"] { background: var(--gold); border-color: var(--gold); color: var(--bg); }
 .brandLink { display: block; text-decoration: none; }
 .brandLink:hover { border-color: var(--gold); background: var(--raised); }
-.filters { display: grid; grid-template-columns: minmax(180px, 2fr) minmax(140px,1fr) minmax(140px,1fr) auto; gap: 12px; align-items: end; margin-bottom: 20px; }
+.filters { display: grid; grid-template-columns: minmax(140px,1fr) minmax(180px,2fr) minmax(140px,1fr) minmax(140px,1fr) auto; gap: 12px; align-items: end; margin-bottom: 20px; }
 .pagerFilters { grid-template-columns: minmax(0,1fr) auto auto; }
 .periodBar { padding: 16px; margin: 0 0 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
 .periodHeading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 13px; font-weight: 700; }

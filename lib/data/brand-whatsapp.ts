@@ -1,3 +1,4 @@
+import { ARAB_COUNTRIES, canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import "server-only";
 import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 import { z } from "zod";
@@ -67,10 +68,9 @@ async function dashboard(context: Context): Promise<BrandWhatsAppDashboard> {
 export async function getBrandWhatsAppDashboard() { return dashboard(await requireBrandWhatsAppContext()); }
 
 export async function runBrandWhatsAppAction(raw: unknown): Promise<BrandWhatsAppResult> {
-  const candidates = { SA: actionSchema("SA").safeParse(raw), PS: actionSchema("PS").safeParse(raw) };
-  if (!candidates.SA.success && !candidates.PS.success) throw new BrandWhatsAppError("راجع الطلب وأدخل رقم جوال صحيح لدولة الحساب");
+  if (!ARAB_COUNTRIES.some(country => actionSchema(country.code).safeParse(raw).success)) throw new BrandWhatsAppError("راجع الطلب وأدخل رقم جوال صحيح لدولة الحساب");
   const context = await requireBrandWhatsAppContext();
-  const input = candidates[context.phoneCountry];
+  const input = actionSchema(context.phoneCountry).safeParse(raw);
   if (!input.success) throw new BrandWhatsAppError("راجع الطلب وأدخل رقم جوال صحيح لدولة الحساب");
   if (!marketingConfigured()) throw new BrandWhatsAppError("خدمة الربط غير متاحة حاليًا حاول لاحقًا", 503);
   if (input.data.action === "connect") {
@@ -98,7 +98,7 @@ export async function getBrandCustomerWhatsAppCredentials(cafeId: string | null 
     const { data: cafe, error } = await db.from("cafes").select("id,status").eq("id", cafeId).is("deleted_at", null).maybeSingle();
     if (error || !cafe || !["active", "published"].includes(cafe.status)) return null;
     const row = await readMarketingConnection({ db, cafeId });
-    if (!row?.transactional_requested_at || row.status !== "connected" || !/^(?:9665\d{8}|9705[69]\d{7})$/.test(row.requested_phone)
+    if (!row?.transactional_requested_at || row.status !== "connected" || !canonicalBrandMobile.test(row.requested_phone)
       || row.requested_phone !== row.verified_phone || !row.instance_id || !row.encrypted_credentials) return null;
     return { ...marketingConnectionCredentials(row), expectedPhone: row.requested_phone, generation: row.generation };
   } catch { return null; }

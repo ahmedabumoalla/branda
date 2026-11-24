@@ -3,6 +3,8 @@ import "server-only";
 import { z } from "zod";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
 import { createClient } from "@/lib/supabase/server";
+import { brandCountryFilterSchema } from "@/lib/admin/brand-country-filter";
+import { getAdminBrandCountries } from "@/lib/data/admin-brand-countries";
 
 const timestamp = z.string().datetime({ offset: true });
 const rowSchema = z.object({
@@ -30,8 +32,9 @@ const rowSchema = z.object({
 export type BrandContactRow = z.infer<typeof rowSchema>;
 export type BrandContactReport = { rows: BrandContactRow[]; exportedAt: string };
 
-export async function getBrandContactReport(): Promise<BrandContactReport> {
+export async function getBrandContactReport(countryInput = ""): Promise<BrandContactReport> {
   await requirePlatformAdmin();
+  const country = brandCountryFilterSchema.parse(countryInput);
   const client = await createClient();
   const exportedAt = new Date().toISOString();
   const rows: BrandContactRow[] = [];
@@ -45,7 +48,11 @@ export async function getBrandContactReport(): Promise<BrandContactReport> {
     if (result.error?.code === "PGRST202") throw new Error("Brand contact report not installed");
     if (result.error) throw new Error("Unable to read brand contact report");
     const batch = z.array(rowSchema).parse(result.data);
-    if (!batch.length) return { exportedAt, rows };
+    if (!batch.length) {
+      if (!country) return { exportedAt, rows };
+      const countries = await getAdminBrandCountries(client, rows.map(row => row.brand_id));
+      return { exportedAt, rows: rows.filter(row => countries.get(row.brand_id) === country) };
+    }
     for (const row of batch) {
       if (cursor !== null && row.brand_id <= cursor) throw new Error("Brand report pagination did not advance");
       rows.push(row);

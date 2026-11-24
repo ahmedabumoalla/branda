@@ -38,6 +38,7 @@ export type PlatformPlan = {
 };
 
 export type PlatformCafe = {
+  phoneCountry?: import("@/lib/auth/brand-phone").BrandPhoneCountry;
   id: string;
   slug: string;
   name: string;

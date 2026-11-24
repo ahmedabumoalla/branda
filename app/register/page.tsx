@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { Eye, EyeOff, ArrowLeft, Check, ShieldCheck, Store, UserRound, Sparkles, LoaderCircle, TicketPercent } from "lucide-react";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { registerCafeOwnerAction, requestOwnerRegistrationOtpAction, verifyOwnerRegistrationOtpAction } from "@/app/actions/auth";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import styles from "./register.module.css";
 import { normalizeInputDigits } from "@/lib/auth/input-digits";
 
-import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { normalizeBrandPhone, ARAB_COUNTRIES, getBrandCountry, inferPhoneCountry, isBrandPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 
 const steps = ["بيانات العلامة", "تحقق واتساب", "كلمة المرور"];
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -17,9 +17,9 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 export default function RegisterPage() {
   const [step, setStep] = useState(0);
-  const [planChoice, setPlanChoice] = useState<"loyalty" | "menu_loyalty">("menu_loyalty");
   const [draft, setDraft] = useState({ brandNameAr: "", brandNameEn: "", ownerName: "", email: "", phone: "", couponCode: "" });
   const [accountCountry, setAccountCountry] = useState<BrandPhoneCountry>("SA");
+  const countryChosen = useRef(false);
   const normalizedPhone = normalizeBrandPhone(draft.phone, accountCountry);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +32,7 @@ export default function RegisterPage() {
   const update = (field: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [field]: value }));
   async function sendCode() {
     if (!normalizedPhone) { setMessage("تحقق من رقم الجوال ومفتاح الدولة"); return; }
-    const result = await requestOwnerRegistrationOtpAction({ ...draft, phone: normalizedPhone, accountCountry, planChoice });
+    const result = await requestOwnerRegistrationOtpAction({ ...draft, phone: normalizedPhone, accountCountry, planChoice: "loyalty" });
     setMessage(result.message);
     if (result.retryAfterSeconds) setResendAt(Date.now() + result.retryAfterSeconds * 1000);
     if (result.ok) { setCode(""); setStep(1); }
@@ -84,28 +84,24 @@ export default function RegisterPage() {
         <div className={styles.topline}><Link href="/" aria-label="برندة الرئيسية"><BarndaksaLogo variant="brown" width={100} height={42} /></Link><span>لديك حساب؟ <Link href="/login">تسجيل الدخول <ArrowLeft size={15} aria-hidden="true" /></Link></span></div>
         <div className={styles.formCard}>
         <ol className={styles.steps} aria-label="خطوات التسجيل">{steps.map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={step >= index ? styles.current : ""}><span>{step > index ? <Check size={16} aria-hidden="true" /> : index + 1}</span><b>{label}</b></li>)}</ol>
-        <header className={styles.heading}><span className={styles.kicker}>خطوتك الأولى مع برندة</span><h2>{step === 0 ? "أهلًا بعلامتك" : step === 1 ? "رسالة واحدة ونكمل" : "باقي خطوة وتبدأ"}</h2><p>{step === 0 ? "اختر خدماتك وعرّفنا بعلامتك لتبدأ تجربتك" : step === 1 ? `أرسلنا رمز التحقق إلى واتساب +${normalizedPhone} أدخله لإكمال التسجيل` : "احمِ حسابك بكلمة مرور ثم انتقل إلى لوحة تحكم علامتك"}</p></header>
-        <div className={styles.trial}><span className={styles.trialIcon}><Sparkles size={21} aria-hidden="true" /></span><div><b>{planChoice === "loyalty" ? "باقة الولاء" : "باقة الولاء والمنيو التجريبية"}</b><span>شهر مجاني يبدأ بعد إنشاء الحساب بدون بطاقة دفع</span></div><span className={styles.free}>٣٠ يومًا</span></div>
+        <header className={styles.heading}><span className={styles.kicker}>خطوتك الأولى مع برندة</span><h2>{step === 0 ? "أهلًا بعلامتك" : step === 1 ? "رسالة واحدة ونكمل" : "باقي خطوة وتبدأ"}</h2><p>{step === 0 ? "عرّفنا بعلامتك لتبدأ مع باقة الولاء" : step === 1 ? `أرسلنا رمز التحقق إلى واتساب +${normalizedPhone} أدخله لإكمال التسجيل` : "احمِ حسابك بكلمة مرور ثم انتقل إلى لوحة تحكم علامتك"}</p></header>
+        <div className={styles.trial}><span className={styles.trialIcon}><Sparkles size={21} aria-hidden="true" /></span><div><b>باقة ولاء برندة</b><span>شهر مجاني يبدأ بعد إنشاء الحساب بدون بطاقة دفع</span></div><span className={styles.free}>٣٠ يومًا</span></div>
         {message ? <p className={styles.message} role="status" aria-live="polite">{message}</p> : null}
         <form onSubmit={submit} aria-busy={pending}><fieldset disabled={pending} className={styles.fields}>
           {step === 0 ? <>
-            <fieldset className={styles.planChoices}><legend>اختر خدمات علامتك</legend><div className={styles.planOptions}>
-              <label className={styles.planOption}><input type="radio" name="planChoice" value="loyalty" checked={planChoice === "loyalty"} onChange={() => setPlanChoice("loyalty")} /><span><b>الولاء</b><small>بطاقات الولاء والأختام والمكافآت</small></span></label>
-              <label className={styles.planOption}><input type="radio" name="planChoice" value="menu_loyalty" checked={planChoice === "menu_loyalty"} onChange={() => setPlanChoice("menu_loyalty")} /><span><b>الولاء والمنيو</b><small>الباقة التجريبية الحالية بخدماتها</small></span></label>
-            </div></fieldset>
             <div className={styles.fieldGroup}><h3><Store size={18} aria-hidden="true" /> هوية العلامة</h3>
             <div className={styles.columns}>
               <Field label="اسم العلامة بالعربية"><input placeholder="كما سيظهر لعملائك" value={draft.brandNameAr} onChange={event => update("brandNameAr", event.target.value)} required minLength={2} maxLength={120} autoComplete="organization" /></Field>
               <Field label="اسم العلامة بالإنجليزية"><input placeholder="Your brand name" value={draft.brandNameEn} onChange={event => update("brandNameEn", event.target.value)} required minLength={2} maxLength={120} dir="ltr" /></Field>
             </div>
-            <Field label="دولة الحساب"><select value={accountCountry} onChange={event => setAccountCountry(event.target.value === "PS" ? "PS" : "SA")}><option value="SA">السعودية (+966)</option><option value="PS">فلسطين (+970)</option></select></Field>
+            <Field label="دولة الحساب"><select value={accountCountry} onChange={event => { if (isBrandPhoneCountry(event.target.value)) { countryChosen.current = true; setAccountCountry(event.target.value); } }}>{ARAB_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.name} (+{country.callingCode})</option>)}</select></Field>
             <p className={styles.note}>تُستخدم دولة الحساب لتحديد مفتاح جوال الموظفين والعملاء</p>
             </div>
             <div className={styles.fieldGroup}><h3><UserRound size={18} aria-hidden="true" /> بيانات المسؤول</h3>
             <Field label="اسم المسؤول"><input placeholder="الاسم الكامل" value={draft.ownerName} onChange={event => update("ownerName", event.target.value)} required minLength={2} maxLength={120} autoComplete="name" /></Field>
             <div className={styles.columns}>
               <Field label="البريد الإلكتروني (اختياري)"><input type="email" placeholder="name@example.com" value={draft.email} onChange={event => update("email", event.target.value)} maxLength={254} autoComplete="email" dir="ltr" /></Field>
-              <Field label="رقم الجوال المرتبط بواتساب"><input type="tel" placeholder={accountCountry === "PS" ? "059xxxxxxx" : "05xxxxxxxx"} value={draft.phone} onChange={event => update("phone", event.target.value)} required maxLength={64} autoComplete="tel" dir="ltr" /></Field>
+              <Field label="رقم الجوال المرتبط بواتساب"><input type="tel" placeholder={getBrandCountry(accountCountry).placeholder} value={draft.phone} onChange={event => { update("phone", event.target.value); const detected = inferPhoneCountry(event.target.value); if (!countryChosen.current && detected) setAccountCountry(detected); }} required maxLength={64} autoComplete="tel" dir="ltr" /></Field>
             </div>
             <p className={styles.hint}><ShieldCheck size={15} aria-hidden="true" /> سنرسل رمز التحقق إلى رقم واتساب هذا</p></div>
             <details className={styles.coupon}><summary><TicketPercent size={18} aria-hidden="true" /> لديك كوبون خصم؟ <span>اختياري</span></summary><Field label="كوبون الخصم"><input placeholder="أدخل رمز الكوبون" value={draft.couponCode} onChange={event => update("couponCode", event.target.value)} maxLength={30} dir="ltr" autoCapitalize="characters" /></Field></details>
@@ -118,11 +114,11 @@ export default function RegisterPage() {
             <PasswordField label="تأكيد كلمة المرور" value={confirmPassword} setValue={setConfirmPassword} visible={confirmVisible} toggle={() => setConfirmVisible(value => !value)} />
             <p className={styles.note}>٨ أحرف على الأقل يمكنك لصق كلمة المرور أو استخدام مدير كلمات المرور</p>
           </>}
-          <button className={styles.submit} type="submit">{pending ? "جارٍ إكمال الطلب…" : step === 0 ? "متابعة والتحقق عبر واتساب" : step === 1 ? "تأكيد الرمز والمتابعة" : "إنشاء الحساب وبدء التجربة"}{pending ? <LoaderCircle className={styles.spinner} size={20} aria-hidden="true" /> : <ArrowLeft size={20} aria-hidden="true" />}</button>
+          <button className={styles.submit} type="submit">{pending ? "جارٍ إكمال الطلب…" : step === 0 ? "متابعة والتحقق عبر واتساب" : step === 1 ? "تأكيد الرمز والمتابعة" : "إنشاء الحساب وتفعيل الولاء"}{pending ? <LoaderCircle className={styles.spinner} size={20} aria-hidden="true" /> : <ArrowLeft size={20} aria-hidden="true" />}</button>
           {step === 1 ? <div className={styles.secondary}><button type="button" onClick={resend}>إعادة إرسال الرمز</button><button type="button" onClick={() => { setStep(0); setMessage(""); }}>تعديل البيانات</button></div> : null}
           {step === 2 ? <div className={styles.secondary}><button type="button" onClick={() => { setStep(0); setCode(""); setPassword(""); setConfirmPassword(""); setMessage(""); }}>بدء تحقق جديد أو تعديل البيانات</button></div> : null}
         </fieldset></form>
-        <p className={styles.footer}>تشمل التجربة المنيو والمنتجات وإعدادات العلامة<br />الولاء والعروض متاحة عند الاشتراك في باقة تدعمها</p>
+        <p className={styles.footer}>تتفعّل باقة الولاء تلقائيًا بعد إنشاء الحساب<br />بطاقات الولاء والأختام والمكافآت لعملائك</p>
         </div>
         <p className={styles.bottomNote}>علامتك تستحق تجربة تليق بها</p>
       </div></section>

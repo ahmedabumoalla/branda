@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { brandCountryFilterSchema } from "@/lib/admin/brand-country-filter";
 import { campaignMetricSchema, marketingMetricLabels } from "@/lib/analytics/marketing-report";
 
 export const reportMetricLabels = {
@@ -31,6 +32,7 @@ const date = z.string().refine(value => !value || (/^\d{4}-\d{2}-\d{2}$/.test(va
 export const reportPeriodSchema = z.object({ from: date.default(""), to: date.default("") }).strict()
   .refine(value => !value.from || !value.to || value.from <= value.to, { message: "تاريخ النهاية يجب ألا يسبق البداية" });
 export const reportBrandSchema = z.object({
+  phoneCountry: brandCountryFilterSchema.optional(),
   id: z.uuid(), name: z.string(), slug: z.string(), status: z.string(),
   subscriptionStatus: z.string(), planName: z.string(), expiresAt: z.string().nullable(), subscribed: z.boolean(),
   features: z.array(z.string()),
@@ -49,12 +51,13 @@ export type OperationsReport = z.infer<typeof operationsReportSchema>;
 export type ReportBrand = z.infer<typeof reportBrandSchema>;
 export type ReportPeriod = z.infer<typeof reportPeriodSchema>;
 export type MetricCondition = { metric: ReportMetric; operator: "gte" | "lte" | "eq"; value: number };
-export type ReportFilters = { query: string; brandId: string; subscription: "all" | "subscribed" | "unsubscribed"; feature: string; conditions: MetricCondition[]; sort: ReportMetric | "name" | "lastMenuVisit"; direction: "asc" | "desc" };
-export const defaultReportFilters: ReportFilters = { query: "", brandId: "", subscription: "all", feature: "", conditions: [], sort: "name", direction: "asc" };
+export type ReportFilters = { country?: string; query: string; brandId: string; subscription: "all" | "subscribed" | "unsubscribed"; feature: string; conditions: MetricCondition[]; sort: ReportMetric | "name" | "lastMenuVisit"; direction: "asc" | "desc" };
+export const defaultReportFilters: ReportFilters = { country: "", query: "", brandId: "", subscription: "all", feature: "", conditions: [], sort: "name", direction: "asc" };
 const normalize = (value: string) => value.toLocaleLowerCase("ar").normalize("NFKC").replace(/[\u064b-\u065f\u0640]/g, "").replace(/[أإآ]/g, "ا").replace(/ى/g, "ي");
 export function filterReportBrands(brands: ReportBrand[], filters: ReportFilters) {
   const terms = normalize(filters.query.trim()).split(/\s+/).filter(Boolean);
   return brands.filter(brand => (!filters.brandId || brand.id === filters.brandId)
+    && (!filters.country || (brand.phoneCountry ?? "SA") === filters.country)
     && terms.every(term => normalize(`${brand.name} ${brand.slug} ${brand.planName}`).includes(term))
     && (filters.subscription === "all" || brand.subscribed === (filters.subscription === "subscribed"))
     && (!filters.feature || brand.features.includes(filters.feature))

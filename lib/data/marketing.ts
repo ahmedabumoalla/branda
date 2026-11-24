@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { readMaintenanceSessionCookie } from "@/lib/platform/maintenance";
-import { normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { normalizeBrandPhone, inferPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { encryptMarketingSecret, decryptMarketingSecret, hashMarketingToken, marketingConfigured, marketingPublicOrigin } from "@/lib/marketing/crypto";
 import { provisionGreenApiMarketingInstance, configureGreenApiMarketingWebhook, getGreenApiMarketingState, getGreenApiMarketingAccount, getGreenApiMarketingQr, deleteGreenApiMarketingInstance, GreenApiProviderError, type GreenApiMarketingCredentials } from "@/lib/whatsapp/green-api-marketing";
 import type { MarketingDashboard, MarketingResult, MarketingConnectionStatus, MarketingCampaignSummary, MarketingAudienceMember } from "@/lib/marketing/types";
@@ -125,7 +125,8 @@ export async function refreshMarketingConnection(context: Pick<Context, "db" | "
   let status: MarketingConnectionStatus = "pairing", verified: string | null = null;
   if (state === "authorized") {
     const account = await getGreenApiMarketingAccount(auth);
-    verified = normalizeBrandPhone(account.phone, row.requested_phone.startsWith("970") ? "PS" : "SA");
+    const country = inferPhoneCountry(row.requested_phone);
+    verified = country ? normalizeBrandPhone(account.phone, country) : null;
     status = verified === row.requested_phone ? "connected" : "mismatch";
   }
   const { error } = await context.db.from("brand_marketing_connections").update({ status, verified_phone: verified, last_error: null, updated_at: new Date().toISOString() })
