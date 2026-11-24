@@ -2,13 +2,15 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { AGENT, brandPaths, config, riyadhTime, sendWhatsApp, summary } from "./shared.mjs";
+import { AGENT, brandPaths, config, pageType, riyadhTime, sendWhatsApp, summary } from "./shared.mjs";
 
 // حارس السرعة, layer 2: after each production deployment, open the main public pages in Lighthouse on a throttled
 // mobile profile, take the median of several runs and alert when a page passes its budget. The guard's browser
 // identifies itself, and the platform ignores such visits in brand statistics (lib/analytics/speed-guard-visit.ts)
 
-const { runs, budgets } = config.lighthouse;
+const { runs } = config.lighthouse;
+// A page type can carry its own budget: a menu's weight follows the brand's product photos, not the code
+const budgetFor = value => ({ ...config.lighthouse.budgets, ...(config.lighthouse.typeBudgets?.[pageType(value)] || {}) });
 const lighthouse = process.env.LIGHTHOUSE_BIN || "lighthouse";
 const work = mkdtempSync(path.join(tmpdir(), "speed-guard-lh-"));
 const median = values => { const sorted = [...values].sort((a, b) => a - b); return sorted[Math.floor(sorted.length / 2)]; };
@@ -33,6 +35,7 @@ try {
     }
     if (!samples.length) { results.push({ path: value, failed: true, problems: ["ما انفتحت الصفحة في الفحص"] }); continue; }
     const result = { path: value, lcpMs: Math.round(median(samples.map(s => s.lcpMs))), ttfbMs: Math.round(median(samples.map(s => s.ttfbMs))), totalKb: Math.round(median(samples.map(s => s.totalKb))), score: median(samples.map(s => s.score)) };
+    const budgets = budgetFor(value);
     result.problems = [
       result.lcpMs > budgets.lcpMs && `أكبر عنصر طلع بعد ${(result.lcpMs / 1000).toFixed(1)} ثانية والحد ${budgets.lcpMs / 1000}`,
       result.ttfbMs > budgets.ttfbMs && `السيرفر بدأ يرد بعد ${result.ttfbMs} ms والحد ${budgets.ttfbMs}`,

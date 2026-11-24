@@ -1,6 +1,6 @@
 # حارس السرعة, 2026-11-24 (Claude)
 
-State: Included in the authorized wallet-links release on 2026-11-24, based on measured Claude source at df990363. All original budgets and baseline preserved. WhatsApp secrets are absent; no real alert message is enabled
+State: PUBLISHED. Codex included it in the wallet links release `6ff0b8d3` on 2026-11-24 (Vercel 10:31:28Z to 10:33:24Z). The user then wrote «انشر» for it, and the menu budget fix below was published after that. WhatsApp alerts are on
 
 The user names the two guards apart: «حارس الرفع» is the deployment size guard of 2026-11-21, «حارس السرعة» is this one
 
@@ -33,8 +33,22 @@ The only runtime change is the early return in `trackBrandEngagement` and `repor
 - Layer 3 against the live site: every page answered within 0.2 to 0.9 s
 - Proofs: layer 1 exits 1 when a page passes its limit, layer 3 alerted on the third slow run, repeated, and sent recovery when the pages were fast again (WhatsApp settings absent, so only logged)
 
+## First run on GitHub, and the menu budget
+
+The after-deployment run on `6ff0b8d3` measured on a GitHub runner:
+
+| Page | Largest paint | Weight | Score |
+|---|---|---|---|
+| `/` | 3.8 s | 1663 KB | 88 |
+| `/login` | 2.2 s | 391 KB | 98 |
+| `/cashier/login` | 4.7 s | 755 KB | 83 |
+| Two menus | 5.9 to 6.0 s | 3292 to 3403 KB | 68 to 72 |
+| Two loyalty pages | 3.2 s | 564 to 633 KB | 93 |
+
+It failed only on menu weight, over the 3000 KB budget. The budget had been set from one light menu. Menu weight and largest paint follow each brand's product photos, not the code: one menu measured 10.8 s on this machine. `lighthouse.typeBudgets` now gives `/menu/*` 12 s and 6000 KB, and every other page keeps the general budget. Finding for the user: menus are the slowest pages on mobile, and image size is the likely cause
+
 ## Pending
 
-- GitHub secrets for the WhatsApp alert through the notifications number: `SPEED_GUARD_WA_API_URL`, `SPEED_GUARD_WA_INSTANCE`, `SPEED_GUARD_WA_TOKEN`, `SPEED_GUARD_WA_TO`. Recipient confirmation is pending. One real test message needs the user's word
+- Done 2026-11-24 with the user's word: GitHub secrets `SPEED_GUARD_WA_API_URL`, `SPEED_GUARD_WA_INSTANCE`, `SPEED_GUARD_WA_TOKEN`, `SPEED_GUARD_WA_TO` set for the notifications number (found by its phone on the partner account). The recipient is the user's own phone, which the user confirmed. One test message was accepted by the provider. Whether it arrived on the phone is for the user to confirm
 - Pages behind sign in (dashboard, finance, cashier, admin) need a read only test account, a database change that needs «عدل القاعدة»
 - Layer 2 numbers on GitHub runners may differ from this machine; review the first runs and adjust budgets with the measured numbers

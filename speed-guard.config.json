@@ -31,6 +31,9 @@
       "totalKb": 3000,
       "score": 50
     },
+    "typeBudgets": {
+      "/menu/*": { "lcpMs": 12000, "totalKb": 6000 }
+    },
     "blockedUrlPatterns": ["*/api/analytics/*"]
   }
 }
