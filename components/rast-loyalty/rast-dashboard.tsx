@@ -129,7 +129,7 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, near
     {(view === "customers" || (view === "all" && section === "customers")) && <div id="rast-customers-panel"><LoyaltyCustomerDirectory downloadedOnly={view === "customers"} /></div>}
     {view === "all" && activityLog && <div id="rast-activity-panel" hidden={section !== "activity"}>{activityLog}</div>}
     {(view === "all" || showProgram || showMessages) && <div id="rast-program-panel" hidden={!showProgram && !showMessages}>
-    {showProgram && <div className={s.signupActions}><Link href={`/loyalty/${encodeURIComponent(identity.slug)}/qr`} target="_blank" rel="noreferrer" className={s.secondary}><ScanLine aria-hidden="true" />صفحة باركود الولاء</Link><p className={s.hint}>افتح صفحة بهوية علامتك لعرض رمز التسجيل للعملاء عند الكاشير أو مشاركتها معهم</p></div>}
+    {showProgram && <div className={s.signupActions}><Link href={`/loyalty/${encodeURIComponent(identity.slug)}/qr`} target="_blank" rel="noreferrer" className={s.secondary}><ScanLine aria-hidden="true" />صفحة باركود الولاء</Link>{!staffMode && walletLinks && <a href="#wallet-card-links" className={s.secondary}>روابط البطاقة</a>}<p className={s.hint}>افتح صفحة بهوية علامتك لعرض رمز التسجيل للعملاء عند الكاشير أو مشاركتها معهم</p></div>}
     <div className={s.dashboardLayout} style={!showProgram ? { gridTemplateColumns: "minmax(0, 1fr)" } : undefined}>
       <div className={s.dashboardMain}>
         {showProgram && <>

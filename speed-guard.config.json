@@ -1,0 +1,36 @@
+{
+  "site": "https://barndaksa.com",
+  "pageWeight": {
+    "growthPercent": 30,
+    "growthMinKb": 80,
+    "newPublicRouteKb": 560,
+    "newRouteKb": 1240,
+    "privatePrefixes": ["/dashboard", "/admin", "/finance/[slug]/system", "/api"]
+  },
+  "watch": {
+    "fixedPaths": ["/", "/login", "/register", "/cashier/login", "/brands", "/api/public/home-catalog"],
+    "catalogPath": "/api/public/home-catalog",
+    "sampleBrands": 3,
+    "typePatterns": ["^/(menu|loyalty)/[^/?#]+"],
+    "slowMs": 3000,
+    "timeoutMs": 15000,
+    "failuresInARow": 3,
+    "repeatAlertMinutes": 30
+  },
+  "statistics": {
+    "visitFile": "lib/analytics/speed-guard-visit.ts",
+    "trackers": ["lib/analytics/public-tracking.ts", "lib/analytics/customer-usage-tracking.ts"]
+  },
+  "lighthouse": {
+    "fixedPaths": ["/", "/login", "/cashier/login"],
+    "sampleBrands": 2,
+    "runs": 3,
+    "budgets": {
+      "lcpMs": 7000,
+      "ttfbMs": 1800,
+      "totalKb": 3000,
+      "score": 50
+    },
+    "blockedUrlPatterns": ["*/api/analytics/*"]
+  }
+}

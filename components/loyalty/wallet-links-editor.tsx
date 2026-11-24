@@ -72,7 +72,7 @@ export function WalletLinksEditor({ initial, brandName }: { initial: WalletLinks
     }
   }
 
-  return <section className={s.section} aria-labelledby="wallet-links-title">
+  return <section id="wallet-card-links" className={s.section} aria-labelledby="wallet-links-title" style={{ scrollMarginTop: 24 }}>
     <header className={s.heading}><Link2 aria-hidden="true" /><div><h2 id="wallet-links-title">روابط البطاقة</h2><p>حسابات التواصل والمنيو وأي رابط يخص {brandName} داخل تفاصيل بطاقة المحفظة</p></div></header>
     {!initial.available ? <p role="status" className={s.notice}>إعداد روابط البطاقة غير متاح حاليًا حاول تحديث الصفحة لاحقًا</p> : <>
       <form onSubmit={submit}>

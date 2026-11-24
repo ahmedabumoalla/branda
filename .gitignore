@@ -48,3 +48,6 @@ BARNDAKSA_*_PATCH/
 BARNDAKSA_*_HOTFIX/
 BARNDAKSA_SAFE_CLEANUP_NODE/
 /public/downloads/*.idsig
+
+# حارس السرعة: state kept between watch runs on GitHub
+/.speed-guard-state/

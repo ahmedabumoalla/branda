@@ -1,8 +1,11 @@
 "use client";
 import type { EngagementKind } from "./brand-analytics";
 import { activeInterval } from "./customer-usage";
+import { isSpeedGuardVisit } from "./speed-guard-visit";
 export function reportCustomerUsage(slug: string, kind: EngagementKind, sessionId: string, seconds: number) {
     try {
+        if (isSpeedGuardVisit())
+            return;
         const body = JSON.stringify({ slug, kind, sessionId, seconds });
         if (navigator.sendBeacon?.("/api/analytics/customer-activity", new Blob([body], { type: "application/json" })))
             return;

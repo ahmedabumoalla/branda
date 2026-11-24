@@ -75,6 +75,16 @@ These are the names the user uses. Use the same names with the user and in the h
 - After every deployment measure the build time with `gh api repos/{owner}/{repo}/commits/<sha>/statuses` (last pending to success) and write it in the deployment report. Measured on 2026-11-21: under one minute for a docs change and about two minutes for a code change. Over five minutes, stop releasing and find the cause first
 - Do not raise a limit or remove the guard to get a release out. Read `docs/BARNDAKSA_HANDOFF/DEPLOYMENT_SIZE_GUARD_20261121.md` first
 
+## Page speed
+
+The user's names: «حارس الرفع» is the deployment size guard above, «حارس السرعة» is this one. Read `docs/BARNDAKSA_HANDOFF/SPEED_GUARD_20261124.md` before changing it
+
+- Never remove, disable or bypass it. Keep the `postbuild` script, `scripts/speed-guard/`, `speed-guard.config.json` and the three `speed-guard*.yml` workflows
+- Layer 1 stops the production build when a page's compressed first load JavaScript passes its measured limit. Fix the page (lazy load the library or keep the code on the server). Run `node scripts/speed-guard/verify-page-weight.mjs --update` only when the user accepts the measured growth, and write the reason in the commit
+- Before every push to main run `node scripts/speed-guard/check.mjs` next to `node scripts/check-deployment-size.mjs`
+- Its browser visits never count in brand statistics through `lib/analytics/speed-guard-visit.ts`. Keep that check in every new client tracker
+- Its alerts go by WhatsApp through the notifications number to the user only, one per incident and one on recovery. Do not add recipients or move them to another number without the user's word
+
 ## Communication Rules
 
 All assistant responses to the user must be in Arabic and rendered right-to-left using this wrapper:
