@@ -13,6 +13,7 @@ export type LoadingBrand = {
 
 // Loading identity only: never use this registry to select a brand's menu layout
 const brands: Record<string, LoadingBrand> = {
+  "brand-0c1c249cb74b": { plain: true, name: "AWJ CAFE", logo: "/brand-assets/awj/logo.png", background: "#faf7f1", accent: "#b81d2c", foreground: "#30211f", greeting: "أهلًا بك في أوج", detail: "نجهّز لك المنيو" },
   "brand-7060952bf681": { plain: true, name: "أولاد العز", logo: "/brand-assets/awlad-al-izz/logo.jpeg", background: "#ffffff", accent: "#1609b8", foreground: "#08064e", greeting: "حياك عند أولاد العز", detail: "نجهّز لك الصفحة", salon: true },
   delicake: { name: "Deli Cake", logo: "/deli-cake/logo-official-light-v2.svg", background: "#202619", accent: "#c7c4a5", foreground: "#f8ebdd", greeting: "لحظتك الحلوة تبدأ هنا", detail: "نجهّز لك اختيارات ديلي كيك" },
   rast: { name: "مقهى الكواكب", logo: "/menu-logos/kawakib-transparent-20261008.png", background: "#272c26", accent: "#bdc8a4", foreground: "#ece9df", greeting: "قهوتك على ذوقك", detail: "نجهّز لك اختيارات الكواكب" },

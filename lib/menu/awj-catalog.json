@@ -1,0 +1,62 @@
+[
+  { "name": "المشروبات الساخنة", "en": "Hot coffee & tea", "key": "hot", "items": [
+    {"name":"إسبريسو روبوستا","en":"Robusta Espresso","key":"robusta","prices":[60]},
+    {"name":"شاي أحمر","en":"Black Tea","key":"black-tea","prices":[60]},
+    {"name":"شاي أخضر","en":"Green Tea","key":"green-tea","prices":[60]},
+    {"name":"زهورات","en":"Herbal Tea","key":"herbal","prices":[60]},
+    {"name":"كمون وليمون","en":"Cumin & Lemon","key":"cumin-lemon","prices":[60]},
+    {"name":"إسبريسو أرابيكا مختص","en":"Specialty Arabica Espresso","key":"arabica","prices":[150]},
+    {"name":"لاتيه","en":"Latte","key":"latte","prices":[150]},
+    {"name":"سبانش لاتيه","en":"Spanish Latte","key":"spanish","prices":[150]},
+    {"name":"هوت شوكليت","en":"Hot Chocolate","key":"hot-chocolate","prices":[150]},
+    {"name":"قهوة تركية","en":"Turkish Coffee","key":"turkish","prices":[150]},
+    {"name":"قهوة عربية","en":"Arabic Coffee","key":"arabic","prices":[150]},
+    {"name":"نسكافيه غولد","en":"Nescafé Gold","key":"nescafe","prices":[80]},
+    {"name":"كاراميل لاتيه","en":"Caramel Latte","key":"caramel","prices":[200]},
+    {"name":"فرنش فانيلا","en":"French Vanilla","key":"hot-vanilla","prices":[200]}
+  ] },
+  { "name": "المشروبات الباردة", "en": "Cold drinks", "key": "cold", "items": [
+    {"name":"آيس موكا","en":"Iced Mocha","key":"iced-mocha","prices":[250,300]},
+    {"name":"آيس كاراميل لاتيه","en":"Iced Caramel Latte","key":"iced-caramel","prices":[250,300]},
+    {"name":"آيس سبانش لاتيه","en":"Iced Spanish Latte","key":"iced-spanish","prices":[250,300]},
+    {"name":"فرابيه","en":"Frappe","key":"frappe","prices":[250,300]},
+    {"name":"ميلك شيك شوكولا","en":"Chocolate Milkshake","key":"milkshake","prices":[250,300]},
+    {"name":"ماتشا","en":"Matcha","key":"matcha","prices":[200,250]},
+    {"name":"فرنش فانيلا","en":"French Vanilla","key":"cold-vanilla","prices":[200,250]},
+    {"name":"آيس لاتيه","en":"Iced Latte","key":"iced-latte","prices":[200,250]},
+    {"name":"كركديه","en":"Hibiscus","key":"hibiscus","prices":[200,250]},
+    {"name":"عصير طاقة أوج","en":"AWJ Energy Drink","key":"energy","prices":[200,250]},
+    {"name":"آيس تي ليمون","en":"Lemon Iced Tea","key":"iced-lemon","prices":[150,200]},
+    {"name":"آيس تي دراق","en":"Peach Iced Tea","key":"iced-peach","prices":[150,200]},
+    {"name":"أمريكانو","en":"Americano","key":"americano","prices":[150]},
+    {"name":"قهوة اليوم","en":"Coffee of the Day","key":"day-coffee","prices":[250]},
+    {"name":"V60","en":"V60 Specialty Coffee","key":"v60","prices":[450]}
+  ] },
+  { "name": "الموهيتو", "en": "Mojito", "key": "mojito", "items": [
+    {"name":"ليمون","en":"Lemon","key":"lemon","prices":[200,250]},
+    {"name":"نعناع","en":"Mint","key":"mint","prices":[200,250]},
+    {"name":"ليمون ونعناع","en":"Lemon & Mint","key":"lemon-mint","prices":[200,250]},
+    {"name":"أناناس","en":"Pineapple","key":"pineapple","prices":[200,250]},
+    {"name":"توت وليمون","en":"Berry & Lemon","key":"berry-lemon","prices":[200,250]},
+    {"name":"بطيخ","en":"Watermelon","key":"watermelon","prices":[200,250]},
+    {"name":"فراولة","en":"Strawberry","key":"strawberry","prices":[200,250]},
+    {"name":"تفاح أخضر","en":"Green Apple","key":"green-apple","prices":[200,250]},
+    {"name":"توت أسود","en":"Blackberry","key":"blackberry","prices":[200,250]},
+    {"name":"توت أحمر","en":"Raspberry","key":"raspberry","prices":[200,250]},
+    {"name":"توت أزرق","en":"Blueberry","key":"blueberry","prices":[200,250]},
+    {"name":"بلو كوراساو","en":"Blue Curaçao","key":"blue-curacao","prices":[200,250]},
+    {"name":"مانجو","en":"Mango","key":"mango","prices":[200,250]},
+    {"name":"برتقال","en":"Orange","key":"orange","prices":[200,250]},
+    {"name":"كيوي","en":"Kiwi","key":"kiwi","prices":[200,250]},
+    {"name":"رمان","en":"Pomegranate","key":"pomegranate","prices":[200,250]}
+  ] },
+  { "name": "الآيس كريم", "en": "Ice cream", "key": "ice", "items": [
+    {"name":"بوظة حليب","en":"Milk Ice Cream","key":"milk-ice","prices":[360]},
+    {"name":"بوظة كرز","en":"Cherry Ice","key":"cherry-ice","prices":[300]},
+    {"name":"قمع","en":"Cone","key":"cone","prices":[30,80]},
+    {"name":"كوب","en":"Cup","key":"cup","prices":[60,90]}
+  ] },
+  { "name": "الحلويات والكيك", "en": "Cakes & desserts", "key": "dessert", "items": [
+    {"name":"سينابون","en":"Cinnamon Roll","key":"cinnamon","prices":[100]}
+  ] }
+]
