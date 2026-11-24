@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getBrandCurrency } from "@/lib/data/brand-currency";
 import { withMenuProductPriceMode } from "@/lib/menu/product-price-mode";
 import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 import { butcherProductDetailsSchema, type ButcherProductDetails } from "@/lib/menu/butcher-products";
@@ -270,9 +271,10 @@ export async function getOwnerMenu(branchId?: string | null) {
   }
   const categoryQuery = supabase.from("menu_categories").select("*").eq("cafe_id", cafe.id).is("deleted_at", null).order("sort_order");
   const productQuery = supabase.from("menu_products").select("*").eq("cafe_id", cafe.id).is("deleted_at", null).order("sort_order");
-  const [{ data: categories, error: categoryError }, { data: products, error: productError }] = await Promise.all([
+  const [{ data: categories, error: categoryError }, { data: products, error: productError }, currency] = await Promise.all([
     branchId === undefined ? categoryQuery : branchId ? categoryQuery.eq("branch_id", branchId) : categoryQuery.is("branch_id", null),
     branchId === undefined ? productQuery : branchId ? productQuery.eq("branch_id", branchId) : productQuery.is("branch_id", null),
+    getBrandCurrency(cafe.id),
   ]);
   if (categoryError) throw categoryError;
   if (productError) throw productError;
@@ -300,6 +302,8 @@ export async function getOwnerMenu(branchId?: string | null) {
 
   return {
     cafe,
+    currencyCode: currency.currencyCode,
+    currencyLabel: currency.currencyLabel,
     categories: categoryRows.map((c) => mapDbCategoryToRecord(cafe.slug, c)),
     products: await attachEventTicketSettings(supabase, cafe.id, mappedProducts),
   };

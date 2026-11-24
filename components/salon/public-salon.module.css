@@ -1,4 +1,5 @@
 @font-face{font-family:SalonArabic;src:url('/fonts/bistro-sans-regular-ar.woff2') format('woff2');font-weight:400;font-display:swap}
+/* Awlad Al Izz uses its supplied cobalt/white identity, independently of other salons. */
 @font-face{font-family:SalonArabic;src:url('/fonts/bistro-sans-semibold-ar.woff2') format('woff2');font-weight:600 900;font-display:swap}
 .content .loyaltyEntry{padding:0;margin:10px 0 64px}
 @media(max-width:720px){.content .loyaltyEntry{margin-bottom:36px}}
@@ -253,3 +254,48 @@
 .choiceList input { inline-size: 1.125rem; block-size: 1.125rem; accent-color: #785036; }
 .choiceList small { margin-inline-start: auto; }
 .choiceTotal { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .4rem; padding-block: .7rem; }
+
+.page.editorial.awlad{--surface:#101225;--gold:#b4baff;--ink:#111326;--paper:#f7f8ff;--panel:#1b1e36;--copy:#c7cae0;--line:#454963}
+.awlad .primary,
+.awlad .dock .dockBooking,
+.awlad .submit {
+  background: #3022b9;
+  color: #fff !important;
+}
+.awlad .salonIdentity {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 14px;
+  row-gap: 0;
+  align-items: center;
+  text-align: start;
+}
+.awlad .salonIdentityLogo {
+  grid-row: span 2;
+  width: clamp(68px, 9vw, 100px);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: contain;
+  background: white;
+  mix-blend-mode: normal;
+}
+.awlad .salonIdentity > strong { align-self: end; color: #fff; }
+.awlad .salonIdentity > span {
+  align-self: start;
+  color: #e2e5ff;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+@media (max-width: 720px) {
+  .awlad .salonIdentity { width: fit-content; align-self: flex-start; }
+  .awlad .opening .heroVisual { inset-block-start: 0; }
+  .awlad .opening::after {
+    background: linear-gradient(180deg, #101225f5, #101225cb 116px, transparent 42%, #10122599 66%, #101225 100%);
+  }
+  .awlad .heroCopy:has(.salonIdentity) .eyebrow { padding-top: 32px; }
+}
+.awlad .loyaltyEntry{margin-block:32px}
+.awlad .booking{--gold:#3529a1;--copy:#50536c}
+.awlad .choiceList input{accent-color:#3022b9}

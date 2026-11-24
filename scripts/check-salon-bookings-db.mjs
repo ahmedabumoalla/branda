@@ -188,7 +188,21 @@ await db.exec(`ALTER TABLE cafe_cashiers ADD COLUMN pager_station text, ADD COLU
  INSERT INTO menu_products(id,cafe_id,name,price,available,catalog_kind) VALUES
  ('${haircut}','${degrees}','قص شعر',25,true,'service'),('${id(903)}','${degrees}','حلاقة ذقن',20,true,'service');`);
 await db.exec(await readFile('supabase/migrations/20261123221000_degrees_booking_services.sql','utf8'));
+await db.exec("ALTER TABLE menu_categories ADD COLUMN icon text");
+await db.exec(await readFile('supabase/migrations/20261124212015_awlad_salon_booking.sql','utf8'));
+const awlad = 'dfa5934b-a097-4fcd-bc5f-2fc8b974e545';
+await db.exec(`INSERT INTO cafes VALUES('${awlad}','awlad','Awlad','hair_salons','active',null,'${id(1)}');
+ INSERT INTO feature_access VALUES('${awlad}','menu',true);
+ INSERT INTO menu_categories(id,cafe_id,visible,icon) VALUES('${id(927)}','${awlad}',true,'awlad-laser');
+ INSERT INTO menu_products(id,cafe_id,name,price,available,catalog_kind,category_id) VALUES
+ ('${id(928)}','${awlad}','A',10000,true,'service',null),('${id(929)}','${awlad}','B',15000,true,'service',null),
+ ('${id(930)}','${awlad}','C',25000,true,'service','${id(927)}');`);
 await db.exec('SET ROLE service_role');
+const requestAwlad = (n, services) => v('select to_jsonb(degrees_create_booking($1,$2,$3,$4,$5,$6,$7,$8,$9))',
+ [id(n),awlad,'عميل اختبار','966500000778',services,tomorrow,hash(n),hash(9901),hash(9801)]);
+ok((await requestAwlad(931,[id(928),id(929)])).service_snapshot.price === 25000,'Awlad multi-service total');
+await denied(()=>requestAwlad(932,[id(930)]),/SERVICE_UNAVAILABLE/);
+await denied(()=>requestAwlad(933,[haircut]),/SERVICE_UNAVAILABLE/);
 const multi=(services, n=901)=>v('select to_jsonb(degrees_create_booking($1,$2,$3,$4,$5,$6,$7,$8,$9))',
  [id(n),degrees,'عميل اختبار','966500000777',services,tomorrow,hash(n),hash(9900),hash(9999)]);
 ok(await v("select can_use_pager from cafe_cashiers where id='9d827704-d6cf-4d54-b2b6-2bdbfe65b989'"),'existing Degrees cashier enabled');

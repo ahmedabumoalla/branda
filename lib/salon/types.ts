@@ -1,7 +1,10 @@
+import type { AccountCurrencyCode } from "@/lib/currency/account-currency";
+
 export const bookingStatuses = ["pending", "proposed", "confirmed", "rejected", "in_service", "completed", "cancelled"] as const;
 export type BookingStatus = typeof bookingStatuses[number];
 export type SalonBooking = {
   id: string; customerName: string; phone: string; status: BookingStatus; version: number;
+  currencyCode?: AccountCurrencyCode;
   requestedStart: string; scheduledStart: string | null; proposedStart: string | null;
   service: { name?: string; price?: number | null; durationMinutes?: number | null; agreedPrice?: number; priceRevision?: number; items?: { id: string; name: string; price: number | null }[] }; createdAt: string;
   calledAt: string | null; completedAt: string | null; rating: number | null; review: string;

@@ -5,7 +5,7 @@ import { getPagerPage, getStaffPagerContext } from "@/lib/data/pager";
 import { getCashierToken } from "@/lib/data/cashier";
 import { CashierServiceUnavailable } from "@/components/cashier/cashier-unavailable";
 import { getDegreesBookingStaff, getSalonBookings, isSalonCafe, getSalonDisplayIdentity } from "@/lib/data/salon";
-import { DEGREES_SALON_ID } from "@/lib/salon/degrees";
+import { hasManagedSalonBookings } from "@/lib/salon/degrees";
 import { SalonCashier } from "@/components/salon/salon-cashier";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function PagerPage() {
   if (degrees) return <SalonCashier showRequests initial={await getSalonBookings({ status: "active" }, "staff", true)} identity={await getSalonDisplayIdentity(degrees.cafeId)} canUseLoyalty={degrees.canUseLoyalty} />;
   const context = await getStaffPagerContext().catch(() => null);
   if (!context) return <CashierServiceUnavailable />;
-  if (await isSalonCafe(context.cafeId)) return <SalonCashier showRequests={context.cafeId === DEGREES_SALON_ID} initial={await getSalonBookings({ status: "active" }, "staff", true)} identity={await getSalonDisplayIdentity(context.cafeId)} canUseLoyalty={context.canUseLoyalty} />;
+  if (await isSalonCafe(context.cafeId)) return <SalonCashier showRequests={hasManagedSalonBookings(context.cafeId)} initial={await getSalonBookings({ status: "active" }, "staff", true)} identity={await getSalonDisplayIdentity(context.cafeId)} canUseLoyalty={context.canUseLoyalty} />;
   const initialPage = await getPagerPage({ status: "active" }, "staff");
   return <StaffWorkspace key={cashierWorkspaceKey(token)} sessionKey={cashierWorkspaceKey(token)} initial={{ screen: "pager", context, page: initialPage }} />;
 }

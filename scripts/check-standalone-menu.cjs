@@ -35,7 +35,7 @@ function fakeClient({ published = true, status = "active", products = [fixturePr
   const queries = [], signedPaths = [];
   const tables = {
     branches,
-    cafes: [{ id: cafeId, slug, name: "Double B Bistro", status, business_category: businessCategory, is_public: false, deleted_at: deleted ? "deleted" : null }],
+    cafes: [{ id: cafeId, slug, name: "Double B Bistro", status, business_category: businessCategory, phone_country: "SA", is_public: false, deleted_at: deleted ? "deleted" : null }],
     brand_feature_overrides: published === null ? [] : [{ cafe_id: cafeId, feature_id: "standalone_menu", enabled: published }],
     menu_categories: categories ?? [
       { id: "category", cafe_id: cafeId, name: "Category", visible: true, deleted_at: null },
@@ -56,6 +56,7 @@ function fakeClient({ published = true, status = "active", products = [fixturePr
         order() { return builder; },
         range(start, end) { rows = rows.slice(start, end + 1); return builder; },
         maybeSingle() { return Promise.resolve({ data: rows[0] ?? null, error: null }); },
+        single() { return Promise.resolve({ data: rows[0] ?? null, error: null }); },
         then(resolve, reject) { return Promise.resolve({ data: rows, error: null }).then(resolve, reject); },
       };
       return builder;

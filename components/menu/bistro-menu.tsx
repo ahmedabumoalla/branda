@@ -1,5 +1,6 @@
 "use client";
 import { hulmPhotoFraming } from "@/lib/menu/hulm-framing";
+import { formatAccountAmount, menuCurrencyLabel } from "@/lib/currency/account-currency";
 
 import { ArrowDownLeft, ArrowUpLeft, ArrowRight, CakeSlice, Check, ChevronLeft, ChevronRight, Clock3, Coffee, CookingPot, Flame, GlassWater, LayoutGrid, List, Search, Share2, SlidersHorizontal, Utensils, X } from "lucide-react";
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties } from "react";
@@ -65,7 +66,7 @@ function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (pr
         <p className={spotlight.description} dir="auto">{menuDisplayText(active.description || "خذ لك لحظة واكتشف تفاصيلها على ذوقك")}</p>
         {active.code && <p className={spotlight.code}>كود العرض <b dir="ltr">{active.code}</b></p>}
         <div className={spotlight.bottom}>
-          {priceAtSale ? <div className={spotlight.price}>السعر يحدد عند البيع</div> : product && displayPrice != null && <div className={spotlight.price}>{displayPrice !== product.price && <del>{product.price.toLocaleString("en-US")}</del>}<b dir="ltr">{displayPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b><span>ريال</span></div>}
+          {priceAtSale ? <div className={spotlight.price}>السعر يحدد عند البيع</div> : product && displayPrice != null && <div className={spotlight.price}>{displayPrice !== product.price && <del>{formatAccountAmount(product.price, product.currencyCode, "en-US")}</del>}<b dir="ltr">{formatAccountAmount(displayPrice, product.currencyCode, "en-US")}</b><span>{menuCurrencyLabel(product.currencyCode)}</span></div>}
           {product ? <button type="button" className={spotlight.action} onClick={() => onSelect(product)}>اكتشف الصنف<ArrowUpLeft aria-hidden="true" /></button>
             : <a className={spotlight.action} href="#rast-menu-items">تصفح القائمة<ArrowUpLeft aria-hidden="true" /></a>}
         </div>
@@ -101,8 +102,8 @@ function Price({ product }: { product: StandaloneMenuProduct }) {
   const values = product.priceRange ? [product.priceRange.min, product.priceRange.max] : product.priceOptions?.length ? product.priceOptions : [product.price];
   const separator = product.priceRange ? "–" : " / ";
   return <span className={s.price} data-price-range={!!product.priceRange || undefined}>
-    {final !== product.price && <del>{(product.priceRange ? values : [product.price]).map(value => value.toLocaleString("en-US", { maximumFractionDigits: 2 })).join(separator)}</del>}
-    <b dir="ltr">{values.map(value => productFinalPrice(value, product.promo).toLocaleString("en-US", { maximumFractionDigits: 2 })).join(separator)}</b><span>ريال</span>
+    {final !== product.price && <del>{(product.priceRange ? values : [product.price]).map(value => formatAccountAmount(value, product.currencyCode, "en-US")).join(separator)}</del>}
+    <b dir="ltr">{values.map(value => formatAccountAmount(productFinalPrice(value, product.promo), product.currencyCode, "en-US")).join(separator)}</b><span>{menuCurrencyLabel(product.currencyCode)}</span>
   </span>;
 }
 

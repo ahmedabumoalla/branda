@@ -30,9 +30,15 @@ import { getBusinessCopy } from "@/lib/platform/business-copy";
 import { captureProductPosition } from "@/lib/menu/product-position";
 import { notifyMenuChanged } from "@/lib/menu/menu-change";
 import { createProductCopy } from "@/lib/menu/product-copy";
+import { currencyByCode } from "@/lib/currency/account-currency";
 import { readCommerceDetails } from "@/lib/commerce/product-details";
 import { withMenuProductPriceMode } from "@/lib/menu/product-price-mode";
 import styles from "@/components/dashboard/menu/menu-dashboard.module.css";
+
+import { AwladSections } from "@/components/menu/awlad-sections";
+import { awladCategorySection, awladProductSection, awladSectionHref } from "@/lib/menu/awlad-al-izz";
+import type { AwladSection } from "@/lib/menu/awlad-al-izz-catalog";
+import { saveDraftProduct, deleteDraftProduct, saveDraftCategories, deleteDraftCategory } from "@/app/actions/awlad-draft";
 
 function ModalLoadingPlaceholder() {
   return (
@@ -76,10 +82,14 @@ const MenuInventoryIngredients = dynamic(
 );
 
 type Props = {
+  awlad?: boolean;
+  localDraft?: boolean;
   initialProducts: MenuProduct[];
   initialCategories: MenuCategoryRecord[];
   businessCategory?: string;
   cafeSlug?: string;
+  currencyCode?: string;
+  currencyLabel?: string;
   branchId?: string | null;
   branchName?: string;
   branchSlug?: string;
@@ -89,11 +99,13 @@ type Props = {
   initialProductId?: string;
 };
 
-export function MenuPageClient({ initialProducts, initialCategories, businessCategory, cafeSlug, branchId, branchName, branchSlug, branches = [], configError, inventoryCatalog = false, initialProductId }: Props) {
+export function MenuPageClient({ awlad = false, localDraft = false, initialProducts, initialCategories, businessCategory, cafeSlug, currencyCode, currencyLabel, branchId, branchName, branchSlug, branches = [], configError, inventoryCatalog = false, initialProductId }: Props) {
   const router = useRouter();
   const [branchPending, startBranchTransition] = useTransition();
   const [requestedBranchName, setRequestedBranchName] = useState("");
-  const copy = getBusinessCopy(businessCategory);
+  const [section, setSection] = useState<AwladSection>("salon");
+  const sectionBusiness = awlad && section === "cafe" ? "cafes" : businessCategory;
+  const copy = getBusinessCopy(sectionBusiness);
   const [products, setProducts] = useState<MenuProduct[]>(initialProducts);
   const [categories, setCategories] = useState<MenuCategoryRecord[]>(initialCategories);
   const [query, setQuery] = useState("");
@@ -137,17 +149,25 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   const isSalon = copy.kind === "barbershop";
   const isFashion = copy.kind === "clothing";
   const isGifts = copy.kind === "gifts" || isFashion;
-  const menuTitle = inventoryCatalog ? "المنيو" : isFashion ? "المتجر والمنتجات" : isGifts ? "المنتجات والخدمات" : isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "التذاكر والباقات" : "المنيو الرقمي";
+  const menuTitle = awlad ? "الخدمات والمنيو" : inventoryCatalog ? "المنيو" : isFashion ? "المتجر والمنتجات" : isGifts ? "المنتجات والخدمات" : isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "التذاكر والباقات" : "المنيو الرقمي";
   const importLabel = isFashion ? "استيراد المنتجات" : isGifts ? "استيراد المنتجات والخدمات" : isSalon ? "استيراد الخدمات والمنتجات" : copy.kind === "events" ? "استيراد التذاكر" : "استيراد المنيو";
-  const addLabel = isFashion ? "إضافة منتج" : isGifts ? "إضافة منتج أو خدمة" : isSalon ? "إضافة خدمة أو منتج" : copy.kind === "events" ? "إضافة تذكرة أو باقة" : "إضافة منتج";
+  const addLabel = awlad && section === "laser" ? "إضافة خدمة ليزر" : isFashion ? "إضافة منتج" : isGifts ? "إضافة منتج أو خدمة" : isSalon ? "إضافة خدمة أو منتج" : copy.kind === "events" ? "إضافة تذكرة أو باقة" : "إضافة منتج";
+
+  const sectionProducts = useMemo(() => awlad ? products.filter(p =>
+    awladProductSection(p, categories.find(c => c.id === p.categoryId)) === section) : products,
+    [awlad, products, categories, section]);
+  const sectionCategories = useMemo(() => awlad ? categories.filter(c => {
+    const assigned = awladCategorySection(c);
+    return assigned ? assigned === section : sectionProducts.some(p => p.categoryId === c.id) || (!products.some(p => p.categoryId === c.id) && section === "cafe");
+  }) : categories, [awlad, categories, section, products, sectionProducts]);
 
   const sortedCategories = useMemo(
-    () => [...categories].sort((a, b) => a.sortOrder - b.sortOrder),
-    [categories]
+    () => [...sectionCategories].sort((a, b) => a.sortOrder - b.sortOrder),
+    [sectionCategories]
   );
 
   const filtered = useMemo(() => {
-    return products.filter((p) => {
+    return sectionProducts.filter((p) => {
       const categoryName = getCategoryNameById(categories, p.categoryId, p.category);
       const matchQuery =
         p.name.includes(query) ||
@@ -162,9 +182,9 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
 
       return matchQuery && matchCategory;
     });
-  }, [products, query, categoryFilter, categories]);
+  }, [sectionProducts, query, categoryFilter, categories]);
 
-  const availableCount = products.filter((p) => p.available).length;
+  const availableCount = sectionProducts.filter(p => p.available && (!awlad || !p.categoryId || sectionCategories.some(c => c.id === p.categoryId && c.visible))).length;
 
   async function saveProduct(product: MenuProduct) {
     if (actionLock.current) return false;
@@ -174,7 +194,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     try {
       const categoryName = getCategoryNameById(categories, product.categoryId, product.category);
       const normalized = { ...product, category: categoryName, ...(branchId !== undefined ? { branchId } : {}) };
-      const id = await saveMenuProductAction(normalized);
+      const id = await (localDraft ? saveDraftProduct : saveMenuProductAction)(normalized);
       const saved = { ...normalized, id: id || normalized.id,
         ...(isGifts ? { commerceSnapshot: readCommerceDetails(normalized.commerceDetails) } : {}),
         ...(cafeSlug === "mind-hospital" && normalized.priceMode ? { commerceSnapshot: withMenuProductPriceMode(normalized.commerceSnapshot, normalized.priceMode) } : {}),
@@ -202,7 +222,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     setSaving(true);
     restorePosition.current = captureProductPosition(productId);
     try {
-      await deleteMenuProductAction(productId);
+      await (localDraft ? deleteDraftProduct : deleteMenuProductAction)(productId);
       setProducts((prev) => prev.filter((product) => product.id !== productId));
       notifyMenuChanged(cafeSlug);
       showToast({ type: "success", message: "تم حذف المنتج" });
@@ -217,8 +237,8 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   async function handleCategoriesChange(next: MenuCategoryRecord[]) {
     setSaving(true);
     try {
-      const saved = await saveMenuCategoriesAction(next.map(item => ({ ...item, ...(branchId !== undefined ? { branchId } : {}) })));
-      setCategories(saved);
+      const saved = await (localDraft ? saveDraftCategories : saveMenuCategoriesAction)(next.map(item => ({ ...item, ...(awlad ? { icon: `awlad-${section}` } : {}), ...(branchId !== undefined ? { branchId } : {}) })));
+      setCategories(current => awlad ? [...current.filter(c => !sectionCategories.some(sc => sc.id === c.id)), ...saved] : saved);
       notifyMenuChanged(cafeSlug);
       showToast({ type: "success", message: isFashion ? "تم حفظ تصنيفات المتجر" : copy.kind === "events" ? "تم حفظ فئات التذاكر" : copy.kind === "gifts" ? "تم حفظ تصنيفات المنتجات والخدمات" : "تم حفظ تصنيفات المنيو" });
       return saved;
@@ -233,7 +253,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   async function handleCategoryDelete(categoryId: string) {
     setSaving(true);
     try {
-      const result = await deleteMenuCategoryAction(categoryId);
+      const result = await (localDraft ? deleteDraftCategory : deleteMenuCategoryAction)(categoryId);
 
       if (result.ok) {
         setCategories((current) => current.filter((category) => category.id !== categoryId));
@@ -300,14 +320,15 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
       {inventoryCatalog && <InventoryCatalogTabs active="menu" />}
       <DashboardPageShell
         title={branchName ? `${menuTitle} — ${branchName}` : menuTitle}
-        subtitle={isFashion ? "أدر منتجات المتجر وصورها وأسعارها والمقاسات والألوان" : isGifts ? "أدر منتجاتك وخدماتك وصورها وأسعارها وخيارات العملاء" : isSalon ? "خدمات الصالون وأسعاره ومنتجات العناية كما يراها العميل" : "منتجاتك وأسعارك كما يراها العميل"}
+        subtitle={awlad ? undefined : isFashion ? "أدر منتجات المتجر وصورها وأسعارها والمقاسات والألوان" : isGifts ? "أدر منتجاتك وخدماتك وصورها وأسعارها وخيارات العملاء" : isSalon ? "خدمات الصالون وأسعاره ومنتجات العناية كما يراها العميل" : "منتجاتك وأسعارك كما يراها العميل"}
         action={
           <div className={styles.headerActions}>
-            {cafeSlug && <a href={`/${isSalon ? "salon" : "menu"}/${encodeURIComponent(cafeSlug)}${branchSlug ? `?branch=${encodeURIComponent(branchSlug)}` : ""}`} target="_blank" rel="noopener noreferrer" className={styles.secondaryAction}>
+            {awlad && <AwladSections selected={section} onSelect={next => { setSection(next); setQuery(""); setCategoryFilter("الكل"); setCategoriesOpen(false); }} />}
+            {cafeSlug && <a href={`${awlad ? awladSectionHref(cafeSlug, section) : `/${isSalon ? "salon" : "menu"}/${encodeURIComponent(cafeSlug)}`}${branchSlug ? `?branch=${encodeURIComponent(branchSlug)}` : ""}`} target="_blank" rel="noopener noreferrer" className={styles.secondaryAction}>
               <ExternalLink className="h-5 w-5" aria-hidden="true" />
-              {isGifts ? "فتح صفحة المتجر" : isSalon ? "فتح صفحة الصالون" : "فتح المنيو المستقل"}
+              {awlad && section === "laser" ? "فتح صفحة الليزر" : isGifts ? "فتح صفحة المتجر" : isSalon ? "فتح صفحة الصالون" : "فتح المنيو المستقل"}
             </a>}
-            {!branchId && <button
+            {!branchId && !localDraft && <button
               type="button"
               onClick={() => {
                 setImportModalRequested(true);
@@ -334,6 +355,8 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           </div>
         }
       >
+        {localDraft && <p className="mb-2 text-sm">معاينة محلية تُحفظ تعديلاتك على هذا الجهاز</p>}
+        {currencyCode && <p className="mb-4 text-sm font-bold text-[#6B5144]" data-account-currency={currencyCode}>عملة الحساب {currencyByCode(currencyCode).currencyName} <bdi>({currencyCode})</bdi></p>}
         <MenuBranchSwitcher branches={branches} currentId={branchId} busy={saving} onSwitch={branch => {
           setRequestedBranchName(branch.name);
           const destination = inventoryCatalog ? "/dashboard/system/inventory/items?view=products&branch=" : "/dashboard/menu?branch=";
@@ -341,10 +364,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
         }} />
         <section className={styles.summaryGrid} aria-label={isGifts ? "ملخص المنتجات والخدمات" : "ملخص المنيو"}>
           {[
-            [isFashion ? "إجمالي المنتجات" : isGifts ? "المنتجات والخدمات" : isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات", products.length],
-            [isGifts ? "متاح للطلب" : isSalon ? "ظاهر في صفحة الصالون" : copy.kind === "events" ? "تذاكر متاحة" : "ظاهر في المنيو", availableCount],
-            ["التصنيفات", categories.length],
-            [isGifts ? "غير متاح للطلب" : isSalon ? "مخفي من صفحة الصالون" : "مخفي من المنيو", products.length - availableCount],
+            [isFashion ? "إجمالي المنتجات" : isGifts ? "المنتجات والخدمات" : isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات", sectionProducts.length],
+            [isGifts ? "متاح للطلب" : awlad ? "ظاهر في صفحة القسم" : isSalon ? "ظاهر في صفحة الصالون" : copy.kind === "events" ? "تذاكر متاحة" : "ظاهر في المنيو", availableCount],
+            ["التصنيفات", sectionCategories.length],
+            [isGifts ? "غير متاح للطلب" : awlad ? "مخفي من صفحة القسم" : isSalon ? "مخفي من صفحة الصالون" : "مخفي من المنيو", sectionProducts.length - availableCount],
           ].map(([label, value]) => (
             <div key={String(label)} className={styles.metricCard}>
               <p className={styles.metricLabel}>{label}</p>
@@ -389,11 +412,11 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
         {categoriesOpen ? (
           <div className="mb-6">
             <CategoryManager
-              categories={categories}
-              products={products}
+              categories={sectionCategories}
+              products={sectionProducts}
               onChange={handleCategoriesChange}
               onDelete={handleCategoryDelete}
-              businessCategory={businessCategory}
+              businessCategory={sectionBusiness}
             />
           </div>
         ) : null}
@@ -412,12 +435,13 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           </div>
           {filtered.length === 0 ? (
             <div className={styles.emptyState}>
-              {query || categoryFilter !== "الكل" ? "لا توجد نتائج مطابقة جرّب اسمًا أو تصنيفًا آخر" : isFashion ? "أضف أول منتج لمتجرك" : isGifts ? "أضف أول منتج أو خدمة لمتجرك" : isSalon ? "أضف أول خدمة للصالون أو منتج للعناية" : copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
+              {query || categoryFilter !== "الكل" ? "لا توجد نتائج مطابقة جرّب اسمًا أو تصنيفًا آخر" : awlad && section === "laser" ? "أضف أول خدمة ليزر" : isFashion ? "أضف أول منتج لمتجرك" : isGifts ? "أضف أول منتج أو خدمة لمتجرك" : isSalon ? "أضف أول خدمة للصالون أو منتج للعناية" : copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
             </div>
           ) : (
             <div className={styles.productGrid} onPointerOver={inventoryCatalog ? warmIngredients : undefined} onFocus={inventoryCatalog ? warmIngredients : undefined}>
               {filtered.map((product, index) => (
                   <MenuProductCard
+                    currencyCode={currencyCode}
                     onInventoryIngredients={inventoryCatalog && cafeSlug ? () => setIngredientsProduct(product) : undefined}
                     key={product.id}
                     product={product}
@@ -449,7 +473,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
                       setOpen(true);
                     }}
                     onDelete={() => { void deleteProduct(product.id); }}
-                    businessCategory={businessCategory}
+                    businessCategory={sectionBusiness}
                   />
               ))}
             </div>
@@ -459,12 +483,14 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
         {ingredientsProduct && cafeSlug && <MenuInventoryIngredients slug={cafeSlug} productId={ingredientsProduct.id} productName={ingredientsProduct.name} onClose={() => setIngredientsProduct(null)} />}
         {productModalRequested ? (
           <MenuProductFormModal
+            currencyCode={currencyCode}
+            currencyLabel={currencyLabel}
             open={open}
             mode={editing ? products.some((product) => product.id === editing.id) ? "edit" : "duplicate" : "add"}
             editingProduct={editing}
-            productList={products}
-            categories={categories}
-            businessCategory={businessCategory}
+            productList={sectionProducts}
+            categories={sectionCategories}
+            businessCategory={sectionBusiness}
             cafeSlug={cafeSlug}
             onCategoriesChange={handleCategoriesChange}
             onClose={() => {

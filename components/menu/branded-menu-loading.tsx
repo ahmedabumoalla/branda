@@ -7,8 +7,8 @@ export function BrandedMenuLoading({ brand }: { brand: LoadingBrand }) {
   const colors = { "--loading-bg": brand.background, "--loading-accent": brand.accent, "--loading-ink": brand.foreground } as CSSProperties;
   return (
     <main className={styles.screen} style={colors} dir="rtl" aria-busy="true" aria-label={brand.name}>
-      <div className={styles.glow} aria-hidden="true" />
-      <div className={styles.frame} aria-hidden="true" />
+      {!brand.plain && <div className={styles.glow} aria-hidden="true" />}
+      {!brand.plain && <div className={styles.frame} aria-hidden="true" />}
       <div className={styles.content}>
         <span className={styles.eyebrow}>{brand.salon ? "عناية تليق بك" : "لحظات بطعم مختلف"}</span>
         <div className={styles.identity}>

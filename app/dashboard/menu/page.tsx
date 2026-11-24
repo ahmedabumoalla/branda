@@ -12,6 +12,8 @@ import { getOwnerMenuBranches } from "@/lib/data/menu-branches";
 import { BranchInheritedMenu } from "@/components/dashboard/pages/branch-inherited-menu";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { redirect } from "next/navigation";
+import { readAwladDraft, canPreviewAwlad } from "@/lib/data/awlad-preview";
+import { isAwladAlIzz } from "@/lib/menu/awlad-al-izz";
 
 type MenuLoadResult =
   | { status: "ready"; menu: Awaited<ReturnType<typeof getOwnerMenu>>; branches: Awaited<ReturnType<typeof getOwnerMenuBranches>>["branches"]; branch: Awaited<ReturnType<typeof getOwnerMenuBranches>>["branches"][number] | null }
@@ -92,13 +94,19 @@ export default async function DashboardMenuPage({ searchParams }: { searchParams
     ...result.menu.categories.map((category) => category.id).sort(),
   ].join(":");
 
+  const awlad = isAwladAlIzz(result.menu.cafe.id);
+  const draft = canPreviewAwlad(result.menu.cafe.id, result.menu.products, result.menu.categories, result.branch) ? readAwladDraft() : null;
   return (
     <MenuPageClient
       key={menuDataKey}
-      initialProducts={result.menu.products}
-      initialCategories={result.menu.categories}
+      awlad={awlad}
+      localDraft={Boolean(draft)}
+      initialProducts={draft?.products ?? result.menu.products}
+      initialCategories={draft?.categories ?? result.menu.categories}
       businessCategory={result.menu.cafe.businessCategory}
       cafeSlug={result.menu.cafe.slug}
+      currencyCode={result.menu.currencyCode}
+      currencyLabel={result.menu.currencyLabel}
       branchId={result.branch?.id ?? null}
       branchName={result.branch?.name}
       branchSlug={result.branch?.slug}

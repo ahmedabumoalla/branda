@@ -45,6 +45,8 @@ try {
   publicBrand = { id: "public-cafe" }; const priorReads = adminReads;
   ok((await cafeLookup.getCafeBySlug("public-cafe"))?.id === "public-cafe" && adminReads === priorReads, "existing public cafe resolution remains unchanged");
   const types = await load("lib/salon/types.ts");
+  const currency = await load("lib/currency/account-currency.ts");
+  const currencyImports = { "@/lib/currency/account-currency": currency };
   const loyaltyTheme = await load("components/rast-loyalty/loyalty-theme.ts");
   const salonTheme = await load("components/salon/salon-theme.ts", { "@/components/rast-loyalty/loyalty-theme": loyaltyTheme });
   ok(types.salonInputTime("2030-05-10T14:30") === "2030-05-10T11:30:00.000Z", "Saudi input never depends on client timezone");
@@ -58,6 +60,8 @@ try {
   let category = "hair_salons", featureList = ["menu", "pager", "offers", "loyalty"], rpcCalls = [];
   const rows = { cafes: { id: cafeId, name: "صالون الاختبار", slug: "salon-test", business_category: category }, salon_bookings: { id, cafe_id: cafeId, customer_name: "عميل اختبار", phone: "966500000001", status: "confirmed", version: 1, requested_start: "2030-05-10T11:30:00Z", scheduled_start: "2030-05-10T11:30:00Z", service_snapshot: { name: "حلاقة شعر", price: 40 }, portal_hash: "secret", client_key: "private" } };
   let staffCafe = cafeId;
+  let bookingCountry = "SA";
+  const currencyRequests = [];
   const queueFilters = [];
   function builder(table) {
     const result = () => ({ data: table === "cafes" ? { ...rows.cafes, business_category: category } : rows[table], error: null });
@@ -68,19 +72,20 @@ try {
     b.range = async () => ({ data: [rows.salon_bookings], count: 1, error: null });
     return b;
   }
-  const signing = { "@/lib/barndaksa/env": { getSupabaseServiceRoleKey: () => "test-secret-only-never-production" } };
+  const digits = await load("lib/auth/input-digits.ts");
+  const brandPhone = await load("lib/auth/brand-phone.ts", { "@/lib/auth/input-digits": digits, "@/lib/auth/arab-phone-rules": await load("lib/auth/arab-phone-rules.ts") });
+  const signing = { "@/lib/auth/brand-phone": brandPhone, "@/lib/barndaksa/env": { getSupabaseServiceRoleKey: () => "test-secret-only-never-production" } };
   const loyaltySessions = await load("lib/auth/loyalty-session-token.ts", signing);
   let linkContext = [{ cafe_id: cafeId, profile_id: id, slug: "salon-test", phone: "966500000001" }];
   const loyaltyLink = await load("lib/salon/loyalty-link.ts", { ...signing,
     "@/lib/auth/loyalty-session-token": loyaltySessions,
     "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name,args) => { assert.equal(name,"salon_loyalty_link_context"); assert.match(args.p_hash,/^[a-f0-9]{64}$/); return {data:linkContext,error:null}; } }) },
   });
-  const digits = await load("lib/auth/input-digits.ts");
-  const ownerPhone = await load("lib/auth/owner-phone.ts", { "@/lib/auth/input-digits": digits });
   const degrees = await load("lib/salon/degrees.ts");
   const data = await load("lib/data/salon.ts", {
+    "@/lib/data/brand-currency": { getBrandCurrency: async cafe => { currencyRequests.push(cafe); return currency.currencyForCountry(bookingCountry); } },
     "@/lib/salon/degrees": degrees,
-    "@/lib/auth/brand-phone": await load("lib/auth/brand-phone.ts", { "@/lib/auth/owner-phone": ownerPhone }),
+    "@/lib/auth/brand-phone": brandPhone,
     "@/lib/data/brand-phone-country": { getBrandPhoneCountry: async () => "SA" },
     "@/lib/salon/loyalty-link": loyaltyLink,
     "next/headers": { headers: async () => new Headers({ "x-vercel-forwarded-for": "127.0.0.1" }) },
@@ -107,10 +112,21 @@ try {
   linkContext = []; linked = await linkRoute.GET(new Request("https://barndaksa.com/salon/card/test"), { params: Promise.resolve({token:loyaltyLink.salonLoyaltyToken(id)}) });
   ok(linked.status === 404 && !linked.headers.get("set-cookie"), "expired or revoked link cannot mint cookie");
   const portal = await data.getSalonPortal(token);
+  ok(portal.booking.currencyCode === "SAR" && currencyRequests.at(-1) === cafeId, "booking currency derives from its owning cafe");
+  bookingCountry = "IQ";
+  const iraqiPortal = await data.getSalonPortal(token);
+  ok(iraqiPortal.booking.currencyCode === "IQD" && iraqiPortal.booking.service.price === 40, "Iraqi booking retains numeric amount with IQD denomination");
+  const requestsBeforeList = currencyRequests.length;
+  const iraqiBookings = await data.getSalonBookings();
+  ok(iraqiBookings.bookings.every(booking => booking.currencyCode === "IQD") && currencyRequests.length === requestsBeforeList + 1, "list resolves account currency once, not per booking");
+  bookingCountry = "SA";
   ok(portal.booking.phone === "" && !JSON.stringify(portal).includes("private") && !JSON.stringify(portal).includes("secret"), "public projection excludes phone and private hashes");
   ok(await data.getSalonPortal("wrong") === null, "invalid capabilities rejected before lookup");
   await reject(() => data.commandSalonBooking(id, 1, "confirm", null, "staff"), /مخصصة/);
   category = "cafes_coffee";
+  const requestsBeforeDenied = currencyRequests.length;
+  await reject(() => data.getSalonBookings(), /غير متاحة/);
+  ok(currencyRequests.length === requestsBeforeDenied, "unauthorized account cannot trigger booking currency lookup");
   await reject(() => data.commandSalonBooking(id, 1, "call", null, "owner"), /غير متاحة/);
   ok(rpcCalls.length === 0, "unauthorized actors never reach RPC");
   category = "hair_salons"; featureList = ["menu"];
@@ -170,7 +186,9 @@ try {
   h = await workerHarness({ kinds: ["loyalty_welcome"] }); await h.worker.runSalonMessageJobs(); await h.worker.runSalonMessageJobs();
   ok(h.sent.length === 1 && h.sent[0].message.includes(`/salon/card/${loyaltyLink.salonLoyaltyToken(id)}`) && h.sent[0].message.includes("ينتظر تأكيد الصالون"), "welcome sends one direct card link without falsely confirming appointment");
   const loyaltyEntry = await load("components/menu/brand-loyalty-entry.tsx", { "next/link": { __esModule: true, default: "a" }, "@/lib/analytics/public-tracking": { trackBrandEngagement() {} }, "./loyalty-link-content": { LoyaltyLinkContent: ({ label }) => React.createElement("span", null, label) } });
-  const degreesImports = { "@/lib/salon/degrees": await load("lib/salon/degrees.ts"), "./degrees-opening": await load("components/salon/degrees-opening.tsx") };
+  const awlad = await load("lib/menu/awlad-al-izz.ts", { "./awlad-al-izz-catalog": await load("lib/menu/awlad-al-izz-catalog.ts") });
+  const awladBrand = await load("components/menu/awlad-brand.tsx", { "@/lib/menu/awlad-al-izz": awlad });
+  const degreesImports = { ...currencyImports, "@/lib/menu/awlad-al-izz": awlad, "@/components/menu/awlad-brand": awladBrand, "@/lib/salon/degrees": await load("lib/salon/degrees.ts"), "./degrees-opening": await load("components/salon/degrees-opening.tsx") };
   const publicUi = await load("components/salon/public-salon.tsx", { ...degreesImports, "@/app/actions/salon": {}, "@/lib/salon/types": types, "./salon-theme": salonTheme, "@/components/menu/brand-loyalty-entry": loyaltyEntry });
   const html = renderToStaticMarkup(React.createElement(publicUi.PublicSalon, { menu: { name: "صالون الاختبار", slug: "salon-test", products: [{ id, name: "حلاقة شعر", catalogKind: "service", price: 40, preparationTimeMinutes: 30, images: [] }, { id: cafeId, name: "زيت عناية", catalogKind: "product", price: 25, images: [] }], contacts: {}, loyaltyEnabled: true }, announcements: [{ id: "ad", title: "خدمة جديدة", description: "عناية باللحية" }], colors: { background: "#112211", foreground: "#ffffff", accent: "#aabbcc" } }));
   ok(html.includes("الخدمات والأسعار") && html.includes("منتجات العناية") && html.includes("حلاقة شعر") && html.includes("زيت عناية"), "services and retail products separated on public page");
@@ -198,9 +216,16 @@ try {
   ok(boxes().every(n=>n.props.checked) && text(renderDegrees().find(n=>n.props?.role==='status')).includes('٦٥'),"select two services in the same appointment and recalculate total");
   boxes()[0].props.onChange({currentTarget:{checked:false}});
   ok(!boxes()[0].props.checked && boxes()[1].props.checked,"remove one service without clearing remaining selection");
-  const priceEditor = await load("components/salon/booking-price.tsx", { "@/app/actions/salon": {} });
+  const priceEditor = await load("components/salon/booking-price.tsx", { ...currencyImports, "@/app/actions/salon": {} });
   const consoleUi = await load("components/salon/booking-console.tsx", { "./booking-price": priceEditor, "@/components/ui/design-system": { DashboardPageShell: ({ title, children }) => React.createElement("section", null, React.createElement("h1", null, title), children) }, "@/app/actions/salon": {}, "@/lib/salon/types": types });
   const baseBooking = { ...portal.booking, phone: "966500000001", proposedStart: null, calledAt: null, completedAt: null, rating: null, review: "" };
+  for (const code of ["IQD", "SAR"]) {
+    const booking = { ...baseBooking, currencyCode: code };
+    const editorHtml = renderToStaticMarkup(React.createElement(priceEditor.BookingPrice, { booking, mode: "owner", refresh: async () => {} }));
+    ok(editorHtml.includes(currency.currencyByCode(code).currencyName), `booking price editor labels ${code}`);
+    const completedHtml = renderToStaticMarkup(React.createElement(priceEditor.BookingPrice, { booking: { ...booking, status: "completed" }, mode: "owner", refresh: async () => {} }));
+    ok(completedHtml.includes(currency.formatAccountMoney(40, code)), `completed booking keeps amount in ${code}`);
+  }
   const degreesHtml = renderToStaticMarkup(React.createElement(publicUi.PublicSalon, { ...props, menu: { ...props.menu, loyaltyEnabled: true, cafeId: degreesImports["@/lib/salon/degrees"].DEGREES_SALON_ID, products: [...props.menu.products, { id:"vip", categoryId:"hair", name:"خدمات VIP", price:0, catalogKind:"service", commerceDetails:{quoteOnly:true}, images:[] }] } }));
   ok(degreesHtml.includes("الخدمات المطلوبة") && (degreesHtml.match(/type="checkbox"/g) ?? []).length === 3, "grouped booking service choices rendered");
   ok(degreesHtml.includes('data-salon-presentation="100-degrees"') && degreesHtml.includes('/salon/100-degrees/wordmark.webp') && degreesHtml.includes('شاملة ضريبة القيمة المضافة'), '100 Degrees scoped branding and tax-inclusive service list');
@@ -237,7 +262,11 @@ try {
   ok(awaitingHtml.includes("بانتظار موافقة العميل") && !awaitingHtml.includes("استدعاء العميل") && !awaitingHtml.includes("إنهاء الخدمة"), "pending confirmed-time proposal cannot be called or completed");
   await reject(() => data.getSalonBookings({ status: "reviews" }, "staff", true), /الكاشير/);
   await reject(() => data.getSalonBookings({ status: "completed" }, "staff", true), /الكاشير/);
-  const portalUi = await load("components/salon/booking-portal.tsx", { "./salon-theme": salonTheme, "next/navigation": { useRouter: () => ({ refresh() {} }) }, "@/app/actions/salon": {}, "@/lib/salon/types": types });
+  const portalUi = await load("components/salon/booking-portal.tsx", { ...currencyImports, "./salon-theme": salonTheme, "next/navigation": { useRouter: () => ({ refresh() {} }) }, "@/app/actions/salon": {}, "@/lib/salon/types": types });
+  for (const code of ["IQD", "SAR"]) {
+    const priceHtml = renderToStaticMarkup(React.createElement(portalUi.BookingPortal, { token, booking: { ...baseBooking, currencyCode: code }, brandName: "صالون الاختبار", slug: "salon-test", loyaltyEnabled: false }));
+    ok(priceHtml.includes(currency.formatAccountMoney(40, code)) && !priceHtml.includes("966500000001"), `customer portal displays ${code} without exposing phone`);
+  }
   const proposedHtml = renderToStaticMarkup(React.createElement(portalUi.BookingPortal, { token, booking: { ...baseBooking, status: "proposed", proposedStart: "2030-05-11T11:30:00Z" }, brandName: "صالون الاختبار", slug: "salon-test", loyaltyEnabled: true }));
   ok(proposedHtml.includes("أوافق على الموعد") && proposedHtml.includes("أرفض الموعد") && !proposedHtml.includes("966500000001"), "proposal needs explicit customer choice and hides phone");
   const doneHtml = renderToStaticMarkup(React.createElement(portalUi.BookingPortal, { token, booking: { ...baseBooking, status: "completed", rating: 5, review: "تقييم محفوظ" }, brandName: "صالون الاختبار", slug: "salon-test", loyaltyEnabled: true }));

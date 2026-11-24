@@ -5,6 +5,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 import { isStorefrontEnabled, isStorefrontPath, storefrontUnavailableResponse } from "@/lib/platform/storefront-availability";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recoverExpiredCashierAction } from "@/lib/cashier/session-recovery";
+import { isAwladAlIzz } from "@/lib/menu/awlad-al-izz";
 import { hospitalAccountLoginPath, hospitalAccountRouteHeader, isHospitalAccountRoute, isLegacyHospitalAccountLogin } from "@/lib/commerce/hospital-account-routing";
 
 const AUTH_REFRESH_PREFIXES = [
@@ -69,8 +70,8 @@ export async function proxy(incoming: NextRequest) {
     const menuSlug = pathname.match(/^\/menu\/([a-z0-9-]{1,100})\/?$/)?.[1];
     if (menuSlug) {
       try {
-        const { data } = await createAdminClient().from("cafes").select("business_category").eq("slug", menuSlug).is("deleted_at", null).abortSignal(AbortSignal.timeout(2000)).maybeSingle();
-        if (data?.business_category === "hair_salons") {
+        const { data } = await createAdminClient().from("cafes").select("id,business_category").eq("slug", menuSlug).is("deleted_at", null).abortSignal(AbortSignal.timeout(2000)).maybeSingle();
+        if (data?.business_category === "hair_salons" && !isAwladAlIzz(data.id)) {
           const target = request.nextUrl.clone(); target.pathname = `/salon/${menuSlug}`;
           return NextResponse.redirect(target, 307);
         }

@@ -11,16 +11,21 @@ import { salonTheme } from "./salon-theme";
 import { DEGREES_SALON_ID } from "@/lib/salon/degrees";
 import { DegreesOpening, DegreesService, degreesMark } from "./degrees-opening";
 import styles from "./public-salon.module.css";
+import { AWLAD_ASSETS, isAwladAlIzz } from "@/lib/menu/awlad-al-izz";
+import { currencyByCode, formatAccountAmount } from "@/lib/currency/account-currency";
+import { AwladBrandFooter } from "@/components/menu/awlad-brand";
 
-const money = (amount: number) => amount.toLocaleString("ar-SA", { maximumFractionDigits: 2 });
-
-export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneMenu; announcements: SalonAnnouncement[]; colors: { background: string; foreground: string; accent: string } }) {
+export function PublicSalon({ menu, announcements, colors, bookingAvailable = true }: { menu: StandaloneMenu; announcements: SalonAnnouncement[]; colors: { background: string; foreground: string; accent: string }; bookingAvailable?: boolean }) {
+  const awlad = isAwladAlIzz(menu.cafeId);
+  const currency = currencyByCode(menu.currencyCode);
+  const currencyLabel = currency.currencyCode === "SAR" ? "ر س" : currency.currencyLabel;
+  const money = (amount: number) => formatAccountAmount(amount, currency.currencyCode);
   // This commissioned identity belongs to this tenant, even if its slug changes.
   const barber55 = menu.cafeId === "ac27c25a-79f3-40f7-ade2-70df8f715551";
   const fineCut = menu.cafeId === "b21a113d-918c-4934-ad47-7c60fa0f4aa9";
   const degrees = menu.cafeId === DEGREES_SALON_ID;
   const logo = degrees ? degreesMark : menu.logoUrl;
-  const servicePrice = (product: StandaloneMenuProduct) => degrees && product.price === 0 && product.commerceDetails?.quoteOnly ? "يُحدّد مع الصالون" : money(product.price) + " ر س";
+  const servicePrice = (product: StandaloneMenuProduct) => degrees && product.price === 0 && product.commerceDetails?.quoteOnly ? "يُحدّد مع الصالون" : `${money(product.price)} ${currencyLabel}`;
   const [bookingOpen, setBookingOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const [serviceIds, setServiceIds] = useState<string[]>([]);
@@ -57,17 +62,17 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (pending || !bookingAvailable) return;
     const form = new FormData(event.currentTarget);
     setError("");
     let start: string;
     try { start = salonInputTime(`${form.get("date")}T${form.get("time")}`); }
     catch { setError("حدد تاريخ الموعد ووقته"); return; }
-    if (Date.parse(start) <= Date.now()) { setError("اختر وقتًا لاحقًا للحجز بتوقيت السعودية"); return; }
+    if (Date.parse(start) <= Date.now()) { setError("اختر وقتًا لاحقًا للحجز بتوقيت الصالون"); return; }
     requestId.current ??= crypto.randomUUID();
     startTransition(async () => {
       try {
-        const result = await createSalonBookingAction({ id: requestId.current!, slug: menu.slug, name: String(form.get("name")), phone: String(form.get("phone")), ...(degrees ? { serviceIds } : { serviceId: serviceId || null }), start });
+        const result = await createSalonBookingAction({ id: requestId.current!, slug: menu.slug, name: String(form.get("name")), phone: String(form.get("phone")), ...((degrees || awlad) ? { serviceIds } : { serviceId: serviceId || null }), start });
         if (result.ok) window.location.assign(result.data.url);
         else setError(result.error);
       } catch { setError("تعذر إرسال الطلب تحقق من اتصالك وحاول مرة أخرى"); }
@@ -80,7 +85,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
         : <div className={styles.serviceArt} aria-hidden="true">{service ? <Scissors /> : <ShoppingBag />}<span>{service ? "GROOMING" : "CARE ESSENTIALS"}</span></div>}
         {product.category && <span className={styles.categoryTag}>{product.category}</span>}
       </div>
-      <div className={styles.serviceBody}><div className={styles.serviceTitle}><h3>{product.name}</h3><span className={styles.price}>{money(product.price)} <small>ر س</small></span></div>
+      <div className={styles.serviceBody}><div className={styles.serviceTitle}><h3>{product.name}</h3><span className={styles.price}>{money(product.price)} <small>{currencyLabel}</small></span></div>
         {product.description && <p>{product.description}</p>}
         <div className={styles.serviceFoot}>{service && product.preparationTimeMinutes ? <span><Clock3 aria-hidden="true" />{product.preparationTimeMinutes} دقيقة تقريبًا</span> : <span>{service ? "عناية على ذوقك" : "لروتين عنايتك"}</span>}
           {service && <button type="button" disabled={pending} onClick={() => choose(product.id)} aria-label={`احجز خدمة ${product.name}`}>احجز الخدمة <ArrowUpLeft aria-hidden="true" /></button>}
@@ -88,18 +93,18 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
       </div>
     </article>;
   }
-  const loyaltyEntry = menu.loyaltyEnabled ? <BrandLoyaltyEntry id="loyalty" className={styles.loyaltyEntry} slug={menu.slug} name={menu.name} logoUrl={logo} source="salon" eyebrow="لأن رجعتك تسعدنا" palette={{ background: "var(--panel)", foreground: "var(--paper)", muted: "var(--copy)", cardBackground: "var(--card-background,#4a281d)", cardForeground: "var(--card-foreground,#fff)", cardBack: "var(--gold)", actionBackground: "var(--paper)", actionForeground: "var(--ink)" }} /> : null;
-  return <main className={`${styles.page}${degrees ? ` ${styles.degrees}` : barber55 ? ` ${styles.barber55}` : ` ${styles.editorial}`}${fineCut ? ` ${styles.fineCut}` : ""}`} style={brandStyle} dir="rtl" data-salon-presentation={degrees ? "100-degrees" : barber55 ? "barber55" : "editorial"}>
+  const loyaltyEntry = menu.loyaltyEnabled ? <BrandLoyaltyEntry id="loyalty" className={styles.loyaltyEntry} slug={menu.slug} name={menu.name} logoUrl={logo} source="salon" eyebrow="لأن رجعتك تسعدنا" palette={{ background: "var(--panel)", foreground: "var(--paper)", muted: "var(--copy)", cardBackground: awlad ? colors.background : "var(--card-background,#4a281d)", cardForeground: awlad ? colors.foreground : "var(--card-foreground,#fff)", cardBack: "var(--gold)", actionBackground: "var(--paper)", actionForeground: "var(--ink)" }} /> : null;
+  return <main className={`${styles.page}${awlad ? ` ${styles.editorial} ${styles.awlad}` : degrees ? ` ${styles.degrees}` : barber55 ? ` ${styles.barber55}` : ` ${styles.editorial}`}${fineCut ? ` ${styles.fineCut}` : ""}`} style={brandStyle} dir="rtl" data-salon-presentation={awlad ? "awlad-al-izz" : degrees ? "100-degrees" : barber55 ? "barber55" : "editorial"}>
     <a className={styles.skip} href="#services">انتقل إلى الخدمات</a>
     {degrees ? <DegreesOpening book={() => setBookingOpen(true)} loyalty={Boolean(menu.loyaltyEnabled)} /> : <div className={styles.opening}>
-      <header className={styles.header}>
+      {!awlad && <header className={styles.header}>
         <a href={`/salon/${menu.slug}`} className={styles.brand} aria-label={menu.name}>
           {menu.logoUrl ? <Image unoptimized width={64} height={64} src={menu.logoUrl} alt={barber55 ? menu.name : ""} className={styles.logo} /> : <span className={styles.brandMark}><Scissors aria-hidden="true" /></span>}
           <span><strong>{menu.name}</strong><small>{barber55 ? "حلاقة رجالية بطابعك" : "العناية بالرجل"}</small></span>
         </a>
         <nav className={styles.nav} aria-label="أقسام الصالون"><a href="#services">الخدمات والأسعار</a>{hasOffers && <a href="#offers">العروض والجديد</a>}{menu.loyaltyEnabled && <a href="#loyalty">بطاقة الولاء</a>}</nav>
         <button className={styles.headerBooking} onClick={() => setBookingOpen(true)}><CalendarDays aria-hidden="true" /><span>احجز موعدك</span><ArrowUpLeft aria-hidden="true" /></button>
-      </header>
+      </header>}
       <section className={styles.hero} aria-labelledby="salon-heading">
         <div className={styles.heroCopy}>
           {fineCut && <div className={styles.fineCutIdentity} dir="ltr"><span className={styles.fineCutWordmark}>FINE <em>CUT</em></span><span className={styles.fineCutSignature}><span />MEN’S GROOMING<span /></span></div>}
@@ -109,11 +114,11 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
           {barber55 && menu.logoUrl && <div className={styles.heroIdentity}><Image unoptimized src={menu.logoUrl} width={360} height={128} alt={menu.name} /></div>}
           <p className={styles.heroDescription}>{menu.description || (!barber55 ? "لحظة لك وإطلالة تليق بك اختر عنايتك واترك لنا التفاصيل" : "وقت لك وإطلالة تشبهك اختر عنايتك واترك للتفاصيل أثرها")}</p>
           <div className={styles.heroActions}><button className={styles.primary} onClick={() => setBookingOpen(true)}>احجز وقتك <ArrowUpLeft aria-hidden="true" /></button><a className={styles.textLink} href="#services">اكتشف الخدمات <ArrowDown aria-hidden="true" /></a></div>
-          <div className={styles.heroNote}><CalendarDays aria-hidden="true" /><span>موعدك على راحتك<small>اختر الوقت وسيصلك التأكيد عبر واتساب</small></span></div>
+          <div className={styles.heroNote}><CalendarDays aria-hidden="true" /><span>موعدك على راحتك<small>{awlad ? "اختر خدماتك وحدد الوقت المناسب" : "اختر الوقت وسيصلك التأكيد عبر واتساب"}</small></span></div>
         </div>
         <div className={styles.heroVisual}>
           {!barber55 && <span className={styles.fineCutEditorial} aria-hidden="true" dir="ltr">THE FINER DETAILS</span>}
-          <div className={styles.artFrame}><Image src={fineCut ? "/salon/fine-cut/portrait-gold.webp" : barber55 ? "/salon/barber-55/portrait-midnight.webp" : "/salon/editorial-portrait-v1.webp"} width={1024} height={1536} loading="eager" fetchPriority="high" sizes="(max-width: 720px) 100vw, 50vw" alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir={barber55 || fineCut ? "ltr" : "auto"}>{fineCut ? "FINE CUT / MEN’S GROOMING" : barber55 ? "BARBER 55 — THE FINER DETAILS" : menu.name}</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
+          <div className={styles.artFrame}><Image src={awlad ? `${AWLAD_ASSETS}/haircut.webp` : fineCut ? "/salon/fine-cut/portrait-gold.webp" : barber55 ? "/salon/barber-55/portrait-midnight.webp" : "/salon/editorial-portrait-v1.webp"} width={1024} height={1536} loading="eager" fetchPriority="high" sizes="(max-width: 720px) 100vw, 50vw" alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir={barber55 || fineCut ? "ltr" : "auto"}>{fineCut ? "FINE CUT / MEN’S GROOMING" : barber55 ? "BARBER 55 — THE FINER DETAILS" : menu.name}</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
           <div className={styles.seal} aria-hidden="true"><Scissors /><span>على ذوقك</span></div>
           <span className={styles.visualNote} aria-hidden="true" dir="ltr">A MOMENT FOR YOURSELF</span>
         </div>
@@ -121,7 +126,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
       <div className={styles.openingFooter}><span><Scissors aria-hidden="true" />عناية تبدأ من هنا</span><div>{menu.contacts.location && <a href={menu.contacts.location.googleUrl} target="_blank" rel="noreferrer"><MapPin aria-hidden="true" />موقع الصالون<ArrowUpLeft aria-hidden="true" /></a>}{menu.contacts.instagramUrl && <a href={menu.contacts.instagramUrl} target="_blank" rel="noreferrer"><Camera aria-hidden="true" />إنستغرام<ArrowUpLeft aria-hidden="true" /></a>}</div><a href="#services" className={styles.scrollLink}>اكتشف أكثر<ArrowDown aria-hidden="true" /></a></div>
     </div>}
     <div className={styles.content}>
-      {degrees && loyaltyEntry}
+      {(degrees || awlad) && loyaltyEntry}
       <section id="services" className={styles.section} aria-labelledby="services-heading">
         {degrees ? <div className={styles.degreesMenuHead}><h2 id="services-heading">قائمة الخدمات</h2><p>الأسعار بالريال وشاملة ضريبة القيمة المضافة</p></div> : <div className={styles.sectionHead}><div><p className={styles.eyebrow}>الخدمات والأسعار</p><h2 id="services-heading">عناية تليق <em>بتفاصيلك</em></h2></div><p className={styles.sectionDescription}>اختر خدمتك<br />وخلّ وقت العناية لك</p></div>}
         {categories.length > 1 && <div className={styles.categories} aria-label="تصنيفات الخدمات"><button aria-pressed={!category} onClick={() => setCategory("")}>كل الخدمات <span>{services.length}</span></button>{categories.map(c => <button key={c.id} aria-pressed={category === c.id} onClick={() => setCategory(c.id)}>{c.name}</button>)}</div>}
@@ -139,35 +144,36 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
         {offers.map(offer => <article className={styles.offer} key={offer.id}>{offer.imageUrl && <Image unoptimized width={640} height={420} src={offer.imageUrl} alt="" className={styles.offerImage} />}<div className={styles.offerBody}><span className={styles.offerLabel}><Gift aria-hidden="true" />{offer.discountPercent != null ? `خصم ${offer.discountPercent}%` : "عرض من الصالون"}</span><h3>{offer.title}</h3><p>{offer.description}</p>{offer.code && <div className={styles.offerCode}>رمز العرض <b dir="ltr">{offer.code}</b></div>}{offer.productId && services.some(p => p.id === offer.productId) && <button className={styles.textLink} onClick={() => choose(offer.productId!)}>احجز الخدمة<ArrowUpLeft aria-hidden="true" /></button>}</div></article>)}
         {announcements.map(ad => <article className={`${styles.offer} ${styles.announcement}`} key={ad.id}><Sparkles className={styles.adIcon} aria-hidden="true" /><div className={styles.offerBody}><span className={styles.offerLabel}>جديد الصالون</span><h3>{ad.title}</h3><p>{ad.description}</p>{ad.service_id && services.some(p => p.id === ad.service_id) && <button className={styles.textLink} onClick={() => choose(ad.service_id!)}>احجز الخدمة<ArrowUpLeft aria-hidden="true" /></button>}</div></article>)}
       </div></section>}
-      {!degrees && loyaltyEntry}
+      {!degrees && !awlad && loyaltyEntry}
       <section className={styles.bookingTeaser}><div><p className={styles.eyebrow}>وقت خاص لك</p><h2>جاهز لإطلالتك القادمة</h2></div><button className={styles.primary} onClick={() => setBookingOpen(true)}>احجز موعدك<ArrowUpLeft aria-hidden="true" /></button></section>
       <dialog ref={dialog} className={styles.bookingDialog} aria-labelledby="booking-heading" onCancel={event => { if (pending) event.preventDefault(); else setBookingOpen(false); }} onClose={() => setBookingOpen(false)}>
         <div className={styles.modalHeader}><span><Scissors aria-hidden="true" />{menu.name}</span><button type="button" aria-label="إغلاق نافذة الحجز" disabled={pending} onClick={() => setBookingOpen(false)}><X aria-hidden="true" /></button></div>
         <div className={styles.booking}>
-        <div className={styles.bookingIntro}><p className={styles.eyebrow}>حان وقتك</p><h2 id="booking-heading"><span>موعدك القادم</span>{" "}<em>يبدأ هنا</em></h2><p>خذ وقتًا لنفسك وحدد الموعد الذي يناسب يومك</p><ol className={styles.steps}><li><span>١</span><div><strong>اختر خدمتك ووقتك</strong><p>طلب واحد بكل تفاصيل موعدك</p></div></li><li><span>٢</span><div><strong>يصلك رد الصالون</strong><p>تأكيد الموعد أو اقتراح وقت آخر عبر واتساب</p></div></li><li><Check aria-hidden="true" /><div><strong>ننتظرك في موعدك</strong><p>اعتماد الموعد بعد تأكيد الصالون</p></div></li></ol><p className={styles.timezone}><Clock3 aria-hidden="true" />جميع الأوقات بتوقيت السعودية</p></div>
+        <div className={styles.bookingIntro}><p className={styles.eyebrow}>حان وقتك</p><h2 id="booking-heading"><span>موعدك القادم</span>{" "}<em>يبدأ هنا</em></h2><p>خذ وقتًا لنفسك وحدد الموعد الذي يناسب يومك</p><ol className={styles.steps}><li><span>١</span><div><strong>اختر خدمتك ووقتك</strong><p>طلب واحد بكل تفاصيل موعدك</p></div></li><li><span>٢</span><div><strong>يصلك رد الصالون</strong><p>{awlad ? "تابع التأكيد أو الوقت المقترح من رابط حجزك" : "تأكيد الموعد أو اقتراح وقت آخر عبر واتساب"}</p></div></li><li><Check aria-hidden="true" /><div><strong>ننتظرك في موعدك</strong><p>اعتماد الموعد بعد تأكيد الصالون</p></div></li></ol><p className={styles.timezone}><Clock3 aria-hidden="true" />{awlad ? "جميع الأوقات بتوقيت بغداد" : "جميع الأوقات بتوقيت السعودية"}</p></div>
         <form className={styles.form} onSubmit={submit} onChange={() => { if (!pending) requestId.current = null; }} aria-busy={pending}>
           <div className={styles.formHeading}><CalendarDays aria-hidden="true" /><div><h3>احجز موعدك</h3><p>{menu.loyaltyEnabled ? "حجزك وبطاقة ولائك في خطوة واحدة" : "خطوة بسيطة لعناية تستحقها"}</p></div></div>
           <label className={styles.field}>اسمك<input name="name" autoComplete="name" placeholder="كيف نناديك" minLength={2} maxLength={120} required disabled={pending} /></label>
-          <label className={styles.field}>جوال واتساب<input name="phone" autoComplete="tel" inputMode="tel" dir="ltr" placeholder="05xxxxxxxx" maxLength={30} required disabled={pending} /></label>
-          {degrees ? <fieldset className={`${styles.serviceChoices} ${styles.full}`} disabled={pending}>
+          <label className={styles.field}>جوال واتساب<input name="phone" autoComplete="tel" inputMode="tel" dir="ltr" placeholder={awlad ? "07xxxxxxxxx" : "رقم الجوال"} maxLength={30} required disabled={pending} /></label>
+          {(degrees || awlad) ? <fieldset className={`${styles.serviceChoices} ${styles.full}`} disabled={pending}>
             <legend>الخدمات المطلوبة</legend>
             <div className={styles.choiceList}>{services.filter(p => p.available !== false).map(p =>
               <label key={p.id}><input type="checkbox" checked={serviceIds.includes(p.id)} onChange={e => {
                 const checked = e.currentTarget.checked;
                 setServiceIds(ids => checked ? [...ids, p.id] : ids.filter(id => id !== p.id));
               }} /><span>{p.name}</span><small>{servicePrice(p)}</small></label>)}</div>
-            <div className={styles.choiceTotal} role="status">{chosen.length ? <><span>عدد الخدمات {chosen.length}</span><strong>{quoted ? "يُحدّد الإجمالي مع الصالون" : `الإجمالي ${money(chosen.reduce((total, p) => total + p.price, 0))} ر س`}</strong></> : "يمكنك تحديد الخدمات مع الصالون"}</div>
+            <div className={styles.choiceTotal} role="status">{chosen.length ? <><span>عدد الخدمات {chosen.length}</span><strong>{quoted ? "يُحدّد الإجمالي مع الصالون" : `الإجمالي ${money(chosen.reduce((total, p) => total + p.price, 0))} ${currencyLabel}`}</strong></> : "يمكنك تحديد الخدمات مع الصالون"}</div>
           </fieldset> : <label className={`${styles.field} ${styles.full}`}>الخدمة<select value={serviceId} onChange={e => setServiceIds(e.target.value ? [e.target.value] : [])} disabled={pending}><option value="">أحدد الخدمة مع الصالون</option>{services.map(p => <option key={p.id} value={p.id}>{p.name} — {servicePrice(p)}</option>)}</select></label>}
-          {!degrees && selected && <div className={`${styles.selectedService} ${styles.full}`} role="status"><span><Scissors aria-hidden="true" />{selected.name}</span><strong>{servicePrice(selected)}</strong></div>}
+          {!degrees && !awlad && selected && <div className={`${styles.selectedService} ${styles.full}`} role="status"><span><Scissors aria-hidden="true" />{selected.name}</span><strong>{servicePrice(selected)}</strong></div>}
           <label className={styles.field}>التاريخ<input ref={dateInput} type="date" name="date" dir="ltr" lang="en" min={salonToday()} required disabled={pending} /></label><label className={styles.field}>الوقت<input type="time" name="time" dir="ltr" lang="en" required disabled={pending} /></label>
           {error && <p role="alert" className={`${styles.error} ${styles.full}`}>{error}</p>}
-          <button className={`${styles.submit} ${styles.full}`} disabled={pending}>{pending ? "جارٍ إرسال طلبك" : "إرسال طلب الحجز"}<ArrowUpLeft aria-hidden="true" /></button>
+          <button className={`${styles.submit} ${styles.full}`} disabled={pending || !bookingAvailable}>{!bookingAvailable ? "معاينة الحجز فقط" : pending ? "جارٍ إرسال طلبك" : "إرسال طلب الحجز"}<ArrowUpLeft aria-hidden="true" /></button>
           <p className={`${styles.consent} ${styles.full}`}>{menu.loyaltyEnabled ? "بإرسال الطلب توافق على التسجيل في الولاء وتلقي بطاقة الولاء ورسائل الحجز والنداء والتقييم عبر واتساب" : "بإرسال الطلب توافق على تلقي رسائل هذا الحجز والنداء والتقييم عبر واتساب"}</p>
         </form>
         </div>
       </dialog>
-      <footer className={styles.footer}><a href={`/salon/${menu.slug}`} className={styles.footerBrand}>{logo && <Image unoptimized width={44} height={44} src={logo} alt="" />}<span>{menu.name}<small>تفاصيل تعكس أناقتك</small></span></a><div>{menu.contacts.instagramUrl && <a href={menu.contacts.instagramUrl} target="_blank" rel="noreferrer">إنستغرام</a>}{menu.contacts.location && <a href={menu.contacts.location.googleUrl} target="_blank" rel="noreferrer">موقع الصالون</a>}<a href="https://barndaksa.com">بواسطة برندة<ArrowUpLeft aria-hidden="true" /></a></div></footer>
+      {!awlad && <footer className={styles.footer}><a href={`/salon/${menu.slug}`} className={styles.footerBrand}>{logo && <Image unoptimized width={44} height={44} src={logo} alt="" />}<span>{menu.name}<small>تفاصيل تعكس أناقتك</small></span></a><div>{menu.contacts.instagramUrl && <a href={menu.contacts.instagramUrl} target="_blank" rel="noreferrer">إنستغرام</a>}{menu.contacts.location && <a href={menu.contacts.location.googleUrl} target="_blank" rel="noreferrer">موقع الصالون</a>}<a href="https://barndaksa.com">بواسطة برندة<ArrowUpLeft aria-hidden="true" /></a></div></footer>}
     </div>
+    {awlad && <AwladBrandFooter name={menu.name} contacts={menu.contacts} section="salon" />}
     <nav className={styles.dock} aria-label="الوصول السريع"><a href="#services"><Scissors aria-hidden="true" /><span>الخدمات</span></a>{menu.loyaltyEnabled && <a href={`/loyalty/${menu.slug}`}><Gift aria-hidden="true" /><span>ولائي</span></a>}<button className={styles.dockBooking} onClick={() => setBookingOpen(true)}><CalendarDays aria-hidden="true" />احجز موعدك<ArrowUpLeft aria-hidden="true" /></button></nav>
   </main>;
 }

@@ -28,6 +28,9 @@ import { isHospitalStore, MIND_HOSPITAL_SLUG } from "@/lib/commerce/hospital-pro
 import { WahedMasoubMenu } from "@/components/menu/wahed-masoub-menu";
 import { WAHED_MASOUB_SLUG, WAHED_MASOUB_COLOR } from "@/lib/menu/wahed-masoub";
 import { HospitalMenu } from "@/components/menu/hospital-menu";
+import { AwladAlIzz } from "@/components/menu/awlad-al-izz";
+import { withAwladCatalogPreview } from "@/lib/data/awlad-preview";
+import { AWLAD_SLUG, AWLAD_BLUE, isAwladAlIzz } from "@/lib/menu/awlad-al-izz";
 
 export const dynamic = "force-dynamic";
 // Share the preview publication check between metadata and page rendering in one request.
@@ -37,6 +40,7 @@ type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<Record<
 
 export async function generateViewport({ params }: Props): Promise<Viewport> {
   const { slug } = await params;
+  if (slug === AWLAD_SLUG) return { themeColor: AWLAD_BLUE, width: "device-width", initialScale: 1 };
   return { themeColor: isMeramStore(slug) ? "#e2dcd7" : slug === WAHED_MASOUB_SLUG ? WAHED_MASOUB_COLOR : isAldeemStore(slug) ? "#6b347e" : isFawaselStore(slug) ? "#ff8500" : slug === JAMILA_SLUG ? "#5c5c5c" : "#102019", width: "device-width", initialScale: 1 };
 }
 
@@ -51,6 +55,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (loyaltyBrand) return { title: `${loyaltyBrand.identity.name} | الولاء والمكافآت`, description: `انضم إلى برنامج ولاء ${loyaltyBrand.identity.name} واجمع أختامك`, alternates: { canonical: `/loyalty/${loyaltyBrand.identity.slug}/qr` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
+  if (isAwladAlIzz(menu.cafeId)) return { title: `${menu.name} | المشروبات والمنيو`, description: "في ضيافة أولاد العز القهوة والمشروبات والمعجنات", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (isMeramStore(menu.slug)) return { title: "ميرام | ورود وهدايا", description: "اختر هديتك من ميرام وأضف كلمات الإهداء وحدد موقع التسليم", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (isAldeemStore(menu.slug)) return { title: "خيال الديم | حلا يكمّل حلو أيامك", description: "اكتشف تشكيلة سلسلة خيال الديم للحلويات من الكيك والتشيز والحلا واختَر ما يناسب لحظتك", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (isFawaselStore(menu.slug)) return { title: "فواصل | ستايلك كل يوم", description: "تسوّق أزياء وأحذية وإكسسوارات فواصل واختر تفاصيل إطلالتك وانضم إلى نادي فواصل", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
@@ -76,6 +81,12 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   if (loyaltyBrand) redirect(`/loyalty/${loyaltyBrand.identity.slug}/qr`);
   const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) notFound();
+  if (isAwladAlIzz(menu.cafeId)) {
+    const catalog = withAwladCatalogPreview(menu);
+    const program = menu.loyaltyEnabled ? await getPublicLoyaltyProgramBySlug(menu.slug) : null;
+    const content = <AwladAlIzz menu={catalog.menu} showLoyalty={Boolean(program?.enabled)} />;
+    return showcase ? <div inert>{content}</div> : <>{!catalog.preview && <PublicPageAnalytics slug={menu.slug} kind="menu_view" />}{content}</>;
+  }
   if (isHospitalStore(menu.slug)) {
     const program = menu.loyaltyEnabled ? await getPublicLoyaltyProgramBySlug(menu.slug).catch(() => null) : null;
     const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;

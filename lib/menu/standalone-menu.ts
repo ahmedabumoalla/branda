@@ -1,4 +1,5 @@
 import type { MenuProduct } from "@/lib/mock/menu";
+import type { AccountCurrencyCode } from "@/lib/currency/account-currency";
 
 export const STANDALONE_MENU_FEATURE = "standalone_menu";
 
@@ -23,6 +24,7 @@ export type StandaloneMenuProduct = Pick<MenuProduct,
   "id" | "name" | "category" | "categoryId" | "description" | "price" | "priceOptions" |
   "calories" | "preparationTimeMinutes" | "ingredients" | "available" | "promo" | "commerceDetails" | "butcherDetails"
 > & {
+  currencyCode?: AccountCurrencyCode;
   priceMode?: "fixed" | "cashier";
   priceRange?: MenuPriceRange;
   catalogKind?: "service" | "product";
@@ -33,6 +35,8 @@ export type StandaloneMenuProduct = Pick<MenuProduct,
 };
 
 export type StandaloneMenu = {
+  currencyCode?: AccountCurrencyCode;
+  currencyLabel?: string;
   presentation?: "signature";
   appearance?: { palette: Record<string, string>; heroUrl: string | null };
   branches?: { id: string; name: string; slug: string }[];

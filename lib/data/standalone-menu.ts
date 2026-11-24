@@ -1,5 +1,5 @@
 import { isHospitalStore } from "@/lib/commerce/hospital-profile";
-import { DEGREES_SALON_ID } from "@/lib/salon/degrees";
+import { hasManagedSalonBookings } from "@/lib/salon/degrees";
 import "server-only";
 import { isCommerceBusinessCategory } from "@/lib/commerce/business-category";
 import { signatureBrand } from "@/lib/menu/signature-brands";
@@ -15,6 +15,7 @@ import { standaloneLogoVariant } from "@/lib/menu/logo-variants";
 import { publishedMenuLogo } from "@/lib/cafe/published-logo";
 import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
 import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
+import { getBrandCurrency } from "@/lib/data/brand-currency";
 import { isGreenApiConfigured } from "@/lib/whatsapp/green-api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
@@ -83,14 +84,15 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
   const sourceBranch = branchRows?.find(row => row.id === branchId);
   const hospitalMenu = isHospitalStore(slug) || (slug === "brand-8ad185ee82e3" && sourceBranch?.menu_slug === "hospital");
   const branchDto = (row: NonNullable<typeof branchRows>[number]) => ({ id: String(row.id), name: String(row.name), slug: String(row.menu_slug) });
-  const categoryQuery = admin.from("menu_categories").select("id,name,description").eq("cafe_id", cafe.id)
+  const categoryQuery = admin.from("menu_categories").select("id,name,description,icon").eq("cafe_id", cafe.id)
     .eq("visible", true).is("deleted_at", null).order("sort_order").order("id");
 
-  const [categoryResult, settingsResult, rawRows, identityResult] = await Promise.all([
+  const [categoryResult, settingsResult, rawRows, identityResult, currency] = await Promise.all([
     branchId ? categoryQuery.eq("branch_id", branchId) : categoryQuery.is("branch_id", null),
     admin.from("cafe_settings").select("logo_url,logo_storage_path,description,instagram,whatsapp").eq("cafe_id", cafe.id).maybeSingle(),
-    readMenuProducts(admin, String(cafe.id), branchId, isCommerceBusinessCategory(cafe.business_category) || hospitalMenu || cafe.id === DEGREES_SALON_ID),
+    readMenuProducts(admin, String(cafe.id), branchId, isCommerceBusinessCategory(cafe.business_category) || hospitalMenu || hasManagedSalonBookings(cafe.id)),
     defaultPresentation ? admin.from("cafe_custom_identity").select("palette,logo_storage_path,logo_url,background_storage_path,background_url").eq("cafe_id", cafe.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    getBrandCurrency(String(cafe.id)),
   ]);
   if (categoryResult.error) throw categoryResult.error;
   if (settingsResult.error) throw settingsResult.error;
@@ -157,6 +159,7 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
       priceMode: hospitalMenu ? product.priceMode : undefined,
       priceRange: hospitalMenu && product.priceMode === undefined && !product.priceOptions?.length ? readMenuPriceRange(product.commerceSnapshot, product.price) : undefined,
       catalogKind: product.catalogKind,
+      currencyCode: currency.currencyCode,
       commerceDetails: product.commerceDetails,
       preparationTimeMinutes: product.preparationTimeMinutes, ingredients: product.ingredients,
       available: isCommerceBusinessCategory(cafe.business_category) ? giftProductAvailable(product) : product.available, promo: product.promo,
@@ -176,5 +179,6 @@ export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: st
   const rawPalette = identity?.palette;
   const palette = rawPalette && typeof rawPalette === "object" && !Array.isArray(rawPalette) ? Object.fromEntries(Object.entries(rawPalette).filter((entry): entry is [string, string] => typeof entry[1] === "string" && /^#[a-f\d]{6}$/i.test(entry[1]))) : {};
   return { ...(defaultPresentation ? { presentation: "signature" as const, appearance: { palette, heroUrl } } : {}), branch: chosenBranch ? branchDto(chosenBranch) : null, branches: publicBranches.map(branchDto), businessCategory: cafe.business_category, cafeId: cafe.id, name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights, loyaltyEnabled: featureCodesAllow(features, "loyalty"),
+    currencyCode: currency.currencyCode, currencyLabel: currency.currencyLabel,
     contacts: { ...menuContacts(cafe.id, settings?.instagram), feedbackEnabled: Boolean(normalizeBrandPhone(settings?.whatsapp ?? "", await getBrandPhoneCountry(cafe.id)) && isGreenApiConfigured()) } };
 });

@@ -1,7 +1,7 @@
 "use client";
 import { Flower2, Shirt, Scissors, Clock3, ChevronDown, Coffee, Copy, Eye, EyeOff, Flame, Gift, Pencil, Trash2, Boxes } from "lucide-react";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
-import { formatSar } from "@/lib/format";
+import { formatAccountMoney } from "@/lib/currency/account-currency";
 import { butcherPriceAtSale } from "@/lib/menu/butcher-products";
 import { isPromoActive, promoBadgeText, productFinalPrice, type MenuProduct } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
@@ -10,10 +10,11 @@ import styles from "./menu-dashboard.module.css";
 type Props = {
   product: MenuProduct; index?: number; busy?: boolean; categoryLabel?: string;
   freeProductLabel?: string; businessCategory?: string;
+  currencyCode?: string;
   onEdit: () => void; onDuplicate: () => void; onToggleAvailability: () => void; onDelete: () => void;
   onInventoryIngredients?: () => void;
 };
-export function MenuProductCard({ product, busy = false, categoryLabel, freeProductLabel, onEdit, onDuplicate, onToggleAvailability, onDelete, businessCategory, onInventoryIngredients }: Props) {
+export function MenuProductCard({ product, busy = false, categoryLabel, freeProductLabel, onEdit, onDuplicate, onToggleAvailability, onDelete, businessCategory, onInventoryIngredients, currencyCode }: Props) {
   const isEvents = getBusinessCopy(businessCategory).kind === "events";
   const isSalon = businessCategory === "hair_salons";
   const isGifts = businessCategory === "gifts_flowers" || businessCategory === "clothing_stores" || businessCategory === "retail_stores";
@@ -38,8 +39,8 @@ export function MenuProductCard({ product, busy = false, categoryLabel, freeProd
     </div>
     <div className={styles.priceRow}>
       <div><span className={styles.priceLabel}>{isEvents ? "رسوم الدخول" : isGifts && product.commerceDetails?.optionGroups?.length ? "السعر الأساسي" : "السعر"}</span><div className={styles.priceValues}>
-        <strong className={styles.price}>{product.priceMode === "cashier" ? "يحدد الكاشير السعر" : butcherPriceAtSale(product) ? "يحدده الكاشير عند البيع" : isGifts && product.commerceDetails?.quoteOnly ? "حسب الطلب" : formatSar(discounted ? finalPrice : product.price)}</strong>
-        {discounted && <del className={styles.originalPrice}>{formatSar(product.price)}</del>}
+        <strong className={styles.price}>{product.priceMode === "cashier" ? "يحدد الكاشير السعر" : butcherPriceAtSale(product) ? "يحدده الكاشير عند البيع" : isGifts && product.commerceDetails?.quoteOnly ? "حسب الطلب" : formatAccountMoney(discounted ? finalPrice : product.price, currencyCode)}</strong>
+        {discounted && <del className={styles.originalPrice}>{formatAccountMoney(product.price, currencyCode)}</del>}
       </div></div>
       {isEvents ? <span className={styles.secondaryInfo}>السعة {product.eventTicketSettings?.capacity?.toLocaleString("ar-SA") ?? "غير محددة"}<br />{product.eventTicketSettings?.checkinPolicy === "multi_use" ? "دخول متعدد" : "دخول مرة واحدة"}</span>
         : isSalon || isGifts ? <span className={styles.secondaryInfo}>{product.catalogKind === "service" ? "خدمة" : "منتج"}{product.catalogKind === "service" && product.preparationTimeMinutes ? <><Clock3 size={14} aria-hidden="true" />{product.preparationTimeMinutes} دقيقة</> : null}</span> : product.calories !== undefined && <span className={styles.secondaryInfo}><Flame size={14} aria-hidden="true" />{product.calories.toLocaleString("ar-SA")} سعرة</span>}

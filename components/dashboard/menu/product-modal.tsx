@@ -28,7 +28,7 @@ import {
 } from "@/lib/cafe/local-asset-store";
 import { Modal } from "@/components/dashboard/ui/modal";
 import styles from "@/components/dashboard/menu/menu-dashboard.module.css";
-import { formatSar } from "@/lib/format";
+import { currencyByCode, formatAccountMoney } from "@/lib/currency/account-currency";
 import {
   isPromoActive,
   PROMO_KINDS,
@@ -58,6 +58,8 @@ type Props = {
   categories: MenuCategoryRecord[];
   businessCategory?: string;
   cafeSlug?: string;
+  currencyCode?: string;
+  currencyLabel?: string;
   onCategoriesChange: (
     categories: MenuCategoryRecord[]
   ) => Promise<MenuCategoryRecord[]> | MenuCategoryRecord[] | void;
@@ -164,6 +166,8 @@ function MenuProductEditor({
   categories,
   businessCategory,
   cafeSlug,
+  currencyCode,
+  currencyLabel,
   onCategoriesChange,
   onClose,
   onSave,
@@ -187,7 +191,7 @@ function MenuProductEditor({
   const productNameLabel = isFashion || isRetail ? "اسم المنتج" : isGifts ? "اسم المنتج أو الخدمة" : isSalon ? "اسم الخدمة أو المنتج" : isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
   const categoryLabel = isEvents ? "نوع التذكرة أو الفئة" : "التصنيف";
   const descriptionLabel = isFashion || isRetail ? "وصف المنتج" : isGifts ? "وصف المنتج أو الخدمة" : isSalon ? "وصف الخدمة أو المنتج" : isEvents ? "وصف التذكرة أو الباقة" : "وصف المنتج";
-  const priceLabel = isEvents ? "رسوم الدخول ر.س *" : "السعر ر.س *";
+  const priceLabel = `${isEvents ? "رسوم الدخول" : "السعر"} ${currencyLabel ?? currencyByCode(currencyCode).currencyLabel} *`;
   const detailsLabel = isGifts ? "تفاصيل إضافية" : isSalon ? "تفاصيل الخدمة أو المنتج" : isEvents ? "ما تشمله التذكرة أو الباقة" : "مكونات المنتج";
   const detailsPlaceholder = isRetail ? "مثال: المكونات وتعليمات الحفظ" : isFashion ? "مثال: الخامة، تعليمات العناية" : isGifts ? "مثال: تغليف هدية، بطاقة إهداء" : isSalon ? "مثال: حلاقة الشعر وتحديد اللحية" : isEvents ? "مثال: حضور ورشة، شهادة" : "مثال: حليب، قهوة";
   const defaultProductName = isFashion || isRetail ? "اسم المنتج" : isGifts ? "اسم المنتج أو الخدمة" : isSalon ? "اسم الخدمة أو المنتج" : isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
@@ -1383,7 +1387,7 @@ function MenuProductEditor({
                     السعر
                   </p>
                   <p className="font-black text-[#3A2117]">
-                    {cashierPrice ? "يحدد الكاشير السعر" : isButcher && butcherDraft.units[0]?.priceMode === "cashier" ? "السعر يحدد عند البيع" : formatSar(productFinalPrice(previewProduct.price, previewProduct.promo))}
+                    {cashierPrice ? "يحدد الكاشير السعر" : isButcher && butcherDraft.units[0]?.priceMode === "cashier" ? "السعر يحدد عند البيع" : formatAccountMoney(productFinalPrice(previewProduct.price, previewProduct.promo), currencyCode)}
                   </p>
                 </div>
 

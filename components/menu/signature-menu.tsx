@@ -10,6 +10,7 @@ import { DEFAULT_SIGNATURE_HERO } from "@/lib/menu/default-signature";
 import { hulmPhotoFraming } from "@/lib/menu/hulm-framing";
 import { matchesMenuSearch, menuDisplayText, type StandaloneHighlight, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { productFinalPrice } from "@/lib/mock/menu";
+import { formatAccountAmount, menuCurrencyLabel } from "@/lib/currency/account-currency";
 import { getProductOffers, getPublishedOfferPromo } from "@/lib/offers/published-offers";
 import { menuEntryUrl, startMenuAtTop } from "@/lib/menu/menu-entry-scroll";
 import { ProductDetails } from "./bistro-menu";
@@ -43,7 +44,7 @@ function Price({ product }: { product: StandaloneMenuProduct }) {
   if (product.butcherDetails?.units[0]?.priceMode === "cashier") return <span className={s.price}>السعر يحدد عند البيع</span>;
   const values = product.priceRange ? [product.priceRange.min, product.priceRange.max] : product.priceOptions?.length ? product.priceOptions : [product.price];
   const separator = product.priceRange ? "–" : " / ";
-  return <span className={s.price} data-price-range={!!product.priceRange || undefined}><bdi>{values.map(value => productFinalPrice(value, product.promo).toLocaleString("en-US", { maximumFractionDigits: 2 })).join(separator)}</bdi><span>ريال</span>{productFinalPrice(product.price, product.promo) < product.price && <del>{(product.priceRange ? values : [product.price]).map(value => value.toLocaleString("en-US")).join(separator)}</del>}</span>;
+  return <span className={s.price} data-price-range={!!product.priceRange || undefined}><bdi>{values.map(value => formatAccountAmount(productFinalPrice(value, product.promo), product.currencyCode, "en-US")).join(separator)}</bdi><span>{menuCurrencyLabel(product.currencyCode)}</span>{productFinalPrice(product.price, product.promo) < product.price && <del>{(product.priceRange ? values : [product.price]).map(value => formatAccountAmount(value, product.currencyCode, "en-US")).join(separator)}</del>}</span>;
 }
 
 function ProductPhoto({ brand, product }: { brand: SignatureBrand; product: StandaloneMenuProduct }) {
