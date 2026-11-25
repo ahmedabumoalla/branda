@@ -6,6 +6,7 @@ const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.Modu
 function load(authError) {
   const calls = [];
   const stubs = {
+    'node:crypto': require('node:crypto'),
     zod: require('zod'),
     '@/lib/auth/session-policy': { PERSISTENT_SESSION_EXPIRES_AT: Date.UTC(9999, 11, 31) },
     '@/lib/data/cafes': { requirePlatformAdmin: async () => { if (authError) throw authError; return { id: 'admin' }; } },
@@ -36,7 +37,7 @@ function load(authError) {
   await assert.rejects(unexpected.action('BR-TEST'), error => error === failure);
   assert.deepEqual(unexpected.calls, []);
   const valid = load();
-  assert.equal((await valid.action('BR-TEST')).redirectTo, '/dashboard');
+  assert.match((await valid.action('BR-TEST')).redirectTo, /^\/dashboard\?maintenance=[0-9a-f-]{36}$/);
   assert.deepEqual(valid.calls, ['admin', 'cookie', 'admin', 'audit']);
   console.log('PASS maintenance auth: expired session, forbidden role, unexpected failure and valid admin');
 })().catch(error => { console.error(error); process.exitCode = 1; });

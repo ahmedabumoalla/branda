@@ -6,6 +6,7 @@ export const maintenanceSessionMaxAgeSeconds = SESSION_COOKIE_SECONDS;
 export type MaintenanceSession = {
   adminUserId: string;
   cafeId: string;
+  workspaceId?: string;
   cafeSlug: string;
   cafeName: string;
   maintenanceAccountNumber: string;

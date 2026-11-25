@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { openMaintenanceWorkspace } from "@/lib/platform/open-maintenance-workspace";
 import { ShieldCheck, Wrench } from "lucide-react";
 import { enterMaintenanceModeAction } from "@/app/actions/maintenance";
 import { AdminInput, AdminPageShell, BentoCard } from "@/components/ui/design-system";
@@ -12,7 +12,6 @@ type Props = {
 };
 
 export function AdminMaintenancePage({ configError }: Props) {
-  const router = useRouter();
   const [maintenanceCode, setMaintenanceCode] = useState("");
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -28,7 +27,7 @@ export function AdminMaintenancePage({ configError }: Props) {
           setMessage(result.message);
           if (result.ok && result.redirectTo) {
             clearDashboardShellSnapshot();
-            router.push(result.redirectTo);
+            openMaintenanceWorkspace(result.redirectTo);
           }
         } catch {
           setMessage("تعذر تفعيل دخول الصيانة");

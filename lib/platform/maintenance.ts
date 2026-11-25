@@ -1,4 +1,5 @@
-import { cookies } from "next/headers";
+import { maintenanceHeader } from "./maintenance-workspace";
+import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveUser } from "@/lib/auth/active-user";
 import { readActiveProfileRole } from "@/lib/auth/active-profile-role";
@@ -39,7 +40,9 @@ export async function clearMaintenanceSessionCookie() {
 
 export async function readMaintenanceSessionCookie() {
   const cookieStore = await cookies();
-  return decodeSession(cookieStore.get(maintenanceSessionCookieName)?.value);
+  const session = decodeSession(cookieStore.get(maintenanceSessionCookieName)?.value);
+  if (!session?.workspaceId || (await headers()).get(maintenanceHeader) !== session.workspaceId) return null;
+  return session;
 }
 
 export async function getCurrentMaintenanceSession() {

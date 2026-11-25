@@ -4,15 +4,16 @@ function nodes(tree){return !tree||typeof tree!=='object'?[]:[tree,...React.Chil
 const redirect=url=>{throw Error('REDIRECT '+url);};
 async function main(){
  let identity='cashier',tables=[],rpcCalls=0;
- const client={auth:{getUser:async()=>({data:{user:identity==='anonymous'?null:{id:identity}}})},rpc:async()=>{rpcCalls++;return{data:null,error:{code:'42501'}};},from:table=>{tables.push(table);return{select(){return this;},eq(){return this;},is(){return this;},limit(){return this;},order(){return this;},maybeSingle:async()=>({data:table==='profiles'?{role:identity==='admin'?'platform_admin':'customer'}:table==='cafes'&&['owner','admin'].includes(identity)?{id:'brand',slug:'brand-test',name:'Brand'}:null})};}};
+ const client={auth:{getUser:async()=>({data:{user:identity==='anonymous'?null:{id:identity}}})},rpc:async name=>{if(name==='current_account_active')return{data:true};rpcCalls++;return{data:null,error:{code:'42501'}};},from:table=>{tables.push(table);return{select(){return this;},eq(){return this;},is(){return this;},neq(){return this;},limit(){return this;},order(){return this;},maybeSingle:async()=>({data:table==='profiles'?{role:identity==='admin'?'platform_admin':'customer'}:table==='cafes'&&['owner','admin'].includes(identity)?{id:'brand',slug:'brand-test',name:'Brand'}:null})};}};
  const mocks={react:{...React,cache:fn=>fn},'@/lib/supabase/server':{createClient:async()=>client},'@/lib/supabase/admin':{createAdminClient:()=>{throw Error('No admin bypass');}},'@/lib/platform/maintenance':{readMaintenanceSessionCookie:async()=>null,getCurrentMaintenanceSession:async()=>null}};
  const cafes=load('lib/data/cafes.ts',mocks);
  for(const who of ['cashier','finance-manager','anonymous']){identity=who;assert.equal(await cafes.getOwnerCafeContext(),null);await assert.rejects(cafes.requireOwnerCafeContext(),/Unauthorized/);}
  assert(!tables.includes('bf_staff'),'Financial membership must not become dashboard authority');
  let analytics=0;
- const layout=load('app/dashboard/layout.tsx',{...mocks,'@/lib/data/cafes':cafes,'next/navigation':{redirect},'next/font/google':{IBM_Plex_Sans_Arabic:()=>({className:'font'})},'next/server':{after:()=>analytics++},'@/lib/data/operation-events':{},'@/components/dashboard/dashboard-app-layout':{DashboardAppLayout:()=>null}}).default;
+ const layout=load('app/dashboard/layout.tsx',{...mocks,'@/lib/data/cafes':cafes,'next/navigation':{redirect},'next/font/google':{IBM_Plex_Sans_Arabic:()=>({className:'font'})},'next/server':{after:()=>analytics++},'@/lib/data/operation-events':{},'@/components/dashboard/aldeem-clean-dashboard':{AldeemCleanDashboard:()=>null},'@/app/actions/dashboard-shell':{fetchOwnerDashboardShellAction:async()=>null},'@/components/dashboard/dashboard-app-layout':{DashboardAppLayout:()=>null}}).default;
  for(const who of ['cashier','finance-manager','anonymous']){identity=who;await assert.rejects(layout({children:'private'}),/REDIRECT \/login/);}assert.equal(analytics,0);
- for(const who of ['owner','admin']){identity=who;assert(await layout({children:'authorized'}));}assert.equal(analytics,2);
+ identity='owner';assert(await layout({children:'authorized'}));assert.equal(analytics,1);
+ identity='admin';await assert.rejects(layout({children:'private'}),/REDIRECT \/admin\/cafes/);assert.equal(analytics,1);
  identity='cashier';
  const finance=load('lib/data/brand-finance.ts',{...mocks,'@/lib/data/finance-cashier-maintenance':{getFinanceCashierMaintenance:async()=>null},'@/lib/data/cafes':cafes,'@/lib/menu/standalone-menu':{isOwnedMenuAsset:()=>true},'./finance-pos-customer-messages':{dispatchFinancePosCustomerMessages:()=>{throw Error('Unexpected message');}},'./finance-shifts':{getFinanceMaintenanceActor:async()=>null,resetFinanceBalances:async()=>{throw Error('No reset in navigation test');}},'./finance-shift-alerts':{dispatchShiftAlerts:async()=>{throw Error('No notification in navigation test');}},'next/server':{after:()=>{throw Error('No side effects in read test');}}});
  await assert.rejects(finance.getBrandFinanceSnapshot(),/Unauthorized/);assert.equal(rpcCalls,0);
@@ -38,7 +39,7 @@ async function main(){
  let tree=render();let button=nodes(tree).find(n=>n.type==='button');assert.equal(button.props['aria-expanded'],true);assert.equal(nodes(tree).filter(n=>n.props['aria-current']==='page').length,1);
  const panelId=button.props['aria-controls'];
  button.props.onClick();tree=render();assert.equal(nodes(tree).find(n=>n.props.id===panelId).props.hidden,true);
- collapsed=true;tree=render();nodes(tree).find(n=>n.type==='button').props.onClick();assert.equal(expandedSidebar,1);collapsed=false;tree=render();assert.equal(nodes(tree).find(n=>n.props.id===panelId).props.hidden,false);
+ collapsed=true;tree=render();nodes(tree).find(n=>n.type==='button').props.onClick();assert.equal(expandedSidebar,1);collapsed=false;tree=render();assert.equal(nodes(tree).find(n=>n.props.id===panelId).props.hidden,true);nodes(tree).find(n=>n.props['aria-controls']===panelId).props.onClick();tree=render();assert.equal(nodes(tree).find(n=>n.props.id===panelId).props.hidden,false);
  global.window={history:{pushState:(_s,_t,url)=>history.push(url)}};let prevented=0;
  const sales=nodes(tree).find(n=>n.props.href==='/dashboard/finance?section=sales');assert.equal(sales.props.prefetch,false);sales.props.onClick({button:0,preventDefault:()=>prevented++});assert.equal(prevented,1);assert.deepEqual(history,['/dashboard/finance?section=sales']);
  sales.props.onClick({button:0,ctrlKey:true,preventDefault:()=>prevented++});assert.equal(prevented,1);assert(nodes(tree).some(n=>n.props.href==='/finance/brand-test/pos'));assert(!nodes(tree).some(n=>n.props.href==='/dashboard/finance/pos'));

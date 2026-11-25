@@ -1,6 +1,8 @@
 import { refreshCashierCookie } from "@/lib/cashier/persistent-session";
 import { NextResponse, NextRequest } from "next/server";
 
+import { decodeSession, maintenanceSessionCookieName } from "@/lib/platform/maintenance-token";
+import { brandPicker, maintenanceHeader, maintenanceParam, maintenanceRequestScope } from "@/lib/platform/maintenance-workspace";
 import { updateSession } from "@/lib/supabase/middleware";
 import { isStorefrontEnabled, isStorefrontPath, storefrontUnavailableResponse } from "@/lib/platform/storefront-availability";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -36,6 +38,26 @@ export async function proxy(incoming: NextRequest) {
   const hospitalAccount = isHospitalAccountRoute(incoming.nextUrl.pathname);
   const requestHeaders = new Headers(incoming.headers);
   requestHeaders.delete(hospitalAccountRouteHeader);
+  requestHeaders.delete(maintenanceHeader);
+  const cookie = incoming.cookies.get(maintenanceSessionCookieName)?.value;
+  const maintenance = cookie ? decodeSession(cookie) : null;
+  const binding = maintenanceRequestScope(incoming.nextUrl, incoming.headers.get("referer"), maintenance?.workspaceId);
+  const read = incoming.method === "GET" || incoming.method === "HEAD";
+  if (binding.blocked) {
+    const response = read && !incoming.nextUrl.pathname.startsWith("/api/")
+      ? NextResponse.redirect(new URL(brandPicker, incoming.url), 303)
+      : NextResponse.json({ error: "maintenance_workspace_changed" }, { status: 409 });
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
+  }
+  if (binding.scope) {
+    requestHeaders.set(maintenanceHeader, binding.scope);
+    if (binding.canonicalize && read) {
+      const target = incoming.nextUrl.clone();
+      target.searchParams.set(maintenanceParam, binding.scope);
+      return NextResponse.redirect(target, { status: 307, headers: { "Cache-Control": "private, no-store" } });
+    }
+  }
   // Server-only path marker for the dashboard employee allow-list; never trusted from the client
   requestHeaders.set("x-branda-pathname", incoming.nextUrl.pathname);
   if (hospitalAccount) requestHeaders.set(hospitalAccountRouteHeader, "1");
@@ -105,7 +127,7 @@ export async function proxy(incoming: NextRequest) {
     }
   }
 
-  if (!shouldRefreshSupabaseSession(pathname)) {
+  if (!binding.scope && !shouldRefreshSupabaseSession(pathname)) {
     return refreshCashierCookie(request, NextResponse.next({ request }));
   }
 

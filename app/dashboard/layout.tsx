@@ -5,7 +5,7 @@ import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getDashboardCafeContext } from "@/lib/data/cafes";
+import { getDashboardCafeContext, requirePlatformAdmin } from "@/lib/data/cafes";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { fetchOwnerDashboardShellAction } from "@/app/actions/dashboard-shell";
@@ -28,7 +28,10 @@ export default async function DashboardLayout({
 }) {
   // Finance staff membership never grants access to the brand dashboard.
   const cafe = await getDashboardCafeContext();
-  if (!cafe) redirect("/login");
+  if (!cafe) {
+    const admin = await requirePlatformAdmin().catch(() => null);
+    redirect(admin ? "/admin/cafes" : "/login");
+  }
   // Loco employees open only the sections their owner granted
   if (cafe.staff) {
     const pathname = (await headers()).get("x-branda-pathname") ?? "";

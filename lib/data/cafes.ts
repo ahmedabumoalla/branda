@@ -99,23 +99,10 @@ const readCafeContext = cache(async (): Promise<CafeContext | null> => {
       }
     }
 
-    const { data: cafe } = await supabase
-      .from("cafes")
-      .select("id, slug, name, business_category")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (cafe) {
-      return {
-        id: cafe.id,
-        slug: cafe.slug,
-        name: cafe.name,
-        businessCategory: cafe.business_category ?? "cafes_coffee",
-        role: "platform_admin",
-      };
-    }
+    return null;
   }
+
+  if (await readMaintenanceSessionCookie()) return null;
 
   const management = await readBrandManagement(supabase, user);
   if (management) {

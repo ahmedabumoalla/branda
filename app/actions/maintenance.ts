@@ -2,6 +2,7 @@
 
 import { PERSISTENT_SESSION_EXPIRES_AT } from "@/lib/auth/session-policy";
 
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
@@ -74,11 +75,11 @@ export async function enterMaintenanceModeAction(input: string) {
 
   if (error) throw error;
 
-  const cafe = (data ?? []).find((item) => {
+  const matches = (data ?? []).filter((item) => {
     return makeMaintenanceAccountNumber(String(item.id), String(item.slug)) === code;
   });
 
-  if (!cafe) {
+  if (matches.length !== 1) {
     return {
       ok: false as const,
       message: "رقم الصيانة غير صحيح أو غير موجود",
@@ -86,6 +87,8 @@ export async function enterMaintenanceModeAction(input: string) {
     };
   }
 
+  const [cafe] = matches;
+  const workspaceId = randomUUID();
   const maintenanceAccountNumber = makeMaintenanceAccountNumber(
     String(cafe.id),
     String(cafe.slug)
@@ -93,6 +96,7 @@ export async function enterMaintenanceModeAction(input: string) {
   const expiresAt = PERSISTENT_SESSION_EXPIRES_AT;
 
   await setMaintenanceSessionCookie({
+    workspaceId,
     adminUserId: adminUser.id,
     cafeId: String(cafe.id),
     cafeSlug: String(cafe.slug),
@@ -112,23 +116,22 @@ export async function enterMaintenanceModeAction(input: string) {
   return {
     ok: true as const,
     message: "تم تفعيل دخول الصيانة",
-    redirectTo: "/dashboard",
+    redirectTo: `/dashboard?maintenance=${workspaceId}`,
   };
 }
 
 export async function exitMaintenanceModeAction() {
   const adminUser = await requirePlatformAdmin();
   const session = await getCurrentMaintenanceSession();
+  if (!session) return { ok: false as const };
   await clearMaintenanceSessionCookie();
 
-  if (session) {
-    await writeMaintenanceAudit("maintenance_mode_ended", {
-      actorId: adminUser.id,
-      cafeId: session.cafeId,
-      cafeSlug: session.cafeSlug,
-      maintenanceAccountNumber: session.maintenanceAccountNumber,
-    });
-  }
+  await writeMaintenanceAudit("maintenance_mode_ended", {
+    actorId: adminUser.id,
+    cafeId: session.cafeId,
+    cafeSlug: session.cafeSlug,
+    maintenanceAccountNumber: session.maintenanceAccountNumber,
+  });
 
   return { ok: true as const };
 }

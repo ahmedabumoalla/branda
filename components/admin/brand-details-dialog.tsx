@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { openMaintenanceWorkspace } from "@/lib/platform/open-maintenance-workspace";
 import { enterMaintenanceModeAction } from "@/app/actions/maintenance";
 import { clearDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
 import { ArrowLeft, BarChart3, Building2, Check, ChevronLeft, CircleDollarSign, Copy, CreditCard, Gift, Headphones, Layers3, MessageSquareText, Package, Phone, Search, ShieldCheck, ShoppingBag, SlidersHorizontal, TicketCheck, UserRound, Users, Utensils, X } from "lucide-react";
@@ -92,7 +92,6 @@ type Props = {
 };
 
 export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStatus, planPending, updatePlan, removePlans, close, onDeleted, onUpdated }: Props) {
-  const router = useRouter();
   const [maintenancePending, setMaintenancePending] = useState(false);
   const [failedLogo, setFailedLogo] = useState<string | null>(null);
   const [maintenanceError, setMaintenanceError] = useState("");
@@ -128,7 +127,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
       const result = await enterMaintenanceModeAction(cafe.maintenanceAccountNumber);
       if (result.ok && result.redirectTo) {
         clearDashboardShellSnapshot();
-        router.push(result.redirectTo);
+        openMaintenanceWorkspace(result.redirectTo);
         return;
       }
       setMaintenanceError(result.message);

@@ -32,7 +32,11 @@ function harness(action = async () => ({ ok: true, redirectTo: "/dashboard" }), 
   };
   const stubs = {
     react: hooks,
-    "next/navigation": { useRouter: () => ({ push: path => calls.push(["navigate", path]) }) },
+    "@/lib/platform/open-maintenance-workspace": { openMaintenanceWorkspace: path => calls.push(["navigate", path]) },
+    "./brand-password-delivery": { BrandPasswordDelivery: () => null },
+    "./brand-archive-files": { BrandArchiveFiles: () => null },
+    "./brand-account-editors": { BrandAccountEditors: () => null },
+    "./brand-billing": { BrandBillingCard: () => null, BrandBillingDetails: () => null, useBrandBilling: () => ({}) },
     "@/app/actions/maintenance": { enterMaintenanceModeAction: async code => { calls.push(["enter", code]); return action(); } },
     "@/lib/performance/dashboard-shell-client": { clearDashboardShellSnapshot: () => calls.push(["clearSnapshot"]) },
     "@/lib/format": { formatSar: value => String(value) },

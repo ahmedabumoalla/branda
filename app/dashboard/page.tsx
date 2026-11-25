@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+import { maintenanceHeader, maintenanceParam } from "@/lib/platform/maintenance-workspace";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
@@ -10,7 +12,16 @@ export default async function DashboardPage() {
   if ((await getOwnerCafeContext())?.slug === "khayal-aldeem") return null;
   const features = await getOwnerFeatureCodes();
   const firstService = getBrandNavigationFeatures().find((feature) => features.includes(feature.id));
-  if (firstService) redirect(firstService.route);
+  if (firstService) {
+    const scope = (await headers()).get(maintenanceHeader);
+    if (scope) {
+      const [path, query] = firstService.route.split("?");
+      const params = new URLSearchParams(query);
+      params.set(maintenanceParam, scope);
+      redirect(`${path}?${params}`);
+    }
+    redirect(firstService.route);
+  }
 
   return (
     <section dir="rtl" className="mx-auto max-w-2xl rounded-2xl border border-amber-200/30 bg-white/5 p-8 text-right">
