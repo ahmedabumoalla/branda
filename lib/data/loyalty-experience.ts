@@ -4,7 +4,6 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
-import { getWalletLinks } from "@/lib/data/wallet-links";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCafeFeatureCodesBySlug, getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
@@ -96,7 +95,7 @@ export async function loadWalletMemberByCode(cardCode: string): Promise<WalletMe
 // Internal only: callers must obtain a fresh view and complete their access guard first.
 async function loadWalletMemberFromView(view: CustomerLoyaltyCardView): Promise<WalletMember | null> {
   if (!view || !view.program.enabled) return null;
-  const [brand, experience, branchLocations, { count, error }, nearbySchedule, walletLinks] = await Promise.all([
+  const [brand, experience, branchLocations, { count, error }, nearbySchedule] = await Promise.all([
     getLoyaltyBrand(view.cafeSlug),
     getLoyaltyExperience(view.card.cafeId),
     loadWalletBranchLocations(view.card.cafeId),
@@ -104,7 +103,6 @@ async function loadWalletMemberFromView(view: CustomerLoyaltyCardView): Promise<
       .eq("cafe_id", view.card.cafeId).eq("loyalty_card_id", view.card.id).eq("status", "available")
       .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
     getNearbySchedule(view.card.cafeId),
-    getWalletLinks(view.card.cafeId),
   ]);
   if (!brand) return null;
   if (error) throw new Error("تعذر تحديث مكافآت البطاقة");
@@ -116,11 +114,10 @@ async function loadWalletMemberFromView(view: CustomerLoyaltyCardView): Promise<
     return { ...view, cafeName: branch.name, branchId: branch.id, bannerUrl: branch.banner, program: branchProgram(view.program, branch),
       card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: branch.logo || brand.identity.logoUrl,
       experience: { ...experience, nearbyMessage: periodMessage ?? branch.nearbyMessage, latitude: branch.latitude, longitude: branch.longitude },
-      branchLocations: scheduledLocations, walletLinks: walletLinks.available ? walletLinks.links : undefined };
+      branchLocations: scheduledLocations };
   }
   return { ...view, card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: brand.identity.logoUrl,
-    experience: periodMessage === null ? experience : { ...experience, nearbyMessage: periodMessage }, branchLocations: scheduledLocations,
-    walletLinks: walletLinks.available ? walletLinks.links : undefined };
+    experience: periodMessage === null ? experience : { ...experience, nearbyMessage: periodMessage }, branchLocations: scheduledLocations };
 }
 
 export async function getBranchLoyaltyBrand(slug: string, branchId?: string | null, issuedCard = false) {

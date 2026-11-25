@@ -10,7 +10,6 @@ import type { LoyaltyDashboardView } from "@/components/rast-loyalty/rast-dashbo
 import { getDashboardCafeContext } from "@/lib/data/cafes";
 import { getNearbySchedule } from "@/lib/data/nearby-schedule";
 import { supportsNearbySchedule } from "@/lib/loyalty/nearby-schedule";
-import { getOwnerWalletLinks } from "@/lib/data/wallet-links";
 
 export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "customers" | "messages" } = {}) {
   const features = await getOwnerFeatureCodes().catch(() => []);
@@ -24,19 +23,16 @@ export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "cus
   const [dashboard, cafe] = await Promise.all([getOwnerLoyaltyProgramSettings(staffPermission).catch(() => null), getDashboardCafeContext()]);
   const staffMode = Boolean(cafe?.staff);
   if (dashboard) {
-    const [brand, experience, products, nearbySchedule, walletLinks] = await Promise.all([
+    const [brand, experience, products, nearbySchedule] = await Promise.all([
       getLoyaltyBrand(dashboard.cafeSlug),
       needsProgram ? getLoyaltyExperience(dashboard.cafeId).then((settings) => ({ settings, error: undefined as string | undefined })).catch(() => ({ settings: defaultLoyaltyExperience, error: "إعدادات تجربة الولاء لم تُفعّل بعد أكمل تهيئة قاعدة البيانات قبل الحفظ" })) : Promise.resolve({ settings: defaultLoyaltyExperience, error: undefined }),
       needsProgram && featureCodesAllow(features, "menu") ? getOwnerLoyaltyRewardProducts() : Promise.resolve([]),
       needsProgram && !staffMode && supportsNearbySchedule(dashboard.cafeId)
         ? getNearbySchedule(dashboard.cafeId).then(schedule => ({ schedule })).catch(() => ({ schedule: null, error: "تعذر تحميل فترات رسائل القرب حدّث الصفحة قبل تعديلها" }))
         : Promise.resolve(undefined),
-      needsProgram && !staffMode
-        ? getOwnerWalletLinks().catch(() => ({ available: false, links: [] }))
-        : Promise.resolve(undefined),
     ]);
     if (brand) return <>{experience.error && <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{experience.error}</p>}<RastLoyaltyDashboard key={dashboard.cafeId} initialDashboard={{ program: dashboard.program }} identity={brand.identity}
-      pointsAvailable view={view} initialExperience={experience.settings} nearbySchedule={nearbySchedule} walletLinks={walletLinks} walletAvailability={getWalletReadiness()} products={products} staffMode={staffMode}
+      pointsAvailable view={view} initialExperience={experience.settings} nearbySchedule={nearbySchedule} walletAvailability={getWalletReadiness()} products={products} staffMode={staffMode}
       signupUrl={`${(process.env.NEXT_PUBLIC_APP_URL || "https://barndaksa.com").replace(/\/$/, "")}/loyalty/${encodeURIComponent(dashboard.cafeSlug)}?source=qr`} /></>;
     return <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">تعذر تحميل هوية برنامج الولاء حاول تحديث الصفحة</p>;
   }

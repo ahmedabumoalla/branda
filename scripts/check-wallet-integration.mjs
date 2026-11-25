@@ -114,11 +114,7 @@ try {
   const linkedEntries = unpackStoredZip(await apple.issueApplePass({ ...member, walletLinks }));
   const linkedPass = JSON.parse(linkedEntries["pass.json"]);
   const linkFields = linkedPass.storeCard.backFields.filter(field => field.key.startsWith("wallet_link_"));
-  assert.equal(linkFields.length, 3, "Native pass generator retains all managed links");
-  assert.equal(linkFields[0].attributedValue, '<a href="https://instagram.com/example">إنستغرام</a>');
-  assert.equal(linkFields[1].attributedValue, '<a href="https://example.com/menu?a=1&amp;b=2">&lt;Menu &amp; &quot;offers&quot;&gt;</a>');
-  assert.equal(linkFields[2].attributedValue, '<a href="tel:+966501234567">اتصل بنا</a>');
-  assert.deepEqual(linkFields.map(field => field.value), walletLinks.map(link => link.url), "Plain fallback keeps usable destinations");
+  assert.equal(linkFields.length, 0, "Native pass ignores stored links while the feature is withdrawn");
   assert.deepEqual(linkedPass.barcodes, pass.barcodes);
   assert.equal(linkedPass.serialNumber, pass.serialNumber);
   assert.deepEqual(linkedPass.storeCard.backFields.filter(field => !field.key.startsWith("wallet_link_")), pass.storeCard.backFields);

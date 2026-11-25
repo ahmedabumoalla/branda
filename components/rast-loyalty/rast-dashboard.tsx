@@ -21,8 +21,6 @@ import { PointsProgramEditor } from "@/components/loyalty/points-program-editor"
 import { PointsRewardPath } from "@/components/loyalty/points-reward-path";
 import { defaultPointsProgram } from "@/lib/loyalty/points-program";
 import { NearbyScheduleEditor, type NearbyScheduleEditorState } from "@/components/loyalty/nearby-schedule-editor";
-import { WalletLinksEditor } from "@/components/loyalty/wallet-links-editor";
-import type { WalletLinksState } from "@/lib/loyalty/wallet-links";
 
 export type LoyaltyDashboardView = "all" | "rewards" | "customers" | "messages";
 type Props = {
@@ -30,7 +28,6 @@ type Props = {
   initialDashboard: Pick<LoyaltyCardsDashboard, "program">;
   initialExperience: LoyaltyExperienceSettings;
   nearbySchedule?: NearbyScheduleEditorState;
-  walletLinks?: WalletLinksState;
   identity: LoyaltyIdentity;
   signupUrl: string;
   walletAvailability: RastWalletAvailability;
@@ -41,7 +38,7 @@ type Props = {
   pointsAvailable?: boolean;
 };
 
-export function RastLoyaltyDashboard({ initialDashboard, initialExperience, nearbySchedule, walletLinks, identity, signupUrl, walletAvailability, products = [], activityLog, view = "all", staffMode = false, pointsAvailable = false }: Props) {
+export function RastLoyaltyDashboard({ initialDashboard, initialExperience, nearbySchedule, identity, signupUrl, walletAvailability, products = [], activityLog, view = "all", staffMode = false, pointsAvailable = false }: Props) {
   const router = useRouter();
   const [section, setSection] = useState<"settings" | "activity" | "customers">("settings");
   const showProgram = view === "rewards" || (view === "all" && section === "settings");
@@ -129,7 +126,7 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, near
     {(view === "customers" || (view === "all" && section === "customers")) && <div id="rast-customers-panel"><LoyaltyCustomerDirectory downloadedOnly={view === "customers"} /></div>}
     {view === "all" && activityLog && <div id="rast-activity-panel" hidden={section !== "activity"}>{activityLog}</div>}
     {(view === "all" || showProgram || showMessages) && <div id="rast-program-panel" hidden={!showProgram && !showMessages}>
-    {showProgram && <div className={s.signupActions}><Link href={`/loyalty/${encodeURIComponent(identity.slug)}/qr`} target="_blank" rel="noreferrer" className={s.secondary}><ScanLine aria-hidden="true" />صفحة باركود الولاء</Link>{!staffMode && walletLinks && <a href="#wallet-card-links" className={s.secondary}>روابط البطاقة</a>}<p className={s.hint}>افتح صفحة بهوية علامتك لعرض رمز التسجيل للعملاء عند الكاشير أو مشاركتها معهم</p></div>}
+    {showProgram && <div className={s.signupActions}><Link href={`/loyalty/${encodeURIComponent(identity.slug)}/qr`} target="_blank" rel="noreferrer" className={s.secondary}><ScanLine aria-hidden="true" />صفحة باركود الولاء</Link><p className={s.hint}>افتح صفحة بهوية علامتك لعرض رمز التسجيل للعملاء عند الكاشير أو مشاركتها معهم</p></div>}
     <div className={s.dashboardLayout} style={!showProgram ? { gridTemplateColumns: "minmax(0, 1fr)" } : undefined}>
       <div className={s.dashboardMain}>
         {showProgram && <>
@@ -169,7 +166,6 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, near
             <div className={s.saveBar}><span>التغييرات تطبّق بعد الحفظ</span><button type="submit" className={s.primary}>{saving ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <Save aria-hidden="true" />}{saving ? "جاري الحفظ" : "حفظ إعدادات الولاء"}</button></div>
           </fieldset>
         </form>
-        {!staffMode && walletLinks && <WalletLinksEditor initial={walletLinks} brandName={identity.name} />}
         </>}
         {showMessages && <>
         <section className={s.notifications} aria-labelledby="notifications-title"><div className={s.settingsHeading}><div><Bell aria-hidden="true" /><h2 id="notifications-title">خلّ أخبار {identity.name} توصلهم</h2></div></div><p className={s.sectionDescription}>أرسل عرضًا أو خبرًا إلى العملاء الذين أضافوا بطاقتهم إلى المحفظة</p><form onSubmit={(event) => { event.preventDefault(); if (!sending && anyWalletReady) announcementDialog.current?.showModal(); }}><fieldset disabled={sending || !anyWalletReady} className={s.notificationFields}><legend className={s.srOnly}>محتوى الإشعار</legend><label className={s.field}><span>عنوان الإشعار</span><input value={title} onChange={(event) => setTitle(event.target.value)} minLength={2} maxLength={80} required placeholder={`شي حلو ينتظرك في ${identity.name}`} /></label><label className={s.field}><span>نص الرسالة</span><textarea rows={3} value={body} onChange={(event) => setBody(event.target.value)} minLength={2} maxLength={240} required placeholder="اكتب العرض أو الخبر الذي ترغب بإرساله" /></label><button type="submit" className={s.primary}><Bell aria-hidden="true" />مراجعة الإشعار وإرساله</button></fieldset></form>{!anyWalletReady ? <p className={s.hint}>إرسال الإشعارات متاح بعد تفعيل إحدى المحافظ وإضافة العملاء لبطاقاتهم</p> : null}{notificationError ? <p className={s.error} role="alert">{notificationError}</p> : null}{notificationResult ? <p className={s.deliveryResult} role="status">{notificationResult}</p> : null}</section>

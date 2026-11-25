@@ -72,12 +72,13 @@ const { RastLoyaltyDashboard } = load("components/rast-loyalty/rast-dashboard.ts
   "@/components/loyalty/wallet-message-history": { WalletMessageHistory: () => null },
   "@/components/loyalty/nearby-schedule-editor": { NearbyScheduleEditor: () => null },
 });
-check("Owner rewards shows links editor while staff and messages views omit it", () => {
+check("Card links editor and shortcut are hidden from all dashboard views", () => {
   const props = { identity, view: "rewards", initialDashboard: { program },
     initialExperience: { rewardValidityDays: 30, nearbyMessage: "", latitude: null, longitude: null },
     signupUrl: "https://example.com/loyalty/brand", walletAvailability: { apple: true, google: true },
     walletLinks: { available: true, links: [] } };
-  assert(render(RastLoyaltyDashboard, props).includes('id="wallet-links-title"'));
+  assert(!render(RastLoyaltyDashboard, props).includes('id="wallet-links-title"'));
+  assert(!render(RastLoyaltyDashboard, props).includes('href="#wallet-card-links"'));
   assert(!render(RastLoyaltyDashboard, { ...props, staffMode: true }).includes('id="wallet-links-title"'));
   assert(!render(RastLoyaltyDashboard, { ...props, view: "messages" }).includes('id="wallet-links-title"'));
 });
