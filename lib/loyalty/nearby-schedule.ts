@@ -1,14 +1,5 @@
 import { z } from "zod";
 
-const nearbyScheduleCafeIds = new Set([
-  "dbe942ba-dfa4-422b-a9f6-9527c3b27cc9", // Bolingo
-  "39219b91-3545-4660-b5d9-f4267de290d2", // Al Hassoun Center Sakaka
-]);
-
-export function supportsNearbySchedule(cafeId: string) {
-  return nearbyScheduleCafeIds.has(cafeId);
-}
-
 export const NEARBY_SCHEDULE_TIME_ZONE = "Asia/Riyadh";
 export const MAX_NEARBY_PERIODS = 48;
 export type NearbyPeriod = { id: string; start: string; end: string; message: string };

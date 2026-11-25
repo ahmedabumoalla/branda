@@ -128,7 +128,6 @@ let pageSlug="rast";
 const page=await load("components/loyalty/owner-loyalty-page.tsx",{
   "@/lib/data/cafes":{getDashboardCafeContext:async()=>({staff:false})},
   "@/lib/data/nearby-schedule":{getNearbySchedule:async()=>null},
-  "@/lib/loyalty/nearby-schedule":{supportsNearbySchedule: cafeId => cafeId === "nearby-demo"},
   "next/navigation":{redirect:()=>{throw new Error("redirect");}},
   "react/jsx-runtime":{jsx,jsxs:jsx,Fragment:"Fragment"},
   "@/components/dashboard/pages/loyalty-dashboard-page":{LoyaltyDashboardPage:"GenericLoyalty"},
@@ -151,7 +150,7 @@ const rast=find(rendered);check(!!rast,"Rast owner receives intended client comp
 equal(rast.props.initialDashboard,{program:{enabled:true}},"server passes program only to Rast client");
 check(!JSON.stringify(rendered).includes("private-bulk-phone")&&!JSON.stringify(rendered).includes("private-bulk-email"),"rendered client props exclude bulk customer contacts");
 equal(rast.props.products,[{id:"product-one",name:"Tea"}],"product props also use explicit safe projection");
-for(const slug of ["basilico","test-cafe","new-brand"]){pageSlug=slug;const tree=await page.OwnerLoyaltyPage();const shared=find(tree);check(!!shared,"every entitled brand receives approved loyalty experience");check(shared.props.pointsAvailable,"every entitled brand owner can configure points");check(shared.props.signupUrl.endsWith(`/loyalty/${slug}?source=qr`),"signup URL belongs to current brand");check(!JSON.stringify(tree).includes("private-bulk"),"all brands omit bulk contact props");}
+for(const slug of ["basilico","test-cafe","new-brand"]){pageSlug=slug;const tree=await page.OwnerLoyaltyPage();const shared=find(tree);check(!!shared,"every entitled brand receives approved loyalty experience");check(shared.props.nearbySchedule !== undefined,"every entitled owner can configure proximity periods");check(shared.props.pointsAvailable,"every entitled brand owner can configure points");check(shared.props.signupUrl.endsWith(`/loyalty/${slug}?source=qr`),"signup URL belongs to current brand");check(!JSON.stringify(tree).includes("private-bulk"),"all brands omit bulk contact props");}
 brandAvailable=false;
 const unavailable=await page.OwnerLoyaltyPage();
 equal(unavailable.props.role,"alert","missing brand fails closed with an alert");

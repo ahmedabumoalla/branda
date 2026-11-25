@@ -183,7 +183,7 @@ function LogoutButton() {
 export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, children }: { maintenance: boolean; loyaltyEnabled?: boolean; children?: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const loyaltyPage = pathname === "/dashboard/loyalty/guide" || pathname === "/dashboard/loyalty/settings" || pathname === "/dashboard/loyalty/branches";
+  const loyaltyPage = pathname === "/dashboard/loyalty" || pathname === "/dashboard/loyalty/guide" || pathname === "/dashboard/loyalty/settings" || pathname === "/dashboard/loyalty/branches";
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(true);
@@ -313,6 +313,7 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
           </button>
           <div id="aldeem-loyalty-menu" className={styles.submenu} hidden={!loyaltyOpen}>
             <Link href="/dashboard/loyalty/branches" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/branches" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/branches" ? "page" : undefined}><Store size={16} aria-hidden="true" /><span>الفروع</span></Link>
+            <Link href="/dashboard/loyalty" className={`${styles.subItem} ${pathname === "/dashboard/loyalty" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty" ? "page" : undefined}><Star size={16} aria-hidden="true" /><span>إدارة المكافآت</span></Link>
             <Link href="/dashboard/loyalty/settings" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/settings" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/settings" ? "page" : undefined}><Settings size={16} aria-hidden="true" /><span>إعدادات الولاء</span></Link>
             <Link href="/dashboard/loyalty/guide" className={`${styles.subItem} ${pathname === "/dashboard/loyalty/guide" ? styles.subActive : ""}`} aria-current={pathname === "/dashboard/loyalty/guide" ? "page" : undefined}><FileText size={16} aria-hidden="true" /><span>دليل نظام الولاء</span></Link>
           </div>
