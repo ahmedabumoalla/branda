@@ -44,7 +44,30 @@ const purchaseSections = [
   { id: "purchase-requests", title: "طلبات الشراء", icon: ClipboardList },
   { id: "purchase-orders", title: "أوامر الشراء", icon: FileText },
 ] as const;
+const posSettingPages = [
+  { id: "pos-setting-counters", title: "تعريف الكاونترات" },
+  { id: "pos-setting-sellers", title: "تعريف البائعين" },
+  { id: "pos-setting-counter-sellers", title: "ربط الكاونترات بالبائعين" },
+  { id: "pos-setting-networks", title: "تعريف الشبكات" },
+  { id: "pos-setting-customers", title: "عملاء نقاط البيع" },
+  { id: "pos-setting-sms", title: "إرسال رسائل SMS" },
+  { id: "pos-setting-halls-tables", title: "تعريف الصالات والطاولات" },
+  { id: "pos-setting-counter-currencies", title: "تعريف عملات الكاونتر" },
+  { id: "pos-setting-transactions", title: "معاملات نقاط البيع" },
+  { id: "pos-setting-welcome-message", title: "الرسالة الترحيبية" },
+  { id: "pos-setting-vouchers", title: "القسائم الشرائية" },
+  { id: "pos-setting-delivery-companies", title: "تعريف شركات التوصيل" },
+  { id: "pos-setting-bonus", title: "تعريف البونص" },
+  { id: "pos-setting-counter-activity", title: "حركة الكاونتر" },
+  { id: "pos-setting-discount-offers", title: "عروض الخصم" },
+  { id: "pos-setting-bonus-groups", title: "مجموعات البونص" },
+  { id: "pos-setting-general-bonus", title: "البونص العام" },
+  { id: "pos-setting-promotions", title: "العروض الترويجية" },
+  { id: "pos-setting-customer-group", title: "مجموعة عملاء نقاط البيع" },
+  { id: "pos-setting-tax-customers", title: "عملاء ضريبيون نقاط البيع" },
+] as const;
 const posSections = [
+  { id: "pos-main-settings", title: "إعدادات نقاط البيع الرئيسية", icon: Settings },
   { id: "branch-pos-management", title: "إدارة نقاط بيع الفروع", icon: Store },
   { id: "pos-active-shifts", title: "الورديات النشطة", icon: ClipboardList },
   { id: "pos-price-management", title: "إدارة الأسعار لكل نقطة", icon: Settings },
@@ -105,7 +128,7 @@ const employeeSections = [
   { id: "employee-payroll", title: "مسيرات الرواتب", icon: Wallet },
   { id: "employee-organization", title: "الهيكل التنظيمي", icon: Network },
 ] as const;
-type Section = "overview" | typeof settingsSections[number]["id"] | typeof salesSections[number]["id"] | typeof purchaseSections[number]["id"] | typeof posSections[number]["id"] | typeof inventorySections[number]["id"] | typeof producerSections[number]["id"] | typeof franchiseSections[number]["id"] | typeof workshopSections[number]["id"] | typeof customerSections[number]["id"] | typeof loyaltyDemoSections[number]["id"] | typeof manufacturingSections[number]["id"] | typeof financeSections[number]["id"] | typeof employeeSections[number]["id"];
+type Section = "overview" | typeof posSettingPages[number]["id"] | typeof settingsSections[number]["id"] | typeof salesSections[number]["id"] | typeof purchaseSections[number]["id"] | typeof posSections[number]["id"] | typeof inventorySections[number]["id"] | typeof producerSections[number]["id"] | typeof franchiseSections[number]["id"] | typeof workshopSections[number]["id"] | typeof customerSections[number]["id"] | typeof loyaltyDemoSections[number]["id"] | typeof manufacturingSections[number]["id"] | typeof financeSections[number]["id"] | typeof employeeSections[number]["id"];
 
 const systemGroups = [
   { id: "overview", title: "نظرة عامة", icon: LayoutDashboard, children: [] },
@@ -176,7 +199,7 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
   const [manufacturingOpen, setManufacturingOpen] = useState(true);
   const [financeOpen, setFinanceOpen] = useState(true);
   const [employeesOpen, setEmployeesOpen] = useState(true);
-  const [section, setWorkspaceSection, locationReady] = useAldeemLocation<Section>("section", "overview", ["overview", ...systemGroups.flatMap(group => group.children.map(child => child.id)), ...loyaltyDemoSections.map(item => item.id)]);
+  const [section, setWorkspaceSection, locationReady] = useAldeemLocation<Section>("section", "overview", ["overview", ...posSettingPages.map(item => item.id), ...systemGroups.flatMap(group => group.children.map(child => child.id)), ...loyaltyDemoSections.map(item => item.id)]);
   const [demo, setDemo] = useAldeemDemo();
   function setSection(value: Section) {
     if (loyaltyPage) router.push(`/dashboard?aldeem.section=${encodeURIComponent(value)}`);
@@ -198,6 +221,8 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
   const selectedSales = salesSections.find((item) => item.id === section);
   const selectedPurchase = purchaseSections.find((item) => item.id === section);
   const selectedPos = posSections.find((item) => item.id === section);
+  const posSettingPage = posSettingPages.find(item => item.id === section);
+  const inPosSettings = section === "pos-main-settings" || !!posSettingPage;
   const selectedInventory = inventorySections.find((item) => item.id === section);
   const selectedProducer = producerSections.find((item) => item.id === section);
   const selectedFranchise = franchiseSections.find((item) => item.id === section);
@@ -239,11 +264,11 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
         <div id="aldeem-purchases-menu" className={styles.submenu} hidden={!purchasesOpen}>
           {purchaseSections.map(({ id, title, icon: Icon }) => <button key={id} type="button" className={`${styles.subItem} ${section === id ? styles.subActive : ""}`} aria-current={section === id ? "page" : undefined} onClick={() => setSection(id)}><Icon size={16} strokeWidth={1.6} aria-hidden="true" /><span>{title}</span></button>)}
         </div>
-        <button type="button" className={`${styles.navItem} ${selectedPos ? styles.groupSelected : ""}`} onClick={() => setPosOpen((open) => !open)} aria-expanded={posOpen} aria-controls="aldeem-pos-menu">
+        <button type="button" className={`${styles.navItem} ${selectedPos || posSettingPage ? styles.groupSelected : ""}`} onClick={() => setPosOpen((open) => !open)} aria-expanded={posOpen} aria-controls="aldeem-pos-menu">
           <Monitor size={19} strokeWidth={1.6} aria-hidden="true" /><span>نقاط البيع</span><ChevronDown size={15} className={`${styles.chevron} ${posOpen ? styles.expanded : ""}`} aria-hidden="true" />
         </button>
         <div id="aldeem-pos-menu" className={styles.submenu} hidden={!posOpen}>
-          {posSections.map(({ id, title, icon: Icon }) => <button key={id} type="button" className={`${styles.subItem} ${section === id ? styles.subActive : ""}`} aria-current={section === id ? "page" : undefined} onClick={() => setSection(id)}><Icon size={16} strokeWidth={1.6} aria-hidden="true" /><span>{title}</span></button>)}
+          {posSections.map(({ id, title, icon: Icon }) => <button key={id} type="button" className={`${styles.subItem} ${(section === id || (id === "pos-main-settings" && posSettingPage)) ? styles.subActive : ""}`} aria-current={section === id ? "page" : undefined} onClick={() => setSection(id)}><Icon size={16} strokeWidth={1.6} aria-hidden="true" /><span>{title}</span></button>)}
         </div>
         <button type="button" className={`${styles.navItem} ${selectedInventory ? styles.groupSelected : ""}`} onClick={() => setInventoryOpen((open) => !open)} aria-expanded={inventoryOpen} aria-controls="aldeem-inventory-menu">
           <Package size={19} strokeWidth={1.6} aria-hidden="true" /><span>المخزون</span><ChevronDown size={15} className={`${styles.chevron} ${inventoryOpen ? styles.expanded : ""}`} aria-hidden="true" />
@@ -326,10 +351,13 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
         </div>
       </footer>
     </aside>
-    <main id="aldeem-overview" className={styles.canvas} tabIndex={-1} aria-label={loyaltyPage ? "الولاء" : selectedPage?.title ?? "نظرة عامة"}>
+    <main id="aldeem-overview" className={`${styles.canvas} ${!loyaltyPage && posSettingPage ? styles.blankPosPage : ""}`} tabIndex={-1} aria-label={loyaltyPage ? "الولاء" : posSettingPage?.title ?? selectedPage?.title ?? "نظرة عامة"}>
       {loyaltyPage ? children : !locationReady ? <p role="status">جار استعادة الصفحة</p> : <>
       {selectedPage && <header className={styles.pageHeader}><span>{selectedSales ? "المبيعات" : selectedPurchase ? "المشتريات" : selectedPos ? "نقاط البيع" : selectedInventory ? "المخزون" : selectedProducer ? "الأسر المنتجة" : selectedFranchise ? "الفرنشايز" : selectedWorkshop ? "المعمل" : selectedCustomer ? "العملاء" : selectedLoyalty ? "نقاط الولاء والاختام" : selectedManufacturing ? "التصنيع" : selectedFinance ? "المالية" : selectedEmployee ? "الموظفين" : "الإعدادات"}</span><h1>{selectedPage.title}</h1></header>}
-      {demo ? <AldeemDemo section={section} title={selectedPage?.title ?? "نظرة عامة"} go={value => setSection(value as Section)} /> : <>
+      {section === "pos-main-settings" && <nav className={styles.posSettingsList} aria-label="إعدادات نقاط البيع الرئيسية">
+        {posSettingPages.map(item => <button key={item.id} type="button" className={styles.subItem} onClick={() => setSection(item.id)}>{item.title}</button>)}
+      </nav>}
+      {demo ? !inPosSettings && <AldeemDemo section={section} title={selectedPage?.title ?? "نظرة عامة"} go={value => setSection(value as Section)} /> : <>
       {section === "system-sections" && <SystemSectionSettings />}
       {section === "overview" ? <AldeemRealOverview onNavigate={value => setSection(value as Section)} /> : section === "inventory-warehouses" || section === "finance-treasuries" ? <AldeemOperationalPresentation key={section} section={section} /> : ALDEEM_OPERATIONAL_SECTIONS[section] && <AldeemOperationalWorkspace key={section} section={section} />}
       {selectedProducer && <AldeemFamilies section={section} />}
@@ -341,7 +369,7 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
       {salesVisited && <div hidden={section !== "sales-invoices"}><AldeemSalesInvoices /></div>}
       {quotesVisited && <div hidden={section !== "sales-quotes"}><AldeemSalesQuotes /></div>}
       {returnsVisited && <div hidden={section !== "sales-returns"}><AldeemSalesReturns /></div>}
-      {posVisited && <div hidden={!selectedPos}><AldeemPosManagement section={section === "pos-active-shifts" || section === "pos-price-management" ? section : "branch-pos-management"} /></div>}
+      {posVisited && <div hidden={!selectedPos || inPosSettings}><AldeemPosManagement section={section === "pos-active-shifts" || section === "pos-price-management" ? section : "branch-pos-management"} /></div>}
       {purchasesVisited["purchase-invoices"] && <div hidden={section !== "purchase-invoices"}><AldeemPurchases kind="invoice" /></div>}
       {purchasesVisited["purchase-requests"] && <div hidden={section !== "purchase-requests"}><AldeemPurchases kind="request" /></div>}
       {purchasesVisited["purchase-orders"] && <div hidden={section !== "purchase-orders"}><AldeemPurchases kind="order" /></div>}
