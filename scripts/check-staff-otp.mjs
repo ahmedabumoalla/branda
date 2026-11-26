@@ -10,6 +10,9 @@ function load(file,mocks) {
 }
 let count=0;async function test(label,fn){try{await fn();count++;}catch(e){throw new Error(label,{cause:e});}}
 const jar=new Map(),writes=[],calls=[],sent=[];
+const meram='98fd33d5-522d-46e7-adeb-34b04a665f4f', other='c85ff015-030b-4ad8-acd9-e2876c8e5012';
+let cafeId=other,privateStatus='queued',privateSender={idInstance:'meram-test'};
+const privateSends=[];
 let configured=true,sendFail=false,brandName='Test brand',rpcFail='',allow=true,mark=true,verified=false;
 const mocks={
  'server-only':{},
@@ -17,13 +20,15 @@ const mocks={
  '@/lib/barndaksa/env':{getSupabaseServiceRoleKey:()=> 'isolated-test-key'},
  '@/lib/auth/owner-phone':load('lib/auth/owner-phone.ts',{'server-only':{},'@/lib/auth/input-digits':load('lib/auth/input-digits.ts',{})}),
  '@/lib/data/cashier':{cashierSessionCookie:'barndaksa_cashier_session'},
- '@/lib/whatsapp/green-api':{isGreenApiConfigured:()=>configured,sendGreenApiOtp:async input=>{if(sendFail)throw Error('provider secret');sent.push(input);}},
- '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name,args)=>{calls.push({name,args});return {error:name===rpcFail?{message:'private sql error'}:null,data:name==='begin_staff_otp'?{ok:allow,brandName}:name==='mark_staff_otp_sent'?mark:{ok:verified,token:'a'.repeat(48),expiresAt:sessionExpiry ?? new Date(Date.now()+28800000).toISOString()}};}})},
+ '@/lib/whatsapp/customer-routing':{selectBrandOtpSender:async id=>{assert.equal(id,meram);return privateSender;}},
+ '@/lib/whatsapp/green-api':{isGreenApiConfigured:()=>configured,sendGreenApiOtp:async input=>{if(sendFail)throw Error('provider secret');sent.push(input);},
+   sendGreenApiCustomerMessage:async(sender,input,timeout,purpose)=>{privateSends.push({sender,input,timeout,purpose});return {status:privateStatus};}},
+ '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name,args)=>{calls.push({name,args});return {error:name===rpcFail?{message:'private sql error'}:null,data:name==='begin_staff_otp'?{ok:allow,brandName,cafeId}:name==='mark_staff_otp_sent'?mark:{ok:verified,token:'a'.repeat(48),expiresAt:sessionExpiry ?? new Date(Date.now()+28800000).toISOString()}};}})},
 };
 let sessionExpiry;
 const api=load('lib/auth/cashier-otp.ts',mocks);
 await test('invalid phone never calls provider or database',async()=>{assert.equal((await api.requestCashierOtp('123')).ok,false);assert.equal(calls.length,0);});
-await test('unconfigured provider rejects',async()=>{configured=false;assert.equal((await api.requestCashierOtp('0501234567')).ok,false);assert.equal(calls.length,0);configured=true;});
+await test('unconfigured shared provider rejects after trusted brand resolution',async()=>{configured=false;assert.equal((await api.requestCashierOtp('0501234567')).ok,false);assert.deepEqual(calls.map(c=>c.name),['begin_staff_otp']);calls.length=0;configured=true;});
 await test('normalizes Arabic phone and stores only browser proof after acknowledgement',async()=>{
  assert.equal((await api.requestCashierOtp('٠٥٠١٢٣٤٥٦٧')).ok,true);assert.equal(sent[0].phoneNormalized,'966501234567');
  assert.match(sent[0].code,/^\d{6}$/);assert.equal(calls[0].args.p_phone,'+966501234567');assert(!JSON.stringify(calls).includes(sent[0].code));
@@ -46,6 +51,19 @@ await test('provider failure never marks sent or writes cookie',async()=>{sendFa
 await test('failed acknowledgement persistence fails closed',async()=>{mark=false;const before=writes.length;assert.equal((await api.requestCashierOtp('0501234567')).ok,false);assert.equal(writes.length,before);mark=true;});
 await test('unknown or legacy phone never sends OTP',async()=>{brandName=null;const before=sent.length;assert.equal((await api.requestCashierOtp('0501234567')).ok,true);assert.equal(sent.length,before);brandName='Test brand';});
 await test('database errors are generic',async()=>{rpcFail='begin_staff_otp';assert(!JSON.stringify(await api.requestCashierOtp('0501234567')).includes('private'));rpcFail='';});
+await test('Meram staff challenge uses only its own number even without a platform sender',async()=>{
+ const platformBefore=sent.length;cafeId=meram;configured=false;
+ assert.equal((await api.requestCashierOtp('0501234567')).ok,true);
+ const submission=privateSends.at(-1);assert.equal(submission.sender,privateSender);assert.equal(submission.purpose,'otp');
+ assert.match(submission.input.message,/ميرام.*[0-9]{6}/);assert.equal(calls.at(-1).name,'mark_staff_otp_sent');
+ configured=true;
+ for(const state of ['rejected','unknown','offline','missing-context']){
+   privateStatus=state;privateSender=state==='offline'?null:{idInstance:'meram-test'};cafeId=state==='missing-context'?null:meram;
+   const before=writes.length;assert.equal((await api.requestCashierOtp('0501234567')).ok,false);
+   assert.equal(calls.at(-1).name,'begin_staff_otp');assert.equal(writes.length,before);
+ }
+ assert.equal(sent.length,platformBefore);cafeId=other;
+});
 
 await test('Palestinian WhatsApp code keeps the explicit country',async()=>{
  const before=sent.length;assert.equal((await api.requestCashierOtp('+970 59 123 4567')).ok,true);assert.equal(sent[before].phoneNormalized,'970591234567');

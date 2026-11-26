@@ -29,6 +29,7 @@ BEGIN
  challenge:=gen_random_uuid();
  r:=public.begin_staff_otp(challenge,phone,ph,iph,sh,ch);
  ASSERT (r->>'ok')::boolean AND r->>'brandName' IS NOT NULL;
+ ASSERT (r->>'cafeId')::uuid IS NOT DISTINCT FROM brand,'OTP sender belongs to the admitted cashier';
  ASSERT (SELECT cashier_id=staff FROM platform_access_private.staff_otp_challenges WHERE id=challenge),'OTP selects new account only, even if legacy phone matches';
  ASSERT NOT (public.verify_staff_otp(challenge,sh,ch)->>'ok')::boolean,'Unsent code rejected';
  ASSERT public.mark_staff_otp_sent(challenge,sh);

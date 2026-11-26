@@ -17,11 +17,11 @@ const { LOCO_CAFE_ID: loco, WAHED_MASOUB_CAFE_ID: wahed } = load('lib/whatsapp/b
 const { mapAdminWhatsAppSummary: summary } = load('lib/whatsapp/admin-sender-summary.ts');
 const { MERAM_CAFE_ID: meram } = load('lib/commerce/meram-profile.ts');
 const row = { cafe_id: wahed, status: 'connected', requested_phone: '966500000001', verified_phone: '966500000001', instance_id: 'fixture-instance', transactional_requested_at: '2026-11-17T10:00:00Z', updated_at: '2026-11-17T10:00:00Z' };
-assert.equal(summary(meram, null).source, 'branda');
+assert.equal(summary(meram, null).source, 'private');
 assert.equal(summary(meram, { ...row, cafe_id: meram }).source, 'private');
-assert.equal(summary(meram, { ...row, cafe_id: meram }).platformFallback, true);
-assert.equal(summary(meram, { ...row, cafe_id: meram, transactional_requested_at: null }).source, 'branda');
-assert.equal(summary(meram, { ...row, cafe_id: meram, verified_phone: '966500000002' }).source, 'branda');
+assert.equal(summary(meram, { ...row, cafe_id: meram }).platformFallback, false);
+assert.equal(summary(meram, { ...row, cafe_id: meram, transactional_requested_at: null }).source, 'private');
+assert.equal(summary(meram, { ...row, cafe_id: meram, verified_phone: '966500000002' }).source, 'private');
 assert.equal(summary(wahed, null).source, 'branda');
 assert.equal(summary(wahed, undefined).source, 'unavailable');
 assert.equal(summary(wahed, row).source, 'private');

@@ -1,9 +1,10 @@
 import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import "server-only";
-import { brandSlugAllowsNewWork } from '@/lib/data/account-cancellation';
+import { brandAllowsNewWork } from '@/lib/data/account-cancellation';
+import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isGreenApiFinanceReceiptConfigured, selectGreenApiPlatformSender, sendGreenApiCustomerMessage, sendGreenApiFinanceReceipt } from "@/lib/whatsapp/green-api";
+import { isGreenApiFinanceReceiptConfigured, selectOperationalDeliveryConfig, sendGreenApiCustomerMessage, sendGreenApiFinanceReceipt } from "@/lib/whatsapp/green-api";
 import { syncWalletCardByCode } from "@/lib/wallet";
 import { financeCustomerReceiptSchema } from "@/lib/finance/customer-receipt";
 import { createFinanceCustomerReceiptPdf } from "./finance-customer-receipt";
@@ -34,10 +35,12 @@ export function financePosCustomerMessage(job: CustomerMessageJob) {
 /** SQL claims are single-use; ambiguous sends and expired leases require review, never automatic resend */
 export async function dispatchFinancePosCustomerMessages(cafeId?: string) {
   if (cafeId) z.uuid().parse(cafeId);
-  if (!isGreenApiFinanceReceiptConfigured()) return { configured: false, claimed: 0, queued: 0, needsReview: 0 };
+  const sharedConfigured = isGreenApiFinanceReceiptConfigured();
+  if (!sharedConfigured && cafeId && cafeId !== MERAM_CAFE_ID) return { configured: false, claimed: 0, queued: 0, needsReview: 0 };
+  const claimCafeId = cafeId ?? (sharedConfigured ? null : MERAM_CAFE_ID);
   const client = createAdminClient();
   // One receipt leaves room for rendering, primary retries and the four-minute lease.
-  const { data, error } = await client.rpc("brand_finance_claim_customer_messages", { p_cafe_id: cafeId ?? null, p_limit: 1 });
+  const { data, error } = await client.rpc("brand_finance_claim_customer_messages", { p_cafe_id: claimCafeId, p_limit: 1 });
   if (error || !Array.isArray(data)) throw new Error("FINANCE_CUSTOMER_QUEUE_UNAVAILABLE");
   let queued = 0; let needsReview = 0;
   const walletCodes = new Set<string>();
@@ -46,9 +49,17 @@ export async function dispatchFinancePosCustomerMessages(cafeId?: string) {
     let status: "queued" | "rejected" | "unknown" = "rejected";
     let messageId: string | undefined;
     let errorCode = "customer_receipt_invalid";
-    const allowed = parsed.success && await brandSlugAllowsNewWork(parsed.data.slug);
+    // The receipt projection carries the invoice owner's immutable ID. Older projections need a lease lookup.
+    let jobCafeId = claimCafeId ?? parsed.data?.receipt.cafeId;
+    if (parsed.success && !jobCafeId) {
+      const job = await client.from("bf_customer_message_jobs").select("cafe_id")
+        .eq("id", parsed.data.id).eq("lease_token", parsed.data.leaseToken).single();
+      if (job.error || !job.data?.cafe_id) throw new Error("FINANCE_CUSTOMER_QUEUE_UNAVAILABLE");
+      jobCafeId = String(job.data.cafe_id);
+    }
+    const allowed = parsed.success && jobCafeId && await brandAllowsNewWork(jobCafeId);
     if (parsed.success && !allowed) errorCode = 'brand_archived_before_dispatch';
-    if (parsed.success && allowed) {
+    if (parsed.success && jobCafeId && allowed) {
       if (parsed.data.loyaltyStatus === "stamped" && parsed.data.cardCode) walletCodes.add(parsed.data.cardCode);
       let pdf: Uint8Array | undefined;
       const renderStarted = Date.now();
@@ -62,13 +73,13 @@ export async function dispatchFinancePosCustomerMessages(cafeId?: string) {
       }
       errorCode = "customer_receipt_render_failed";
       if (pdf || parsed.data.invoiceEnabled === false && parsed.data.includeCardLink !== false) {
-        if (!await brandSlugAllowsNewWork(parsed.data.slug)) {
+        if (!await brandAllowsNewWork(jobCafeId)) {
           errorCode = 'brand_archived_before_dispatch';
           if(parsed.data.cardCode)walletCodes.delete(parsed.data.cardCode);
         } else try {
           const result = parsed.data.invoiceEnabled === false
-            ? await sendGreenApiCustomerMessage(await selectGreenApiPlatformSender(), { phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data) })
-            : await sendGreenApiFinanceReceipt({ phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data), pdf: pdf!, invoiceNumber: parsed.data.receipt.number });
+            ? await sendGreenApiCustomerMessage(await selectOperationalDeliveryConfig(jobCafeId), { phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data) })
+            : await sendGreenApiFinanceReceipt({ phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data), pdf: pdf!, invoiceNumber: parsed.data.receipt.number }, jobCafeId);
           status = result.status; messageId = result.providerMessageId;
           errorCode = ("errorCode" in result && typeof result.errorCode === "string" ? result.errorCode : undefined) ?? `customer_message_${status}`;
         } catch { status = "unknown"; errorCode = "customer_media_exception"; }

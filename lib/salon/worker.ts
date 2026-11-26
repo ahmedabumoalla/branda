@@ -64,7 +64,7 @@ export async function runSalonMessageJobs(limit = 10) {
             providerId = response.providerMessageId ?? null;
             if (response.status === "rejected") sendError = "provider_rejected";
           } else {
-            providerId = (await sendGreenApiPagerMessage({ phone: job.phone, message })).providerMessageId;
+            providerId = (await sendGreenApiPagerMessage({ phone: job.phone, message }, job.cafe_id)).providerMessageId;
           }
         }
         catch { /* Ambiguous sends are never replayed */ }

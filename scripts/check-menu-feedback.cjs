@@ -15,7 +15,7 @@ const input = { requestId: "abcdefab-1234-4123-a123-abcdefabcdef", rating: 5, no
 function fixture({ published = true, phone = "0531293437", failProvider = false, failStorage = false, status = "active" } = {}) {
   const sent = [];
   const tables = {
-    cafes: [{ id: cafeId, slug: "double-b-bistro", name: "Double B Bistro", deleted_at: null, status }],
+    cafes: [{ id: cafeId, slug: "double-b-bistro", name: "Double B Bistro", phone_country: "SA", deleted_at: null, status }],
     cafe_settings: [{ cafe_id: cafeId, whatsapp: phone }],
     brand_feature_overrides: [{ cafe_id: cafeId, feature_id: "standalone_menu", enabled: published }],
     cafe_operation_events: [],
@@ -46,7 +46,7 @@ function fixture({ published = true, phone = "0531293437", failProvider = false,
     "@/lib/supabase/admin": { createAdminClient: () => client },
     "@/lib/whatsapp/green-api": {
       isGreenApiConfigured: () => true,
-      sendGreenApiMenuFeedback: async value => { sent.push(value); if (failProvider) throw Error("secret provider URL"); return { providerMessageId: "queued-test" }; },
+      sendGreenApiMenuFeedback: async (value, senderCafeId) => { assert.equal(senderCafeId, cafeId); sent.push(value); if (failProvider) throw Error("secret provider URL"); return { providerMessageId: "queued-test" }; },
     },
   });
   return { ...service, sent, tables, submit: value => service.submitMenuFeedback("double-b-bistro", value ?? input, "test-client") };
@@ -102,13 +102,16 @@ async function run() {
     assert.equal(calls, 1);
 
     const originalFetch = global.fetch;
-    process.env.GREEN_API_API_URL = "https://provider.test";
-    process.env.GREEN_API_ID_INSTANCE = "test";
+    process.env.GREEN_API_API_URL = "https://1100.api.greenapi.com";
+    process.env.GREEN_API_ID_INSTANCE = "111";
     process.env.GREEN_API_API_TOKEN_INSTANCE = "test-token";
     try {
       let payload;
-      global.fetch = async (_url, options) => { payload = JSON.parse(options.body); return Response.json({ idMessage: "test-queue-id" }); };
-      const green = load("lib/whatsapp/green-api.ts");
+      global.fetch = async (url, options) => {
+        if (url.includes("/getStateInstance/")) return Response.json({ stateInstance: "authorized" });
+        payload = JSON.parse(options.body); return Response.json({ idMessage: "test-queue-id" });
+      };
+      const green = load("lib/whatsapp/green-api.ts", { "@/lib/whatsapp/owner-guide-delivery": {}, "@/lib/whatsapp/notification-sender": {} });
       assert.deepEqual(await green.sendGreenApiMenuFeedback({ recipient: "966531293437", brandName: "Double B Bistro", rating: 3, notes: "Test" }), { providerMessageId: "test-queue-id" });
       assert.equal(payload.chatId, "966531293437@c.us");
       assert.equal(payload.linkPreview, false);

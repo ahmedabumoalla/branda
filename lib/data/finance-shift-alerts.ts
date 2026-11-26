@@ -40,7 +40,7 @@ export async function dispatchShiftAlerts(cafeId?: string, shiftId?: string) {
     try { message = financeShiftAlertMessage(alert); } catch { status = "rejected"; }
     if (phone && message) {
       try {
-        const outcome = await sendGreenApiFinanceShiftAlert({ phone, message });
+        const outcome = await sendGreenApiFinanceShiftAlert({ phone, message }, alert.cafeId);
         status = outcome.status; messageId = outcome.providerMessageId;
       } catch { status = "unknown"; }
     }

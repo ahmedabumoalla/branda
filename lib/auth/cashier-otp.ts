@@ -6,7 +6,9 @@ import { z } from "zod";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
 import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isGreenApiConfigured, sendGreenApiOtp } from "@/lib/whatsapp/green-api";
+import { isGreenApiConfigured, sendGreenApiCustomerMessage, sendGreenApiOtp } from "@/lib/whatsapp/green-api";
+import { selectBrandOtpSender } from "@/lib/whatsapp/customer-routing";
+import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 import { cashierSessionCookie } from "@/lib/data/cashier";
 
 const CHALLENGE_COOKIE = "barndaksa_staff_otp";
@@ -22,7 +24,6 @@ function digits(value: string) {
 export async function requestCashierOtp(phone: string): Promise<CashierOtpResult> {
   const parsed = z.string().max(30).transform(digits).transform(value => normalizeOwnerPhone(value)).refine(Boolean).safeParse(phone);
   if (!parsed.success) return { ok: false, message: "أدخل رقم جوال صحيحًا مع مفتاح الدولة" };
-  if (!isGreenApiConfigured()) return unavailable();
   try {
     const admin = createAdminClient();
     const id = randomUUID(), secret = randomBytes(32).toString("hex");
@@ -36,11 +37,21 @@ export async function requestCashierOtp(phone: string): Promise<CashierOtpResult
     });
     if (started.error) return unavailable();
     if (!started.data?.ok) return { ok: false, message: "انتظر قليلًا قبل طلب رمز آخر أو حاول لاحقًا إذا بلغت حد المحاولات", retryAfterSeconds: 60 };
+    if (started.data.cafeId !== MERAM_CAFE_ID && !isGreenApiConfigured()) return unavailable();
     // Unknown and legacy numbers receive the same response without a message or login access.
     if (started.data.brandName) {
-      try {
+      const cafeId = z.uuid().parse(started.data.cafeId);
+      if (cafeId === MERAM_CAFE_ID) {
+        const sender = await selectBrandOtpSender(cafeId);
+        if (!sender) return unavailable();
+        const result = await sendGreenApiCustomerMessage(sender, {
+          phone: parsed.data!,
+          message: `رمز التحقق لعلامة ميرام: ${code}\nصالح لمدة 5 دقائق\nلا تشارك الرمز مع أي شخص\nإذا لم تطلبه فتجاهل الرسالة`,
+        }, 25_000, "otp");
+        if (result.status !== "queued") return unavailable();
+      } else {
         await sendGreenApiOtp({ phoneNormalized: parsed.data!, brandName: String(started.data.brandName), code });
-      } catch { return unavailable(); }
+      }
       const marked = await admin.rpc("mark_staff_otp_sent", { p_id: id, p_session_hash: sessionHash });
       if (marked.error || marked.data !== true) return unavailable();
     }

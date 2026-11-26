@@ -7,7 +7,7 @@ function load(file, mocks = {}) {
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new Function('require', 'exports', code)(name => {
     if (name in mocks) return mocks[name];
-    if (['@/lib/auth/input-digits', '@/lib/auth/owner-phone', '@/lib/auth/brand-phone'].includes(name)) return load(name.slice(2) + '.ts');
+    if (['@/lib/auth/input-digits', '@/lib/auth/owner-phone', '@/lib/auth/brand-phone', '@/lib/auth/arab-phone-rules', '@/lib/commerce/meram-profile'].includes(name)) return load(name.slice(2) + '.ts');
     if (name === '@/lib/data/account-cancellation') return { brandAllowsNewWork: async () => true, brandSlugAllowsNewWork: async () => true };
     if (name === 'zod' || name === 'node:crypto') return require(name);
     if (name === 'server-only') return {};
@@ -87,7 +87,7 @@ const lease = '33333333-3333-4333-8333-333333333333';
   data = { ...row, cafe_id: orderId }; await assert.rejects(() => dal.transitionFinancePosPager(orderId, 'ready'));
 
   let configured = true, sent = [], workerCalls = [], finishThrows = false, providerStatus = 'queued', walletCalls = [], walletFailure = false, deliveryOrder = [];
-  const receipt = {brandName:'Brand',number:19,createdAt:'2026-10-27T01:00:00Z',localReference:null,subtotal:11.5,discount:0,tax:1.5,total:11.5,paid:11.5,vatRate:15,taxInclusive:true,paymentMethod:'cash',lines:[{name:'Coffee',quantity:1,unitPrice:11.5,net:10,tax:1.5}]};
+  const receipt = {cafeId:id,brandName:'Brand',number:19,createdAt:'2026-10-27T01:00:00Z',localReference:null,subtotal:11.5,discount:0,tax:1.5,total:11.5,paid:11.5,vatRate:15,taxInclusive:true,paymentMethod:'cash',lines:[{name:'Coffee',quantity:1,unitPrice:11.5,net:10,tax:1.5}]};
   let pdfFailure=false,pdfFailuresRemaining=0,pdfCalls=0; const pdf=new TextEncoder().encode('%PDF-test');
   const job = { receipt, id, leaseToken: lease, phone, brandName: 'Brand', slug: 'brand', invoiceNumber: 19, loyaltyStatus: 'stamped', cardCode: 'PRIVATE_CARD_CODE' };
   let jobs = [job];

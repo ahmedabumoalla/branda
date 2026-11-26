@@ -196,7 +196,7 @@ export async function provisionSalesCashier(input: { name: string; phone: string
       if (linked.error || !linked.data?.id) throw new SalesCashierCreationError("existing_account_unavailable");
       if (!linked.data.changed) return { ok: true as const, delivery: "unchanged" as const, message: "الموظف مضاف بالفعل ككاشير مبيعات لهذه العلامة حساب العميل وكلمة مروره لم يتغيرا" };
       try {
-        await sendGreenApiLinkedSalesCashierWelcome({ phone: parsed.phone, fullName: parsed.name, brandName: snapshot.cafe.name });
+        await sendGreenApiLinkedSalesCashierWelcome({ phone: parsed.phone, fullName: parsed.name, brandName: snapshot.cafe.name }, cafe.id);
         return { ok: true as const, delivery: "queued" as const, message: "تم ربط حساب العميل بكاشير المبيعات وقبول رسالة رابط الدخول لدى مزود واتساب كلمة مروره لم تتغير ويمكنه الدخول برمز واتساب" };
       } catch {
         return { ok: true as const, delivery: "unconfirmed" as const, message: "تم ربط حساب العميل بكاشير المبيعات لكن لم يتأكد إرسال واتساب يمكنه الدخول برمز واتساب من صفحة الكاشيرات لا تكرر إضافته" };
@@ -223,7 +223,7 @@ export async function provisionSalesCashier(input: { name: string; phone: string
   // Send once, only after the committed grant; delivery failure never rolls back a usable account.
   // The password stays in this request only, never in metadata, logs, or a delivery queue.
   try {
-    await sendGreenApiSalesCashierWelcome({ phone: parsed.phone, fullName: parsed.name, brandName: snapshot.cafe.name, slug: cafe.slug, password: parsed.password });
+    await sendGreenApiSalesCashierWelcome({ phone: parsed.phone, fullName: parsed.name, brandName: snapshot.cafe.name, slug: cafe.slug, password: parsed.password }, cafe.id);
     return { ok: true as const, delivery: "queued" as const, message: "تم إنشاء كاشير المبيعات وقبول رسالة بيانات الدخول ورابط نقطة البيع لدى مزود واتساب" };
   } catch {
     return { ok: true as const, delivery: "unconfirmed" as const, message: "تم إنشاء كاشير المبيعات لكن لم يتأكد إرسال واتساب سلّم بيانات الدخول للموظف ولا تكرر إضافة الحساب" };

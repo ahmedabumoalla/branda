@@ -1,3 +1,4 @@
+import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 import {
   isMetaWhatsAppConfigured,
   normalizeWhatsAppToNumber,
@@ -25,8 +26,21 @@ export type WhatsAppSendResult =
       devHint?: string;
     };
 
-function isEnabled(): boolean {
-  return isMetaWhatsAppConfigured();
+async function sendMeramText(cafeId: string, phone: string, message: string): Promise<WhatsAppSendResult> {
+  const { selectOperationalDeliveryConfig } = await import("@/lib/whatsapp/green-api");
+  const { sendGreenApiMarketingMessage, GreenApiProviderError } = await import("@/lib/whatsapp/green-api-marketing");
+  let sender;
+  try {
+    sender = await selectOperationalDeliveryConfig(cafeId);
+  } catch {
+    return { ok: false, skipped: true, reason: "sender_unavailable" };
+  }
+  try {
+    const result = await sendGreenApiMarketingMessage(sender, { phone, message });
+    return { ok: true, messageId: result.providerMessageId };
+  } catch (error) {
+    return { ok: false, reason: error instanceof GreenApiProviderError && !error.uncertain ? "rejected" : "unknown" };
+  }
 }
 
 export function normalizeWhatsAppPhone(input?: string | null): string | null {
@@ -72,7 +86,7 @@ function logWhatsAppFailure(
 export async function sendWhatsAppMessage(
   input: WhatsAppSendInput,
 ): Promise<WhatsAppSendResult> {
-  if (!isEnabled()) {
+  if (input.cafeId !== MERAM_CAFE_ID && !isMetaWhatsAppConfigured()) {
     return { ok: false, skipped: true, reason: "disabled" };
   }
 
@@ -80,6 +94,8 @@ export async function sendWhatsAppMessage(
   if (!normalizedTo) {
     return { ok: false, skipped: true, reason: "invalid_recipient" };
   }
+
+  if (input.cafeId === MERAM_CAFE_ID) return sendMeramText(input.cafeId, normalizedTo.slice(1), input.body);
 
   const result = await sendMetaWhatsAppText({
     to: normalizeWhatsAppToNumber(normalizedTo) ?? normalizedTo,

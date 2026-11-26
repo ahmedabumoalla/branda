@@ -29,7 +29,7 @@ export async function runPagerMessageJobs(limit = 100) {
           const message = pagerMessageText(job);
           if (!await authorizePagerDispatch(job.id, job.leaseToken)) { result.skipped++; return; }
           let providerId: string;
-          try { providerId = (await sendGreenApiPagerMessage({ phone: job.phone, message })).providerMessageId; }
+          try { providerId = (await sendGreenApiPagerMessage({ phone: job.phone, message }, job.cafeId)).providerMessageId; }
           catch {
             await finishPagerMessage(job.id, job.leaseToken, { error: "provider_send_failed" });
             result.failed++;

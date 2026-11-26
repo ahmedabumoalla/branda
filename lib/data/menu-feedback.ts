@@ -66,7 +66,7 @@ export async function submitMenuFeedback(slug: string, input: Feedback, clientAd
   if (saved.error?.code === "23505") throw new FeedbackError(409, "تقييمك قيد المعالجة");
   if (saved.error) throw saved.error; // Never send unless the idempotency record is persisted
   try {
-    const result = await sendGreenApiMenuFeedback({ recipient, brandName: cafe.name, rating: parsed.data.rating, notes: parsed.data.notes });
+    const result = await sendGreenApiMenuFeedback({ recipient, brandName: cafe.name, rating: parsed.data.rating, notes: parsed.data.notes }, cafe.id);
     const updated = await admin.from("cafe_operation_events").update({ metadata: { ...metadata, status: "queued", providerMessageId: result.providerMessageId } }).eq("id", id).eq("cafe_id", cafe.id);
     if (updated.error) throw updated.error;
     return { status: "queued" as const };

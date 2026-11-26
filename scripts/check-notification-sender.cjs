@@ -34,12 +34,13 @@ function selector({ rows, accounts, env = { GREEN_API_ID_INSTANCE: '111', GREEN_
 }
 const row = (id, extra = {}) => ({ idInstance: id, name: `Instance ${id}`, tariff: 'PARTNER', isPartner: true, deleted: false, isExpired: false, apiTokenInstance: `token-${id}-fixture`, apiUrl: 'https://7700.api.greenapi.com', ...extra });
 
-function worker({ paused, notify, primaryReady = false, jobs, off = false, loco = null, meramSender = null }) {
-  const finished = [], sent = [], claims = [];
+function worker({ paused, notify, primaryReady = false, jobs, off = false, loco = null, meramSender = null, rewards = false }) {
+  const finished = [], sent = [], messages = [], claims = [];
   const queue = [...jobs];
   const exports = {};
   new Function('require', 'exports', 'process', transpile('lib/loyalty/read-card-links.ts'))(name => ({
     'server-only': {},
+    '@/lib/commerce/meram-profile': { MERAM_CAFE_ID: '98fd33d5-522d-46e7-adeb-34b04a665f4f' },
     '@/lib/auth/brand-phone': loadAuthHelper('@/lib/auth/brand-phone'),
     '@/lib/data/account-cancellation': { brandAllowsNewWork: async () => true },
     '@/lib/supabase/admin': { createAdminClient: () => ({ async rpc(fn, args) {
@@ -50,14 +51,14 @@ function worker({ paused, notify, primaryReady = false, jobs, off = false, loco 
     '@/lib/whatsapp/green-api': {
       isGreenApiLoyaltyWelcomeReady: async () => primaryReady,
       sendGreenApiLoyaltyWelcome: async input => { sent.push(['platform', input.phone]); return { status: 'queued', providerMessageId: 'p' }; },
-      sendGreenApiCustomerMessage: async (sender, input) => { sent.push([sender.idInstance, input.phone]); return { status: 'queued', providerMessageId: 'n' }; },
+      sendGreenApiCustomerMessage: async (sender, input) => { messages.push(input.message); sent.push([sender.idInstance, input.phone]); return { status: 'queued', providerMessageId: 'n' }; },
     },
     '@/lib/whatsapp/customer-routing': { selectLocoLoyaltySender: async () => loco, selectBrandLoyaltySender: async () => null, selectVerifiedBrandWhatsAppSender: async cafe => { assert.equal(cafe, '98fd33d5-522d-46e7-adeb-34b04a665f4f'); return meramSender; } },
     '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: 'loco', WAHED_MASOUB_CAFE_ID: 'wahed' },
     '@/lib/whatsapp/notification-sender': { selectNotificationSender: async () => notify },
     '@/lib/wallet/google': { getGoogleWalletSaveState: async () => false },
-  })[name] ?? (() => { throw new Error(`Unmocked dependency ${name}`); })(), exports, { env: { ...(paused ? { BRANDA_ACCESS_MESSAGES_ONLY: 'true' } : {}), ...(off ? { BRANDA_PLATFORM_CARD_LINKS: 'off' } : {}) } });
-  return { exports, finished, sent, claims };
+  })[name] ?? (() => { throw new Error(`Unmocked dependency ${name}`); })(), exports, { env: { ...(paused ? { BRANDA_ACCESS_MESSAGES_ONLY: 'true' } : {}), ...(off ? { BRANDA_PLATFORM_CARD_LINKS: 'off' } : {}), ...(rewards ? { BRANDA_REWARD_NOTICES: 'on' } : {}) } });
+  return { exports, finished, sent, messages, claims };
 }
 const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardId: 'c', brandSlug: 'brand', brandName: 'Brand', phone: '966500000001', cardCreated: true, googleIssued: false });
 
@@ -118,7 +119,24 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
     const offline = worker({ paused: true, off: true, notify, primaryReady: true, jobs: [meram] });
     await offline.exports.dispatchStampCardLinks(1);
     assert.deepEqual(offline.sent, []);
-    assert.deepEqual(offline.finished, [['new', 'deferred']]); checks++;
+    assert.deepEqual(offline.finished, [['new', 'deferred']]);
+    const reward = { ...repeat, id: 'reward', privateSenderRequested: true, meramRewardEarned: true, stampsInCycle: 0, purchasesRequired: 5 };
+    const unearned = { ...reward, id: 'ordinary', meramRewardEarned: false };
+    const privateAccount = { idInstance: 'meram-private' };
+    for (const notificationsAccount of [notify, null]) {
+      const fresh = { ...meram, meramRewardEarned: true };
+      const enabled = worker({ paused: true, off: true, rewards: true, notify: notificationsAccount, meramSender: privateAccount, jobs: [reward, unearned, fresh] });
+      await enabled.exports.dispatchStampCardLinks(3);
+      assert.deepEqual(enabled.finished, [['reward', 'queued'], ['ordinary', 'skipped'], ['new', 'queued']]);
+      assert.deepEqual(enabled.sent, [[privateAccount.idInstance, reward.phone], [privateAccount.idInstance, fresh.phone]]);
+      assert.match(enabled.messages[0], /استحقيت مكافأة/);
+      assert.match(enabled.messages[1], /بطاقة الولاء جاهزة/);
+    }
+    const disconnected = worker({ paused: true, off: true, rewards: true, notify, primaryReady: true, jobs: [reward] });
+    await disconnected.exports.dispatchStampCardLinks(1);
+    assert.deepEqual(disconnected.sent, []);
+    assert.deepEqual(disconnected.finished, [['reward', 'deferred']]);
+    checks++;
   }
 
   // Access-only switch on and the notifications number ready: card links go out from it, never from Branda's primary
@@ -252,7 +270,8 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
       const exports = {};
       new Function('require', 'exports', transpile('lib/whatsapp/customer-routing.ts'))(name => ({
         'server-only': {},
-    '@/lib/auth/brand-phone': loadAuthHelper('@/lib/auth/brand-phone'),
+        '@/lib/commerce/meram-profile': { MERAM_CAFE_ID: '98fd33d5-522d-46e7-adeb-34b04a665f4f' },
+        '@/lib/auth/brand-phone': loadAuthHelper('@/lib/auth/brand-phone'),
         '@/lib/data/brand-whatsapp': { getLocoCustomerWhatsAppCredentials: async () => null, getBrandCustomerWhatsAppCredentials: async () => linked },
         '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: 'loco', WAHED_MASOUB_CAFE_ID: 'brand', supportsPrivateWhatsApp: () => true },
         '@/lib/whatsapp/green-api': { isGreenApiBackupOnly: () => false, getGreenApiCustomerPlatformSenders: () => ({ primary: { idInstance: '111' }, backup: { idInstance: '222' } }),
@@ -278,8 +297,8 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
     assert.match(fs.readFileSync('lib/auth/otp-delivery.ts', 'utf8'), /await selectBrandOtpSender\(job\.cafe_id!\)/);
     assert.match(fs.readFileSync('lib/whatsapp/company-document.ts', 'utf8'), /selectBrandCustomerSender\(cafeId\)/);
     assert.match(fs.readFileSync('lib/loyalty/read-card-links.ts', 'utf8'), /selectNotificationSender\(\)/);
-    // Meram rejection notices join the existing approved verification and loyalty routes.
-    assert.match(fs.readFileSync('lib/commerce/meram-notifications.ts', 'utf8'), /await selectNotificationSender\(\)/);
+    // Meram order notices always use its own verified number.
+    assert.doesNotMatch(fs.readFileSync('lib/commerce/meram-notifications.ts', 'utf8'), /selectNotificationSender/);
     const users = [];
     const walk = directory => fs.readdirSync(directory, { withFileTypes: true }).forEach(entry => {
       const file = `${directory}/${entry.name}`;
@@ -287,7 +306,7 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
       else if (/\.tsx?$/.test(entry.name) && /whatsapp\/notification-sender"/.test(fs.readFileSync(file, 'utf8'))) users.push(file);
     });
     ['app', 'lib', 'components'].forEach(walk);
-    assert.deepEqual(users.sort(), ['lib/commerce/meram-notifications.ts', 'lib/loyalty/read-card-links.ts', 'lib/salon/worker.ts', 'lib/whatsapp/customer-routing.ts', 'lib/whatsapp/green-api.ts']);
+    assert.deepEqual(users.sort(), ['lib/loyalty/read-card-links.ts', 'lib/salon/worker.ts', 'lib/whatsapp/customer-routing.ts', 'lib/whatsapp/green-api.ts']);
     checks++;
   }
 

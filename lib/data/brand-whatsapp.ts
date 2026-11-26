@@ -54,7 +54,7 @@ async function dashboard(context: Context): Promise<BrandWhatsAppDashboard> {
     phoneCountry: context.phoneCountry, brandName: context.brandName,
     monthlyPriceUsd: context.cafeId === LOCO_CAFE_ID ? null : 30,
     configured: marketingConfigured(),
-    platformFallback: context.cafeId !== LOCO_CAFE_ID,
+    platformFallback: context.cafeId !== LOCO_CAFE_ID && context.cafeId !== MERAM_CAFE_ID,
     ...(context.cafeId === MERAM_CAFE_ID ? { meramNotifications: true as const } : {}),
     transactionalEnabled: Boolean(row?.transactional_requested_at) && !["disconnected", "disconnecting"].includes(row!.status),
     connection: row ? {

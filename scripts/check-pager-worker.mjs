@@ -32,7 +32,7 @@ async function workerHarness(options={}){
     },
     "@/lib/whatsapp/green-api":{
       isGreenApiConfigured:()=>options.configured??true,
-      sendGreenApiPagerMessage:async input=>{sent.push(input);sendCalls++;return options.send?options.send(input,sendCalls):{providerMessageId:`provider-${sendCalls}`};},
+      sendGreenApiPagerMessage:async (input,cafeId)=>{assert.equal(cafeId,"cafe-one");sent.push(input);sendCalls++;return options.send?options.send(input,sendCalls):{providerMessageId:`provider-${sendCalls}`};},
     },
   });
   return {worker,claimed,sent,finished,authorized,requeue:jobs=>{queue.push(...jobs);}};
@@ -127,6 +127,9 @@ try {
   process.env.GREEN_API_API_URL="https://1100.api.greenapi.com";process.env.GREEN_API_ID_INSTANCE="111";process.env.GREEN_API_API_TOKEN_INSTANCE="test-token";
   process.env.GREEN_API_REQUEST_TIMEOUT_MS="90000";
   const sender=await load("lib/whatsapp/green-api.ts", {
+    "@/lib/auth/brand-phone": { canonicalBrandMobile: /^9665\d{8}$/ },
+    "@/lib/commerce/meram-profile": await load("lib/commerce/meram-profile.ts"),
+    "@/lib/whatsapp/owner-guide-delivery": {}, "@/lib/whatsapp/notification-sender": {},
     "@/lib/cashier/guide": await load("lib/cashier/guide.ts"),
     "@/lib/whatsapp/owner-guide": await load("lib/whatsapp/owner-guide.ts"),
   });let fetchCalls=[];

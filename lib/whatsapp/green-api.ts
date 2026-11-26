@@ -4,6 +4,7 @@ import { cashierGuideFilename, cashierGuideUrl } from "@/lib/cashier/guide";
 import { ownerGuideFilename, ownerGuideUrl, ownerCompanionGuides, type OwnerCompanionGuide } from "@/lib/whatsapp/owner-guide";
 import { queueOwnerCompanionGuides } from "@/lib/whatsapp/owner-guide-delivery";
 import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
+import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 
 const supportedMobile = canonicalBrandMobile;
 const DEFAULT_GREEN_API_TIMEOUT_MS = 10_000;
@@ -118,9 +119,9 @@ export async function sendGreenApiLoyaltyWelcome(input: { phone: string; message
 }
 
 /** A provider acknowledgement means queued only. Ambiguous outcomes must not be retried automatically */
-export async function sendGreenApiFinanceShiftAlert(input: { phone: string; message: string }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
+export async function sendGreenApiFinanceShiftAlert(input: { phone: string; message: string }, cafeId?: string): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
   if (!supportedMobile.test(input.phone)) throw new Error("INVALID_FINANCE_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
+  const { apiUrl, idInstance, apiTokenInstance } = await selectOperationalDeliveryConfig(cafeId);
   try {
     const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
       method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
@@ -150,10 +151,12 @@ function financeReceiptMediaOrigin(senderId = process.env.GREEN_API_ID_INSTANCE?
   return url.origin;
 }
 
-export async function sendGreenApiFinanceReceipt(input: { phone: string; message: string; pdf: Uint8Array; invoiceNumber: number }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string; errorCode?: string }> {
+export async function sendGreenApiFinanceReceipt(input: { phone: string; message: string; pdf: Uint8Array; invoiceNumber: number }, cafeId?: string): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string; errorCode?: string }> {
   if (!supportedMobile.test(input.phone) || !Number.isSafeInteger(input.invoiceNumber) || input.invoiceNumber < 1 || input.message.length > 1024 || !input.pdf.length || input.pdf.length > 8 * 1024 * 1024 || new TextDecoder().decode(input.pdf.slice(0, 5)) !== "%PDF-") throw new Error("INVALID_FINANCE_RECEIPT");
-  const { idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
-  const mediaOrigin = financeReceiptMediaOrigin(idInstance);
+  const { apiUrl, idInstance, apiTokenInstance } = await selectOperationalDeliveryConfig(cafeId);
+  const mediaOrigin = cafeId === MERAM_CAFE_ID
+    ? apiUrl.replace(/\bapi(?=\.green-?api\.com$)/, "media")
+    : financeReceiptMediaOrigin(idInstance);
   const body = new FormData();
   const fileName = `invoice-${input.invoiceNumber}.pdf`;
   body.set("chatId", `${input.phone}@c.us`);
@@ -172,9 +175,9 @@ export async function sendGreenApiFinanceReceipt(input: { phone: string; message
 }
 
 /** A provider ID means queued by GREEN-API, not delivered or read */
-export async function sendGreenApiPagerMessage(input: { phone: string; message: string }) {
+export async function sendGreenApiPagerMessage(input: { phone: string; message: string }, cafeId?: string) {
   if (!supportedMobile.test(input.phone)) throw new Error("INVALID_PAGER_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("pager");
+  const { apiUrl, idInstance, apiTokenInstance } = await selectOperationalDeliveryConfig(cafeId, "pager");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
     signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
@@ -189,9 +192,9 @@ export async function sendGreenApiPagerMessage(input: { phone: string; message: 
 /** Sales cashier credentials are sent only after the owner's account provisioning succeeds. */
 export async function sendGreenApiSalesCashierWelcome(input: {
   phone: string; fullName: string; brandName: string; slug: string; password: string;
-}) {
+}, cafeId?: string) {
   if (!supportedMobile.test(input.phone) || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(input.slug)) throw new Error("INVALID_SALES_CASHIER_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
+  const { apiUrl, idInstance, apiTokenInstance } = await selectOperationalDeliveryConfig(cafeId, "cashier_welcome");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
     signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
@@ -213,9 +216,9 @@ export async function sendGreenApiSalesCashierWelcome(input: {
 }
 
 /** Linking a customer never reveals or replaces their existing password. */
-export async function sendGreenApiLinkedSalesCashierWelcome(input: { phone: string; fullName: string; brandName: string }) {
+export async function sendGreenApiLinkedSalesCashierWelcome(input: { phone: string; fullName: string; brandName: string }, cafeId?: string) {
   if (!supportedMobile.test(input.phone)) throw new Error("INVALID_SALES_CASHIER_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
+  const { apiUrl, idInstance, apiTokenInstance } = await selectOperationalDeliveryConfig(cafeId, "cashier_welcome");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
     signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
@@ -240,9 +243,9 @@ export async function sendGreenApiCashierWelcome(input: {
   phone: string;
   fullName: string;
   brandName: string;
-}) {
+}, cafeId?: string) {
   if (!input.phone.startsWith("+") || !supportedMobile.test(input.phone.slice(1))) throw new Error("INVALID_CASHIER_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
+  const { apiUrl, idInstance, apiTokenInstance } = await selectOperationalDeliveryConfig(cafeId, "cashier_welcome");
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendFileByUrl/${apiTokenInstance}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -276,9 +279,9 @@ export async function sendGreenApiCashierWelcome(input: {
 }
 
 /** idMessage acknowledges provider queueing only, not WhatsApp delivery */
-export async function sendGreenApiMenuFeedback(input: { recipient: string; brandName: string; rating: number; notes: string }) {
+export async function sendGreenApiMenuFeedback(input: { recipient: string; brandName: string; rating: number; notes: string }, cafeId?: string) {
   if (!supportedMobile.test(input.recipient)) throw new Error("INVALID_FEEDBACK_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
+  const { apiUrl, idInstance, apiTokenInstance } = await selectOperationalDeliveryConfig(cafeId);
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
     signal: AbortSignal.timeout(greenApiTimeoutMs()),
@@ -560,6 +563,17 @@ async function requireDeliveryConfig(kind: "otp" | "owner" | "owner_handoff" | "
  * Exactly one sender is selected before POST; an uncertain send is never replayed. */
 export async function selectGreenApiPlatformSender() {
   return requireDeliveryConfig("other");
+}
+
+/** The cafe identity comes from the authorized operation or its claimed database job. */
+export async function selectOperationalDeliveryConfig(cafeId?: string, kind: "other" | "pager" | "cashier_welcome" = "other") {
+  if (kind === "cashier_welcome" && isPlatformAccessOnly()) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
+  if (cafeId !== MERAM_CAFE_ID) return requireDeliveryConfig(kind === "pager" ? "pager" : "other");
+  if (isGreenApiBackupOnly()) throw new Error("MESSAGING_TEMPORARILY_PAUSED");
+  const { selectVerifiedBrandWhatsAppSender } = await import("@/lib/whatsapp/customer-routing");
+  const sender = await selectVerifiedBrandWhatsAppSender(cafeId);
+  if (!sender || isGreenApiPlatformSender(sender)) throw new Error("BRAND_WHATSAPP_UNAVAILABLE");
+  return validateOtpSender(sender);
 }
 
 /** Explicitly authorized renewal notices also use standby during the primary restriction. */

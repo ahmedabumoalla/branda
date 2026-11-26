@@ -13,6 +13,7 @@ async function test(name, run) { await run(); count++; console.log('PASS ' + nam
 const id = '16b4c203-44a2-4a18-98c5-c63403800a01', lease = '16b4c203-44a2-4a18-98c5-c63403800a02';
 let key = 'isolated-service-test-key', jobs = [], calls = [], sends = [], unavailable = false, admitted = true, sendError = false, releaseSend;
 const loco = '321fd305-1883-48df-ab69-829cf7d1bc48';
+const meram = '98fd33d5-522d-46e7-adeb-34b04a665f4f';
 let selectedSender = { idInstance: 'isolated-brand' }, routedSends = [], routedStatus = 'queued', selections = 0;
 const admin = { rpc: async (name, args) => {
   calls.push({ name, args });
@@ -33,9 +34,13 @@ const delivery = load('lib/auth/otp-delivery.ts', {
   'server-only': {}, '@/lib/supabase/admin': { createAdminClient: () => admin },
   '@/lib/barndaksa/env': { getSupabaseServiceRoleKey: () => key },
   '@/lib/whatsapp/customer-routing': {
-    isBrandCustomerOtp: (cafeId,purpose) => cafeId === loco && ['customer_signup','customer_login'].includes(purpose),
+    isBrandCustomerOtp: (cafeId,purpose) => cafeId === meram || (cafeId === loco && ['customer_signup','customer_login'].includes(purpose)),
     // Since 2026-11-22 the worker asks for the code sender, which adds the notifications number before the platform numbers
-    selectBrandOtpSender: async () => { selections++; return selectedSender; },
+    selectBrandOtpSender: async cafeId => {
+      selections++;
+      if (cafeId === loco && !selectedSender) throw Error('OTP_SENDERS_UNAVAILABLE');
+      return selectedSender;
+    },
   },
   '@/lib/whatsapp/green-api': {
     greenApiProviderInstanceKey: () => 'isolated-provider',
@@ -137,6 +142,21 @@ function request(signed = true, raw = JSON.stringify({ user: { phone: '+96650000
       assert.equal(sends.length,legacy); assert.equal(calls.at(-1).args.p_status,'sent');
       assert.equal(routedSends.at(-1).timeoutMs,25000);
     }
+  });
+  await test('Meram uses private sender for every admitted purpose and never sends from the platform after failure',async()=>{
+    const before=sends.length;
+    for(const purpose of ['customer_signup','customer_login','finance_cashier_login']){
+      for(const state of ['queued','unknown','rejected','offline']){
+        selectedSender=state==='offline'?null:{idInstance:'meram-test'};routedStatus=state;
+        const count=routedSends.length;
+        jobs=[{id,payload:delivery.sealOtpDelivery({phoneNormalized:'966500000001',code:'123456'}),lease_token:lease,cafe_id:meram,purpose}];
+        await delivery.deliverQueuedOtp();
+        assert.equal(routedSends.length,count+(selectedSender?1:0));assert.equal(sends.length,before);
+        assert.equal(calls.at(-1).args.p_status,state==='queued'?'sent':state==='unknown'?'unknown':'failed');
+        if(selectedSender){assert.equal(routedSends.at(-1).sender,selectedSender);assert.match(routedSends.at(-1).input.message,/ميرام/);}
+      }
+    }
+    selectedSender={idInstance:'isolated-brand'};routedStatus='queued';
   });
   await test('staff, other tenants and historical jobs preserve the existing transport', async () => {
     const before = selections;

@@ -14,10 +14,12 @@ function worker({ env, notify, jobs, saved = false }) {
   const exports = {};
   new Function('require', 'exports', 'process', transpile('lib/loyalty/read-card-links.ts'))(name => ({
     'server-only': {},
+    '@/lib/commerce/meram-profile': { MERAM_CAFE_ID: '98fd33d5-522d-46e7-adeb-34b04a665f4f' },
     '@/lib/auth/brand-phone': brandPhone,
     '@/lib/data/account-cancellation': { brandAllowsNewWork: async () => true },
     '@/lib/supabase/admin': { createAdminClient: () => ({ async rpc(fn, args) {
-      if (fn === 'claim_stamp_card_link_v2') return { data: args.p_primary_ready ? queue.shift() ?? null : null, error: null };
+      if (fn === 'claim_stamp_card_link_v3') return { data: args.p_primary_ready ? queue.shift() ?? null : null, error: null };
+      assert.equal(fn, 'finish_stamp_card_link_v2');
       finished.push([args.p_id, args.p_status]); return { data: true, error: null };
     } }) },
     '@/lib/auth/loyalty-session-token': { createLoyaltySessionToken: () => 'fixture-token', loyaltyIdentityHash: () => 'fixture' },

@@ -5,11 +5,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createLoyaltySessionToken, loyaltyIdentityHash } from "@/lib/auth/loyalty-session-token";
 import { isGreenApiLoyaltyWelcomeReady, sendGreenApiCustomerMessage, sendGreenApiLoyaltyWelcome } from "@/lib/whatsapp/green-api";
 import { selectLocoLoyaltySender, selectBrandLoyaltySender, selectVerifiedBrandWhatsAppSender } from "@/lib/whatsapp/customer-routing";
+import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
 import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
 import { getGoogleWalletSaveState } from "@/lib/wallet/google";
 
-type CardLinkJob = { id: string; claimToken: string; cafeId: string; profileId: string; cardId: string; brandSlug: string; brandName: string; phone: string; cardCreated: boolean; googleIssued: boolean; privateSenderRequested: boolean; meramCashierPhoneIssue?: boolean; stampsInCycle?: number | null; purchasesRequired?: number | null; rewardName?: string | null };
+type CardLinkJob = { id: string; claimToken: string; cafeId: string; profileId: string; cardId: string; brandSlug: string; brandName: string; phone: string; cardCreated: boolean; googleIssued: boolean; privateSenderRequested: boolean; meramCashierPhoneIssue?: boolean; meramRewardEarned?: boolean; stampsInCycle?: number | null; purchasesRequired?: number | null; rewardName?: string | null };
 const BOLINGO_CAFE_ID = "dbe942ba-dfa4-422b-a9f6-9527c3b27cc9";
 /** Brands explicitly authorized to send card links through Branda's notifications number. */
 export const PLATFORM_CARD_LINK_CAFE_IDS: ReadonlySet<string> = new Set([
@@ -47,7 +48,8 @@ export async function dispatchStampCardLinks(limit = 2) {
   const notifySender = platformOff ? null : readyNotifySender;
   // BRANDA_REWARD_NOTICES "on": the one exception. When a stamp completes the card, the notifications number
   // tells the customer, in the brand's name, that a reward is waiting
-  const rewardSender = platformOff && process.env.BRANDA_REWARD_NOTICES?.trim() === "on" ? readyNotifySender : null;
+  const rewardNoticesEnabled = process.env.BRANDA_REWARD_NOTICES?.trim() === "on";
+  const rewardSender = platformOff && rewardNoticesEnabled ? readyNotifySender : null;
   // Card links of brands without their own sender leave from the notifications number (second standby). Branda's
   // primary and first standby carry them only when that number is unavailable and the access-only switch is off.
   // While the switch is on and the notifications number is unavailable, the jobs are still claimed and closed as
@@ -70,18 +72,21 @@ export async function dispatchStampCardLinks(limit = 2) {
       result.processed++; result[status]++;
     };
     // The database flag proves a successful new cashier phone issue for Meram.
-    const meramInvitation = job.meramCashierPhoneIssue === true && job.cardCreated;
-    const privateSender = meramInvitation ? await selectVerifiedBrandWhatsAppSender(job.cafeId)
+    const isMeram = job.cafeId === MERAM_CAFE_ID;
+    const meramInvitation = isMeram && job.meramCashierPhoneIssue === true && job.cardCreated;
+    const meramReward = isMeram && !meramInvitation && rewardNoticesEnabled && job.meramRewardEarned === true;
+    if (isMeram && !meramInvitation && !meramReward) { await finish("skipped"); continue; }
+    const privateSender = isMeram ? await selectVerifiedBrandWhatsAppSender(job.cafeId)
       : job.cafeId === LOCO_CAFE_ID ? locoSender
       : job.privateSenderRequested ? await selectBrandLoyaltySender(job.cafeId) : null;
-    if (meramInvitation && !privateSender) { await finish("deferred"); continue; }
+    if (isMeram && !privateSender) { await finish("deferred"); continue; }
     if (!claimPlatform && !privateSender) { await finish("deferred"); continue; }
     const usesPlatformNumber = job.cafeId !== LOCO_CAFE_ID && !privateSender;
     // A stamp that completes the card sets the count back to zero, so zero right after a stamp means a reward was earned
     // A brand the user named keeps its card link while the platform switch is off, from the notifications number
     // only. Bolingo's points invoices report zero stamps even when no reward has been earned.
     const namedLink = Boolean(platformOff && usesPlatformNumber && readyNotifySender) && PLATFORM_CARD_LINK_CAFE_IDS.has(job.cafeId);
-    const earnedReward = !meramInvitation && !(namedLink && job.cafeId === BOLINGO_CAFE_ID) && Boolean(drain && usesPlatformNumber && rewardSender) && job.stampsInCycle === 0 && Number(job.purchasesRequired) >= 1;
+    const earnedReward = meramReward || (!(namedLink && job.cafeId === BOLINGO_CAFE_ID) && Boolean(drain && usesPlatformNumber && rewardSender) && job.stampsInCycle === 0 && Number(job.purchasesRequired) >= 1);
     if (drain && usesPlatformNumber && !earnedReward && !namedLink) { await finish("skipped"); continue; }
     if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
     if (job.googleIssued) {
@@ -95,7 +100,7 @@ export async function dispatchStampCardLinks(limit = 2) {
       const input = { phone: job.phone, message: earnedReward ? rewardNoticeMessage(job) : stampCardLinkMessage(job, { rating: namedLink }) };
       if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
       sends++;
-      outcome = earnedReward ? await sendGreenApiCustomerMessage(rewardSender!, input)
+      outcome = earnedReward ? await sendGreenApiCustomerMessage((meramReward ? privateSender : rewardSender)!, input)
         : namedLink ? await sendGreenApiCustomerMessage(readyNotifySender!, input)
         : privateSender ? await sendGreenApiCustomerMessage(privateSender, input)
         : job.cafeId === LOCO_CAFE_ID ? { status: "rejected" }

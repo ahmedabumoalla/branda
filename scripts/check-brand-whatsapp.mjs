@@ -83,7 +83,7 @@ try {
   });
   await test('Meram owner can opt in her verified order sender using the existing pairing flow',async()=>{
     const meram='98fd33d5-522d-46e7-adeb-34b04a665f4f',h=harness({contextCafe:meram});
-    const dash=await h.getBrandWhatsAppDashboard();assert.equal(dash.meramNotifications,true);
+    const dash=await h.getBrandWhatsAppDashboard();assert.equal(dash.meramNotifications,true);assert.equal(dash.platformFallback,false);
     assert.equal(h.counts().provisions,0);
     const paired=await h.runBrandWhatsAppAction({action:'connect',phone:'0500000001'});
     assert.equal(paired.dashboard.transactionalEnabled,true);assert.equal(h.row().cafe_id,meram);

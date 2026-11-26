@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const ts = require('typescript');
 const loco = '321fd305-1883-48df-ab69-829cf7d1bc48';
 const wahed = '8dbf85ba-df8f-4218-bc6f-9d2b39e937ef';
-const supportsPrivateWhatsApp = id => id === loco || id === wahed;
+const meram = '98fd33d5-522d-46e7-adeb-34b04a665f4f';
+const supportsPrivateWhatsApp = id => [loco,wahed,meram].includes(id);
 function load(file, mocks = {}, env = process.env, fetcher = globalThis.fetch) {
   const exports = {};
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -37,10 +38,10 @@ async function scenario({ states = {}, linked = { ...config('333'), expectedPhon
   const router = load('lib/whatsapp/customer-routing.ts', {
     '@/lib/whatsapp/green-api': green,
     '@/lib/whatsapp/green-api-marketing': marketing,
-    '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: loco, WAHED_MASOUB_CAFE_ID: wahed, supportsPrivateWhatsApp },
+    '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: loco, MERAM_CAFE_ID:meram, WAHED_MASOUB_CAFE_ID: wahed, supportsPrivateWhatsApp },
     '@/lib/data/brand-whatsapp': {
       getLocoCustomerWhatsAppCredentials: async id => { assert.equal(id,loco); gets.push(id); if (getterError) throw Error('private-token'); return linked; },
-      getBrandCustomerWhatsAppCredentials: async id => { assert.equal(id,wahed); gets.push(id); if (getterError) throw Error('private-token'); return linked; },
+      getBrandCustomerWhatsAppCredentials: async id => { assert.equal(id,tenant); gets.push(id); if (getterError) throw Error('private-token'); return linked; },
     },
   });
   const selected = await (brand ? loyaltyOnly ? router.selectBrandLoyaltySender(tenant) : router.selectBrandCustomerSender(tenant) : loyaltyOnly ? router.selectLocoLoyaltySender(tenant) : router.selectLocoCustomerSender(tenant));
@@ -73,6 +74,14 @@ async function scenario({ states = {}, linked = { ...config('333'), expectedPhon
   const invalidBrand = await scenario({linked:{...config('333'),apiUrl:'https://evil.example'}}); assert.equal(invalidBrand.selected.idInstance,'111'); checks++;
   const changedPhone = await scenario({accountPhone:'966522222222'}); assert.equal(changedPhone.selected.idInstance,'111'); assert.equal(changedPhone.calls.filter(c=>c.method==='POST').length,1); checks++;
   const normal = await scenario();
+  for(const options of [{},{linked:null},{getterError:true},{states:{333:'notAuthorized'}},{accountPhone:'966522222222'}]){
+    const x=await scenario({brand:true,tenant:meram,...options});
+    for(const purpose of ['customer_signup','customer_login','finance_cashier_login']) assert.equal(x.router.isBrandCustomerOtp(meram,purpose),true);
+    if(Object.keys(options).length){
+      assert.equal(x.selected,null);await assert.rejects(x.router.selectBrandOtpSender(meram),/OTP_SENDERS_UNAVAILABLE/);
+    }else{assert.equal(x.selected.idInstance,'333');assert.equal((await x.router.selectBrandOtpSender(meram)).idInstance,'333');}
+    assert(x.calls.every(c=>c.instance==='333'));checks++;
+  }
   const incidentGreen = load('lib/whatsapp/green-api.ts', {}, {...env,GREEN_API_TEMPORARY_BACKUP_ONLY:'true'}, async()=>{throw Error('Unexpected network');});
   const documents = load('lib/whatsapp/company-document.ts', {
     './green-api': incidentGreen,

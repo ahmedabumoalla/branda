@@ -1,4 +1,5 @@
 import "server-only";
+import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
 import { z } from "zod";
@@ -68,11 +69,12 @@ export async function deliverQueuedOtp(id?: string) {
     // The Auth response has already been acknowledged after durable enqueue.
     // A slow provider can now finish without invalidating the user's Auth OTP.
     const sender = isBrandCustomerOtp(job.cafe_id, job.purpose) ? await selectBrandOtpSender(job.cafe_id!) : null;
+    if (job.cafe_id === MERAM_CAFE_ID && !sender) throw new Error("OTP_SENDERS_UNAVAILABLE");
     if (sender) {
       status = "unknown";
       const outcome = await sendGreenApiCustomerMessage(sender, {
         phone: payload.phoneNormalized,
-        message: `رمز التحقق في برندة: ${payload.code}\nصالح لمدة 5 دقائق\nلا تشارك الرمز مع أي شخص\nإذا لم تطلبه فتجاهل الرسالة`,
+        message: `رمز التحقق في ${job.cafe_id === MERAM_CAFE_ID ? "ميرام" : "برندة"}: ${payload.code}\nصالح لمدة 5 دقائق\nلا تشارك الرمز مع أي شخص\nإذا لم تطلبه فتجاهل الرسالة`,
       }, 25_000, "otp");
       status = outcome.status === "queued" ? "sent" : outcome.status === "rejected" ? "failed" : "unknown";
     } else {

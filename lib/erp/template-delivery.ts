@@ -9,7 +9,8 @@ import { isMetaWhatsAppConfigured,sendMetaWhatsAppText } from "@/lib/whatsapp/me
 import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
 import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { deliveryHttpState,normalizeTemplatePhone,templatePlainText } from "@/lib/erp/template-delivery-policy";
-import { sendSavedSystemTemplate } from "@/lib/erp/settings-delivery";
+import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
+import { deliverMeramTemplate, sendSavedSystemTemplate } from "@/lib/erp/settings-delivery";
 type Claimed=TemplateDelivery&{cafe_id:string;lease_id:string;values:DocumentTemplateValues;cc:string[];bcc:string[]};
 type Outcome={status:"sent"|"failed"|"unknown"|"blocked";message?:string;providerId?:string};
 async function deliver(job:Claimed,manual=false):Promise<Outcome>{
@@ -45,6 +46,7 @@ async function deliver(job:Claimed,manual=false):Promise<Outcome>{
    if(!response.ok)return{status:deliveryHttpState(response.status),message:"لم يؤكد مزود الرسائل القصيرة قبول الرسالة"};const body=await response.json();return typeof body.sid==="string"?{status:"sent",providerId:body.sid}:{status:"unknown",message:"لم يصل معرف الرسالة من المزوّد"};
   }
   if(job.channel==="whatsapp"){
+   if(job.cafe_id===MERAM_CAFE_ID)return deliverMeramTemplate(phone,text);
    if(!isMetaWhatsAppConfigured())return{status:"blocked",message:"خدمة واتساب غير مهيأة"};const r=await sendMetaWhatsAppText({to:phone,body:text});if(r.ok)return r.messageId?{status:"sent",providerId:r.messageId}:{status:"unknown",message:"لم يصل تأكيد مزود واتساب"};return{status:r.skipped?"blocked":r.status?deliveryHttpState(r.status):"unknown",message:"لم يؤكد مزود واتساب قبول الرسالة"};
   }
   return{status:"blocked",message:"طريقة الإرسال غير متاحة"};

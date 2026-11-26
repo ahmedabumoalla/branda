@@ -1,5 +1,5 @@
-import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 import type { MarketingConnectionStatus } from "@/lib/marketing/types";
+export { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 
 export const LOCO_CAFE_ID = "321fd305-1883-48df-ab69-829cf7d1bc48";
 export const LOCO_BRAND_SLUG = "brand-9a8c97305195";
@@ -7,7 +7,7 @@ export const WAHED_MASOUB_CAFE_ID = "8dbf85ba-df8f-4218-bc6f-9d2b39e937ef";
 export const WAHED_MASOUB_BRAND_SLUG = "brand-3c0437f1733a";
 
 export function supportsPrivateWhatsApp(cafeId: string | null | undefined) {
-  return Boolean(cafeId) && cafeId !== MERAM_CAFE_ID;
+  return Boolean(cafeId);
 }
 export function supportsBrandWhatsAppConnection(cafeId: string | null | undefined) {
   return Boolean(cafeId);

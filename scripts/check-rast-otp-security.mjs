@@ -8,6 +8,7 @@ import ts from "typescript";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime.js";
+import { SearchParamsContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime.js";
 
 const root=fileURLToPath(new URL("..",import.meta.url));
 const dependency=createRequire(import.meta.url);
@@ -129,7 +130,8 @@ try {
   expect((await POST(request())).status,403,"wrong provider blocks delivery");
   const {RastEnrollment}=load("components/rast-loyalty/rast-enrollment.tsx");
   const identity={slug:"rast",name:"Rast",logoUrl:null};
-  const renderEnrollment=(enabled,authenticated)=>renderToStaticMarkup(React.createElement(AppRouterContext.Provider,{value:{refresh(){}}},React.createElement(RastEnrollment,{identity,program:{enabled,purchasesRequired:7,rewardName:"Coffee"},authenticated})));
+  const renderEnrollment=(enabled,authenticated)=>renderToStaticMarkup(React.createElement(AppRouterContext.Provider,{value:{refresh(){}}},
+    React.createElement(SearchParamsContext.Provider,{value:new URLSearchParams()},React.createElement(RastEnrollment,{identity,program:{enabled,purchasesRequired:7,rewardName:"Coffee"},authenticated}))));
   for(const authenticated of [false,true]) {
     const paused=renderEnrollment(false,authenticated);
     expect(paused.includes("<form"),false,"disabled program has no OTP form for any session");

@@ -214,6 +214,14 @@ try {
     const wahedSnapshot = { ...snapshot, settings: { ...snapshot.settings, cafeSlug: "brand-3c0437f1733a", cafeName: "واحد معصوب" } };
     assert.equal(nodes(DashboardSidebar({ snapshot: wahedSnapshot, servicesAvailable: true }), node => node.props?.href === "/dashboard/brand-phone").length, 1);
   });
+  await check("Meram shows its exclusive sender even when disconnecting", () => {
+    const h = harness({ ...connected, brandName: "ميرام", meramNotifications: true, platformFallback: false });
+    const tree = h.render();
+    assert.match(text(tree), /رقم واتساب ميرام الموثّق فقط/);
+    button(tree, "فصل الرقم أو تغييره").props.onClick();
+    assert.match(text(h.render()), /يتوقف إرسال رسائل واتساب الخاصة بميرام/);
+    h.unmount();
+  });
   await check("Wahed uses platform by default and never provisions without explicit action", () => {
     const before = requests.length;
     const loco = harness({ ...base, monthlyPriceUsd: null }); assert.doesNotMatch(text(loco.render()), /دولار|شهريًا/); loco.unmount();

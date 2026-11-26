@@ -1,3 +1,4 @@
+import { MERAM_CAFE_ID } from "@/lib/commerce/meram-profile";
 import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import { LOCO_CAFE_ID, supportsBrandWhatsAppConnection } from "./brand-connection-types";
 import type { MarketingConnectionStatus } from "@/lib/marketing/types";
@@ -32,13 +33,13 @@ export function mapAdminWhatsAppSummary(cafeId: string, row: AdminWhatsAppConnec
   if (row === undefined || (row && row.cafe_id !== cafeId)) {
     return { source: "unavailable", sendingPaused, platformFallback: false, connection: null };
   }
-  const loco = cafeId === LOCO_CAFE_ID;
-  const optional = !loco && supportsBrandWhatsAppConnection(cafeId);
-  const optedIn = Boolean(row?.transactional_requested_at) && (loco || optional);
+  const privateByDefault = cafeId === LOCO_CAFE_ID || cafeId === MERAM_CAFE_ID;
+  const optional = !privateByDefault && supportsBrandWhatsAppConnection(cafeId);
+  const optedIn = Boolean(row?.transactional_requested_at) && (privateByDefault || optional);
   const verified = Boolean(optedIn && row?.status === "connected" && row.instance_id
     && canonicalBrandMobile.test(row.requested_phone) && row.verified_phone === row.requested_phone);
   return {
-    source: loco || (optional && verified) ? "private" : "branda",
+    source: privateByDefault || (optional && verified) ? "private" : "branda",
     sendingPaused,
     platformFallback: optional && verified,
     connection: row ? {

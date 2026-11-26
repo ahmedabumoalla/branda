@@ -489,7 +489,7 @@ export async function createOwnerCashier(input: {
     try {
       await sendGreenApiCashierWelcome({
         phone, fullName: parsed.fullName, brandName: cafe.name,
-      });
+      }, cafe.id);
       whatsappStatus = "queued";
     } catch {
       whatsappStatus = "failed";
