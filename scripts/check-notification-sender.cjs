@@ -43,7 +43,7 @@ function worker({ paused, notify, primaryReady = false, jobs, off = false, loco 
     '@/lib/auth/brand-phone': loadAuthHelper('@/lib/auth/brand-phone'),
     '@/lib/data/account-cancellation': { brandAllowsNewWork: async () => true },
     '@/lib/supabase/admin': { createAdminClient: () => ({ async rpc(fn, args) {
-      if (fn === 'claim_stamp_card_link_v2') { claims.push(args); return { data: args.p_primary_ready ? queue.shift() ?? null : null, error: null }; }
+      if (fn === 'claim_stamp_card_link_v3') { claims.push(args); return { data: args.p_primary_ready ? queue.shift() ?? null : null, error: null }; }
       finished.push([args.p_id, args.p_status]); return { data: true, error: null };
     } }) },
     '@/lib/auth/loyalty-session-token': { createLoyaltySessionToken: () => 'fixture', loyaltyIdentityHash: () => 'fixture' },
@@ -147,7 +147,7 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
     assert.deepEqual(y.sent, [['platform', '966500000001']]); checks++;
     const z = worker({ paused: false, notify: null, primaryReady: false, jobs: [job('a')] });
     await z.exports.dispatchStampCardLinks(2);
-    assert.deepEqual(z.sent, []); assert.deepEqual(z.claims, [], 'nothing is claimed when no sender is ready'); checks++;
+    assert.deepEqual(z.sent, []); assert.deepEqual(z.claims, [{p_primary_ready:false,p_loco_ready:false}], 'check only for eligible private senders when the platform is unavailable'); assert.deepEqual(z.finished, []); checks++;
   }
 
   // Verification codes (user decision 2026-11-22): the notifications number first, Branda's primary and first
@@ -239,7 +239,7 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
         'server-only': {},
     '@/lib/auth/brand-phone': loadAuthHelper('@/lib/auth/brand-phone'),
         '@/lib/data/brand-whatsapp': { getLocoCustomerWhatsAppCredentials: async () => null, getBrandCustomerWhatsAppCredentials: async () => linked },
-        '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: 'loco', supportsPrivateWhatsApp: () => true },
+        '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: 'loco', WAHED_MASOUB_CAFE_ID: 'brand', supportsPrivateWhatsApp: () => true },
         '@/lib/whatsapp/green-api': { isGreenApiBackupOnly: () => false, getGreenApiCustomerPlatformSenders: () => ({ primary: { idInstance: '111' }, backup: { idInstance: '222' } }),
           isGreenApiCustomerSenderReady: async sender => sender.idInstance === '333' ? notifyReady : true },
         '@/lib/whatsapp/green-api-marketing': { getGreenApiMarketingAccount: async () => ({ phone: '966500000005' }) },
@@ -252,6 +252,7 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
     assert.equal((await route({}).selectBrandOtpSender('brand')).idInstance, '333');
     assert.equal((await route({ notifyReady: false }).selectBrandOtpSender('brand')).idInstance, '111');
     assert.equal((await route({ notifySender: null }).selectBrandOtpSender('brand')).idInstance, '111');
+    assert.equal(await route({}).selectBrandOtpSender('new-brand'), null, 'the caller keeps its existing platform OTP fallbacks');
     // Documents keep their own selection and never reach the notifications number
     assert.equal((await route({}).selectBrandCustomerSender('brand')).idInstance, '111'); checks++;
   }

@@ -1,6 +1,6 @@
 import "server-only";
 import { getLocoCustomerWhatsAppCredentials, getBrandCustomerWhatsAppCredentials } from "@/lib/data/brand-whatsapp";
-import { LOCO_CAFE_ID, supportsPrivateWhatsApp } from "@/lib/whatsapp/brand-connection-types";
+import { LOCO_CAFE_ID, WAHED_MASOUB_CAFE_ID, supportsPrivateWhatsApp } from "@/lib/whatsapp/brand-connection-types";
 import { isGreenApiBackupOnly, getGreenApiCustomerPlatformSenders, isGreenApiCustomerSenderReady, type GreenApiCustomerSender } from "@/lib/whatsapp/green-api";
 import { getGreenApiMarketingAccount } from "@/lib/whatsapp/green-api-marketing";
 import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
@@ -45,9 +45,13 @@ export async function selectBrandCustomerSender(cafeId: string): Promise<GreenAp
 export async function selectBrandOtpSender(cafeId: string): Promise<GreenApiCustomerSender | null> {
   const linked = isGreenApiBackupOnly() ? null : await selectBrandLoyaltySender(cafeId);
   if (linked) return linked;
+  // Other brands keep the established platform OTP path (including its pre-approved fallbacks).
+  if (cafeId !== LOCO_CAFE_ID && cafeId !== WAHED_MASOUB_CAFE_ID) return null;
   const notify = await selectNotificationSender();
   if (notify && await isGreenApiCustomerSenderReady(notify)) return notify;
-  return selectBrandCustomerSender(cafeId);
+  const fallback = await selectBrandCustomerSender(cafeId);
+  if (!fallback) throw new Error("OTP_SENDERS_UNAVAILABLE");
+  return fallback;
 }
 
 /** Loyalty welcomes and card links must retain the brand's identity, even offline. */

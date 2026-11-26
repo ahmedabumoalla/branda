@@ -1,4 +1,4 @@
-import { hasLoyaltyLanguageChoice, loyaltyText, type LoyaltyLanguage } from "@/lib/loyalty/customer-language";
+import { loyaltyText, type LoyaltyLanguage } from "@/lib/loyalty/customer-language";
 import { LoyaltyLanguageLink } from "./loyalty-language-link";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,7 +11,7 @@ import { FawaselBrandMark } from "@/components/store/fawasel-brand-mark";
 
 export function RastBrand({ identity, light = false, locale = "ar" }: { identity: LoyaltyIdentity; light?: boolean; locale?: "ar" | "en" }) {
   return <div className={`${s.brand} ${light ? s.brandLight : ""}`}>
-    {isFawaselStore(identity.slug) ? <FawaselBrandMark logoUrl={identity.logoDisplayUrl || identity.logoUrl} /> : identity.logoUrl || identity.slug === "rast" ? <Image src={identity.logoDisplayUrl || identity.logoUrl || "/menu-logos/kawakib-transparent-20261008.png"} alt={loyaltyText(identity.name, locale)} width={144} height={78} className={s.logo} unoptimized /> : <strong className={s.logoFallback}>{loyaltyText(identity.name, locale)}</strong>}
+    {isFawaselStore(identity.slug) ? <FawaselBrandMark language={locale} logoUrl={identity.logoDisplayUrl || identity.logoUrl} /> : identity.logoUrl || identity.slug === "rast" ? <Image src={identity.logoDisplayUrl || identity.logoUrl || "/menu-logos/kawakib-transparent-20261008.png"} alt={loyaltyText(identity.name, locale)} width={144} height={78} className={s.logo} unoptimized /> : <strong className={s.logoFallback}>{loyaltyText(identity.name, locale)}</strong>}
     <span>{locale === "en" ? `${loyaltyText(identity.nameEn || identity.name, locale)} community` : loyaltyCommunityName(identity)}</span>
   </div>;
 }
@@ -19,7 +19,7 @@ export function RastBrand({ identity, light = false, locale = "ar" }: { identity
 export function RastHeader({ identity, language = "ar" }: { identity: LoyaltyIdentity; language?: LoyaltyLanguage }) {
   return <header className={s.publicHeader}>
     <RastBrand identity={identity} locale={language} />
-    {hasLoyaltyLanguageChoice(identity.slug) && <LoyaltyLanguageLink language={language} />}
-    <Link href={`/menu/${identity.slug}`} className={s.menuLink}>{language === "en" ? "Menu" : isFawaselStore(identity.slug) ? "متجر" : "قائمة"} {loyaltyText(identity.name, language)} <ArrowUpLeft aria-hidden="true" /></Link>
+    <LoyaltyLanguageLink language={language} />
+    <Link href={`/menu/${identity.slug}`} className={s.menuLink}>{isFawaselStore(identity.slug) ? (language === "en" ? "Store" : "متجر") : language === "en" ? "Menu" : "قائمة"} {loyaltyText(identity.name, language)} <ArrowUpLeft aria-hidden="true" /></Link>
   </header>;
 }

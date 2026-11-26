@@ -19,9 +19,9 @@ export async function getOwnerLoyaltyCustomerCardMessage(id: unknown, downloaded
   const db = await createClient();
   const { data: card } = await db.from("loyalty_cards").select("stamps_in_cycle").eq("cafe_id", cafe.id).eq("customer_profile_id", customer.id).eq("status", "active").maybeSingle();
   const message = stampCardLinkMessage({
-    id: customer.id, claimToken: "", cafeId: cafe.id, profileId: customer.id, cardId: "", brandSlug: cafe.slug, brandName: cafe.name, phone,
+    cafeId: cafe.id, profileId: customer.id, brandSlug: cafe.slug, brandName: cafe.name, phone,
     // A card with its first stamp gets the new card wording; a card further along gets the stamp wording
-    cardCreated: Number(card?.stamps_in_cycle ?? 1) <= 1, googleIssued: false,
+    cardCreated: Number(card?.stamps_in_cycle ?? 1) <= 1,
   });
   return { message, whatsappUrl: `https://wa.me/${phone}?text=${encodeURIComponent(message)}` };
 }

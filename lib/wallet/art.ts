@@ -37,7 +37,7 @@ export function walletArtUrl(member: WalletMember) {
   const selected = brandStampStyle(member.cafeSlug, member.program.stampStyle);
   // A logo stamp carries its rendition version so wallets fetch the improved artwork.
   const style = selected === "brand" ? `brand:${STAMP_LOGO_VERSION}` : selected;
-  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${style}:${member.card.updatedAt}:${appearance}${pointsVersion}`)}`;
+  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${style}:${member.card.updatedAt}:${appearance}${pointsVersion}`)}${member.language === "en" && points?.mode === "points" ? "&lang=en" : ""}`;
 }
 
 // All balances and reward names also remain accessible in the native pass fields.
@@ -91,9 +91,9 @@ export async function walletStampArtwork(member: WalletMember, scale: 1 | 2 | 3 
   if (points?.mode === "points") {
     const { background, foreground, accent } = walletColors(member);
     const balance = member.card.availableLoyaltyPoints ?? 0;
-    const key = walletArtifactKey(JSON.stringify([POINTS_MAP_VERSION, points.milestones, balance, background, foreground, accent, scale, dark]));
+    const key = walletArtifactKey(JSON.stringify([POINTS_MAP_VERSION, member.language ?? "ar", points.milestones, balance, background, foreground, accent, scale, dark]));
     return cachedArtwork(key, async () => {
-      const svg = await walletPointsSvg(points.milestones, balance, background, foreground, accent, scale);
+      const svg = await walletPointsSvg(points.milestones, balance, background, foreground, accent, scale, member.language);
       return sharp(Buffer.from(svg)).png().toBuffer();
     });
   }

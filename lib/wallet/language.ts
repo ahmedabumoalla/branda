@@ -1,18 +1,22 @@
-import { hasLoyaltyLanguageChoice, loyaltyLanguage, loyaltyText } from "@/lib/loyalty/customer-language";
+import { loyaltyLanguage } from "@/lib/loyalty/customer-language";
+import { englishLoyaltyCopy, localizePublicProgram, publicProgramCopy } from "@/lib/loyalty/localize-public-copy";
 import type { WalletMember } from "./types";
 
-export function walletInLanguage(member: WalletMember, requested: unknown): WalletMember {
-  if (!hasLoyaltyLanguageChoice(member.cafeSlug)) return member;
-  const language = loyaltyLanguage(member.cafeSlug, requested);
+export async function walletInLanguage(member: WalletMember, requested: unknown): Promise<WalletMember> {
+  const language = loyaltyLanguage(requested);
   if (language === "ar") return { ...member, language };
-  const translate = (value: string) => loyaltyText(value, language);
+
+  const name = member.cafeNameEn?.trim() || member.cafeName;
+  const { nearbyMessage, offerTitle, offerBody } = member.experience;
+  const translate = await englishLoyaltyCopy([
+    name, ...publicProgramCopy(member.program), nearbyMessage, offerTitle ?? "", offerBody ?? "",
+    ...(member.branchLocations ?? []).flatMap(location => [location.nearbyMessage ?? "", location.branchName ?? ""]),
+  ]);
   return {
-    ...member, language, cafeName: translate(member.cafeName),
-    program: { ...member.program, cardTitle: translate(member.program.cardTitle), stampLabel: translate(member.program.stampLabel),
-      terms: translate(member.program.terms), rewardName: translate(member.program.rewardName) },
-    experience: { ...member.experience, nearbyMessage: translate(member.experience.nearbyMessage),
-      offerTitle: member.experience.offerTitle && translate(member.experience.offerTitle),
-      offerBody: member.experience.offerBody && translate(member.experience.offerBody) },
+    ...member, language, cafeName: translate(name),
+    program: localizePublicProgram(member.program, translate),
+    experience: { ...member.experience, nearbyMessage: translate(nearbyMessage),
+      offerTitle: offerTitle && translate(offerTitle), offerBody: offerBody && translate(offerBody) },
     branchLocations: member.branchLocations?.map(location => ({ ...location,
       nearbyMessage: location.nearbyMessage && translate(location.nearbyMessage),
       branchName: location.branchName && translate(location.branchName) })),

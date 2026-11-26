@@ -1,3 +1,4 @@
+import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import { LOCO_CAFE_ID, supportsBrandWhatsAppConnection } from "./brand-connection-types";
 import type { MarketingConnectionStatus } from "@/lib/marketing/types";
 
@@ -35,7 +36,7 @@ export function mapAdminWhatsAppSummary(cafeId: string, row: AdminWhatsAppConnec
   const optional = !loco && supportsBrandWhatsAppConnection(cafeId);
   const optedIn = Boolean(row?.transactional_requested_at) && (loco || optional);
   const verified = Boolean(optedIn && row?.status === "connected" && row.instance_id
-    && /^9665\d{8}$/.test(row.requested_phone) && row.verified_phone === row.requested_phone);
+    && canonicalBrandMobile.test(row.requested_phone) && row.verified_phone === row.requested_phone);
   return {
     source: loco || (optional && verified) ? "private" : "branda",
     sendingPaused,

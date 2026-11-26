@@ -1,11 +1,7 @@
 export type LoyaltyLanguage = "ar" | "en";
 
-export function hasLoyaltyLanguageChoice(slug: string) {
-  return slug === "brand-4eb156760728";
-}
-
-export function loyaltyLanguage(slug: string, requested: unknown): LoyaltyLanguage {
-  return hasLoyaltyLanguageChoice(slug) && requested === "en" ? "en" : "ar";
+export function loyaltyLanguage(requested: unknown): LoyaltyLanguage {
+  return requested === "en" ? "en" : "ar";
 }
 
 // Match the owner's published wording exactly. New offers and terms keep their
@@ -35,11 +31,12 @@ const englishCopy: Record<string, string> = {
   "برنامج الولاء غير متاح حاليًا": "The loyalty program is currently unavailable",
   "أدخل رقم جوال صحيح لدولة العلامة": "Enter a valid mobile number for this country",
   "محاولات كثيرة انتظر قليلًا ثم حاول مجددًا": "Too many attempts. Please wait a moment and try again",
-  "تعذر فتح البطاقة تأكد من الاسم المسجّل ورقم الجوال أو تواصل مع العلامة": "Check your registered name and mobile number or contact the restaurant",
+  "تعذر فتح البطاقة تأكد من الاسم المسجّل ورقم الجوال أو تواصل مع العلامة": "Check your registered name and mobile number or contact the brand",
   "تعذر إكمال التسجيل حاول لاحقًا": "We couldn’t complete your registration. Please try again later",
 };
 
 export function loyaltyText(value: string, language: LoyaltyLanguage): string {
   if (language !== "en") return value;
-  return englishCopy[value.trim()] ?? value.split("\n").map(line => englishCopy[line.trim()] ?? line).join("\n");
+  const lookup = (text: string) => Object.hasOwn(englishCopy, text.trim()) ? englishCopy[text.trim()] : text;
+  return Object.hasOwn(englishCopy, value.trim()) ? lookup(value) : value.split("\n").map(lookup).join("\n");
 }

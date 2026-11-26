@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request, context: { params: Promise<{ slug: string }> }) {
   const { slug } = await context.params;
   if (!/^[a-z0-9-]{1,80}$/.test(slug)) return new Response(null, { status: 404 });
-  const response = NextResponse.redirect(new URL(`/loyalty/${slug}`, request.url));
+  const destination = new URL(`/loyalty/${slug}`, request.url);
+  if (new URL(request.url).searchParams.get("lang") === "en") destination.searchParams.set("lang", "en");
+  const response = NextResponse.redirect(destination);
   response.headers.set("cache-control", "private, no-store");
   response.headers.set("referrer-policy", "no-referrer");
   const token = new URL(request.url).searchParams.get("token") ?? "";

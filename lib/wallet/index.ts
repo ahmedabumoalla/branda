@@ -116,7 +116,7 @@ async function syncMember(member: WalletMember, previous?: WalletDeliveryResult,
   // New scans can coalesce into an existing pending sync job. Provider success
   // from an older attempt is not evidence that Google has the current balance.
   if (readiness.google && hasGoogle) {
-    try { await updateGooglePass(walletInLanguage(member, passes?.find(pass => pass.provider === "google")?.display_language), !silent && previous?.google?.status !== "accepted"); result.google = { status: "accepted", count: 1 }; } catch (error) { result.google = providerFailed(error); }
+    try { await updateGooglePass(await walletInLanguage(member, passes?.find(pass => pass.provider === "google")?.display_language), !silent && previous?.google?.status !== "accepted"); result.google = { status: "accepted", count: 1 }; } catch (error) { result.google = providerFailed(error); }
   }
   const applePass = passes?.find(pass => pass.provider === "apple");
   if (readiness.apple && hasApple) {

@@ -116,7 +116,7 @@ async function loadWalletMemberFromView(view: CustomerLoyaltyCardView): Promise<
       experience: { ...experience, nearbyMessage: periodMessage ?? branch.nearbyMessage, latitude: branch.latitude, longitude: branch.longitude },
       branchLocations: scheduledLocations };
   }
-  return { ...view, card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: brand.identity.logoUrl,
+  return { ...view, cafeNameEn: brand.identity.nameEn, card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: brand.identity.logoUrl,
     experience: periodMessage === null ? experience : { ...experience, nearbyMessage: periodMessage }, branchLocations: scheduledLocations };
 }
 

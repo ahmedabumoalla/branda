@@ -2,7 +2,7 @@ import path from "node:path";
 import sharp from "sharp";
 import type { PointsMilestone } from "@/lib/loyalty/points-program";
 
-const digits = new Intl.NumberFormat("ar-SA-u-nu-arab");
+const arabicDigits = new Intl.NumberFormat("ar-SA-u-nu-arab");
 const fontFile = path.join(process.cwd(), "public/fonts/tajawal-bold.ttf");
 
 function luminance(hex: string) {
@@ -53,7 +53,9 @@ function trackSection(from: Point, to: Point, progress: number) {
   return { base: curve(c1, c2, to), lit: curve(first, second, tip), tip };
 }
 
-export async function walletPointsSvg(milestones: PointsMilestone[], balance: number, surface: string, foreground: string, accent: string, scale: number) {
+export async function walletPointsSvg(milestones: PointsMilestone[], balance: number, surface: string, foreground: string, accent: string, scale: number, language: "ar" | "en" = "ar") {
+  const en = language === "en";
+  const direction = en ? 1 : -1;
   const next = milestones.findIndex(tier => tier.points > balance);
   // A reward always occupies the same slot. Longer programs turn pages of three
   // after the final reward on the current page becomes available.
@@ -68,27 +70,29 @@ export async function walletPointsSvg(milestones: PointsMilestone[], balance: nu
   };
   const ink = contrast(foreground) >= 4.5 ? foreground : surfaceLight > .18 ? "#101418" : "#ffffff";
   const highlight = contrast(accent) >= 3 ? accent : ink;
-  const origin = { x: 360, y: 64 };
+  const origin = { x: en ? 15 : 360, y: 64 };
   let previous = origin;
   let lastPrice = start ? milestones[start - 1].points : 0;
   let track = "";
   const stops = [];
   for (const [index, tier] of visible.entries()) {
-    const x = 362.5 - cellWidth * (index + .5);
+    const offset = cellWidth * (index + .5);
+    const x = en ? 12.5 + offset : 362.5 - offset;
     const y = index % 2 ? 60 : 24;
     const reached = balance >= tier.points;
     const upcoming = start + index === next;
     const fraction = Math.min(1, Math.max(0, (balance - lastPrice) / (tier.points - lastPrice)));
-    const route = trackSection({ x: previous.x - (index ? 19 : 5), y: previous.y }, { x: x + 19, y }, fraction);
+    const route = trackSection({ x: previous.x + direction * (index ? 19 : 5), y: previous.y }, { x: x - direction * 19, y }, fraction);
     track += `<path d="${route.base}" stroke="${ink}" stroke-opacity=".63" stroke-width="1.9" stroke-dasharray="2.4 4.2"/>`;
     if (fraction > 0) track += `<path d="${route.lit}" stroke="${highlight}" stroke-width="3"/>`;
     if (fraction > 0 && fraction < 1) track += `<circle cx="${route.tip.x}" cy="${route.tip.y}" r="3.3" fill="${highlight}"/>`;
     const name = Array.from(tier.reward).length > 23 ? Array.from(tier.reward).slice(0, 22).join("") + "…" : tier.reward;
-    const state = reached ? "متاحة للاستبدال" : upcoming ? `باقي ${digits.format(tier.points - balance)} نقطة` : "";
+    const state = reached ? (en ? "Ready to redeem" : "متاحة للاستبدال")
+      : upcoming ? (en ? `${tier.points - balance} points to go` : `باقي ${arabicDigits.format(tier.points - balance)} نقطة`) : "";
     stops.push(async () => {
       const [reward, price, status] = await Promise.all([
         label(name, 18, ink, cellWidth - 14, x, y + 24),
-        label(`${digits.format(tier.points)} نقطة`, 14, ink, cellWidth - 14, x, y + 47),
+        label(en ? `${tier.points} points` : `${arabicDigits.format(tier.points)} نقطة`, 14, ink, cellWidth - 14, x, y + 47),
         state ? label(state, 12, reached && contrast(highlight) >= 4.5 ? highlight : ink, cellWidth - 14, x, y + 66) : "",
       ]);
       return `<polygon points="${star(x, y, 17)}" fill="${reached ? highlight : "none"}" stroke="${reached ? highlight : ink}" stroke-width="${reached ? 1.3 : 1.9}" stroke-linejoin="round"/>

@@ -94,7 +94,7 @@ export async function downloadUpdatedApplePass(request: Request, passType: strin
   const since = request.headers.get("if-modified-since");
   // Never truncate subsecond update tags: If-Modified-Since is second-resolution and would lose rapid scans.
   if (since && Number.isFinite(Date.parse(since)) && Date.parse(updatedAt) < Date.parse(since)) return new Response(null, { status: 304, headers: noStore });
-  const buffer = await issueApplePass(walletInLanguage(member, pass?.display_language));
+  const buffer = await issueApplePass(await walletInLanguage(member, pass?.display_language));
   if (pass) {
     // Evidence that an authenticated device requested this version; it is not
     // a guarantee that every registered phone displayed the response.

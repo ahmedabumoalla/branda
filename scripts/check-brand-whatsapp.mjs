@@ -76,8 +76,8 @@ const originalFetch=globalThis.fetch;globalThis.fetch=async()=>{throw Error('Rea
 try {
   await test('Read-only owner dashboard exposes no credentials, campaigns, audience or provider request',async()=>{
     const h=harness({connection:linked({last_error:'secret-provider-value'})}),d=await h.getBrandWhatsAppDashboard();
-    assert.equal(d.brandName,'LOCO');assert.equal(d.transactionalEnabled,false);assert.equal(d.configured,true);
-    assert.deepEqual(Object.keys(d).sort(),['brandName','configured','connection','phoneCountry','platformFallback','transactionalEnabled']);
+    assert.equal(d.brandName,'LOCO');assert.equal(d.monthlyPriceUsd,null);assert.equal(d.transactionalEnabled,false);assert.equal(d.configured,true);
+    assert.deepEqual(Object.keys(d).sort(),['brandName','configured','connection','monthlyPriceUsd','phoneCountry','platformFallback','transactionalEnabled']);
     for(const secret of ['7103999999','private-test-token','encrypted_credentials','secret-provider-value','webhook_token_hash'])assert(!JSON.stringify(d).includes(secret));
     assert.equal(h.counts().stateReads,0);assert.equal(h.counts().provisions,0);assert(!h.calls.some(x=>x.rpc));
   });
@@ -88,6 +88,13 @@ try {
     const paired=await h.runBrandWhatsAppAction({action:'connect',phone:'0500000001'});
     assert.equal(paired.dashboard.transactionalEnabled,true);assert.equal(h.row().cafe_id,meram);
     assert.equal(h.calls.find(x=>x.rpc==='loco_claim_whatsapp_connection').args.p_cafe,meram);
+  });
+  await test('New brand sees the monthly price and can explicitly pair its own number',async()=>{
+    const cafeId=id(8), h=harness({contextCafe:cafeId});
+    assert.equal((await h.getBrandWhatsAppDashboard()).monthlyPriceUsd,30);assert.equal(h.counts().provisions,0);
+    const {dashboard}=await h.runBrandWhatsAppAction({action:'connect',phone:'0500000001'});
+    assert.equal(dashboard.transactionalEnabled,true);assert.equal(h.row().cafe_id,cafeId);
+    assert.equal((await harness({profile:{role:'platform_admin',status:'active'},maintenance:{adminUserId:id(1),cafeId,expiresAt:Date.now()+100000}}).getBrandWhatsAppDashboard()).monthlyPriceUsd,30);
   });
   await test('Wahed connection is optional, scoped and never provisioned on read',async()=>{
     const h=harness({contextCafe:WAHED});
@@ -105,14 +112,14 @@ try {
     for(const options of [{owner:id(2),member:'staff'},{cafeStatus:'suspended'},{profile:{role:'cafe_owner',status:'suspended'}}]) await assert.rejects(()=>harness({contextCafe:WAHED,...options}).getBrandWhatsAppDashboard());
   });
   await test('Session, profile, immutable brand and actual owner all gate connection reads',async()=>{
-    for(const config of [{user:null},{profile:{role:'cafe_owner',status:'suspended'}},{contextCafe:id(2)},{contextMissing:true},{owner:id(2),member:'manager'},{owner:id(2),member:'staff'},{cafeStatus:'suspended'},{cafeMissing:true}]){
+    for(const config of [{user:null},{profile:{role:'cafe_owner',status:'suspended'}},{contextMissing:true},{owner:id(2),member:'manager'},{owner:id(2),member:'staff'},{cafeStatus:'suspended'},{cafeMissing:true}]){
       const h=harness(config);await assert.rejects(()=>h.getBrandWhatsAppDashboard(),e=>[401,403].includes(e.status));
       assert(!h.calls.some(x=>x.table==='brand_marketing_connections'));assert.equal(h.counts().provisions,0);
     }
     await harness({owner:id(2),member:'owner'}).getBrandWhatsAppDashboard();
   });
-  await test('Admin access needs a live maintenance session bound to the actor and LOCO',async()=>{
-    for(const maintenance of [null,{adminUserId:id(2),cafeId:LOCO,expiresAt:Date.now()+100000},{adminUserId:id(1),cafeId:LOCO,expiresAt:Date.now()-1},{adminUserId:id(1),cafeId:id(2),expiresAt:Date.now()+100000}]){
+  await test('Admin access needs a live maintenance session bound to the actor and selected brand',async()=>{
+    for(const maintenance of [null,{adminUserId:id(2),cafeId:LOCO,expiresAt:Date.now()+100000},{adminUserId:id(1),cafeId:LOCO,expiresAt:Date.now()-1}]){
       const h=harness({profile:{role:'platform_admin',status:'active'},maintenance});await assert.rejects(()=>h.getBrandWhatsAppDashboard(),e=>e.status===403);assert.equal(h.counts().adminReads,0);
     }
     await harness({profile:{role:'platform_admin',status:'active'},maintenance:{adminUserId:id(1),cafeId:LOCO,expiresAt:Date.now()+100000}}).getBrandWhatsAppDashboard();

@@ -12,8 +12,12 @@ export function pointsProgressText(milestones: PointsMilestone[], balance: numbe
   return next ? `باقي ${next.points - balance} نقطة على ${next.reward}` : "رصيدك يكفي لاختيار أي مكافأة من المسار";
 }
 
-export function describePointsRewards(milestones: PointsMilestone[], balance: number) {
+export function describePointsRewards(milestones: PointsMilestone[], balance: number, language: "ar" | "en" = "ar") {
   return milestones.map(tier => {
+    if (language === "en") {
+      const availability = balance >= tier.points ? "Ready to redeem" : `${tier.points - balance} points to go`;
+      return `${tier.reward} · ${tier.points} points · ${availability}`;
+    }
     const availability = balance >= tier.points ? "متاحة للاستبدال" : `باقي ${tier.points - balance} نقطة`;
     return `${tier.reward} · ${tier.points} نقطة · ${availability}`;
   }).join("\n");

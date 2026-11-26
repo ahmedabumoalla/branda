@@ -27,6 +27,12 @@ async function translate(text: string, target: "ar" | "en") {
   pending.set(key, work);
   try { return await work; } finally { pending.delete(key); }
 }
+/** Public merchant catalog copy only. Callers select the fields explicitly. */
+export async function englishCatalogText(source: string) {
+  if (!arabic.test(source) || source.length > 4000) return source;
+  try { return await translate(source, "en"); } catch { return source; }
+}
+
 /** Only authorized database catalog snapshots, never customer names, phones or codes */
 export async function localizeCashierCatalog(input: Record<string, string>): Promise<CashierCatalog> {
   let unavailable = false;

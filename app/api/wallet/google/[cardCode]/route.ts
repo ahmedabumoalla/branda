@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: Props) {
     const member = await getAuthorizedWalletMember(cardCode);
     if (!member) return NextResponse.json({ message: requested === "en" ? "Open your membership to access this card" : "البطاقة غير متاحة ادخل إلى عضويتك أولًا" }, { status: 404, headers: { "Cache-Control": "private, no-store" } });
     if (!getWalletReadiness().google || !member.program.googleWalletEnabled) return NextResponse.json({ message: requested === "en" ? "This wallet is currently unavailable" : "حفظ البطاقة في قوقل لم يُفعّل بعد" }, { status: 503, headers: { "Cache-Control": "private, no-store" } });
-    const url = await issueGoogleSaveUrl(walletInLanguage(member, requested));
+    const url = await issueGoogleSaveUrl(await walletInLanguage(member, requested));
     after(() => welcomeAfterWalletDownload(member.card.id));
     return NextResponse.redirect(url, { status: 303, headers: { "Cache-Control": "private, no-store" } });
   } catch { return NextResponse.json({ message: requested === "en" ? "Unable to issue the card. Please try again later" : "تعذر إصدار البطاقة الآن حاول لاحقًا" }, { status: 503, headers: { "Cache-Control": "private, no-store" } }); }

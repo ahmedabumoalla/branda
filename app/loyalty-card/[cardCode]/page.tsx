@@ -1,3 +1,4 @@
+import { loyaltyLanguage } from "@/lib/loyalty/customer-language";
 import { notFound, redirect } from "next/navigation";
 import { PublicLoyaltyCardView } from "@/components/loyalty/public-loyalty-card-view";
 import { getLoyaltyCardViewByCode } from "@/lib/data/loyalty-cards";
@@ -8,7 +9,7 @@ import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = {
   params: Promise<{ cardCode: string }>;
-  searchParams?: Promise<{ back?: string }>;
+  searchParams?: Promise<{ back?: string; lang?: string | string[] }>;
 };
 
 export const dynamic = "force-dynamic";
@@ -20,9 +21,15 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
 
   if (!view) notFound();
   // Static Rast card codes identify cards; they never authorize a public customer-data read.
-  if (view.cafeSlug === "rast") redirect("/loyalty/rast");
+  const en = loyaltyLanguage(query.lang) === "en";
+  if (view.cafeSlug === "rast") redirect(en ? "/loyalty/rast?lang=en" : "/loyalty/rast");
   // The points balance is shown through the authenticated membership page.
-  if (view.program.pointsProgram?.mode === "points") redirect(`/loyalty/${encodeURIComponent(view.cafeSlug)}${view.card.branchId ? `?branch=${encodeURIComponent(view.card.branchId)}` : ""}`);
+  if (view.program.pointsProgram?.mode === "points") {
+    const options = new URLSearchParams();
+    if (view.card.branchId) options.set("branch", view.card.branchId);
+    if (en) options.set("lang", "en");
+    redirect(`/loyalty/${encodeURIComponent(view.cafeSlug)}${options.size ? "?" + options : ""}`);
+  }
 
   const { card, program, cafeSlug, cafeName, businessCategory } = view;
   const copy = getBusinessCopy(businessCategory);

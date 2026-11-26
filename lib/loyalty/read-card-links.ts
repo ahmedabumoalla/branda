@@ -5,11 +5,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createLoyaltySessionToken, loyaltyIdentityHash } from "@/lib/auth/loyalty-session-token";
 import { isGreenApiLoyaltyWelcomeReady, sendGreenApiCustomerMessage, sendGreenApiLoyaltyWelcome } from "@/lib/whatsapp/green-api";
 import { selectLocoLoyaltySender, selectBrandLoyaltySender } from "@/lib/whatsapp/customer-routing";
-import { LOCO_CAFE_ID, WAHED_MASOUB_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
+import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
 import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
 import { getGoogleWalletSaveState } from "@/lib/wallet/google";
 
-type CardLinkJob = { id: string; claimToken: string; cafeId: string; profileId: string; cardId: string; brandSlug: string; brandName: string; phone: string; cardCreated: boolean; googleIssued: boolean; stampsInCycle?: number | null; purchasesRequired?: number | null; rewardName?: string | null };
+type CardLinkJob = { id: string; claimToken: string; cafeId: string; profileId: string; cardId: string; brandSlug: string; brandName: string; phone: string; cardCreated: boolean; googleIssued: boolean; privateSenderRequested: boolean; stampsInCycle?: number | null; purchasesRequired?: number | null; rewardName?: string | null };
 const BOLINGO_CAFE_ID = "dbe942ba-dfa4-422b-a9f6-9527c3b27cc9";
 /** Brands explicitly authorized to send card links through Branda's notifications number. */
 export const PLATFORM_CARD_LINK_CAFE_IDS: ReadonlySet<string> = new Set([
@@ -18,7 +18,7 @@ export const PLATFORM_CARD_LINK_CAFE_IDS: ReadonlySet<string> = new Set([
 ]);
 /** `rating` is the text for a brand named above: it suits stamps and points alike and closes with a rating that
  * invites a reply. Brands with their own sender keep the original text */
-export function stampCardLinkMessage(job: CardLinkJob, options: { rating?: boolean } = {}) {
+export function stampCardLinkMessage(job: Pick<CardLinkJob, "cafeId" | "profileId" | "brandSlug" | "brandName" | "phone" | "cardCreated">, options: { rating?: boolean } = {}) {
   if (!/^[a-z0-9-]{1,80}$/.test(job.brandSlug) || !canonicalBrandMobile.test(job.phone)) throw new Error("invalid_card_link_job");
   const token = createLoyaltySessionToken({ slug: job.brandSlug, cafeId: job.cafeId, profileId: job.profileId, phoneHash: loyaltyIdentityHash(job.phone) });
   const link = `https://barndaksa.com/loyalty/${job.brandSlug}/access?token=${encodeURIComponent(token)}`;
@@ -39,7 +39,7 @@ export function rewardNoticeMessage(job: CardLinkJob) {
 export async function dispatchStampCardLinks(limit = 2) {
   const startedAt = Date.now();
   const result = { processed: 0, queued: 0, rejected: 0, unknown: 0, skipped: 0, deferred: 0 };
-  const [primaryReady, locoSender, wahedSender, readyNotifySender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID), selectBrandLoyaltySender(WAHED_MASOUB_CAFE_ID), selectNotificationSender()]);
+  const [primaryReady, locoSender, readyNotifySender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID), selectNotificationSender()]);
   // User decision of 2026-11-22 (BRANDA_PLATFORM_CARD_LINKS "off" in next.config.ts): Branda's own numbers, the
   // notifications number included, no longer send the card link after a stamp. Their jobs are claimed and closed
   // as skipped so nothing waits. Brands with their own sender are not affected
@@ -56,12 +56,11 @@ export async function dispatchStampCardLinks(limit = 2) {
   const paused = process.env.BRANDA_ACCESS_MESSAGES_ONLY?.trim() === "true";
   const drain = platformOff || (paused && !notifySender);
   const claimPlatform = primaryReady || paused || Boolean(notifySender) || platformOff;
-  if (!claimPlatform && !locoSender && !wahedSender) return result;
   const admin = createAdminClient();
   const sendBudget = Math.min(5, Math.max(1, limit));
   let sends = 0;
   for (let index = 0; index < (drain ? 40 : sendBudget) && sends < sendBudget && (index === 0 || Date.now() - startedAt < 70_000); index++) {
-    const { data, error } = await admin.rpc("claim_stamp_card_link_v2", { p_primary_ready: claimPlatform, p_loco_ready: Boolean(locoSender), p_wahed_ready: Boolean(wahedSender) });
+    const { data, error } = await admin.rpc("claim_stamp_card_link_v3", { p_primary_ready: claimPlatform, p_loco_ready: Boolean(locoSender) });
     if (error) throw new Error("stamp_card_link_claim_unavailable");
     if (!data) break;
     const job = data as CardLinkJob;
@@ -70,7 +69,10 @@ export async function dispatchStampCardLinks(limit = 2) {
       if (saveError || !saved) throw new Error("stamp_card_link_result_unavailable");
       result.processed++; result[status]++;
     };
-    const usesPlatformNumber = job.cafeId !== LOCO_CAFE_ID && !(job.cafeId === WAHED_MASOUB_CAFE_ID && wahedSender);
+    const privateSender = job.cafeId === LOCO_CAFE_ID ? locoSender
+      : job.privateSenderRequested ? await selectBrandLoyaltySender(job.cafeId) : null;
+    if (!claimPlatform && !privateSender) { await finish("deferred"); continue; }
+    const usesPlatformNumber = job.cafeId !== LOCO_CAFE_ID && !privateSender;
     // A stamp that completes the card sets the count back to zero, so zero right after a stamp means a reward was earned
     // A brand the user named keeps its card link while the platform switch is off, from the notifications number
     // only. Bolingo's points invoices report zero stamps even when no reward has been earned.
@@ -91,9 +93,8 @@ export async function dispatchStampCardLinks(limit = 2) {
       sends++;
       outcome = earnedReward ? await sendGreenApiCustomerMessage(rewardSender!, input)
         : namedLink ? await sendGreenApiCustomerMessage(readyNotifySender!, input)
-        : job.cafeId === LOCO_CAFE_ID
-        ? locoSender ? await sendGreenApiCustomerMessage(locoSender, input) : { status: "rejected" }
-        : job.cafeId === WAHED_MASOUB_CAFE_ID && wahedSender ? await sendGreenApiCustomerMessage(wahedSender, input)
+        : privateSender ? await sendGreenApiCustomerMessage(privateSender, input)
+        : job.cafeId === LOCO_CAFE_ID ? { status: "rejected" }
         : notifySender ? await sendGreenApiCustomerMessage(notifySender, input)
         : primaryReady ? await sendGreenApiLoyaltyWelcome(input) : { status: "rejected" };
     } catch { outcome = { status: "unknown" }; }

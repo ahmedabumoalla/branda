@@ -30,7 +30,7 @@ export function RastStampCard({ language = "ar", identity, customerName, stamps,
   const en = language === "en";
   const logoUrl = identity.logoDisplayUrl || identity.logoUrl;
   const stampLogo = logoUrl ? stampLogoUrl(identity.slug, identity.branchId) : null;
-  if (isFawaselStore(identity.slug)) return <FawaselLoyaltyCard background={identity.cardBackground} foreground={identity.cardForeground} accent={identity.cardAccent} stampStyle={brandStampStyle(identity.slug, stampStyle)} stampLogo={stampLogo} logoUrl={logoUrl} customerName={customerName} stamps={stamps} required={required} rewardName={rewardName} cardCode={cardCode} displayNumber={displayNumber} preview={preview} details={details} />;
+  if (isFawaselStore(identity.slug)) return <FawaselLoyaltyCard language={language} background={identity.cardBackground} foreground={identity.cardForeground} accent={identity.cardAccent} stampStyle={brandStampStyle(identity.slug, stampStyle)} stampLogo={stampLogo} logoUrl={logoUrl} customerName={customerName} stamps={stamps} required={required} rewardName={rewardName} cardCode={cardCode} displayNumber={displayNumber} preview={preview} details={details} />;
   const goal = Math.max(1, Math.min(100, Math.trunc(required)));
   const collected = Math.max(0, Math.min(goal, Math.trunc(stamps)));
   const selectedStyle = brandStampStyle(identity.slug, stampStyle);

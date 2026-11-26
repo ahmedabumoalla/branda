@@ -52,6 +52,7 @@ async function dashboard(context: Context): Promise<BrandWhatsAppDashboard> {
   const row = await readMarketingConnection(context);
   return {
     phoneCountry: context.phoneCountry, brandName: context.brandName,
+    monthlyPriceUsd: context.cafeId === LOCO_CAFE_ID ? null : 30,
     configured: marketingConfigured(),
     platformFallback: context.cafeId !== LOCO_CAFE_ID,
     ...(context.cafeId === MERAM_CAFE_ID ? { orderNotificationsOnly: true as const } : {}),

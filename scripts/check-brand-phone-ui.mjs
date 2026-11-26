@@ -195,11 +195,11 @@ try {
   await check("all connection states have honest labels and mismatch recovery", () => {
     for (const [status, phrase] of [["disconnected", "غير متصل"], ["provisioning", "جارٍ تجهيز الاتصال"], ["pairing", "جاهز لطلب رمز الربط"], ["mismatch", "الرقم المرتبط مختلف"], ["uncertain", "جارٍ التحقق من الاتصال"], ["error", "تعذر الاتصال"], ["disconnecting", "جارٍ فصل الرقم"]]) { const h = harness({ ...pairing, connection: { ...pairing.connection, status } }); const tree = h.render(); assert(text(tree).includes(phrase)); if (status === "mismatch") assert.match(text(tree), /افصل الاتصال ثم اربط رقم العلامة الصحيح/); h.unmount(); }
   });
-  await check("server route rejects other stable brand IDs before reading connection data", async () => {
+  await check("server route accepts new brands and rejects missing context or denied owner access", async () => {
     let cafe = null, reads = 0, fail403 = false;
     class BrandWhatsAppError extends Error { constructor() { super("forbidden"); this.status = 403; } }
     const { default: Route } = load("app/dashboard/brand-phone/page.tsx", { "next/navigation": { notFound() { throw new Error("NOT_FOUND"); } }, "@/components/dashboard/pages/brand-phone-page": { BrandPhonePage: () => null }, "@/lib/data/cafes": { getOwnerCafeContext: async () => cafe }, "@/lib/data/brand-whatsapp": { BrandWhatsAppError, getBrandWhatsAppDashboard: async () => { reads++; if (fail403) throw new BrandWhatsAppError(); return base; } } });
-    await assert.rejects(Route(), /NOT_FOUND/); cafe = { id: "other", slug: "brand-9a8c97305195" }; await assert.rejects(Route(), /NOT_FOUND/); assert.equal(reads, 0);
+    await assert.rejects(Route(), /NOT_FOUND/); assert.equal(reads, 0); cafe = { id: "new-brand" }; assert.equal((await Route()).props.initialDashboard, base);
     cafe = { id: "321fd305-1883-48df-ab69-829cf7d1bc48" }; const result = await Route(); assert.equal(result.props.initialDashboard, base); fail403 = true; await assert.rejects(Route(), /NOT_FOUND/);
   });
   await check("sidebar exposes the route for supported brands and preserves collapsed/mobile behavior", () => {
@@ -207,16 +207,18 @@ try {
     const blank = () => null;
     const { DashboardSidebar } = load("components/dashboard/DashboardSidebar.tsx", { react: { ...React, useEffect() {} }, "@/lib/performance/notifications-client": { retainOwnerNotificationBrand: () => () => {} }, "./dashboard-navigation-link": { DashboardNavigationLink: "a" }, "./finance-sidebar-menu": { FinanceSidebarMenu: blank }, "next/navigation": { usePathname: () => pathname, useRouter: () => ({ push() {} }) }, "@/components/dashboard/subscription-countdown": { SubscriptionCountdown: blank }, "@/components/cafe/cafe-logo": { CafeLogo: blank }, "@/components/dashboard/notifications-panel": { NotificationsPanel: blank }, "@/components/ui/barndaksa-logo": { BarndaksaLogo: blank }, "@/lib/cafe/use-resolved-cafe-logo": { useResolvedCafeLogoUrl: () => null }, "@/lib/platform/auth": { logoutBarndaksaAuth: async () => {} }, "@/lib/platform/feature-access": { getSidebarFeaturesForBrand: () => [] } });
     const snapshot = { settings: { cafeSlug: "brand-9a8c97305195", cafeName: "لوكو", businessCategory: "restaurants" }, notifications: [], plans: [], featureOverrides: [], planId: "loyalty" };
-    for (const props of [{}, { snapshot: { ...snapshot, settings: { ...snapshot.settings, cafeSlug: "another-brand" } }, servicesAvailable: true }, { snapshot, servicesAvailable: false }]) assert.equal(nodes(DashboardSidebar(props), node => node.props?.href === "/dashboard/brand-phone").length, 0);
+    for (const props of [{}, { snapshot, servicesAvailable: false }]) assert.equal(nodes(DashboardSidebar(props), node => node.props?.href === "/dashboard/brand-phone").length, 0);
     for (const collapsed of [false, true]) { const link = nodes(DashboardSidebar({ snapshot, servicesAvailable: true, collapsed, onNavigate: () => navigations++ }), node => node.props?.href === "/dashboard/brand-phone")[0]; assert(link); assert.equal(link.props["aria-current"], "page"); assert.equal(link.props["aria-label"], "ربط رقم العلامة التجارية"); assert.match(link.props.className, /min-h-11/); if (collapsed) assert.equal(link.props.title, "ربط رقم العلامة التجارية"); link.props.onClick(); }
     assert.equal(navigations, 2); pathname = "/dashboard"; assert.equal(nodes(DashboardSidebar({ snapshot, servicesAvailable: true }), node => node.props?.href === "/dashboard/brand-phone")[0].props["aria-current"], undefined);
+    assert.equal(nodes(DashboardSidebar({ snapshot: { ...snapshot, settings: { ...snapshot.settings, cafeSlug: "another-brand" } }, servicesAvailable: true }), node => node.props?.href === "/dashboard/brand-phone").length, 1);
     const wahedSnapshot = { ...snapshot, settings: { ...snapshot.settings, cafeSlug: "brand-3c0437f1733a", cafeName: "واحد معصوب" } };
     assert.equal(nodes(DashboardSidebar({ snapshot: wahedSnapshot, servicesAvailable: true }), node => node.props?.href === "/dashboard/brand-phone").length, 1);
   });
   await check("Wahed uses platform by default and never provisions without explicit action", () => {
     const before = requests.length;
-    const h = harness({ ...base, brandName: "واحد معصوب", platformFallback: true });
-    const tree = h.render(); assert.ok(text(tree).includes("الإرسال الحالي من رقم برندة")); assert.ok(text(tree).includes("رقم برندة جاهز والرقم الخاص اختياري"));
+    const loco = harness({ ...base, monthlyPriceUsd: null }); assert.doesNotMatch(text(loco.render()), /دولار|شهريًا/); loco.unmount();
+    const h = harness({ ...base, brandName: "واحد معصوب", platformFallback: true, monthlyPriceUsd: 30 });
+    const tree = h.render(); assert.match(text(tree), /30\s*دولار أمريكي شهريًا/); assert.ok(text(tree).includes("الإرسال الحالي من رقم برندة")); assert.ok(text(tree).includes("رقم برندة جاهز والرقم الخاص اختياري"));
     assert.equal(requests.length, before, "merely opening the optional link page cannot buy an instance"); h.unmount();
     const linked = harness({ ...connected, brandName: "واحد معصوب", platformFallback: true });
     assert.ok(text(linked.render()).includes("الإرسال من رقمكم الخاص عند توفر الاتصال")); linked.unmount();

@@ -183,6 +183,7 @@ function LogoutButton() {
 export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, children }: { maintenance: boolean; loyaltyEnabled?: boolean; children?: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const brandPhonePage = pathname === "/dashboard/brand-phone";
   const loyaltyPage = pathname === "/dashboard/loyalty" || pathname === "/dashboard/loyalty/guide" || pathname === "/dashboard/loyalty/settings" || pathname === "/dashboard/loyalty/branches";
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -202,7 +203,7 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
   const [section, setWorkspaceSection, locationReady] = useAldeemLocation<Section>("section", "overview", ["overview", ...posSettingPages.map(item => item.id), ...systemGroups.flatMap(group => group.children.map(child => child.id)), ...loyaltyDemoSections.map(item => item.id)]);
   const [demo, setDemo] = useAldeemDemo();
   function setSection(value: Section) {
-    if (loyaltyPage) router.push(`/dashboard?aldeem.section=${encodeURIComponent(value)}`);
+    if (loyaltyPage || brandPhonePage) router.push(`/dashboard?aldeem.section=${encodeURIComponent(value)}`);
     else setWorkspaceSection(value);
   }
   const [salesVisited, setSalesVisited] = useState(false);
@@ -234,7 +235,7 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
   const selectedEmployee = employeeSections.find((item) => item.id === section);
   const selectedPage = selectedSales ?? selectedPurchase ?? selectedPos ?? selectedInventory ?? selectedProducer ?? selectedFranchise ?? selectedWorkshop ?? selectedCustomer ?? selectedLoyalty ?? selectedManufacturing ?? selectedFinance ?? selectedEmployee ?? selectedSettings;
   // Old bookmarks reopen the new workspace, never the retired dashboard UI.
-  useEffect(() => { if (pathname !== "/dashboard" && !loyaltyPage) router.replace(`/dashboard${window.location.search}`); }, [pathname, router, loyaltyPage]);
+  useEffect(() => { if (pathname !== "/dashboard" && !loyaltyPage && !brandPhonePage) router.replace(`/dashboard${window.location.search}`); }, [pathname, router, loyaltyPage, brandPhonePage]);
   function exitMaintenance() {
     setError("");
     startTransition(async () => {
@@ -340,6 +341,7 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
           <Settings size={19} strokeWidth={1.6} aria-hidden="true" /><span>الإعدادات</span><ChevronDown size={15} className={`${styles.chevron} ${settingsOpen ? styles.expanded : ""}`} aria-hidden="true" />
         </button>
         <div id="aldeem-settings-menu" className={styles.submenu} hidden={!settingsOpen}>
+          <Link href="/dashboard/brand-phone" className={`${styles.subItem} ${brandPhonePage ? styles.subActive : ""}`} aria-current={brandPhonePage ? "page" : undefined}><Settings size={16} aria-hidden="true" /><span>ربط رقم العلامة التجارية</span></Link>
           {settingsSections.map(({ id, title, icon: Icon }) => <button key={id} type="button" className={`${styles.subItem} ${section === id ? styles.subActive : ""}`} aria-current={section === id ? "page" : undefined} onClick={() => setSection(id)}><Icon size={16} strokeWidth={1.6} aria-hidden="true" /><span>{title}</span></button>)}
         </div>
       </nav>
@@ -352,8 +354,8 @@ export function AldeemCleanDashboard({ maintenance, loyaltyEnabled = false, chil
         </div>
       </footer>
     </aside>
-    <main id="aldeem-overview" className={`${styles.canvas} ${!loyaltyPage && posSettingPage ? styles.blankPosPage : ""}`} tabIndex={-1} aria-label={loyaltyPage ? "الولاء" : posSettingPage?.title ?? selectedPage?.title ?? "نظرة عامة"}>
-      {loyaltyPage ? children : !locationReady ? <p role="status">جار استعادة الصفحة</p> : <>
+    <main id="aldeem-overview" className={`${styles.canvas} ${!loyaltyPage && !brandPhonePage && posSettingPage ? styles.blankPosPage : ""}`} tabIndex={-1} aria-label={brandPhonePage ? "ربط رقم العلامة التجارية" : loyaltyPage ? "الولاء" : posSettingPage?.title ?? selectedPage?.title ?? "نظرة عامة"}>
+      {loyaltyPage || brandPhonePage ? children : !locationReady ? <p role="status">جار استعادة الصفحة</p> : <>
       {selectedPage && <header className={styles.pageHeader}><span>{selectedSales ? "المبيعات" : selectedPurchase ? "المشتريات" : selectedPos ? "نقاط البيع" : selectedInventory ? "المخزون" : selectedProducer ? "الأسر المنتجة" : selectedFranchise ? "الفرنشايز" : selectedWorkshop ? "المعمل" : selectedCustomer ? "العملاء" : selectedLoyalty ? "نقاط الولاء والاختام" : selectedManufacturing ? "التصنيع" : selectedFinance ? "المالية" : selectedEmployee ? "الموظفين" : "الإعدادات"}</span><h1>{selectedPage.title}</h1></header>}
       {section === "pos-main-settings" && <nav className={styles.posSettingsList} aria-label="إعدادات نقاط البيع الرئيسية">
         {posSettingPages.map(item => <button key={item.id} type="button" className={styles.subItem} onClick={() => setSection(item.id)}>{item.title}</button>)}

@@ -186,12 +186,13 @@ await check("WhatsApp unavailable defers claim and ambiguous send is recorded se
     "@/lib/whatsapp/green-api": { isGreenApiLoyaltyWelcomeReady: async () => ready, sendGreenApiLoyaltyWelcome: async () => { sends++; throw Error("response lost"); } },
     "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, args) => {
       recorded.push({ name, args });
+      if (!ready) return { data: null };
       if (name === "finish_stamp_card_link_v2") return { data: true };
       if (claimed) return { data: null }; claimed = true;
       return { data: { id: requestId, claimToken: profileId, cafeId, profileId, brandName: "Test", brandSlug: "test-brand", phone: "966501234567", cardCreated: true } };
     } }) },
   });
-  await dispatcher.dispatchStampCardLinks(2); assert.equal(recorded.length, 0);
+  await dispatcher.dispatchStampCardLinks(2); assert.equal(recorded.length, 1); assert.equal(recorded[0].args.p_primary_ready, false);
   ready = true; const result = await dispatcher.dispatchStampCardLinks(2);
   assert.equal(sends, 1); assert.equal(result.unknown, 1);
   assert.equal(recorded.find(x => x.name === "finish_stamp_card_link_v2").args.p_status, "unknown");
@@ -246,32 +247,31 @@ await check("LOCO invitations stay pending offline and resume only on the verifi
   assert.deepEqual(sent, [brandSender]);
   assert.equal((await dispatcher.dispatchStampCardLinks()).processed, 0);
 });
-await check("Wahed card links prefer verified private sender with primary fallback only before submit", async () => {
+await check("All brands with an opted-in sender prefer verified private sender with primary fallback only before submit", async () => {
   const wahed = "8dbf85ba-df8f-4218-bc6f-9d2b39e937ef";
   for (const [primary, privateReady, tenant, status, expectedSender] of [
     [true, false, wahed, "queued", "primary"], [true, true, wahed, "queued", "private"],
     [false, true, wahed, "queued", "private"], [true, true, wahed, "unknown", "private"],
-    [true, true, wahed, "rejected", "private"], [false, true, "other", "rejected", null],
+    [true, true, wahed, "rejected", "private"], [false, true, "new-brand", "queued", "private"],
   ]) {
     let claimed = false;
     const sent = [], flags = [], finished = [];
     const dispatcher = load("lib/loyalty/read-card-links.ts", {
       ...tokenMocks, "@/lib/wallet/google": {},
       "@/lib/whatsapp/brand-connection-types": { LOCO_CAFE_ID: "loco", WAHED_MASOUB_CAFE_ID: wahed },
-      "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => null, selectBrandLoyaltySender: async id => { assert.equal(id, wahed); return privateReady ? { idInstance: "wahed" } : null; } },
+      "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => null, selectBrandLoyaltySender: async id => { assert.equal(id, tenant); return privateReady ? { idInstance: tenant } : null; } },
       "@/lib/whatsapp/green-api": {
         isGreenApiLoyaltyWelcomeReady: async () => primary,
         sendGreenApiLoyaltyWelcome: async () => { sent.push("primary"); return { status }; },
-        sendGreenApiCustomerMessage: async sender => { assert.equal(sender.idInstance, "wahed"); sent.push("private"); return { status }; },
+        sendGreenApiCustomerMessage: async sender => { assert.equal(sender.idInstance, tenant); sent.push("private"); return { status }; },
       },
       "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, args) => {
         if (name === "finish_stamp_card_link_v2") { finished.push(args.p_status); return { data: true }; }
         flags.push(args); if (claimed) return { data: null }; claimed = true;
-        return { data: { id: requestId, claimToken: profileId, cafeId: tenant, profileId, cardId: requestId, brandName: "Wahed", brandSlug: "test-brand", phone: "966501234567", cardCreated: true, googleIssued: false } };
+        return { data: { id: requestId, claimToken: profileId, cafeId: tenant, privateSenderRequested: privateReady, profileId, cardId: requestId, brandName: "Wahed", brandSlug: "test-brand", phone: "966501234567", cardCreated: true, googleIssued: false } };
       } }) },
     });
     await dispatcher.dispatchStampCardLinks(1);
-    assert.equal(flags[0].p_wahed_ready, privateReady);
     assert.equal(flags[0].p_primary_ready, primary);
     assert.deepEqual(sent, expectedSender ? [expectedSender] : []);
     assert.deepEqual(finished, [status]);

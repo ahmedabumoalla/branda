@@ -43,6 +43,7 @@ export function walletAppleLocations(member: WalletMember) {
 }
 
 export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl: string) {
+  const en = member.language === "en";
   const mqas77 = (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo);
   const points = member.program.pointsProgram;
   const logoVersion = mqas77 ? MQAS77_WALLET_VERSION : walletArtifactKey(JSON.stringify([member.cafeName, member.logoUrl, member.program.cardBackground]));
@@ -58,7 +59,7 @@ export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl
     hexBackgroundColor: walletColors(member).background,
     merchantLocations: walletLocations(member),
     textModulesData: [points?.mode === "points"
-      ? { id: "reward", header: "احتساب النقاط", body: `كل ${points.rateSar} ر.س تمنحك ${points.rateQuantity} نقطة` }
+      ? { id: "reward", header: en ? "Earning points" : "احتساب النقاط", body: en ? `Earn ${points.rateQuantity} points for every SAR ${points.rateSar}` : `كل ${points.rateSar} ر.س تمنحك ${points.rateQuantity} نقطة` }
       : { id: "reward", header: member.program.rewardName, body: member.program.terms }, { id: "nearby", header: member.cafeName, body: member.experience.nearbyMessage }],
     // Explicitly clear previously published links when the class is updated.
     linksModuleData: { uris: [] },
@@ -66,6 +67,7 @@ export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl
 }
 
 export function buildGoogleObject(member: WalletMember, issuerId: string, artworkUrl?: string) {
+  const en = member.language === "en";
   const points = member.program.pointsProgram?.mode === "points" ? member.program.pointsProgram : null;
   const balance = member.card.availableLoyaltyPoints ?? 0;
   const next = points && nextPointsReward(points.milestones, balance);
@@ -74,19 +76,19 @@ export function buildGoogleObject(member: WalletMember, issuerId: string, artwor
     id: googleObjectId(issuerId, member), classId: googleClassId(issuerId, member.card.cafeId, member.branchId, member.language === "en"),
     state: member.program.enabled ? "ACTIVE" : "INACTIVE",
     barcode: { type: "QR_CODE", value: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), alternateText: member.card.displayNumber || member.card.cardCode },
-    loyaltyPoints: points ? { label: "رصيد النقاط", balance: { int: balance } } : (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
-      ? { label: "مكافآت جاهزة", balance: { string: String(member.card.availableRewards) } }
+    loyaltyPoints: points ? { label: en ? "Points" : "رصيد النقاط", balance: { int: balance } } : (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
+      ? { label: en ? "Rewards" : "مكافآت جاهزة", balance: { string: String(member.card.availableRewards) } }
       : { label: member.program.stampLabel, balance: { string: `${member.card.stampsInCycle} / ${member.program.purchasesRequired}` } },
-    secondaryLoyaltyPoints: affordable ? { label: "متاحة للاستبدال", balance: { string: `${affordable.reward} · ${affordable.points} نقطة` } }
-      : next ? { label: next.reward, balance: { string: `باقي ${next.points - balance} نقطة` } } : (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
-      ? { label: "أختام للمكافأة", balance: { int: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) } }
+    secondaryLoyaltyPoints: affordable ? { label: en ? "Ready to redeem" : "متاحة للاستبدال", balance: { string: `${affordable.reward} · ${affordable.points} ${en ? "points" : "نقطة"}` } }
+      : next ? { label: next.reward, balance: { string: en ? `${next.points - balance} points to go` : `باقي ${next.points - balance} نقطة` } } : (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
+      ? { label: en ? "Stamps to reward" : "أختام للمكافأة", balance: { int: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) } }
       : { label: member.language === "en" ? "Rewards" : "المكافآت المتاحة", balance: { int: member.card.availableRewards } },
     // PATCH must clear this card's points-only module when the program returns to stamps.
     ...(member.program.pointsProgram ? { textModulesData: points
-      ? [{ id: "pointsPath", header: "مسار المكافآت", body: describePointsRewards(points.milestones, balance) }]
+      ? [{ id: "pointsPath", header: en ? "Reward milestones" : "مسار المكافآت", body: describePointsRewards(points.milestones, balance, member.language) }]
       : [] } : {}),
     merchantLocations: walletLocations(member),
     hexBackgroundColor: walletColors(member).background,
-    ...(artworkUrl ? { heroImage: { sourceUri: { uri: artworkUrl }, contentDescription: { defaultValue: { language: member.language ?? "ar", value: points ? "مسار مكافآت النقاط" : member.program.stampLabel } } } } : {}),
+    ...(artworkUrl ? { heroImage: { sourceUri: { uri: artworkUrl }, contentDescription: { defaultValue: { language: member.language ?? "ar", value: points ? (en ? "Points reward milestones" : "مسار مكافآت النقاط") : member.program.stampLabel } } } } : {}),
   };
 }

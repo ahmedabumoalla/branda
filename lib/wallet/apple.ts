@@ -82,15 +82,15 @@ export async function issueApplePass(member: WalletMember, options: { standalone
     const balance = member.card.availableLoyaltyPoints ?? 0;
     const next = nextPointsReward(points.milestones, balance);
     const affordable = points.milestones.findLast(tier => tier.points <= balance);
-    style.headerFields.push({ key: "points", label: "رصيد النقاط", value: balance, changeMessage: "رصيد نقاطك الآن %@" });
+    style.headerFields.push({ key: "points", label: en ? "Points balance" : "رصيد النقاط", value: balance, changeMessage: en ? "Your points balance is now %@" : "رصيد نقاطك الآن %@" });
     if (affordable) {
-      style.secondaryFields.push({ key: "availableReward", label: "متاحة للاستبدال", value: affordable.reward });
-      style.auxiliaryFields.push({ key: "redemptionCost", label: "تكلفة الاستبدال", value: `${affordable.points} نقطة` });
+      style.secondaryFields.push({ key: "availableReward", label: en ? "Ready to redeem" : "متاحة للاستبدال", value: affordable.reward });
+      style.auxiliaryFields.push({ key: "redemptionCost", label: en ? "Redemption cost" : "تكلفة الاستبدال", value: en ? `${affordable.points} points` : `${affordable.points} نقطة` });
     }
-    if (next) style.secondaryFields.push({ key: "nextReward", label: "المكافأة القادمة", value: next.reward });
-    if (next) style.auxiliaryFields.push({ key: "pointsRemaining", label: "نقاط متبقية", value: next.points - balance });
-    style.backFields.push({ key: "rewardPath", label: "مسار المكافآت", value: describePointsRewards(points.milestones, balance) });
-    if (member.card.availableRewards > 0) style.backFields.push({ key: "vouchers", label: "قسائم المكافآت المتاحة", value: member.card.availableRewards });
+    if (next) style.secondaryFields.push({ key: "nextReward", label: en ? "Next reward" : "المكافأة القادمة", value: next.reward });
+    if (next) style.auxiliaryFields.push({ key: "pointsRemaining", label: en ? "Points to go" : "نقاط متبقية", value: next.points - balance });
+    style.backFields.push({ key: "rewardPath", label: en ? "Reward milestones" : "مسار المكافآت", value: describePointsRewards(points.milestones, balance, member.language) });
+    if (member.card.availableRewards > 0) style.backFields.push({ key: "vouchers", label: en ? "Available reward vouchers" : "قسائم المكافآت المتاحة", value: member.card.availableRewards });
   } else {
     style.headerFields.push({ key: "stamps", label: member.program.stampLabel, value: `${member.card.stampsInCycle} / ${member.program.purchasesRequired}`, changeMessage: en ? "Your stamp balance is now %@" : "رصيد الأختام الآن %@" });
     const remaining = { key: "remaining", label: en ? "Stamps to reward" : "أختام للمكافأة", value: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) };

@@ -8,6 +8,7 @@ export type WalletMember = {
   program: LoyaltyCardProgram;
   cafeSlug: string;
   cafeName: string;
+  cafeNameEn?: string;
   logoUrl: string | null;
   branchId?: string;
   bannerUrl?: string | null;

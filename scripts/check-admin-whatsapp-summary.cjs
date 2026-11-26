@@ -31,8 +31,8 @@ assert.equal(summary(wahed, { ...row, verified_phone: '966500000002' }).source, 
 assert.equal(summary(wahed, { ...row, instance_id: null }).source, 'branda');
 assert.equal(summary(wahed, { ...row, transactional_requested_at: null }).connection.purpose, 'campaigns');
 assert.equal(summary(wahed, { ...row, transactional_requested_at: null }).source, 'branda');
-assert.equal(summary('other', { ...row, cafe_id: 'other' }).source, 'branda');
-assert.equal(summary('other', { ...row, cafe_id: 'other' }).connection.purpose, 'campaigns');
+assert.equal(summary('other', { ...row, cafe_id: 'other' }).source, 'private');
+assert.equal(summary('other', { ...row, cafe_id: 'other' }).connection.purpose, 'customers');
 assert.equal(summary('other', row).source, 'unavailable');
 assert.equal(summary(loco, null).source, 'private');
 assert.equal(summary(loco, { ...row, cafe_id: loco, status: 'uncertain' }).platformFallback, false);
@@ -44,7 +44,7 @@ const style = fs.readFileSync(path.join(root, 'components/admin/brand-directory.
 const compiledStyle = transform({ filename: 'brand-directory.module.css', code: Buffer.from(style), cssModules: true });
 const source = fs.readFileSync(path.join(root, 'components/admin/brand-directory.tsx'), 'utf8');
 for (const [, name] of source.matchAll(/\bs\.(\w+)/g)) assert.ok(compiledStyle.exports[name], name);
-const { BrandDirectory } = load('components/admin/brand-directory.tsx', { './brand-directory.module.css': { __esModule: true, default: new Proxy({}, { get: (_, name) => name }) } });
+const { BrandDirectory } = load('components/admin/brand-directory.tsx', { '@/components/admin/brand-country-options': { BrandCountryOptions: () => null }, './brand-directory.module.css': { __esModule: true, default: new Proxy({}, { get: (_, name) => name }) } });
 function render(sender) {
   return renderToStaticMarkup(React.createElement(BrandDirectory, { cafes: [{ id: wahed, name: 'علامة اختبار', slug: 'fixture-brand', status: 'نشط', planId: '', totalRevenue: 0, whatsappSender: sender }], plans: [], onManage() {} }));
 }
@@ -54,7 +54,7 @@ assert.ok(privateHtml.includes('<details') && privateHtml.includes('برندة �
 assert.ok(render(summary(wahed, null)).includes('رقم برندة'));
 assert.ok(render(undefined).includes('تعذر قراءة حالة الربط'));
 assert.ok(render(summary(wahed, row, true)).includes('إرسال العلامة متوقف'));
-assert.ok(render(summary('other', { ...row, cafe_id: 'other' })).includes('رقم خاص للحملات'));
+assert.ok(render(summary('other', { ...row, cafe_id: 'other', transactional_requested_at: null })).includes('رقم خاص للحملات'));
 
 (async () => {
   const adminSource = fs.readFileSync(path.join(root, 'lib/data/admin.ts'), 'utf8');

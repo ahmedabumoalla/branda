@@ -1,4 +1,5 @@
 import "server-only";
+import { englishLoyaltyCopy } from "@/lib/loyalty/localize-public-copy";
 import { sign } from "node:crypto";
 import { googleConfig } from "./config";
 import { buildGoogleClass, buildGoogleObject, googleClassId, googleObjectId } from "./payload";
@@ -169,6 +170,7 @@ export async function notifyGoogleBrand(cafeId: string, title: string, body: str
     const trimmed = await request(classPath, "PATCH", { messages: messages.slice(-9) });
     if (!trimmed.ok) throw new Error(`google_wallet_update_${trimmed.status}`);
   }
-  const response = await request(`${classPath}/addMessage`, "POST", { message: { id: messageId, header: title, body, messageType: "TEXT_AND_NOTIFY" } });
+  const translate = english ? await englishLoyaltyCopy([title, body]) : (value: string) => value;
+  const response = await request(`${classPath}/addMessage`, "POST", { message: { id: messageId, header: translate(title), body: translate(body), messageType: "TEXT_AND_NOTIFY" } });
   if (!response.ok) throw new Error(`google_wallet_message_${response.status}`);
 }

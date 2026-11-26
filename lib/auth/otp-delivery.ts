@@ -67,9 +67,8 @@ export async function deliverQueuedOtp(id?: string) {
     if (payload.providerInstance !== providerInstance) throw new Error("OTP_PROVIDER_MISMATCH");
     // The Auth response has already been acknowledged after durable enqueue.
     // A slow provider can now finish without invalidating the user's Auth OTP.
-    if (isBrandCustomerOtp(job.cafe_id, job.purpose)) {
-      const sender = await selectBrandOtpSender(job.cafe_id!);
-      if (!sender) throw new Error("OTP_SENDERS_UNAVAILABLE");
+    const sender = isBrandCustomerOtp(job.cafe_id, job.purpose) ? await selectBrandOtpSender(job.cafe_id!) : null;
+    if (sender) {
       status = "unknown";
       const outcome = await sendGreenApiCustomerMessage(sender, {
         phone: payload.phoneNormalized,
