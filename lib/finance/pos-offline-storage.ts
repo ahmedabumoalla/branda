@@ -114,7 +114,8 @@ export async function flagOfflineConflict(sale: OfflineSale, error: string) {
   tx.objectStore("sales").put({ ...sale, status: "conflict", error } satisfies OfflineSale); await done;
 }
 export async function retryOfflineConflicts(scope: string) {
-  const db = await openDatabase(), rows = await listOfflineSales(scope), tx = db.transaction("sales", "readwrite"), done = completed(tx);
+  const db = await openDatabase(), tx = db.transaction("sales", "readwrite"), done = completed(tx);
+  const rows = await read<OfflineSale[]>(tx.objectStore("sales").index("scope").getAll(scope));
   for (const sale of rows.filter(row => row.status === "conflict")) tx.objectStore("sales").put({ ...sale, status: "queued", error: undefined } satisfies OfflineSale);
   await done;
 }

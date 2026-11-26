@@ -38,7 +38,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   // The existing transaction enforces current tenant/staff/shift/price/stock rules and request-id deduplication.
   try {
     const data = await executeBrandFinanceCommand(body.command, slug);
-    const snapshot = await getBrandFinanceSnapshot(slug).catch(() => undefined);
+    const snapshot = slug === "mind-hospital" ? undefined : await getBrandFinanceSnapshot(slug).catch(() => undefined);
     return NextResponse.json({ ok: true, data, snapshot }, { headers });
   } catch (error) {
     if (error instanceof Error && error.name === "FinanceUnavailable") return fail(error.message, "retry", 503);

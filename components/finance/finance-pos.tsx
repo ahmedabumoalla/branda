@@ -118,7 +118,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
   const [showCheckout, setShowCheckout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
-  const [reportShiftId, setReportShiftId] = useState<string | null>(null);
+  const [closedReceipt, setClosedReceipt] = useState<{ id: string; report?: import("@/lib/finance/pos-shift-report").PosShiftReport } | null>(null);
   const [selectedDrawerId, setSelectedDrawerId] = useState("");
   const [closeTargetId, setCloseTargetId] = useState("");
   const drawerKey = `branda-pos-drawer:${data.cafe.id}`;
@@ -215,7 +215,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     }
     try {
       const saved = await state.execute(operation, payload, hospital && operation === "shift_close"
-        ? () => setReportShiftId(String(payload.shiftId)) : undefined);
+        ? result => setClosedReceipt({ id: String(payload.shiftId), report: result.closingReport }) : undefined);
       if (saved) {
         setForm(null);
         if (hospital && operation === "shift_open" && typeof payload.accountId === "string") selectDrawer(payload.accountId);
@@ -457,7 +457,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     </Modal>
     <Modal open={!!form} title={form?.title ?? t("الوردية")} onClose={() => { if (!pending && !operationBusy) setForm(null); }} panelClassName={["refund", "shift_purchase"].includes(form?.operation ?? "") ? styles.invoicePanel : styles.shiftDialog}>{form && <FinanceOperationForm directPosRefund={data.cafe.slug === "mind-hospital"} key={form.operation} form={form} snapshot={data} pending={pending} error={error || localError} onInventoryBusyChange={setOperationBusy} onInventorySaved={state.applyInventoryCatalog} onInventoryUnitsChanged={state.applyInventoryUnits} onCancel={() => setForm(null)} onSubmit={submitOperation} />}</Modal>
     <Modal open={showHistory} title={t("سجل المبيعات")} onClose={() => setShowHistory(false)} panelClassName="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">{!butcher && <div className={styles.actions}><button type="button" className={styles.secondary} disabled={invoiceMessages.loading || !history.length} onClick={() => void invoiceMessages.refresh()}><RefreshCw size={16} aria-hidden="true" />{t("تحديث حالة الرسائل")}</button></div>}{data.truncated && <p className={styles.notice}>{t("يعرض السجل أحدث العمليات المتاحة")}</p>}{!history.length ? <Empty title={t("لا توجد مبيعات مسجلة")} /> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>{t("المستند")}</th><th>{t("التاريخ")}</th><th>{t("الإجمالي")}</th><th>{t("الحالة")}</th>{!butcher && <th>{t("واتساب")}</th>}<th>{t("الإجراء")}</th></tr></thead><tbody>{history.map((document) => <tr key={document.id}><td>{document.number ? `#${document.number}` : document.local_reference}{document.sync_status && document.sync_status !== "synced" && <small className={styles.muted}>{t(" بانتظار المزامنة")}</small>}</td><td>{date(document.created_at)}</td><td><Numeric value={document.total} money /></td><td>{t(financeDocumentStatus(document))}</td>{!butcher && <td><FinanceInvoiceMessageStatus entry={invoiceMessages.entries[document.id]} offline={document.sync_status === "queued" || document.sync_status === "conflict"} /></td>}<td><div className={styles.actions}><button className={styles.secondary} onClick={() => { setShowHistory(false); setReceiptId(document.id); }}>{t("الإيصال")}</button>{!document.refunded && (!document.sync_status || document.sync_status === "synced") && <button className={styles.danger} disabled={disabled} onClick={() => { setShowHistory(false); open({ operation: "refund", title: t("مرتجع مبيعات #") + (document.number), values: { documentId: document.id } }); }}>{t("إرجاع")}</button>}</div></td></tr>)}</tbody></table></div>}</Modal>
-    {reportShiftId && <FinancePosShiftReport key={reportShiftId} shiftId={reportShiftId} slug={data.cafe.slug} brandId={data.cafe.id} autoPrint onClose={() => setReportShiftId(null)} />}
+    {closedReceipt && <FinancePosShiftReport key={closedReceipt.id} shiftId={closedReceipt.id} initialReport={closedReceipt.report} pendingReceipts={state.offline.pending.filter(sale => sale.command.payload.shiftId === closedReceipt.id).length} slug={data.cafe.slug} brandId={data.cafe.id} autoPrint onClose={() => setClosedReceipt(null)} />}
     {receiptPreview && <FinanceReceiptDialog preview receiptBrand={state.offline.brand} document={receiptPreview} snapshot={data} onClose={() => setReceiptPreview(null)} />}
     {printDocument && printer.ready && <FinanceReceiptDialog key={`${data.cafe.id}:automatic:${printId}`} document={printDocument} snapshot={data} receiptBrand={state.offline.brand} autoPrint={printer.autoEnabled} backgroundAutoPrint autoPrintKey={printId} onPrint={printer.handler(printId, true)} onClose={() => setPrintQueue((queue) => queue.filter((id) => id !== printId))} />}
     {receipt && <FinanceReceiptDialog key={`${data.cafe.id}:${receiptId}`} document={receipt} snapshot={data} receiptBrand={state.offline.brand} onPrint={printer.handler(receiptId ?? receipt.id, false)} onClose={() => setReceiptId(null)} />}

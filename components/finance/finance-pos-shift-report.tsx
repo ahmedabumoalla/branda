@@ -10,7 +10,7 @@ import { printThermalReceipt } from "./finance-receipt-print";
 import { financeDate, Numeric } from "./finance-ui";
 import styles from "./finance.module.css";
 
-type ReportProps = { shiftId: string; slug?: string; onClose: () => void; brandId?: string; autoPrint?: boolean };
+type ReportProps = { shiftId: string; initialReport?: PosShiftReport; pendingReceipts?: number; slug?: string; onClose: () => void; brandId?: string; autoPrint?: boolean };
 
 export function FinancePosShiftReport(props: ReportProps) {
   if (props.brandId && isHospitalStore(props.slug)) return <FinanceMindShiftReport {...props} brandId={props.brandId} />;

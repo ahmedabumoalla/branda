@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Printer } from "lucide-react";
-import { fetchPosShiftReportAction } from "@/app/actions/finance-pos-shift-report";
+
 import type { PosShiftReport } from "@/lib/finance/pos-shift-report";
 import { claimAutomaticReceiptPrint } from "./finance-receipt-print";
 import { FinancePosModal, useFinancePosLocale } from "./finance-pos-locale";
@@ -14,11 +14,12 @@ const methodLabels = {
   bank: ["تحويل بنكي", "Bank transfer"], partial: ["دفع جزئي", "Partially paid"], other: ["أخرى", "Other"],
 } as const;
 
-type Props = { shiftId: string; brandId: string; slug?: string; autoPrint?: boolean; onClose: () => void };
+type Props = { shiftId: string; initialReport?: PosShiftReport; pendingReceipts?: number; brandId: string; slug?: string; autoPrint?: boolean; onClose: () => void };
 
-export function FinanceMindShiftReport({ shiftId, brandId, slug, autoPrint, onClose }: Props) {
+export function FinanceMindShiftReport({ shiftId, brandId, slug, autoPrint, initialReport, pendingReceipts = 0, onClose }: Props) {
   const { t, date, money, number, dir, language } = useFinancePosLocale();
-  const [report, setReport] = useState<PosShiftReport | null>(null);
+  const [report, setReport] = useState<PosShiftReport | null>(initialReport ?? null);
+  const initialPending = useRef(pendingReceipts);
   const [loadError, setLoadError] = useState("");
   const [retry, setRetry] = useState(0);
   const [printing, setPrinting] = useState(false);
@@ -28,14 +29,23 @@ export function FinanceMindShiftReport({ shiftId, brandId, slug, autoPrint, onCl
   const busy = useRef(false);
   const printer = useFinancePrinter(brandId);
   useEffect(() => {
-    let cancelled = false;
-    fetchPosShiftReportAction(shiftId, slug, true).then(result => {
-      if (cancelled) return;
-      if (result.ok) setReport(result.data);
-      else setLoadError(result.message);
-    }).catch(() => { if (!cancelled) setLoadError(t("تعذر الاتصال لتحميل التقرير", "Could not load the shift report")); });
-    return () => { cancelled = true; };
-  }, [shiftId, slug, retry, t]);
+    if (initialReport && retry === 0 && initialPending.current === pendingReceipts) return;
+    const controller = new AbortController();
+    async function load() {
+      try {
+        const response = await fetch(`/api/finance/${encodeURIComponent(slug ?? "")}/shift-report?shift=${encodeURIComponent(shiftId)}`, {
+          cache: "no-store", signal: controller.signal,
+        });
+        const result = await response.json();
+        if (!response.ok || result.shift?.id !== shiftId) throw new Error(result.message);
+        if (!controller.signal.aborted) { setReport(result); setLoadError(""); }
+      } catch {
+        if (!controller.signal.aborted) setLoadError(t("تعذر الاتصال لتحميل التقرير", "Could not load the shift report"));
+      }
+    }
+    void load();
+    return () => controller.abort();
+  }, [shiftId, slug, retry, t, initialReport, pendingReceipts]);
 
   const printKey = `shift:${shiftId}`;
   async function print(automatic: boolean) {
@@ -101,13 +111,13 @@ export function FinanceMindShiftReport({ shiftId, brandId, slug, autoPrint, onCl
           <header data-receipt-header><h3>{report.brandName}</h3><p data-receipt-title>{title} #{report.shift.shift_number}</p><p>{report.accountName}</p></header>
           <div data-receipt-meta><p>{t("البداية", "Opened")} {date(report.shift.opened_at)}</p><p>{t("الإقفال", "Closed")} {date(report.shift.closed_at)}</p>{minutes !== null && <p>{t("المدة", "Duration")} {number(Math.floor(minutes / 60))} {t("ساعة", "h")} {number(minutes % 60)} {t("دقيقة", "min")}</p>}</div>
           {summary ? <>
-            <p data-receipt-title>{t("فواتير البيع المسجّلة عند الإغلاق", "Sales invoices posted by closing")}</p>
+            <p data-receipt-title>{t("فواتير مبيعات الوردية", "Shift sales invoices")}</p>
             <table data-receipt-items>
               <thead><tr><th>{t("طريقة الدفع", "Payment method")}</th><th>{t("العدد", "Count")}</th><th>{t("قيمة الفواتير", "Invoice value")}</th></tr></thead>
               <tbody>{methods.map(row => <tr key={row.kind}><td>{methodName(row.kind)}</td><td>{number(row.count)}</td><td>{money(row.total)}</td></tr>)}</tbody>
               <tfoot><tr><th>{t("الإجمالي", "Total")}</th><td>{number(methods.reduce((sum, row) => sum + row.count, 0))}</td><td>{money(methods.reduce((sum, row) => sum + row.total, 0))}</td></tr></tfoot>
             </table>
-            <p>{t("الفواتير المحفوظة على الجهاز بانتظار المزامنة مستبعدة من أرقام الإغلاق", "Closing figures exclude invoices awaiting sync on a device")}</p>
+            {pendingReceipts > 0 && <p>{t("فواتير هذه الوردية بانتظار المزامنة على الجهاز", "Shift invoices awaiting sync on this device")} {number(pendingReceipts)}</p>}
           </> : <div data-receipt-row><span>{t("عدد فواتير البيع", "Sales invoices")}</span><strong>{number(report.invoiceCount)}</strong></div>}
           <p data-receipt-title>{t("تفاصيل الوردية حتى استخراج التقرير", "Shift details as of report time")}</p>
           {rows.map(([label, value]) => <div key={label} data-receipt-row><span>{label}</span><strong>{value == null ? "—" : money(value)}</strong></div>)}

@@ -85,24 +85,19 @@ export async function drainOfflineSales(dependencies: {
   authRequired: (message: string) => void;
 }) {
   const sales = (await dependencies.list()).filter(sale => sale.status !== "synced").sort((a, b) => a.sequence != null && b.sequence != null ? a.sequence - b.sequence : a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
-  const blockedShifts = new Set<unknown>();
+
   for (const sale of sales) {
-    const shiftId = sale.command.payload.shiftId;
     if (sale.status === "conflict") {
-      if (!dependencies.independentShifts) return;
-      blockedShifts.add(shiftId);
+      if (dependencies.independentShifts) continue;
+      return;
     }
-    if (blockedShifts.has(shiftId)) continue;
     let response: PosSyncResponse;
     try { response = await dependencies.send(sale); } catch { return; }
     if (!response.ok) {
       if (response.kind === "auth") dependencies.authRequired(response.message);
       else if (response.kind === "conflict") {
         await dependencies.conflict(sale, response.message);
-        if (dependencies.independentShifts) {
-          blockedShifts.add(shiftId);
-          continue;
-        }
+        if (dependencies.independentShifts) continue;
       }
       return;
     }

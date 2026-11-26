@@ -50,13 +50,38 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
     setSales(rows);
   }, [scope]);
   const sync = useCallback(async (force = false) => {
-    if (syncBusy.current) { await syncDone.current; if (!force) return; }
+    while (syncBusy.current) { await syncDone.current; if (!force) return; }
     if (!current.current.ready || !navigator.onLine) return;
     let finishSync!: () => void;
     syncDone.current = new Promise<void>(resolve => { finishSync = resolve; });
     syncBusy.current = true; if (alive.current) setSyncing(true);
     try {
       await withOfflineSyncLease(scope, async () => {
+        const mind = isHospitalStore(targetSlug);
+        const settledShifts = new Set<string>();
+        const drain = () => drainOfflineSales({
+          independentShifts: mind,
+          list: () => listOfflineSales(scope),
+          send: async sale => {
+            try {
+              const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cafeId: initialSnapshot.cafe.id, userId: initialSnapshot.userId, command: sale.command }), signal: AbortSignal.timeout(25_000) });
+              if (response.status >= 500) { setConnected(false); return { ok: false, kind: "retry", message: "المزامنة ستُستأنف تلقائيًا" }; }
+              return await response.json() as PosSyncResponse;
+            } catch (reason) { setConnected(false); throw reason; }
+          },
+          acknowledge: async (sale, response) => {
+            await acknowledgeOfflineSale(sale, response);
+            if (mind && typeof sale.command.payload.shiftId === "string") settledShifts.add(sale.command.payload.shiftId);
+          },
+          conflict: flagOfflineConflict,
+          authRequired: message => { setBlocked(true); setError(message); void lockOfflineSession(); },
+        });
+        if (mind) {
+          // Each POST authenticates the cashier. A slow catalogue refresh cannot hold queued receipts.
+          if (force) await retryOfflineConflicts(scope);
+          await drain();
+          await reload();
+        }
         const auth = await fetch(endpoint, { cache: "no-store", signal: AbortSignal.timeout(15_000) });
         const body = await auth.json();
         if (!auth.ok) {
@@ -68,20 +93,7 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
         setConnected(true); setBlocked(false);
         // Do not mark an acknowledgement reflected until this fresh snapshot includes it.
         await saveOfflineSnapshot(body.snapshot, true, true);
-        await drainOfflineSales({
-          independentShifts: isHospitalStore(targetSlug),
-          list: () => listOfflineSales(scope),
-          send: async sale => {
-            try {
-              const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cafeId: initialSnapshot.cafe.id, userId: initialSnapshot.userId, command: sale.command }), signal: AbortSignal.timeout(25_000) });
-              if (response.status >= 500) { setConnected(false); return { ok: false, kind: "retry", message: "المزامنة ستُستأنف تلقائيًا" }; }
-              return await response.json() as PosSyncResponse;
-            } catch (reason) { setConnected(false); throw reason; }
-          },
-          acknowledge: acknowledgeOfflineSale,
-          conflict: flagOfflineConflict,
-          authRequired: message => { setBlocked(true); setError(message); void lockOfflineSession(); },
-        });
+        if (!mind) await drain();
         await reload(); notify();
         // Telemetry is advisory; do not hold shift confirmation for heartbeat requests.
         void (async () => {
@@ -93,7 +105,7 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
             localStorage.setItem(key, deviceId.current);
           }
           const local = pendingSales(await listOfflineSales(scope));
-          const shifts = new Set<string>([...body.snapshot.shifts.filter((s: { user_id: string; status: string }) => s.user_id === initialSnapshot.userId && s.status !== "closed").map((s: { id: string }) => s.id), ...local.flatMap(s => typeof s.command.payload.shiftId === "string" && s.command.payload.shiftId ? [s.command.payload.shiftId] : [])]);
+          const shifts = new Set<string>([...settledShifts, ...body.snapshot.shifts.filter((s: { user_id: string; status: string }) => s.user_id === initialSnapshot.userId && s.status !== "closed").map((s: { id: string }) => s.id), ...local.flatMap(s => typeof s.command.payload.shiftId === "string" && s.command.payload.shiftId ? [s.command.payload.shiftId] : [])]);
           await Promise.all([...shifts].map(shiftId => {
             const rows = local.filter(s => s.command.payload.shiftId === shiftId);
             return fetch(endpoint.replace("pos-sync", "shift-heartbeat"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shiftId, deviceId: deviceId.current, pending: rows.length, conflicts: rows.filter(s => s.status === "conflict").length }), signal: AbortSignal.timeout(8000) });
@@ -134,7 +146,7 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
   }, [initialSnapshot, offlineEntry, reload, scope, sync]);
   // Server-rendered data has just passed authorization; do not immediately fetch it again.
   // Restored offline sessions and unsent receipts still synchronize without delay.
-  useEffect(() => { if (ready && (offlineEntry || pendingSales(current.current.sales).length)) void sync(); }, [ready, sync, offlineEntry]);
+  useEffect(() => { if (ready && (offlineEntry || pendingSales(current.current.sales).length)) void sync(isHospitalStore(targetSlug)); }, [ready, sync, offlineEntry, targetSlug]);
 
   async function execute(operation: FinanceFormOperation, payload: Record<string, unknown>, onCommitted?: (result: FinanceCommandResult) => void): Promise<FinanceCommandResult | null> {
     if (busy.current || blocked || !ready) return null;
@@ -145,6 +157,10 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
       if (!navigator.onLine || (!independentShift && !connected)) { setError("هذه العملية تحتاج اتصالًا بالإنترنت المبيعات والفواتير المحلية محفوظة"); return null; }
       if (!independentShift && pendingSales(await listOfflineSales(scope)).length) { setError("انتظر مزامنة الفواتير قبل إقفال الوردية أو تعديل أرصدتها"); return null; }
       const shiftOperation = ["shift_open", "shift_close", "shift_accept", "shift_handover"].includes(operation);
+      if (independentShift && operation === "shift_close" && pendingSales(current.current.sales).length) {
+        // Give the device a chance to post before printing without making closure depend on the queue.
+        await Promise.race([sync(true), new Promise<void>(resolve => setTimeout(resolve, 2500))]);
+      }
       const result = await base.execute(operation, payload, !shiftOperation);
       if (result && result.status !== "pending" && result.status !== "rejected") {
         onCommitted?.(result);
@@ -186,7 +202,7 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
       try { notify(); } catch { /* Another tab may have closed during commit. */ }
       checkoutRetry.current = null;
       setMessage("حُفظت الفاتورة على الجهاز وستُزامن تلقائيًا عند توفر الاتصال");
-      void sync();
+      void sync(isHospitalStore(targetSlug));
       return { id: sale.document.id, localReference: sale.localReference, offline: true };
     } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر حفظ الفاتورة على الجهاز لا تعِد التحصيل قبل التحقق"); return null; }
     finally { busy.current = false; setSaving(false); }
