@@ -68,6 +68,8 @@ const closed = () => { assert.equal(modal.open, false); assert.equal(body.style.
 
 try {
   render(); closed();
+  const mediaLayers = () => nodes(tree).filter(node => node.type === "dialog" || node.type === "video");
+  assert.equal(mediaLayers().length, 0, "An idle barcode tab must not mount a full-screen media layer");
   assert.equal(starts, 0, "A closed scanner must not request camera access");
   open();
   assert.equal(trigger().props["aria-controls"], dialog().props.id);
@@ -84,9 +86,11 @@ try {
   modal.close(); dialog().props.onClose({ currentTarget: modal }); render(); closed();
   open(); assert.equal(nodes(tree).filter((node) => node.props.role === "alert").length, 0);
   dialog().props.onClose({ currentTarget: modal }); render();
+  dialog().props.onClose({ currentTarget: { open: false } }); render();
   assert(modal.open, "A delayed close event cannot close a reopened camera");
   session.onDetected("CARD123"); render(); closed();
   assert.deepEqual(detections, ["CARD123"]);
+  assert.equal(mediaLayers().length, 0, "Scanning removes the video and dialog from the cashier");
   open(); props.disabled = true; render();
   assert.equal(starts, stops, "Pending cashier operations stop camera capture");
   find((node) => node.type === "button" && !node.props["aria-haspopup"]).props.onClick();
