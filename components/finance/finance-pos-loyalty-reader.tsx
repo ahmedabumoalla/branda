@@ -4,12 +4,14 @@ import dynamic from "next/dynamic";
 import { useEffect, useId, useRef, useState } from "react";
 import { Loader2, ScanLine, RefreshCw, X } from "lucide-react";
 import { issueFinanceLoyaltyCardAction, openFinanceLoyaltyReaderAction } from "@/app/actions/finance-loyalty-reader";
+import { frenchReaderLabels } from "@/lib/finance/pos-french-reader";
 import { CashierLanguageProvider } from "@/components/cashier/cashier-language";
 import { lockPageScroll } from "@/lib/ui/page-scroll-lock";
 import { useFinancePosLocale } from "./finance-pos-locale";
 import styles from "./finance.module.css";
 import s from "./finance-pos-loyalty-reader.module.css";
 
+const frenchReader = { lang: "fr", labels: frenchReaderLabels };
 const Reader = dynamic(() => import("@/components/rast-loyalty/rast-cashier").then(module => module.RastCashier), { loading: () => <ReaderLoading /> });
 type Result = Awaited<ReturnType<typeof openFinanceLoyaltyReaderAction>>;
 type Ready = Extract<Extract<Result, { ok: true }>["data"], { status: "ready" }>;
@@ -71,7 +73,7 @@ export function FinancePosLoyaltyReader({ slug }: { slug: string }) {
         {!loading && loginRequired && <div className={s.status}><p>{t("سجّل الدخول بحساب كاشير الولاء لهذه العلامة ثم عد إلى هذه النافذة", "Sign in with this brand’s loyalty cashier account, then return to this window")}</p><a className={styles.primary} href="/cashier/login" target="_blank" rel="noopener noreferrer">{t("دخول كاشير الولاء", "Loyalty cashier sign-in")}</a><button type="button" className={styles.secondary} onClick={() => void load(true)}><RefreshCw size={16} aria-hidden="true" />{t("متابعة بحساب كاشير الولاء", "Continue with the loyalty cashier account")}</button></div>}
         {ready && open && !loading && <p className={s.operator}>{t("موظف الولاء", "Loyalty cashier")}: {displayName(ready.console.cashier.fullName)}</p>}
         {ready?.canIssue && open && !loading && <FinanceLoyaltyIssue slug={slug} />}
-        {ready && <CashierLanguageProvider initialLocale={language} fixedLocale={language}>
+        {ready && <CashierLanguageProvider initialLocale={language === "fr" ? "en" : language} fixedLocale={language === "fr" ? "en" : language} translation={language === "fr" ? frenchReader : undefined}>
           <Reader key={`${ready.console.cafe.id}:${ready.console.cashier.id}`} initialData={ready.console} identity={ready.identity} displayName={displayName} embedded active={open && !loading} />
         </CashierLanguageProvider>}
       </div>

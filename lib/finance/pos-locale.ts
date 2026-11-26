@@ -2,7 +2,8 @@ import { hospitalProductName, hospitalCategoryName } from "@/lib/commerce/hospit
 import { financePosCustomerEnglish } from "./pos-customer-labels";
 import { financePosShiftLabels } from "./pos-shift-labels";
 import { financePosOperationEnglish } from "./pos-operation-labels";
-export type FinancePosLanguage = "ar" | "en";
+import { financePosFrench } from "./pos-french";
+export type FinancePosLanguage = "ar" | "en" | "fr";
 export const FINANCE_POS_LANGUAGE_KEY = "branda.finance.pos.language";
 export const financePosEnglish: Record<string, string> = {
   ...financePosCustomerEnglish,
@@ -123,6 +124,7 @@ export const financePosEnglish: Record<string, string> = {
 /** Display-only spelling of personal names; never use this value as a persisted identity. */
 export function financePosDisplayName(text: string | null | undefined, language: FinancePosLanguage): string {
   if (!text) return "";
+  if (language === "fr" && financePosFrench[financePosEnglish[text]]) return financePosFrench[financePosEnglish[text]];
   if (language === "ar" || !/[\u0600-\u06ff]/u.test(text)) return text;
   const names: Record<string, string> = { "مايند": "MND", "ميند": "MND", "المستشفى": "Hospital", "الدكتور": "Dr", "دكتور": "Dr", "الدكتورة": "Dr", "دكتورة": "Dr", "محمد": "Mohammed", "أحمد": "Ahmed", "احمد": "Ahmed", "محمود": "Mahmoud", "عبدالله": "Abdullah", "عبدالرحمن": "Abdulrahman", "عبدالعزيز": "Abdulaziz", "خالد": "Khalid", "علي": "Ali", "عمر": "Omar", "يوسف": "Yousef", "حسن": "Hassan", "حسين": "Hussein", "سعيد": "Saeed", "سعود": "Saud", "فيصل": "Faisal", "فهد": "Fahad", "إبراهيم": "Ibrahim", "ابراهيم": "Ibrahim", "مصطفى": "Mostafa", "سارة": "Sarah", "فاطمة": "Fatima", "مريم": "Maryam", "نورة": "Noura", "نور": "Noor", "عبد": "Abdul", "الله": "Allah", "بن": "bin", "بنت": "bint" };
   const letters: Record<string, string> = { "ا": "a", "أ": "a", "إ": "i", "آ": "aa", "ب": "b", "ت": "t", "ث": "th", "ج": "j", "ح": "h", "خ": "kh", "د": "d", "ذ": "dh", "ر": "r", "ز": "z", "س": "s", "ش": "sh", "ص": "s", "ض": "d", "ط": "t", "ظ": "dh", "ع": "a", "غ": "gh", "ف": "f", "ق": "q", "ك": "k", "ل": "l", "م": "m", "ن": "n", "ه": "h", "و": "w", "ي": "y", "ى": "a", "ة": "a", "ء": "'", "ئ": "y", "ؤ": "w", "پ": "p", "چ": "ch", "ڤ": "v", "گ": "g", "،": ",", "؛": ";", "؟": "?", "٫": ".", "٬": "," };
@@ -131,6 +133,12 @@ export function financePosDisplayName(text: string | null | undefined, language:
 
 export function financePosText(language: FinancePosLanguage, text: string, english?: string): string {
   if (language === "ar") return text;
+  if (language === "fr") {
+    const englishText = english ?? financePosEnglish[text.trim().replace(/\s+/g, " ")] ?? text.trim();
+    const translated = financePosFrench[englishText.trim()];
+    if (translated) return text.slice(0, text.length - text.trimStart().length) + translated + text.slice(text.trimEnd().length);
+    return text;
+  }
   if (english !== undefined) return english;
   const normalized = text.trim().replace(/\s+/g, " ");
   const translation = financePosEnglish[normalized];
@@ -145,6 +153,10 @@ export function financePosText(language: FinancePosLanguage, text: string, engli
 }
 
 export function financePosProductName(product: { name: string; nameEn?: string | null }, language: FinancePosLanguage) {
+  if (language === "fr") {
+    const catalogName = hospitalProductName(product.name, "en");
+    return financePosFrench[product.nameEn?.trim() ?? ""] ?? financePosFrench[catalogName] ?? (product.nameEn?.trim() || product.name);
+  }
   return language === "en" && product.nameEn?.trim() ? product.nameEn.trim() : financePosDisplayName(hospitalProductName(product.name, language), language);
 }
-export const financePosCategoryName = (name: string, language: FinancePosLanguage) => financePosDisplayName(hospitalCategoryName(name, language), language);
+export const financePosCategoryName = (name: string, language: FinancePosLanguage) => language === "fr" ? financePosFrench[hospitalCategoryName(name, "en")] ?? name : financePosDisplayName(hospitalCategoryName(name, language), language);

@@ -4,9 +4,18 @@ import type { FinanceDocument, FinanceSnapshot } from "@/lib/finance/brand-finan
 import { financeReceiptQr } from "@/lib/finance/receipt-tax";
 import type { ReceiptBrand, ReceiptCopy } from "./finance-receipt-print";
 import { documentKindNames } from "./finance-ui";
-import { PosNumeric as Numeric, useFinancePosLocale } from "./finance-pos-locale";
+import { FinancePosLocaleProvider, PosNumeric as Numeric, useFinancePosLocale } from "./finance-pos-locale";
 import receiptStyles from "./finance-receipt.module.css";
-export function FinanceReceipt({ document, snapshot, brand, copy = "customer", preview = false }: { document: FinanceDocument; snapshot: FinanceSnapshot; brand?: ReceiptBrand; copy?: ReceiptCopy; preview?: boolean }) {
+type ReceiptProps = { document: FinanceDocument; snapshot: FinanceSnapshot; brand?: ReceiptBrand; copy?: ReceiptCopy; preview?: boolean };
+
+export function FinanceReceipt(props: ReceiptProps) {
+  const receipt = <ReceiptContent {...props} />;
+  return props.snapshot.cafe.slug === "mind-hospital" && props.copy !== "preparation"
+    ? <FinancePosLocaleProvider enabled={false}>{receipt}</FinancePosLocaleProvider>
+    : receipt;
+}
+
+function ReceiptContent({ document, snapshot, brand, copy = "customer", preview = false }: ReceiptProps) {
   const { t, dir, language, displayName, productName, date } = useFinancePosLocale();
   const customer = snapshot.parties.find((party) => party.id === document.party_id);
   const account = snapshot.accounts.find((item) => item.id === document.account_id);

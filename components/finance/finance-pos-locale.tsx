@@ -16,13 +16,13 @@ function subscribe(listener: () => void) {
   window.addEventListener("storage", onStorage); window.addEventListener(eventName, listener);
   return () => { window.removeEventListener("storage", onStorage); window.removeEventListener(eventName, listener); };
 }
-function readLanguage(): FinancePosLanguage { if (volatileLanguage) return volatileLanguage; try { const stored = localStorage.getItem(FINANCE_POS_LANGUAGE_KEY); return stored === "ar" || stored === "en" ? stored : memoryLanguage; } catch { return memoryLanguage; } }
+function readLanguage(): FinancePosLanguage { if (volatileLanguage) return volatileLanguage; try { const stored = localStorage.getItem(FINANCE_POS_LANGUAGE_KEY); return stored === "ar" || stored === "en" || stored === "fr" ? stored : memoryLanguage; } catch { return memoryLanguage; } }
 const defaultLanguage = (): FinancePosLanguage => "ar";
 const FinancePosLocaleContext = createContext<{ language: FinancePosLanguage; setLanguage: (value: FinancePosLanguage) => void }>({ language: "ar", setLanguage: () => {} });
 
-export function FinancePosLocaleProvider({ children, enabled = true }: { children: ReactNode; enabled?: boolean }) {
+export function FinancePosLocaleProvider({ children, enabled = true, allowFrench = false }: { children: ReactNode; enabled?: boolean; allowFrench?: boolean }) {
   const savedLanguage = useSyncExternalStore(subscribe, readLanguage, defaultLanguage);
-  const language = enabled ? savedLanguage : "ar";
+  const language = enabled && (allowFrench || savedLanguage !== "fr") ? savedLanguage : "ar";
   const setLanguage = useCallback((value: FinancePosLanguage) => {
     memoryLanguage = value;
     try { localStorage.setItem(FINANCE_POS_LANGUAGE_KEY, value); volatileLanguage = null; } catch { volatileLanguage = value; }
@@ -40,9 +40,9 @@ export function useFinancePosLocale() {
     productName: (product: { name: string; nameEn?: string | null }) => financePosProductName(product, language),
     categoryName: (name: string) => financePosCategoryName(name, language),
     displayName: (name: string | null | undefined) => financePosDisplayName(name, language),
-    date: (value: string | null | undefined) => !value || Number.isNaN(new Date(value).getTime()) ? "—" : new Intl.DateTimeFormat(language === "ar" ? "ar-SA" : "en-GB", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Riyadh" }).format(new Date(value)),
-    number: (value: number, maximumFractionDigits = 3) => new Intl.NumberFormat(language === "ar" ? "ar-SA" : "en-SA", { maximumFractionDigits }).format(value),
-    money: (value: number) => new Intl.NumberFormat(language === "ar" ? "ar-SA" : "en-SA", { style: "currency", currency: "SAR" }).format(value),
+    date: (value: string | null | undefined) => !value || Number.isNaN(new Date(value).getTime()) ? "—" : new Intl.DateTimeFormat(language === "fr" ? "fr-FR" : language === "ar" ? "ar-SA" : "en-GB", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Riyadh" }).format(new Date(value)),
+    number: (value: number, maximumFractionDigits = 3) => new Intl.NumberFormat(language === "fr" ? "fr-FR" : language === "ar" ? "ar-SA" : "en-SA", { maximumFractionDigits }).format(value),
+    money: (value: number) => new Intl.NumberFormat(language === "fr" ? "fr-FR" : language === "ar" ? "ar-SA" : "en-SA", { style: "currency", currency: "SAR" }).format(value),
   };
 }
 

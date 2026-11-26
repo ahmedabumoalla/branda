@@ -137,10 +137,11 @@ const readEnglish: Record<string, string> = {
   "ستظهر نتيجة كل قراءة هنا بعد حفظها": "Each scan result appears here after it is saved",
 };
 export function cashierLocale(value: unknown): CashierLocale { return value === "en" ? "en" : "ar"; }
-export function cashierText(locale: CashierLocale, message: CashierMessage) {
+export function cashierText(locale: CashierLocale, message: CashierMessage, labels?: Record<string, string>) {
   const source = typeof message === "string" ? message : message.text;
   const translated = locale === "en" ? readEnglish[source] ?? cashierEnglish[source] ?? source : source;
-  return typeof message === "string" ? translated : translated.replace(/\{(\w+)\}/g, (_, key: string) => {
+  const template = labels?.[translated] ?? translated;
+  return typeof message === "string" ? template : template.replace(/\{(\w+)\}/g, (_, key: string) => {
     const value = message.values[key];
     return value && typeof value === "object" ? value[locale] : String(value ?? "");
   });

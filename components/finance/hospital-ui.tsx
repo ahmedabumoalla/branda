@@ -4,10 +4,11 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 import s from "./hospital-pos.module.css";
 
-export type HospitalLanguage = "ar" | "en";
-export const hospitalText = (language: HospitalLanguage, ar: string, en: string) => language === "ar" ? ar : en;
-export const hospitalMoney = (value: number, language: HospitalLanguage) => new Intl.NumberFormat(language === "ar" ? "ar-SA" : "en-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 2 }).format(value);
-export const hospitalDate = (value: string, language: HospitalLanguage) => new Intl.DateTimeFormat(language === "ar" ? "ar-SA" : "en-GB", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Riyadh" }).format(new Date(value));
+import { financePosText, type FinancePosLanguage } from "@/lib/finance/pos-locale";
+export type HospitalLanguage = FinancePosLanguage;
+export const hospitalText = (language: HospitalLanguage, ar: string, en: string) => financePosText(language, ar, en);
+export const hospitalMoney = (value: number, language: HospitalLanguage) => new Intl.NumberFormat(language === "fr" ? "fr-FR" : language === "ar" ? "ar-SA" : "en-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 2 }).format(value);
+export const hospitalDate = (value: string, language: HospitalLanguage) => new Intl.DateTimeFormat(language === "fr" ? "fr-FR" : language === "ar" ? "ar-SA" : "en-GB", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Riyadh" }).format(new Date(value));
 
 export function hospitalFailure(language: HospitalLanguage, error?: string, code?: string) {
   const known: Record<string, [string, string]> = {

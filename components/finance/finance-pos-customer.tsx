@@ -12,16 +12,16 @@ import { PagerOrderCard } from "@/components/pager/pager-order-card";
 import styles from "./finance.module.css";
 import s from "./finance-pos-customer.module.css";
 import { useFinancePosLocale } from "./finance-pos-locale";
-import { financePosCustomerEnglish } from "@/lib/finance/pos-customer-labels";
+import { financePosText, type FinancePosLanguage } from "@/lib/finance/pos-locale";
 
-export function financePosCustomerNotice(result?: FinancePosCustomerResult, language: "ar" | "en" = "ar") {
+export function financePosCustomerNotice(result?: FinancePosCustomerResult, language: FinancePosLanguage = "ar") {
   if (!result) return "";
   const messages = [result.pagerOrderId ? "أُضيفت الفاتورة إلى البيجر" : ""];
   if (result.loyaltyStatus === "stamped") messages.push("سُجل ختم الولاء للعميل");
   if (result.loyaltyStatus === "pending_enrollment") messages.push("حُفظ ختم الفاتورة لحين إكمال تسجيل بطاقة الولاء");
   if (result.rewardRedeemedId) messages.push("تم صرف المكافأة وإقفالها");
   if (result.notificationStatus === "pending") messages.push("رسالة رابط البطاقة بانتظار الإرسال");
-  return messages.filter(Boolean).map(text => language === "en" ? financePosCustomerEnglish[text] ?? text : text).join(" · ");
+  return messages.filter(Boolean).map(text => financePosText(language, text)).join(" · ");
 }
 
 export function usePosCustomer(slug?: string, country: BrandPhoneCountry = "SA") {

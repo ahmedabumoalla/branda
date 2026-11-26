@@ -6,6 +6,7 @@ import s from "./cashier-language.module.css";
 
 const InitialLocale = createContext<CashierLocale>("ar");
 const FixedLocale = createContext<CashierLocale | null>(null);
+const EmbeddedTranslation = createContext<{ lang: string; labels: Record<string, string> } | undefined>(undefined);
 const changeEvent = "branda-cashier-language-change";
 let memoryLocale: CashierLocale | null = null;
 function readLocale() {
@@ -29,18 +30,19 @@ function selectLocale(locale: CashierLocale) {
 export function useCashierLanguage() {
   const initial = useContext(InitialLocale);
   const fixed = useContext(FixedLocale);
+  const translation = useContext(EmbeddedTranslation);
   const stored = useSyncExternalStore(subscribe, readLocale, () => initial);
   const locale = fixed ?? stored;
-  return useMemo(() => ({ locale, dir: locale === "ar" ? "rtl" as const : "ltr" as const,
-    t: (message: CashierMessage) => cashierText(locale, message), errorText: (message: string) => cashierError(locale, message),
-    selectLocale: (next: CashierLocale) => { if (!fixed) selectLocale(next); } }), [locale, fixed]);
+  return useMemo(() => ({ locale, lang: translation?.lang ?? locale, dir: locale === "ar" ? "rtl" as const : "ltr" as const,
+    t: (message: CashierMessage) => cashierText(locale, message, translation?.labels), errorText: (message: string) => { const result = cashierError(locale, message); return translation?.labels[result] ?? result; },
+    selectLocale: (next: CashierLocale) => { if (!fixed) selectLocale(next); } }), [locale, fixed, translation]);
 }
 function LanguageFrame({ children }: { children: ReactNode }) {
-  const { locale, dir } = useCashierLanguage();
-  return <div lang={locale} dir={dir} className={s.frame}>{children}</div>;
+  const { lang, dir } = useCashierLanguage();
+  return <div lang={lang} dir={dir} className={s.frame}>{children}</div>;
 }
-export function CashierLanguageProvider({ initialLocale, fixedLocale, children }: { initialLocale: CashierLocale; fixedLocale?: CashierLocale; children: ReactNode }) {
-  return <InitialLocale.Provider value={initialLocale}><FixedLocale.Provider value={fixedLocale ?? null}><LanguageFrame>{children}</LanguageFrame></FixedLocale.Provider></InitialLocale.Provider>;
+export function CashierLanguageProvider({ initialLocale, fixedLocale, translation, children }: { initialLocale: CashierLocale; fixedLocale?: CashierLocale; translation?: { lang: string; labels: Record<string, string> }; children: ReactNode }) {
+  return <InitialLocale.Provider value={initialLocale}><FixedLocale.Provider value={fixedLocale ?? null}><EmbeddedTranslation.Provider value={translation}><LanguageFrame>{children}</LanguageFrame></EmbeddedTranslation.Provider></FixedLocale.Provider></InitialLocale.Provider>;
 }
 export function CashierLanguageSwitch({ dark = false }: { dark?: boolean }) {
   const { locale, selectLocale } = useCashierLanguage();
