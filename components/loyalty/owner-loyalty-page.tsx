@@ -9,6 +9,8 @@ import { getWalletReadiness } from "@/lib/wallet";
 import type { LoyaltyDashboardView } from "@/components/rast-loyalty/rast-dashboard";
 import { getDashboardCafeContext } from "@/lib/data/cafes";
 import { getNearbySchedule } from "@/lib/data/nearby-schedule";
+import { getStampInactivitySettings } from "@/app/actions/stamp-inactivity";
+import { StampInactivityEditor } from "./stamp-inactivity-editor";
 
 export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "customers" | "messages" } = {}) {
   const features = await getOwnerFeatureCodes().catch(() => []);
@@ -31,6 +33,8 @@ export async function OwnerLoyaltyPage({ requestedView }: { requestedView?: "cus
         : Promise.resolve(undefined),
     ]);
     if (brand) return <>{experience.error && <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{experience.error}</p>}<RastLoyaltyDashboard key={dashboard.cafeId} initialDashboard={{ program: dashboard.program }} identity={brand.identity}
+      stampInactivity={needsProgram && !staffMode && dashboard.cafeId === "ec9b4415-b68e-4554-acbd-c918bd5cc2f2" ?
+        <StampInactivityEditor initial={await getStampInactivitySettings()} /> : undefined}
       pointsAvailable view={view} initialExperience={experience.settings} nearbySchedule={nearbySchedule} walletAvailability={getWalletReadiness()} products={products} staffMode={staffMode}
       signupUrl={`${(process.env.NEXT_PUBLIC_APP_URL || "https://barndaksa.com").replace(/\/$/, "")}/loyalty/${encodeURIComponent(dashboard.cafeSlug)}?source=qr`} /></>;
     return <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">تعذر تحميل هوية برنامج الولاء حاول تحديث الصفحة</p>;

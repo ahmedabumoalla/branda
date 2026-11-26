@@ -28,6 +28,7 @@ type Props = {
   initialDashboard: Pick<LoyaltyCardsDashboard, "program">;
   initialExperience: LoyaltyExperienceSettings;
   nearbySchedule?: NearbyScheduleEditorState;
+  stampInactivity?: ReactNode;
   identity: LoyaltyIdentity;
   signupUrl: string;
   walletAvailability: RastWalletAvailability;
@@ -38,7 +39,7 @@ type Props = {
   pointsAvailable?: boolean;
 };
 
-export function RastLoyaltyDashboard({ initialDashboard, initialExperience, nearbySchedule, identity, signupUrl, walletAvailability, products = [], activityLog, view = "all", staffMode = false, pointsAvailable = false }: Props) {
+export function RastLoyaltyDashboard({ initialDashboard, initialExperience, nearbySchedule, stampInactivity, identity, signupUrl, walletAvailability, products = [], activityLog, view = "all", staffMode = false, pointsAvailable = false }: Props) {
   const router = useRouter();
   const [section, setSection] = useState<"settings" | "activity" | "customers">("settings");
   const showProgram = view === "rewards" || (view === "all" && section === "settings");
@@ -134,6 +135,7 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, near
         <p data-testid="rast-saved-activation" role="status" className={s.deliveryResult}>{savedActivation.enabled ? "التسجيل مفتوح للعملاء من الرابط أعلاه" : "التسجيل متوقف حاليًا حدّد المكافأة ثم فعّل برنامج الولاء واحفظ لفتح التسجيل من الرابط أعلاه"}</p>
         {pointsAvailable && !staffMode && <PointsProgramEditor saved={savedPoints} draft={pointsDraft}
           onChange={setPointsDraft} onSaved={value => { setSavedPoints(value); setPointsDraft(value); }} />}
+        {!showPoints && stampInactivity}
         <form onSubmit={saveSettings} aria-busy={saving} className={s.settingsForm}>
           <fieldset disabled={saving} className={s.settingsFieldset}>
             <legend>إعدادات البرنامج</legend>
