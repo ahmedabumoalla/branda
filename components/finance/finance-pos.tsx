@@ -43,7 +43,11 @@ type CartLine = FinanceCartLine;
 const quoteOnlyLabel = "بانتظار اعتماد السعر";
 type FinancePOSProps = { initialSnapshot: FinanceSnapshot; slug?: string; dashboardHref?: "/dashboard/finance"; offlineEntry?: boolean };
 export function FinancePOS(props: FinancePOSProps) {
-  return <FinancePosLocaleProvider allowFrench={isHospitalStore(props.initialSnapshot.cafe.slug)} key={`${props.initialSnapshot.cafe.id}:${props.initialSnapshot.userId}`}><StandardFinancePOS {...props} /></FinancePosLocaleProvider>;
+  return <CashierSession key={`${props.initialSnapshot.cafe.id}:${props.initialSnapshot.userId}`} {...props} />;
+}
+function CashierSession(props: FinancePOSProps) {
+  const state = usePosFinance(props.initialSnapshot, props.slug, props.offlineEntry);
+  return <FinancePosLocaleProvider snapshot={state.snapshot} allowFrench={isHospitalStore(props.initialSnapshot.cafe.slug)}><StandardFinancePOS state={state} {...props} /></FinancePosLocaleProvider>;
 }
 export function financeCartLines(cart: CartLine[], products: FinanceProduct[], butcher = false) {
   return financeSelectedCartLines(cart, products, butcher);
@@ -72,11 +76,10 @@ export function PosProductImage({ product }: { product: FinanceProduct }) {
     onError={() => { if (!fallback && product.imageFallbackUrl && product.imageFallbackUrl !== src) setFallback(true); else setFailed(true); }} />;
 }
 
-function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry = false }: FinancePOSProps) {
+function StandardFinancePOS({ state, initialSnapshot, slug, dashboardHref, offlineEntry = false }: FinancePOSProps & { state: ReturnType<typeof usePosFinance> }) {
   const { t, language, dir, setLanguage, productName, categoryName, displayName, money, number, date } = useFinancePosLocale();
   const hospital = isHospitalStore(initialSnapshot.cafe.slug);
   const router = useRouter();
-  const state = usePosFinance(initialSnapshot, slug, offlineEntry);
   const printer = useFinancePrinter(initialSnapshot.cafe.id, initialSnapshot.cafe.businessCategory);
   const { snapshot: data, pending, stale, error, message } = state;
   const butcher = isButcherFinance(data);
@@ -349,7 +352,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
       </select> : <button type="button" className={styles.secondary} data-pos-language-toggle onClick={() => setLanguage(language === "ar" ? "en" : "ar")} aria-label={language === "ar" ? "Switch cashier to English" : "تغيير لغة الكاشير إلى العربية"}>{language === "ar" ? "English" : "العربية"}</button>}
       {hospital && <><HospitalOrdersToolbar snapshot={data} shiftId={shift?.id ?? null} onRefresh={state.refresh} />{canReadLoyalty && <FinancePosLoyaltyReader key={`${data.cafe.id}:${data.userId}`} slug={data.cafe.slug} />}</>}
       <div className={shiftStyles.controls} aria-label={t("إدارة الوردية")}>
-        {hospital && drawers.length > 0 && <label className={shiftStyles.selector}>{t("صندوق الكاشير", "Cashier drawer")}<select value={drawerId} disabled={disabled || loggingOut} onChange={event => selectDrawer(event.target.value)}>{drawers.map(item => <option key={item.id} value={item.id}>{displayName(item.name)}</option>)}</select></label>}
+        {hospital && drawers.length > 0 && <label className={shiftStyles.selector}>{t("صندوق الكاشير", "Cashier drawer")}<select value={drawerId} disabled={disabled || loggingOut} onChange={event => selectDrawer(event.target.value)}>{drawers.map(item => <option key={item.id} value={item.id}>{language === "fr" ? t(item.name) : displayName(item.name)}</option>)}</select></label>}
         {hospital && closableShifts.length > 1 && <label className={shiftStyles.selector}>{t("الوردية المطلوب إقفالها", "Shift to close")}<select value={closeTarget?.id} disabled={disabled || loggingOut} onChange={event => setCloseTargetId(event.target.value)}>{closableShifts.map(item => <option key={item.id} value={item.id}>{item.shift_number ? `#${item.shift_number} · ` : ""}{date(item.opened_at)}</option>)}</select></label>}
         {allows("shift_open") && !shift && !outgoing && incoming.map(item => <button key={item.id} type="button" className={shiftStyles.start} disabled={disabled || loggingOut} title={t(data.accounts.find(account => account.id === item.account_id)?.name ?? t("صندوق الكاشير"))} onClick={() => open({ operation: "shift_accept", title: t("عد النقدية وتأكيد الاستلام"), values: { shiftId: item.id } })}><Plus size={16} aria-hidden="true" />{t("استلام وبدء وردية")}</button>)}
         {allows("shift_open") && (hospital || (!shift && !outgoing && !incoming.length)) && <button type="button" className={shiftStyles.start} disabled={disabled || loggingOut || (!hospital && data.initialized === false)} onClick={() => open({ operation: "shift_open", title: t("بدء وردية جديدة"), ...(hospital ? { values: { accountId: drawerId } } : {}) })}><Plus size={16} aria-hidden="true" />{t("بدء وردية جديدة")}</button>}

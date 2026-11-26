@@ -5,21 +5,33 @@ export type CashierCatalog = { fields: Record<string, LocalizedText>; unavailabl
 const translations = new Map<string, { value: string; expires: number }>();
 const pending = new Map<string, Promise<string>>();
 const arabic = /[\u0600-\u06ff]/;
-async function translate(text: string, target: "ar" | "en") {
+async function translate(text: string, target: "ar" | "en" | "fr") {
   const key = createHash("sha256").update(target + ":" + text).digest("hex");
   const cached = translations.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
   const existing = pending.get(key);
   if (existing) return existing;
   const work = (async () => {
-    // Existing catalog provider, with bounded latency and caching
-    const url = new URL("https://translate.googleapis.com/translate_a/single");
-    url.search = new URLSearchParams({ client: "gtx", sl: "auto", tl: target, dt: "t", q: text }).toString();
-    const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(4500) });
-    if (!response.ok) throw new Error("CATALOG_TRANSLATION_UNAVAILABLE");
-    const body: unknown = await response.json();
-    const value = Array.isArray(body) && Array.isArray(body[0]) ? body[0].map((part: unknown) => Array.isArray(part) && typeof part[0] === "string" ? part[0] : "").join("").trim() : "";
-    if (!value || (target === "en" && arabic.test(value))) throw new Error("CATALOG_TRANSLATION_UNAVAILABLE");
+    let value: string;
+    const apiKey = target === "fr" && process.env.GOOGLE_TRANSLATE_API_KEY;
+    if (apiKey) {
+      const response = await fetch("https://translation.googleapis.com/language/translate/v2", {
+        method: "POST", headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey },
+        body: JSON.stringify({ q: text, target, format: "text" }),
+        cache: "no-store", signal: AbortSignal.timeout(4500),
+      });
+      if (!response.ok) throw new Error("CATALOG_TRANSLATION_UNAVAILABLE");
+      const translated = (await response.json()).data?.translations?.[0]?.translatedText;
+      value = typeof translated === "string" ? translated.trim() : "";
+    } else {
+      const url = new URL("https://translate.googleapis.com/translate_a/single");
+      url.search = new URLSearchParams({ client: "gtx", sl: "auto", tl: target, dt: "t", q: text }).toString();
+      const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(4500) });
+      if (!response.ok) throw new Error("CATALOG_TRANSLATION_UNAVAILABLE");
+      const body: unknown = await response.json();
+      value = Array.isArray(body) && Array.isArray(body[0]) ? body[0].map((part: unknown) => Array.isArray(part) && typeof part[0] === "string" ? part[0] : "").join("").trim() : "";
+    }
+    if (!value || (target !== "ar" && arabic.test(value))) throw new Error("CATALOG_TRANSLATION_UNAVAILABLE");
     if (translations.size >= 2000) translations.delete(translations.keys().next().value!);
     translations.set(key, { value, expires: Date.now() + 86_400_000 });
     return value;
@@ -45,4 +57,9 @@ export async function localizeCashierCatalog(input: Record<string, string>): Pro
     return [key, localized] as const;
   }));
   return { fields: Object.fromEntries(entries), unavailable };
+}
+
+/** Only labels from the authenticated cashier catalogue. */
+export function frenchCatalogText(source: string) {
+  return translate(source, "fr");
 }

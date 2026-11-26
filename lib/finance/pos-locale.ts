@@ -1,3 +1,4 @@
+import { knownFrenchLabel } from "./pos-french-catalog";
 import { hospitalProductName, hospitalCategoryName } from "@/lib/commerce/hospital-labels";
 import { financePosCustomerEnglish } from "./pos-customer-labels";
 import { financePosShiftLabels } from "./pos-shift-labels";
@@ -137,7 +138,7 @@ export function financePosText(language: FinancePosLanguage, text: string, engli
     const englishText = english ?? financePosEnglish[text.trim().replace(/\s+/g, " ")] ?? text.trim();
     const translated = financePosFrench[englishText.trim()];
     if (translated) return text.slice(0, text.length - text.trimStart().length) + translated + text.slice(text.trimEnd().length);
-    return text;
+    return knownFrenchLabel(text) ?? text;
   }
   if (english !== undefined) return english;
   const normalized = text.trim().replace(/\s+/g, " ");
@@ -154,9 +155,8 @@ export function financePosText(language: FinancePosLanguage, text: string, engli
 
 export function financePosProductName(product: { name: string; nameEn?: string | null }, language: FinancePosLanguage) {
   if (language === "fr") {
-    const catalogName = hospitalProductName(product.name, "en");
-    return financePosFrench[product.nameEn?.trim() ?? ""] ?? financePosFrench[catalogName] ?? (product.nameEn?.trim() || product.name);
+    return knownFrenchLabel(product.name, product.nameEn) ?? product.name;
   }
   return language === "en" && product.nameEn?.trim() ? product.nameEn.trim() : financePosDisplayName(hospitalProductName(product.name, language), language);
 }
-export const financePosCategoryName = (name: string, language: FinancePosLanguage) => language === "fr" ? financePosFrench[hospitalCategoryName(name, "en")] ?? name : financePosDisplayName(hospitalCategoryName(name, language), language);
+export const financePosCategoryName = (name: string, language: FinancePosLanguage) => language === "fr" ? knownFrenchLabel(name) ?? name : financePosDisplayName(hospitalCategoryName(name, language), language);
