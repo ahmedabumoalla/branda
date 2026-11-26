@@ -1,3 +1,4 @@
+import { loyaltyLanguage } from "@/lib/loyalty/customer-language";
 import { notFound } from "next/navigation";
 import { getBranchLoyaltyBrand, getLoyaltyMembership } from "@/lib/data/loyalty-experience";
 import { listPublicLoyaltyBranches } from "@/lib/data/loyalty-branches";
@@ -15,9 +16,10 @@ import { loyaltyVisitKind } from "@/lib/analytics/brand-analytics";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "بطاقة الولاء والمكافآت", robots: { index: false, follow: false } };
 
-export default async function LoyaltyJoinPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ source?: string | string[]; branch?: string | string[] }> }) {
+export default async function LoyaltyJoinPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ lang?: string | string[]; source?: string | string[]; branch?: string | string[] }> }) {
   const { slug } = await params;
   const query = await searchParams;
+  const language = loyaltyLanguage(slug, query.lang);
   if (query.branch !== undefined && (typeof query.branch !== "string" || !/^[a-f0-9-]{36}$/i.test(query.branch))) notFound();
   const branchId = typeof query.branch === "string" ? query.branch : undefined;
   const [brand, profile] = await Promise.all([getBranchLoyaltyBrand(slug, branchId), getLoyaltyCustomerProfile(slug)]);
@@ -30,6 +32,6 @@ export default async function LoyaltyJoinPage({ params, searchParams }: { params
   const membership = brand.program.enabled && profile ? await getLoyaltyMembership(slug, branchId) : null;
   const readiness = getWalletReadiness();
   const analytics = brand.program.enabled ? <PublicPageAnalytics slug={slug} kind={loyaltyVisitKind((await searchParams).source)} /> : null;
-  if (membership) return <>{analytics}<RastMemberCard identity={membership.identity} member={membership} loadedAt={membership.loadedAt} walletAvailability={{ apple: readiness.apple && brand.program.appleWalletEnabled, google: readiness.google && brand.program.googleWalletEnabled }} /></>;
-  return <>{analytics}<RastEnrollment phoneCountry={await getBrandPhoneCountry(brand.cafeId)} identity={brand.identity} program={brand.program} authenticated={Boolean(profile)} /></>;
+  if (membership) return <>{analytics}<RastMemberCard language={language} identity={membership.identity} member={membership} loadedAt={membership.loadedAt} walletAvailability={{ apple: readiness.apple && brand.program.appleWalletEnabled, google: readiness.google && brand.program.googleWalletEnabled }} /></>;
+  return <>{analytics}<RastEnrollment language={language} phoneCountry={await getBrandPhoneCountry(brand.cafeId)} identity={brand.identity} program={brand.program} authenticated={Boolean(profile)} /></>;
 }

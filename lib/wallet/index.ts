@@ -5,6 +5,7 @@ import { getWalletReadiness } from "./config";
 import { issueApplePass as generateApplePass, pushAppleDevice } from "./apple";
 import { issueGoogleSaveUrl as generateGoogleSaveUrl, updateGooglePass, notifyGoogleBrand } from "./google";
 import type { WalletMember, WalletDeliveryResult } from "./types";
+import { walletInLanguage } from "./language";
 import { appleUpdateTag } from "./update-tags";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
@@ -14,7 +15,12 @@ export { walletBrandLogo } from "./apple";
 export type { WalletMember, WalletDeliveryResult } from "./types";
 
 async function trackIssuedPass(member: WalletMember, provider: "apple" | "google") {
-  const { error } = await createAdminClient().from("wallet_passes").upsert({ card_id: member.card.id, cafe_id: member.card.cafeId, provider }, { onConflict: "card_id,provider", ignoreDuplicates: true });
+  const pass = {
+    card_id: member.card.id, cafe_id: member.card.cafeId, provider,
+    ...(member.language ? { display_language: member.language, updated_at: new Date().toISOString() } : {}),
+  };
+  const { error } = await createAdminClient().from("wallet_passes")
+    .upsert(pass, { onConflict: "card_id,provider", ignoreDuplicates: !member.language });
   if (error) throw new Error("wallet_tracking_unavailable");
   const { error: downloadError } = await createAdminClient().rpc("record_wallet_download", { p_card_id: member.card.id, p_provider: provider });
   if (downloadError) throw new Error("wallet_tracking_unavailable");
@@ -101,7 +107,7 @@ async function syncMember(member: WalletMember, previous?: WalletDeliveryResult,
   if (!await brandAllowsNewWork(member.card.cafeId)) return skipped();
   const result = skipped();
   const readiness = getWalletReadiness();
-  const { data: passes, error } = await createAdminClient().from("wallet_passes").select("provider,updated_at,apple_last_served_update").eq("card_id", member.card.id).eq("cafe_id", member.card.cafeId);
+  const { data: passes, error } = await createAdminClient().from("wallet_passes").select("provider,display_language,updated_at,apple_last_served_update").eq("card_id", member.card.id).eq("cafe_id", member.card.cafeId);
   if (error) throw new Error("wallet_tracking_unavailable");
   const hasGoogle = passes?.some(pass => pass.provider === "google") && member.program.googleWalletEnabled;
   const hasApple = passes?.some(pass => pass.provider === "apple") && member.program.appleWalletEnabled;
@@ -110,7 +116,7 @@ async function syncMember(member: WalletMember, previous?: WalletDeliveryResult,
   // New scans can coalesce into an existing pending sync job. Provider success
   // from an older attempt is not evidence that Google has the current balance.
   if (readiness.google && hasGoogle) {
-    try { await updateGooglePass(member, !silent && previous?.google?.status !== "accepted"); result.google = { status: "accepted", count: 1 }; } catch (error) { result.google = providerFailed(error); }
+    try { await updateGooglePass(walletInLanguage(member, passes?.find(pass => pass.provider === "google")?.display_language), !silent && previous?.google?.status !== "accepted"); result.google = { status: "accepted", count: 1 }; } catch (error) { result.google = providerFailed(error); }
   }
   const applePass = passes?.find(pass => pass.provider === "apple");
   if (readiness.apple && hasApple) {
@@ -177,9 +183,9 @@ async function deliverBrandMessage(cafeId: string, title: string, body: string, 
   if (!await brandAllowsNewWork(cafeId)) return result;
   if (!featureCodesAllow(await getCafeFeatureCodes(cafeId), "loyalty")) return result;
   const readiness = getWalletReadiness();
-  const passes: { provider: string; card_id: string }[] = [];
+  const passes: { provider: string; card_id: string; display_language: string }[] = [];
   for (let offset = 0; ; offset += 500) {
-    const { data, error } = await createAdminClient().from("wallet_passes").select("provider,card_id").eq("cafe_id", cafeId)
+    const { data, error } = await createAdminClient().from("wallet_passes").select("provider,card_id,display_language").eq("cafe_id", cafeId)
       .order("card_id").order("provider").range(offset, offset + 499);
     if (error) throw new Error("wallet_tracking_unavailable");
     passes.push(...(data ?? []));
@@ -195,16 +201,20 @@ async function deliverBrandMessage(cafeId: string, title: string, body: string, 
   if (previous?.google?.status === "accepted") result.google = previous.google;
   else if (readiness.google && googleCount) {
     try {
-      const branchIds = new Set<string | undefined>();
+      const classes = new Map<string, { branchId?: string; english: boolean }>();
+      const englishCards = new Set(passes.filter(pass => pass.provider === "google" && pass.display_language === "en").map(pass => pass.card_id));
       const ids = passes.filter(pass => pass.provider === "google").map(pass => pass.card_id);
       for (let offset = 0; offset < ids.length; offset += 100) {
-        const { data: cards, error } = await createAdminClient().from("loyalty_cards").select("loyalty_branch_id").eq("cafe_id", cafeId).in("id", ids.slice(offset, offset + 100));
+        const { data: cards, error } = await createAdminClient().from("loyalty_cards").select("id,loyalty_branch_id").eq("cafe_id", cafeId).in("id", ids.slice(offset, offset + 100));
         if (error || cards?.length !== ids.slice(offset, offset + 100).length) throw new Error("wallet_branch_tracking_unavailable");
-        for (const card of cards ?? []) branchIds.add(card.loyalty_branch_id || undefined);
+        for (const card of cards ?? []) {
+          const english = englishCards.has(card.id);
+          classes.set(`${card.loyalty_branch_id ?? ""}:${english}`, { branchId: card.loyalty_branch_id || undefined, english });
+        }
       }
-      for (const branchId of branchIds) await notifyGoogleBrand(cafeId, title, body, messageId, branchId);
+      for (const { branchId, english } of classes.values()) await notifyGoogleBrand(cafeId, title, body, messageId, branchId, english);
       await recordPromotionRecipients(messageId, cafeId, "google", passes.filter(pass => pass.provider === "google").map(pass => pass.card_id));
-      result.google = { status: "accepted", count: branchIds.size };
+      result.google = { status: "accepted", count: classes.size };
     } catch (error) { result.google = providerFailed(error); }
   }
   if (previous?.apple?.status === "accepted") result.apple = previous.apple;

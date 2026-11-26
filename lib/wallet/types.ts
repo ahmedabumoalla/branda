@@ -3,6 +3,7 @@ import type { WalletBranchLocation } from "./branch-locations";
 import type { WalletLink } from "@/lib/loyalty/wallet-links";
 
 export type WalletMember = {
+  language?: "ar" | "en";
   card: LoyaltyBrandCard;
   program: LoyaltyCardProgram;
   cafeSlug: string;

@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadWalletMemberByCode } from "@/lib/data/loyalty-experience";
+import { walletInLanguage } from "./language";
 import { appleConfig } from "./config";
 import { issueApplePass, verifyAppleAuth } from "./apple";
 import { appleUpdateTag, appleUpdateTimestamp } from "./update-tags";
@@ -85,7 +86,7 @@ export async function downloadUpdatedApplePass(request: Request, passType: strin
   const db = createAdminClient();
   // Observe the update tag before loading the pass contents. A concurrent scan
   // must never label an older snapshot with the newer version's timestamp.
-  const { data: pass, error } = await db.from("wallet_passes").select("card_id,updated_at,loyalty_cards!inner(card_code)").eq("loyalty_cards.card_code", serial).eq("provider", "apple").maybeSingle();
+  const { data: pass, error } = await db.from("wallet_passes").select("card_id,updated_at,display_language,loyalty_cards!inner(card_code)").eq("loyalty_cards.card_code", serial).eq("provider", "apple").maybeSingle();
   if (error) throw new Error("wallet_updates_unavailable");
   const member = await loadWalletMemberByCode(serial);
   if (!member?.program.enabled || !member.program.appleWalletEnabled) return new Response(null, { status: 404, headers: noStore });
@@ -93,7 +94,7 @@ export async function downloadUpdatedApplePass(request: Request, passType: strin
   const since = request.headers.get("if-modified-since");
   // Never truncate subsecond update tags: If-Modified-Since is second-resolution and would lose rapid scans.
   if (since && Number.isFinite(Date.parse(since)) && Date.parse(updatedAt) < Date.parse(since)) return new Response(null, { status: 304, headers: noStore });
-  const buffer = await issueApplePass(member);
+  const buffer = await issueApplePass(walletInLanguage(member, pass?.display_language));
   if (pass) {
     // Evidence that an authenticated device requested this version; it is not
     // a guarantee that every registered phone displayed the response.

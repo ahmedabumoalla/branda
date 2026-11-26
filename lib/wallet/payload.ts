@@ -5,7 +5,8 @@ import { isMqas77Wallet, MQAS77_WALLET_COLORS, MQAS77_WALLET_VERSION, MQAS77_WAL
 import { normalizeWalletLocations, walletLocationText } from "./branch-locations";
 import { describePointsRewards, nextPointsReward } from "@/lib/loyalty/reward-path";
 
-export function googleClassId(issuerId: string, cafeId: string, branchId?: string) {
+export function googleClassId(issuerId: string, cafeId: string, branchId?: string, english = false): string {
+  if (english) return `${googleClassId(issuerId, cafeId, branchId)}_en`;
   if (branchId) return `${issuerId}.branda_${cafeId.replace(/-/g, "")}_branch_${branchId.replace(/-/g, "")}`;
   const override = process.env.GOOGLE_WALLET_RAST_CLASS_ID;
   if (override && cafeId === "3c697864-d371-4190-87ab-48f183cdf2d5") {
@@ -46,12 +47,12 @@ export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl
   const points = member.program.pointsProgram;
   const logoVersion = mqas77 ? MQAS77_WALLET_VERSION : walletArtifactKey(JSON.stringify([member.cafeName, member.logoUrl, member.program.cardBackground]));
   return {
-    id: googleClassId(issuerId, member.card.cafeId, member.branchId),
+    id: googleClassId(issuerId, member.card.cafeId, member.branchId, member.language === "en"),
     issuerName: mqas77 ? MQAS77_WALLET_NAME : member.cafeName,
-    localizedIssuerName: { defaultValue: { language: mqas77 ? "en" : "ar", value: mqas77 ? MQAS77_WALLET_NAME : member.cafeName } },
+    localizedIssuerName: { defaultValue: { language: mqas77 ? "en" : member.language ?? "ar", value: mqas77 ? MQAS77_WALLET_NAME : member.cafeName } },
     programName: member.program.cardTitle,
-    localizedProgramName: { defaultValue: { language: "ar", value: member.program.cardTitle } },
-    programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/brand/${encodeURIComponent(member.cafeSlug)}/logo?v=${logoVersion}${member.branchId ? `&branch=${encodeURIComponent(member.branchId)}` : ""}${mqas77 ? "&wallet=mqas77" : ""}` }, contentDescription: { defaultValue: { language: "ar", value: member.cafeName } } },
+    localizedProgramName: { defaultValue: { language: member.language ?? "ar", value: member.program.cardTitle } },
+    programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/brand/${encodeURIComponent(member.cafeSlug)}/logo?v=${logoVersion}${member.branchId ? `&branch=${encodeURIComponent(member.branchId)}` : ""}${mqas77 ? "&wallet=mqas77" : ""}` }, contentDescription: { defaultValue: { language: member.language ?? "ar", value: member.cafeName } } },
     reviewStatus: "UNDER_REVIEW",
     multipleDevicesAndHoldersAllowedStatus: "ONE_USER_ALL_DEVICES",
     hexBackgroundColor: walletColors(member).background,
@@ -70,7 +71,7 @@ export function buildGoogleObject(member: WalletMember, issuerId: string, artwor
   const next = points && nextPointsReward(points.milestones, balance);
   const affordable = points?.milestones.findLast(tier => tier.points <= balance);
   return {
-    id: googleObjectId(issuerId, member), classId: googleClassId(issuerId, member.card.cafeId, member.branchId),
+    id: googleObjectId(issuerId, member), classId: googleClassId(issuerId, member.card.cafeId, member.branchId, member.language === "en"),
     state: member.program.enabled ? "ACTIVE" : "INACTIVE",
     barcode: { type: "QR_CODE", value: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), alternateText: member.card.displayNumber || member.card.cardCode },
     loyaltyPoints: points ? { label: "رصيد النقاط", balance: { int: balance } } : (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
@@ -79,13 +80,13 @@ export function buildGoogleObject(member: WalletMember, issuerId: string, artwor
     secondaryLoyaltyPoints: affordable ? { label: "متاحة للاستبدال", balance: { string: `${affordable.reward} · ${affordable.points} نقطة` } }
       : next ? { label: next.reward, balance: { string: `باقي ${next.points - balance} نقطة` } } : (isMqas77Wallet(member.cafeSlug) && !member.program.autoLogo)
       ? { label: "أختام للمكافأة", balance: { int: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) } }
-      : { label: "المكافآت المتاحة", balance: { int: member.card.availableRewards } },
+      : { label: member.language === "en" ? "Rewards" : "المكافآت المتاحة", balance: { int: member.card.availableRewards } },
     // PATCH must clear this card's points-only module when the program returns to stamps.
     ...(member.program.pointsProgram ? { textModulesData: points
       ? [{ id: "pointsPath", header: "مسار المكافآت", body: describePointsRewards(points.milestones, balance) }]
       : [] } : {}),
     merchantLocations: walletLocations(member),
     hexBackgroundColor: walletColors(member).background,
-    ...(artworkUrl ? { heroImage: { sourceUri: { uri: artworkUrl }, contentDescription: { defaultValue: { language: "ar", value: points ? "مسار مكافآت النقاط" : member.program.stampLabel } } } } : {}),
+    ...(artworkUrl ? { heroImage: { sourceUri: { uri: artworkUrl }, contentDescription: { defaultValue: { language: member.language ?? "ar", value: points ? "مسار مكافآت النقاط" : member.program.stampLabel } } } } : {}),
   };
 }

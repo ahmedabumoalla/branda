@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
+import type { LoyaltyLanguage } from "@/lib/loyalty/customer-language";
 import { LoaderCircle, Wallet } from "lucide-react";
 import s from "./rast-loyalty.module.css";
 
-export function WalletDownloadLink({ provider, cardCode }: { provider: "apple" | "google"; cardCode: string }) {
+export function WalletDownloadLink({ provider, cardCode, language = "ar" }: { language?: LoyaltyLanguage; provider: "apple" | "google"; cardCode: string }) {
   const [phase, setPhase] = useState<"idle" | "opening" | "retry">("idle");
   const locked = useRef(false);
   useEffect(() => {
@@ -25,10 +26,10 @@ export function WalletDownloadLink({ provider, cardCode }: { provider: "apple" |
     locked.current = true; setPhase("opening");
     // Preserve the browser's native pkpass download / Google redirect.
   }
-  return <a className={s.walletButton} href={`/api/wallet/${provider}/${encodeURIComponent(cardCode)}`}
+  return <a className={s.walletButton} href={`/api/wallet/${provider}/${encodeURIComponent(cardCode)}${language === "en" ? "?lang=en" : ""}`}
     target={provider === "apple" ? "_blank" : undefined} rel={provider === "apple" ? "noopener" : undefined}
     onClick={open} aria-disabled={phase === "opening" || undefined} aria-busy={phase === "opening"}>
     {phase === "opening" ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <Wallet aria-hidden="true" />}
-    <span><small role="status">{phase === "opening" ? "جار فتح المحفظة" : phase === "retry" ? "لم تفتح؟ حاول مجددًا" : "تحميل البطاقة إلى"}</small><strong dir="ltr">{provider === "apple" ? "Apple Wallet" : "Google Wallet"}</strong></span>
+    <span><small role="status">{language === "en" ? (phase === "opening" ? "Opening wallet" : phase === "retry" ? "Try again" : "Add to") : phase === "opening" ? "جار فتح المحفظة" : phase === "retry" ? "لم تفتح؟ حاول مجددًا" : "تحميل البطاقة إلى"}</small><strong dir="ltr">{provider === "apple" ? "Apple Wallet" : "Google Wallet"}</strong></span>
   </a>;
 }
