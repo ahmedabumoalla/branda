@@ -11,10 +11,11 @@ export async function InventoryMenuCatalog({ branchId, productId }: { branchId?:
     const snapshot = await readInventory({ catalog: true }, cafe.slug);
     return <InventoryWorkspace snapshot={snapshot} module="items" mode="list" />;
   }
-  const { menu, branches, branch } = await readInventoryMenu(branchId);
+  const { menu, branches, branch, servingCosts } = await readInventoryMenu(branchId);
   return <MenuPageClient
     key={`${branch?.id ?? "unbranched"}:${productId ?? "list"}`}
     inventoryCatalog
+    servingCosts={servingCosts}
     initialProductId={productId}
     initialProducts={menu.products}
     initialCategories={menu.categories}

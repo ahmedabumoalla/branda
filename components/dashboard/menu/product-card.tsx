@@ -11,10 +11,11 @@ type Props = {
   product: MenuProduct; index?: number; busy?: boolean; categoryLabel?: string;
   freeProductLabel?: string; businessCategory?: string;
   currencyCode?: string;
+  servingCost?: import("@/lib/finance/menu-serving-cost").MenuServingCost | "unavailable" | "unlinked";
   onEdit: () => void; onDuplicate: () => void; onToggleAvailability: () => void; onDelete: () => void;
   onInventoryIngredients?: () => void;
 };
-export function MenuProductCard({ product, busy = false, categoryLabel, freeProductLabel, onEdit, onDuplicate, onToggleAvailability, onDelete, businessCategory, onInventoryIngredients, currencyCode }: Props) {
+export function MenuProductCard({ product, busy = false, categoryLabel, freeProductLabel, onEdit, onDuplicate, onToggleAvailability, onDelete, businessCategory, onInventoryIngredients, currencyCode, servingCost }: Props) {
   const isEvents = getBusinessCopy(businessCategory).kind === "events";
   const isSalon = businessCategory === "hair_salons";
   const isGifts = businessCategory === "gifts_flowers" || businessCategory === "clothing_stores" || businessCategory === "retail_stores";
@@ -45,6 +46,16 @@ export function MenuProductCard({ product, busy = false, categoryLabel, freeProd
       {isEvents ? <span className={styles.secondaryInfo}>السعة {product.eventTicketSettings?.capacity?.toLocaleString("ar-SA") ?? "غير محددة"}<br />{product.eventTicketSettings?.checkinPolicy === "multi_use" ? "دخول متعدد" : "دخول مرة واحدة"}</span>
         : isSalon || isGifts ? <span className={styles.secondaryInfo}>{product.catalogKind === "service" ? "خدمة" : "منتج"}{product.catalogKind === "service" && product.preparationTimeMinutes ? <><Clock3 size={14} aria-hidden="true" />{product.preparationTimeMinutes} دقيقة</> : null}</span> : product.calories !== undefined && <span className={styles.secondaryInfo}><Flame size={14} aria-hidden="true" />{product.calories.toLocaleString("ar-SA")} سعرة</span>}
     </div>
+    {servingCost && (typeof servingCost === "string"
+      ? <p className={styles.secondaryInfo}>{servingCost === "unavailable" ? "تعذر تحميل تكلفة المكونات" : "لم تُربط مكونات مخزنية"}</p>
+      : <details className={styles.productDetails}>
+        <summary>تكلفة الحصة <strong>{servingCost.amount === null ? "غير مكتملة" : formatAccountMoney(Number(servingCost.amount.toFixed(2)), currencyCode)}</strong><ChevronDown size={14} aria-hidden="true" /></summary>
+        <p className={styles.description}>بحسب متوسط تكلفة المخزون وكمية كل مكوّن في حصة واحدة</p>
+        {servingCost.lines.map(line => <p className={styles.description} key={line.itemId}>
+          {line.name} · {line.quantity.toLocaleString("ar-SA")} {line.unit} · {line.amount === null ? "تكلفة غير موثقة" : formatAccountMoney(line.amount, currencyCode)}
+          {line.divisor > 1 && <> · حصة من تكلفة موزعة على {line.divisor.toLocaleString("ar-SA")} منتجات</>}
+        </p>)}
+      </details>)}
     {promoOn && product.promo && <p className={styles.activePromo}><Gift size={14} aria-hidden="true" />{promoBadgeText(product.promo)}</p>}
     {hasDetails && <details className={styles.productDetails}>
       <summary>تفاصيل {isEvents ? "التذكرة" : "الصنف"}{product.promo && !promoOn ? " والعرض غير النشط" : ""}<ChevronDown size={14} aria-hidden="true" /></summary>

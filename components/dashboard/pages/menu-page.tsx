@@ -96,10 +96,11 @@ type Props = {
   branches?: { id: string; name: string; slug: string }[];
   configError?: string;
   inventoryCatalog?: boolean;
+  servingCosts?: import("@/lib/finance/menu-serving-cost").MenuServingCosts | null;
   initialProductId?: string;
 };
 
-export function MenuPageClient({ awlad = false, localDraft = false, initialProducts, initialCategories, businessCategory, cafeSlug, currencyCode, currencyLabel, branchId, branchName, branchSlug, branches = [], configError, inventoryCatalog = false, initialProductId }: Props) {
+export function MenuPageClient({ awlad = false, localDraft = false, initialProducts, initialCategories, businessCategory, cafeSlug, currencyCode, currencyLabel, branchId, branchName, branchSlug, branches = [], configError, inventoryCatalog = false, initialProductId, servingCosts }: Props) {
   const router = useRouter();
   const [branchPending, startBranchTransition] = useTransition();
   const [requestedBranchName, setRequestedBranchName] = useState("");
@@ -442,6 +443,7 @@ export function MenuPageClient({ awlad = false, localDraft = false, initialProdu
               {filtered.map((product, index) => (
                   <MenuProductCard
                     currencyCode={currencyCode}
+                    servingCost={servingCosts === null ? "unavailable" : servingCosts?.[product.id] ?? (servingCosts ? "unlinked" : undefined)}
                     onInventoryIngredients={inventoryCatalog && cafeSlug ? () => setIngredientsProduct(product) : undefined}
                     key={product.id}
                     product={product}
