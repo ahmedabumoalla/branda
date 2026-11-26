@@ -6,6 +6,7 @@ export type PosShiftReport = {
   accountName: string;
   generatedAt: string;
   invoiceCount: number;
+  invoicesAtClose?: { kind: "cash" | "receivable" | "pos" | "bank" | "partial" | "other"; count: number; total: number }[];
   salesTotal: number;
   refundsTotal: number;
   netSales: number;

@@ -28,7 +28,7 @@ function OrderPhoto({ src, quantity }: { src?: string | null; quantity?: number 
   return <span className={s.photo}>{src && !failed ? <Image src={src} alt="" width={80} height={80} unoptimized loading="lazy" onError={() => setFailed(true)} /> : <Coffee size={22} aria-hidden="true" />}{quantity !== undefined && <b aria-label={`${t("الكمية", "Quantity")}: ${number(quantity)}`}><bdi>{number(quantity)}</bdi><span aria-hidden="true">×</span></b>}</span>;
 }
 
-export function HospitalOrdersToolbar({ snapshot, onRefresh }: { snapshot: FinanceSnapshot; onRefresh: () => unknown }) {
+export function HospitalOrdersToolbar({ snapshot, shiftId, onRefresh }: { snapshot: FinanceSnapshot; shiftId: string | null; onRefresh: () => unknown }) {
   const { language, dir, t, displayName, number } = useFinancePosLocale();
   const inbox = useHospitalInbox(snapshot.cafe.slug, snapshot.cafe.id, snapshot.userId);
   const sound = useHospitalOrderSound(inbox.notice?.id);
@@ -80,7 +80,7 @@ export function HospitalOrdersToolbar({ snapshot, onRefresh }: { snapshot: Finan
             <strong>{displayName(order.doctor || order.customerName)}</strong><span className={s.location}><MapPin size={16} aria-hidden="true" />{t("الدور", "Floor")} {displayName(order.floor)} · {displayName(order.clinic)}</span>
             <span className={s.previews}>{order.items.slice(0, 4).map((item, index) => <OrderPhoto key={`${item.productId}:${index}`} src={item.imageUrl ?? snapshot.products.find(product => product.id === item.productId)?.imageUrl} quantity={item.quantity} />)}{order.items.length > 4 && <small>+{number(order.items.length - 4)}</small>}</span>
           </button>)}</div>
-          {selected ? <HospitalOrderDetails key={selected.id} order={selected} snapshot={snapshot} saved={saved} print={() => void print(selected)} printBusy={receiptBusy} stale={inbox.failed} /> : <div className={s.empty}><Building2 size={42} aria-hidden="true" /><p>{t("اختر طلبًا لمراجعة الأصناف ومكان الدكتور", "Select an order to review items and the doctor’s location")}</p></div>}
+          {selected ? <HospitalOrderDetails key={selected.id} order={selected} snapshot={snapshot} shiftId={shiftId} saved={saved} print={() => void print(selected)} printBusy={receiptBusy} stale={inbox.failed} /> : <div className={s.empty}><Building2 size={42} aria-hidden="true" /><p>{t("اختر طلبًا لمراجعة الأصناف ومكان الدكتور", "Select an order to review items and the doctor’s location")}</p></div>}
         </div>}
       </div>
     </FinancePosModal>
@@ -88,13 +88,13 @@ export function HospitalOrdersToolbar({ snapshot, onRefresh }: { snapshot: Finan
   </>;
 }
 
-function HospitalOrderDetails({ order, snapshot, saved, print, printBusy, stale }: { order: HospitalOrder; snapshot: FinanceSnapshot; saved: (result: HospitalOrderCommandResult) => Promise<void>; print: () => void; printBusy: boolean; stale: boolean }) {
+function HospitalOrderDetails({ order, snapshot, shiftId, saved, print, printBusy, stale }: { order: HospitalOrder; snapshot: FinanceSnapshot; shiftId: string | null; saved: (result: HospitalOrderCommandResult) => Promise<void>; print: () => void; printBusy: boolean; stale: boolean }) {
   const { language, t, displayName, productName, money, number } = useFinancePosLocale();
   const [rejecting, setRejecting] = useState(false), [reason, setReason] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false), [success, setSuccess] = useState("");
   const [method, setMethod] = useState<"cash" | "card" | "credit">("cash"), [accountId, setAccountId] = useState(""), [warehouseId, setWarehouseId] = useState(snapshot.warehouses.find(warehouse => warehouse.active)?.id ?? "");
   const [prices, setPrices] = useState(order.items.map(item => item.priceMode === "cashier" ? "" : String(item.unitPrice)));
   const lock = useRef(false), retry = useRef<{ fingerprint: string; requestId: string } | null>(null);
-  const shift = snapshot.shifts.find(row => row.user_id === snapshot.userId && row.status === "open" && !row.supervisor_paused);
+  const shift = snapshot.mindDrawerShifts?.find(row => row.id === shiftId && row.status === "open" && !row.supervisor_paused);
   const accounts = hospitalCheckoutAccounts(snapshot.accounts, method, shift);
   const account = accounts.find(row => row.id === accountId) ?? accounts.find(row => row.is_primary) ?? accounts[0];
   // The price comes from the menu product card: only a product the owner marked as priced by the cashier asks for a price here, every other product is invoiced at its menu price.

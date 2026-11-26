@@ -13,7 +13,7 @@ export function hospitalPricesConfirmed(items: HospitalOrderLine[], values: stri
   });
 }
 
-export function hospitalCheckoutAccounts(accounts: FinanceAccount[], method: "cash" | "card" | "credit", shift?: FinanceShift) {
+export function hospitalCheckoutAccounts(accounts: FinanceAccount[], method: "cash" | "card" | "credit", shift?: Pick<FinanceShift, "status" | "supervisor_paused" | "account_id">) {
   if (method === "credit") return [];
   return accounts.filter(account => account.active && (method === "cash" ? !!shift && shift.status === "open" && !shift.supervisor_paused && account.kind === "cash" && account.id === shift.account_id : account.kind === "pos"));
 }

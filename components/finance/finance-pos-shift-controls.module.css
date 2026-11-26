@@ -1,4 +1,6 @@
 .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.selector { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.selector select { min-height: 44px; max-width: 100%; padding-inline: 8px; border: 1px solid var(--finance-line); border-radius: 12px; color: var(--finance-ink); background: var(--finance-paper); font: inherit; }
 .controls button { display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px; border: 1px solid transparent; border-radius: 12px; font: inherit; font-size: 12px; font-weight: 750; white-space: nowrap; cursor: pointer; }
 .start { background: #146c46; color: #fff; }
 .end { background: #a52c32; color: #fff; }

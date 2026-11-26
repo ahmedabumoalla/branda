@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FinanceCommandResult, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { createFinanceReceiptPreview } from "@/lib/finance/receipt-preview";
+import { isHospitalStore } from "@/lib/commerce/hospital-profile";
 import { financeProductSelection, isButcherFinance, validatePosExpectedAmount, validatePosSaleShift } from "@/lib/finance/pos-product-selection";
 import { drainOfflineSales, pendingSales, posScope, projectOfflineSales, type OfflineSale, type PosSyncResponse } from "@/lib/finance/pos-offline";
-import { acknowledgeOfflineSale, flagOfflineConflict, getOfflineSession, listOfflineSales, lockOfflineSession, retryOfflineConflicts, saveOfflineSnapshot, storeOfflineSale, withOfflineSyncLease } from "@/lib/finance/pos-offline-storage";
+import { acknowledgeOfflineSale, flagOfflineConflict, getOfflineSession, listOfflineSales, lockOfflineSession, recordMindShiftCommit, retryOfflineConflicts, saveOfflineSnapshot, storeOfflineSale, withOfflineSyncLease } from "@/lib/finance/pos-offline-storage";
 import { cachedReceiptBrand, prepareOfflineAssets } from "@/lib/finance/pos-offline-assets";
 import type { ReceiptBrand } from "./finance-receipt-print";
 import type { FinanceFormOperation } from "./finance-operation-form";
@@ -68,6 +69,7 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
         // Do not mark an acknowledgement reflected until this fresh snapshot includes it.
         await saveOfflineSnapshot(body.snapshot, true, true);
         await drainOfflineSales({
+          independentShifts: isHospitalStore(targetSlug),
           list: () => listOfflineSales(scope),
           send: async sale => {
             try {
@@ -101,7 +103,7 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
       });
     } catch { if (alive.current) setConnected(false); }
     finally { syncBusy.current = false; finishSync(); if (alive.current) setSyncing(false); }
-  }, [endpoint, initialSnapshot.cafe.id, initialSnapshot.userId, reload, scope]);
+  }, [endpoint, initialSnapshot.cafe.id, initialSnapshot.userId, reload, scope, targetSlug]);
 
   useEffect(() => {
     alive.current = true;
@@ -134,16 +136,27 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
   // Restored offline sessions and unsent receipts still synchronize without delay.
   useEffect(() => { if (ready && (offlineEntry || pendingSales(current.current.sales).length)) void sync(); }, [ready, sync, offlineEntry]);
 
-  async function execute(operation: FinanceFormOperation, payload: Record<string, unknown>): Promise<FinanceCommandResult | null> {
+  async function execute(operation: FinanceFormOperation, payload: Record<string, unknown>, onCommitted?: (result: FinanceCommandResult) => void): Promise<FinanceCommandResult | null> {
     if (busy.current || blocked || !ready) return null;
     if (operation !== "sale") {
       busy.current = true; setSaving(true);
       try {
-      if (!navigator.onLine || !connected) { setError("هذه العملية تحتاج اتصالًا بالإنترنت المبيعات والفواتير المحلية محفوظة"); return null; }
-      if (pendingSales(await listOfflineSales(scope)).length) { setError("انتظر مزامنة الفواتير قبل إقفال الوردية أو تعديل أرصدتها"); return null; }
+      const independentShift = isHospitalStore(targetSlug) && (operation === "shift_open" || operation === "shift_close");
+      if (!navigator.onLine || (!independentShift && !connected)) { setError("هذه العملية تحتاج اتصالًا بالإنترنت المبيعات والفواتير المحلية محفوظة"); return null; }
+      if (!independentShift && pendingSales(await listOfflineSales(scope)).length) { setError("انتظر مزامنة الفواتير قبل إقفال الوردية أو تعديل أرصدتها"); return null; }
       const shiftOperation = ["shift_open", "shift_close", "shift_accept", "shift_handover"].includes(operation);
       const result = await base.execute(operation, payload, !shiftOperation);
-      if (result) await sync(true);
+      if (result && result.status !== "pending" && result.status !== "rejected") {
+        onCommitted?.(result);
+        if (independentShift && result.drawerShift) {
+          try {
+            await recordMindShiftCommit(scope, result.drawerShift, operation === "shift_close" ? String(payload.shiftId) : undefined);
+            await reload();
+            notify();
+          } catch { setError("تم حفظ الوردية تعذر تحديث نسخة الجهاز حدّث الكاشير قبل متابعة البيع"); }
+          void sync(true);
+        } else await sync(true);
+      } else if (result) await sync(true);
       return result;
       } finally { busy.current = false; setSaving(false); }
     }

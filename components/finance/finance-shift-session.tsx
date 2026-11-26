@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
+import { isHospitalStore } from "@/lib/commerce/hospital-profile";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, Pause, Play, Printer, RefreshCw, Square } from "lucide-react";
 import { readShiftSessionSummaryAction, readShiftSessionRowsAction, readShiftSessionActivityAction } from "@/app/actions/finance-shift-sessions";
@@ -18,6 +20,8 @@ import { Empty, financeDate, Numeric } from "./finance-ui";
 import styles from "./finance.module.css";
 import css from "./finance-shift-monitor.module.css";
 
+const FinancePosShiftReport = dynamic(() => import("./finance-pos-shift-report").then(module => module.FinancePosShiftReport));
+
 const tabs: [ShiftSessionTab, string][] = [["summary", "الملخص"], ["movements", "حركات المال"], ["invoices", "الفواتير"], ["refunds", "المردود"], ["payments", "مدفوعات العميل"], ["activity", "سجل النشاطات"]];
 const methodNames: Record<string, string> = { cash: "نقدي", bank: "تحويل بنكي", pos: "شبكة", credit: "رصيد العميل", receivable: "آجل" };
 const actionNames: Record<string, string> = { open: "فتح الوردية", closed: "إغلاق الوردية", pause: "إيقاف البيع مؤقتًا", resume: "استئناف البيع", close: "إقفال إداري" };
@@ -33,6 +37,8 @@ function Money({ value }: { value: number }) { return <Numeric value={value} mon
 export function FinanceShiftSession(props: Props) {
   const [data, setData] = useState<ShiftSessionSummary | null>(null), [error, setError] = useState(""), [revision, setRevision] = useState(0);
   const [reportOpen, setReportOpen] = useState(false), [analyticsOpen, setAnalyticsOpen] = useState(false), [saving, setSaving] = useState(false);
+  const [mindReport, setMindReport] = useState<"auto" | "manual" | null>(null);
+  const mind = isHospitalStore(props.snapshot.cafe.slug);
   const params = useSearchParams();
   const tab: ShiftSessionTab = tabs.find(([id]) => id === params.get("shiftTab"))?.[0] ?? "summary";
   function setTab(value: ShiftSessionTab) { const next = new URLSearchParams(params.toString()); next.set("shiftTab", value); window.history.replaceState(null, "", `${window.location.pathname}?${next}`); }
@@ -52,12 +58,13 @@ export function FinanceShiftSession(props: Props) {
   return <section className={css.session} dir="rtl" aria-label="تفاصيل الوردية">
     <div className={css.topbar}><h2>الوردية #{data?.shift.shift_number ?? "…"}</h2><div className={styles.actions}><button className={styles.secondary} type="button" disabled={saving} onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} aria-hidden="true" />تحديث</button><button className={styles.secondary} type="button" disabled={saving} onClick={props.onBack}><ArrowRight size={16} aria-hidden="true" />الورديات</button></div></div>
     {error && <div className={styles.error} role="alert">{error}</div>}
+    {mindReport && <FinancePosShiftReport key={props.id} shiftId={props.id} slug={props.snapshot.cafe.slug} brandId={props.snapshot.cafe.id} autoPrint={mindReport === "auto"} onClose={() => setMindReport(null)} />}
     {!data ? <p className={css.empty} role="status">{error ? "تعذر عرض الوردية" : "جار تحميل تفاصيل الوردية"}</p> : <>
-      <SessionControls {...props} data={data} saving={saving} onSaving={setSaving} onChanged={refresh} unavailable={!!error} />
+      <SessionControls {...props} data={data} saving={saving} onSaving={setSaving} onChanged={refresh} onMindClosed={() => setMindReport("auto")} unavailable={!!error} />
       <div className={css.sessionBody}>
         <div className={css.tabs} role="group" aria-label="عرض تفاصيل الوردية">{tabs.map(([id, label]) => <button key={id} type="button" disabled={saving} aria-pressed={tab === id} onClick={() => setTab(id)}>{label}{id !== "summary" && id !== "activity" ? ` (${data.counts[id]})` : ""}</button>)}</div>
         {tab === "summary" ? <div className={css.summary}>
-          <div className={css.printbar}><button type="button" className={styles.secondary} onClick={() => setReportOpen(value => !value)}><Printer size={16} aria-hidden="true" />طباعة التقرير</button></div>
+          <div className={css.printbar}><button type="button" className={styles.secondary} onClick={() => mind && data.shift.status === "closed" ? setMindReport("manual") : setReportOpen(value => !value)}><Printer size={16} aria-hidden="true" />طباعة التقرير</button></div>
           {reportOpen && <SessionReport {...props} />}
           <h3>تفاصيل الوردية</h3>
           <Table headings={["الوردية", "رقم الوردية", "تاريخ الفتح"]}><tr><td>{data.shift.drawer_name}</td><td>#{data.shift.shift_number}</td><td>{financeDate(data.shift.opened_at)}</td></tr></Table>
@@ -105,28 +112,33 @@ function SessionReport({ id, slug, snapshot }: Props) {
   return data ? <FinanceShiftReport detail={data} slug={snapshot.cafe.slug} brandName={snapshot.cafe.name} /> : error ? <div role="alert" className={styles.error}>{error}<button type="button" onClick={() => setAttempt(value => value + 1)}>إعادة المحاولة</button></div> : <p role="status">جار إعداد التقرير</p>;
 }
 
-function SessionControls({ data, snapshot, slug, saving, onSaving, onChanged, unavailable }: Props & { data: ShiftSessionSummary; saving: boolean; onSaving: (value: boolean) => void; unavailable: boolean }) {
+function SessionControls({ data, snapshot, slug, saving, onSaving, onChanged, onMindClosed, unavailable }: Props & { onMindClosed: () => void; data: ShiftSessionSummary; saving: boolean; onSaving: (value: boolean) => void; unavailable: boolean }) {
   const shift = data.shift, canSupervise = canFinance(snapshot.role, "shifts_manage");
   const [action, setAction] = useState<"pause" | "resume" | "close" | null>(null), [reason, setReason] = useState(""), [acknowledged, setAcknowledged] = useState(false), [error, setError] = useState(""), [success, setSuccess] = useState("");
+  const mind = isHospitalStore(snapshot.cafe.slug);
   const lock = useRef(false), retry = useRef<{ fingerprint: string; requestId: string } | null>(null);
-  async function execute(payload: Record<string, unknown> = {}) {
-    if (lock.current || !canSupervise || !action || unavailable) return false;
-    if (reason.trim().length < 3) { setError("اكتب سبب الإجراء بثلاثة أحرف على الأقل"); return false; }
-    if (action === "close" && !acknowledged) { setError("أكد مراجعة حالة الجهاز والفواتير المحلية قبل الإقفال"); return false; }
+  async function execute(payload: Record<string, unknown> = {}, selectedAction = action) {
+    if (lock.current || !canSupervise || !selectedAction) return false;
+    const directClose = mind && selectedAction === "close";
+    if (unavailable && !directClose) return false;
+    if (!directClose && reason.trim().length < 3) { setError("اكتب سبب الإجراء بثلاثة أحرف على الأقل"); return false; }
+    if (!directClose && selectedAction === "close" && !acknowledged) { setError("أكد مراجعة حالة الجهاز والفواتير المحلية قبل الإقفال"); return false; }
     lock.current = true; onSaving(true); setError("");
     try {
-      const payloadData = { ...payload, shiftId: shift.id, reason: reason.trim(), supervisorClose: true, acknowledgeOffline: acknowledged };
-      const fingerprint = JSON.stringify({ action, data: payloadData });
+      const payloadData = directClose ? { shiftId: shift.id, supervisorClose: true } : { ...payload, shiftId: shift.id, reason: reason.trim(), supervisorClose: true, acknowledgeOffline: acknowledged };
+      const fingerprint = JSON.stringify({ action: selectedAction, data: payloadData });
       if (retry.current?.fingerprint !== fingerprint) retry.current = { fingerprint, requestId: crypto.randomUUID() };
-      const result = action === "close" ? await executeBrandFinanceAction({ operation: "shift_close", payload: payloadData, requestId: retry.current.requestId }, slug) : await superviseFinanceShiftAction({ shiftId: shift.id, action, reason: reason.trim(), requestId: retry.current.requestId }, slug);
+      const result = selectedAction === "close" ? await executeBrandFinanceAction({ operation: "shift_close", payload: payloadData, requestId: retry.current.requestId }, slug) : await superviseFinanceShiftAction({ shiftId: shift.id, action: selectedAction, reason: reason.trim(), requestId: retry.current.requestId }, slug);
       if (!result.ok) { setError(result.message); return false; }
+      if (directClose) onMindClosed();
       retry.current = null; setAction(null); setSuccess("تم تنفيذ الإجراء وتسجيله في سجل الوردية"); onChanged(); return true;
     } catch { setError("تعذر تأكيد نتيجة الإجراء أعد المحاولة بنفس البيانات لمنع التكرار"); return false; }
     finally { lock.current = false; onSaving(false); }
   }
   return <div className={css.controls}>
+    {!action && error && <p className={styles.error} role="alert">{error}</p>}
     {success && <p className={styles.success} role="status">{success}</p>}
-    {canSupervise && shift.status !== "closed" && !action && <div className={styles.actions}>{shift.status === "open" && <button type="button" className={styles.secondary} disabled={unavailable} onClick={() => { setAction(shift.supervisor_paused ? "resume" : "pause"); setError(""); }}>{shift.supervisor_paused ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}{shift.supervisor_paused ? "استئناف البيع" : "إيقاف البيع مؤقتًا"}</button>}<button type="button" className={styles.danger} disabled={unavailable} onClick={() => { setAction("close"); setError(""); }}><Square size={16} aria-hidden="true" />إقفال إداري</button></div>}
+    {canSupervise && shift.status !== "closed" && !action && <div className={styles.actions}>{shift.status === "open" && <button type="button" className={styles.secondary} disabled={unavailable} onClick={() => { setAction(shift.supervisor_paused ? "resume" : "pause"); setError(""); }}>{shift.supervisor_paused ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}{shift.supervisor_paused ? "استئناف البيع" : "إيقاف البيع مؤقتًا"}</button>}<button type="button" className={styles.danger} disabled={saving || (!mind && unavailable)} onClick={() => { if (mind) void execute({}, "close"); else { setAction("close"); setError(""); } }}><Square size={16} aria-hidden="true" />إقفال إداري</button></div>}
     {canSupervise && action && <section className={css.procedure}><h3>{actionNames[action]}</h3><p className={styles.notice}>{action === "close" ? "الإقفال نهائي ويتطلب عد النقدية وتحديد جهة تسليمها الفواتير غير المتزامنة تبقى على جهاز الموظف للمراجعة ولا تدخل تلقائيًا في وردية مقفلة" : "يصل الإجراء إلى جهاز الكاشير عند اتصاله الجهاز المنقطع لا يستقبل التغيير فورًا والفواتير المحفوظة تبقى على الجهاز"}</p><label className={styles.field}>سبب الإجراء<textarea required minLength={3} maxLength={1000} value={reason} disabled={saving} onChange={event => setReason(event.target.value)} /></label>{error && <p role="alert" className={styles.error}>{error}</p>}{action === "close" ? <><label className={css.confirm}><input type="checkbox" checked={acknowledged} disabled={saving} onChange={event => setAcknowledged(event.target.checked)} />راجعت حالة الجهاز والفواتير المحلية وأتحمل مسؤولية الإقفال الإداري</label><FinanceCashHandoverForm form={{ operation: "shift_close", title: "إقفال إداري", values: { shiftId: shift.id } }} snapshot={{ ...snapshot, shifts: [shift] }} pending={saving || unavailable} error="" onCancel={() => setAction(null)} onSubmit={(_operation, payload) => execute(payload)} /></> : <div className={styles.actions}><button type="button" className={styles.primary} disabled={saving || unavailable || reason.trim().length < 3} onClick={() => void execute()}>{saving ? "جار الحفظ" : "تأكيد الإجراء"}</button><button type="button" className={styles.secondary} disabled={saving} onClick={() => setAction(null)}>إلغاء</button></div>}</section>}
     <details className={css.diagnostics}><summary>حالة الصندوق والمزامنة</summary><div className={css.facts}><div>النقدية المتوقعة<strong><Money value={shift.current_expected} /></strong></div><div>النقدية المعدودة<strong>{shift.counted_cash == null ? "لم تسجل" : <Money value={shift.counted_cash} />}</strong></div><div>فرق الإقفال<strong>{shift.variance == null ? "—" : <Money value={shift.variance} />}</strong></div><div>آخر اتصال<strong>{shift.last_seen_at ? financeDate(shift.last_seen_at) : "لم يصل تحديث"}</strong></div><div>الفواتير المعلقة<strong>{shift.pending_count}</strong></div><div>تحتاج مراجعة<strong>{shift.conflict_count}</strong></div></div></details>
   </div>;

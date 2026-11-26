@@ -1,4 +1,6 @@
-import type { FinanceDocument, FinanceSnapshot } from "./brand-finance";
+import type { FinanceDocument, FinanceSnapshot, MindDrawerShift } from "./brand-finance";
+import { isHospitalStore } from "../commerce/hospital-profile";
+import { validatePosSaleShift } from "./pos-product-selection";
 import { offlineStockDeductions, posScope, type OfflineSale, type OfflineSession, type PosSyncResponse } from "./pos-offline";
 
 const DB = "branda-pos-v1";
@@ -27,11 +29,46 @@ export async function activeOfflineSession() {
   const db = await openDatabase(); const scope = await read<string | undefined>(db.transaction("meta").objectStore("meta").get("active"));
   return scope ? getOfflineSession(scope) : undefined;
 }
+
+/** A slow snapshot or replayed command must not reopen a closed period or replace a newer one. */
+function retainMindShiftPeriods(snapshot: FinanceSnapshot, known: MindDrawerShift[], closedIds: ReadonlySet<string>) {
+  if (!snapshot.mindDrawerShifts) return snapshot;
+  const latest = new Map(snapshot.mindDrawerShifts.map(shift => [shift.account_id, shift]));
+  const eligible = new Set(snapshot.accounts.filter(account => account.active && account.is_cashier_drawer).map(account => account.id));
+  for (const row of known) {
+    if (!eligible.has(row.account_id)) continue;
+    const other = latest.get(row.account_id);
+    if (!other || row.opened_at > other.opened_at ||
+      (row.opened_at === other.opened_at && ((row.shift_number ?? 0) > (other.shift_number ?? 0) || (row.id === other.id && row.status === "closed")))) {
+      latest.set(row.account_id, row);
+    }
+  }
+  return { ...snapshot, mindDrawerShifts: [...latest.values()], shifts: snapshot.shifts.map(row => closedIds.has(row.id) ? { ...row, status: "closed" as const } : row) };
+}
+
+async function saveSessionSnapshot(store: IDBObjectStore, scope: string, snapshot: FinanceSnapshot, validated: boolean) {
+  const old = await read<OfflineSession | undefined>(store.get(scope));
+  if (snapshot.mindDrawerShifts && old?.snapshot.mindDrawerShifts) {
+    const closed = new Set(old.snapshot.shifts.filter(row => row.status === "closed").map(row => row.id));
+    snapshot = retainMindShiftPeriods(snapshot, old.snapshot.mindDrawerShifts, closed);
+  }
+  store.put({ ...old, scope, snapshot, validatedAt: validated ? Date.now() : old?.validatedAt ?? Date.now() } satisfies OfflineSession);
+}
+
+export async function recordMindShiftCommit(scope: string, drawerShift: MindDrawerShift, closedId?: string) {
+  const db = await openDatabase(), tx = db.transaction("sessions", "readwrite"), done = completed(tx);
+  const store = tx.objectStore("sessions"), session = await read<OfflineSession | undefined>(store.get(scope));
+  if (session) {
+    const snapshot = retainMindShiftPeriods(session.snapshot, [drawerShift], new Set(closedId ? [closedId] : []));
+    store.put({ ...session, snapshot });
+  }
+  await done;
+}
+
 export async function saveOfflineSnapshot(snapshot: FinanceSnapshot, validated = false, reflectConfirmed = false) {
   const db = await openDatabase(), scope = posScope(snapshot);
-  const old = await getOfflineSession(scope);
   const tx = db.transaction(["sessions", "meta", "sales"], "readwrite"), done = completed(tx);
-  tx.objectStore("sessions").put({ ...old, scope, snapshot, validatedAt: validated ? Date.now() : old?.validatedAt ?? Date.now() } satisfies OfflineSession);
+  await saveSessionSnapshot(tx.objectStore("sessions"), scope, snapshot, validated);
   if (validated) tx.objectStore("meta").put(scope, "active");
   if (reflectConfirmed) {
     const sales = tx.objectStore("sales");
@@ -55,6 +92,7 @@ export async function storeOfflineSale(scope: string, payload: Record<string, un
   const session = await read<OfflineSession | undefined>(tx.objectStore("sessions").get(scope));
   const active = await read<string | undefined>(meta.get("active"));
   if (!session || active !== scope) { await done; throw new Error("سجل الدخول بنفس حساب الكاشير لحفظ الفاتورة"); }
+  if (isHospitalStore(session.snapshot.cafe.slug)) validatePosSaleShift(session.snapshot, payload.shiftId);
   const device = await read<string | undefined>(meta.get("device")) ?? crypto.randomUUID().slice(0, 8).toUpperCase();
   const counter = (await read<number | undefined>(meta.get("counter")) ?? 0) + 1;
   const localReference = `L-${device}-${String(counter).padStart(6, "0")}`;
@@ -68,7 +106,7 @@ export async function acknowledgeOfflineSale(sale: OfflineSale, response: Extrac
   const db = await openDatabase(), tx = db.transaction(["sales", "sessions"], "readwrite"), done = completed(tx);
   const serverDocument = response.snapshot?.documents.find(document => document.id === response.data.id);
   tx.objectStore("sales").put({ ...sale, status: "synced", reflected: !!response.snapshot, error: undefined, result: response.data, document: { ...(serverDocument ?? sale.document), id: response.data.id, number: response.data.number ?? sale.document.number, local_reference: sale.localReference, sync_status: "synced" } } satisfies OfflineSale);
-  if (response.snapshot && posScope(response.snapshot) === sale.scope) tx.objectStore("sessions").put({ scope: sale.scope, snapshot: response.snapshot, validatedAt: Date.now() } satisfies OfflineSession);
+  if (response.snapshot) await saveSessionSnapshot(tx.objectStore("sessions"), sale.scope, response.snapshot, true);
   await done;
 }
 export async function flagOfflineConflict(sale: OfflineSale, error: string) {

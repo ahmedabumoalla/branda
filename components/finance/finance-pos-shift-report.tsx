@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { isHospitalStore } from "@/lib/commerce/hospital-profile";
+import { FinanceMindShiftReport } from "./finance-mind-shift-report";
 import { Printer } from "lucide-react";
 import { Modal } from "@/components/dashboard/ui/modal";
 import { fetchPosShiftReportAction } from "@/app/actions/finance-pos-shift-report";
@@ -8,7 +10,14 @@ import { printThermalReceipt } from "./finance-receipt-print";
 import { financeDate, Numeric } from "./finance-ui";
 import styles from "./finance.module.css";
 
-export function FinancePosShiftReport({ shiftId, slug, onClose }: { shiftId: string; slug?: string; onClose: () => void }) {
+type ReportProps = { shiftId: string; slug?: string; onClose: () => void; brandId?: string; autoPrint?: boolean };
+
+export function FinancePosShiftReport(props: ReportProps) {
+  if (props.brandId && isHospitalStore(props.slug)) return <FinanceMindShiftReport {...props} brandId={props.brandId} />;
+  return <LegacyPosShiftReport {...props} />;
+}
+
+function LegacyPosShiftReport({ shiftId, slug, onClose }: ReportProps) {
   const [report, setReport] = useState<PosShiftReport | null>(null);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);

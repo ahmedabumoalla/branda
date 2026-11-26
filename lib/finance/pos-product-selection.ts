@@ -1,4 +1,5 @@
 import type { FinanceProduct, FinanceSnapshot } from "./brand-finance";
+import { isHospitalStore } from "../commerce/hospital-profile";
 
 export type FinanceCartLine = { productId: string; quantity: number; unitId?: string; unitPrice?: number; cashierPrice?: boolean };
 export const financeCartKey = (line: Pick<FinanceCartLine, "productId" | "unitId" | "unitPrice" | "cashierPrice">) => `${line.productId}:${line.unitId ?? ""}${line.cashierPrice ? `:price:${line.unitPrice}` : ""}`;
@@ -59,7 +60,9 @@ export function financeSelectedCartLines(cart: FinanceCartLine[], products: Fina
 }
 
 export function validatePosSaleShift(snapshot: FinanceSnapshot, shiftId: unknown) {
-  const shift = snapshot.shifts.find(row => row.id === shiftId && row.user_id === snapshot.userId);
+  const shift = isHospitalStore(snapshot.cafe.slug)
+    ? snapshot.mindDrawerShifts?.find(row => row.id === shiftId)
+    : snapshot.shifts.find(row => row.id === shiftId && row.user_id === snapshot.userId);
   if (!shift && !shiftId && isButcherFinance(snapshot)) return;
   if (!shift || shift.status !== "open") throw new Error("الوردية مقفلة أو غير متاحة حدث الكاشير قبل متابعة البيع");
   if (shift.supervisor_paused) throw new Error("الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع");

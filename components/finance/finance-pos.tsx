@@ -28,6 +28,7 @@ import { createFinanceReceiptPreview } from "@/lib/finance/receipt-preview";
 import { FinancePosFullscreen } from "./finance-pos-fullscreen";
 import { loadPosPurchases } from "./pos-purchase-cache";
 import { FinancePosActions } from "./finance-pos-actions";
+import { FinancePosShiftReport } from "./finance-pos-shift-report";
 import shiftStyles from "./finance-pos-shift-controls.module.css";
 import { FinancePosCustomerField, FinancePosPager, financePosCustomerNotice, usePosCustomer } from "./finance-pos-customer";
 import { usePosFinance } from "./use-pos-finance";
@@ -73,7 +74,7 @@ export function PosProductImage({ product }: { product: FinanceProduct }) {
 
 function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry = false }: FinancePOSProps) {
   const { t, language, dir, setLanguage, productName, categoryName, displayName, money, number, date } = useFinancePosLocale();
-  const hospital = initialSnapshot.cafe.slug === "mind-hospital";
+  const hospital = isHospitalStore(initialSnapshot.cafe.slug);
   const router = useRouter();
   const state = usePosFinance(initialSnapshot, slug, offlineEntry);
   const printer = useFinancePrinter(initialSnapshot.cafe.id, initialSnapshot.cafe.businessCategory);
@@ -117,13 +118,41 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
   const [showCheckout, setShowCheckout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
-  const shift = data.shifts.find((item) => item.user_id === data.userId && item.status === "open");
+  const [reportShiftId, setReportShiftId] = useState<string | null>(null);
+  const [selectedDrawerId, setSelectedDrawerId] = useState("");
+  const [closeTargetId, setCloseTargetId] = useState("");
+  const drawerKey = `branda-pos-drawer:${data.cafe.id}`;
+  const drawers = data.accounts.filter(account => account.active && account.kind === "cash" && account.is_cashier_drawer);
+  const defaultDrawerId = getPrimaryFinanceAccount(drawers)?.id;
+  const drawerId = drawers.find(item => item.id === selectedDrawerId)?.id ?? defaultDrawerId;
+  const drawerShift = hospital ? data.mindDrawerShifts?.find(item => item.account_id === drawerId) : undefined;
+  const ownShifts = data.shifts.filter(item => item.user_id === data.userId && item.status !== "closed");
+  const shift = hospital ? (drawerShift?.status === "open" ? drawerShift : undefined) : ownShifts.find(item => item.status === "open");
+  const ownShift = shift && data.shifts.find(item => item.id === shift.id && item.user_id === data.userId);
+  const earlierShifts = hospital ? data.shifts.filter(item => item.account_id === drawerId && item.status !== "closed" && item.id !== drawerShift?.id && (data.role === "owner" || item.user_id === data.userId)) : [];
+  const closableShifts = drawerShift && drawerShift.status !== "closed" ? [drawerShift, ...earlierShifts] : earlierShifts;
+  const closeTarget = closableShifts.find(item => item.id === closeTargetId) ?? closableShifts[0];
+  function selectDrawer(id: string) {
+    setSelectedDrawerId(id);
+    setCloseTargetId("");
+    try { sessionStorage.setItem(drawerKey, id); localStorage.setItem(drawerKey, id); } catch { /* This tab retains its selection without storage. */ }
+  }
   useEffect(() => {
-    if (!shift || shift.supervisor_paused) return;
-    const timer = setTimeout(() => { void loadPosPurchases(data.cafe.slug, data.userId, shift.id).catch(() => {}); }, 1200);
+    if (!hospital || !defaultDrawerId) return;
+    try {
+      const remembered = sessionStorage.getItem(drawerKey) || localStorage.getItem(drawerKey);
+      const id = data.accounts.some(row => row.active && row.is_cashier_drawer && row.id === remembered) ? remembered! : defaultDrawerId;
+      sessionStorage.setItem(drawerKey, id);
+      if (!localStorage.getItem(drawerKey)) localStorage.setItem(drawerKey, id);
+      setSelectedDrawerId(id);
+    } catch { /* Authorized drawers still come from the current snapshot. */ }
+  }, [hospital, drawerKey, defaultDrawerId, data.accounts]);
+  useEffect(() => {
+    if (!ownShift || ownShift.supervisor_paused) return;
+    const timer = setTimeout(() => { void loadPosPurchases(data.cafe.slug, data.userId, ownShift.id).catch(() => {}); }, 1200);
     return () => clearTimeout(timer);
-  }, [data.cafe.slug, data.userId, shift?.id, shift?.supervisor_paused]);
-  const outgoing = data.shifts.find((item) => item.user_id === data.userId && item.status === "handover");
+  }, [data.cafe.slug, data.userId, ownShift]);
+  const outgoing = hospital ? (drawerShift?.status === "handover" ? drawerShift : undefined) : ownShifts.find(item => item.status === "handover");
   const currentShiftNumber = (shift ?? outgoing)?.shift_number;
   const incoming = data.shifts.filter((item) => item.handover_to === data.userId && item.status === "handover");
   const disabled = pending || stale;
@@ -156,9 +185,9 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     : lines.some(line => line.product.quoteOnly) ? t("يوجد صنف بانتظار اعتماد السعر احذفه من السلة أو اطلب تسعيره من المسؤول")
     : pricesChanged ? t("اعتمد السعر الجديد للأصناف المتغيرة قبل الدفع")
     : shift?.supervisor_paused ? t("الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع")
-    : needsShift && outgoing ? t("الوردية بانتظار الاستلام أكمل تسليمها قبل بدء وردية جديدة")
-    : needsShift && data.initialized === false ? t("يجب تسجيل الأرصدة الافتتاحية من إدارة الوردية قبل بدء البيع")
-    : needsShift && incoming.length > 1 ? t("اختر الوردية المطلوب استلامها من إدارة الوردية أعلى الصفحة")
+    : needsShift && outgoing && !hospital ? t("الوردية بانتظار الاستلام أكمل تسليمها قبل بدء وردية جديدة")
+    : needsShift && !hospital && data.initialized === false ? t("يجب تسجيل الأرصدة الافتتاحية من إدارة الوردية قبل بدء البيع")
+    : needsShift && incoming.length > 1 && !hospital ? t("اختر الوردية المطلوب استلامها من إدارة الوردية أعلى الصفحة")
     : "";
   const checkoutHint = checkoutBlocker || (needsShift ? t("ابدأ الوردية لإكمال الدفع ستبقى أصناف السلة محفوظة أثناء هذه الخطوة") : "");
   const discount = Math.round((financeDiscount(subtotal, discountValue, discountKind) + points.value) * 100) / 100;
@@ -172,7 +201,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
   const accounts = data.accounts.filter((account) => account.active && account.kind === paymentKind && (paymentKind !== "cash" || (shift ? account.id === shift.account_id : butcher && account.is_cashier_drawer && account.availableWithoutShift !== false && !data.shifts.some(row => row.account_id === account.id && row.status !== "closed"))));
   const paymentAccountId = getPrimaryFinanceAccount(accounts)?.id;
   const receipt = data.documents.find((document) => document.id === receiptId || state.offline.sales.some((sale) => sale.id === receiptId && sale.document.id === document.id));
-  const history = data.documents.filter((document) => document.kind === "sale" && (data.canManage || (butcher && document.created_by === data.userId) || data.shifts.some((item) => item.id === document.shift_id && item.user_id === data.userId)));
+  const history = data.documents.filter((document) => document.kind === "sale" && (data.canManage || ((butcher || hospital) && document.created_by === data.userId) || data.shifts.some((item) => item.id === document.shift_id && item.user_id === data.userId)));
   const invoiceMessages = useFinanceInvoiceMessages({ scope: `${data.cafe.id}:${data.userId}`, slug: data.cafe.slug, documentIds: butcher ? [] : history.filter(document => !document.sync_status || document.sync_status === "synced").map(document => document.id), visible: showHistory && !butcher });
   const open = (next: FinanceForm) => { if (openingShiftLock.current || !allows(next.operation)) return; state.clearFeedback(); setLocalError(""); setForm(next); };
   async function submitOperation(operation: FinanceForm["operation"], payload: Record<string, unknown>) {
@@ -185,10 +214,12 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
       setForm(null);
     }
     try {
-      const saved = await state.execute(operation, payload);
+      const saved = await state.execute(operation, payload, hospital && operation === "shift_close"
+        ? () => setReportShiftId(String(payload.shiftId)) : undefined);
       if (saved) {
         setForm(null);
-        if (operation === "shift_close" && slug && !butcher) await finishLogout();
+        if (hospital && operation === "shift_open" && typeof payload.accountId === "string") selectDrawer(payload.accountId);
+        if (operation === "shift_close" && slug && !butcher && !hospital) await finishLogout();
         if (operation === "refund" && saved.status !== "pending") setReceiptId(saved.id);
       } else if (background) setForm(retryForm);
       return !!saved;
@@ -272,9 +303,9 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     if (checkoutBlocker) return;
     setLocalError("");
     if (needsShift) {
-      open(incoming.length === 1
+      open(!hospital && incoming.length === 1
         ? { operation: "shift_accept", title: t("عد النقدية وتأكيد الاستلام"), values: { shiftId: incoming[0].id } }
-        : { operation: "shift_open", title: t("بدء وردية لإكمال الدفع") });
+        : { operation: "shift_open", title: t("بدء وردية لإكمال الدفع"), ...(hospital ? { values: { accountId: drawerId } } : {}) });
       return;
     }
     setShowCheckout(true);
@@ -308,22 +339,27 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     <div className={styles.posControls}>
     <header className={`${styles.header} ${styles.posHeader} ${shiftStyles.header}`}>
       <div><p className={styles.eyebrow}><ReceiptText size={16} aria-hidden="true" />{t("برندة المالية · ")}{displayName(data.cafe.name)}</p><h1 className={styles.title}>{t("الكاشير المالي")}</h1>
-        <div className={styles.posShiftMeta} aria-label={t("الوردية الحالية")}><Clock3 size={15} aria-hidden="true" /><span>{shift ? shift.supervisor_paused ? t("ورديتك موقوفة إداريًا") : t("ورديتك مفتوحة") : outgoing ? t("ورديتك بانتظار الاستلام") : butcher ? t("البيع متاح والوردية اختيارية") : t("ابدأ ورديتك")}</span>{!!currentShiftNumber && <bdi dir="ltr">#{currentShiftNumber}</bdi>}</div>
+        <div className={styles.posShiftMeta} aria-label={t("الوردية الحالية")}><Clock3 size={15} aria-hidden="true" /><span>{shift ? shift.supervisor_paused ? t("ورديتك موقوفة إداريًا") : hospital ? t("وردية الصندوق مفتوحة", "Drawer shift open") : t("ورديتك مفتوحة") : outgoing ? t("ورديتك بانتظار الاستلام") : butcher ? t("البيع متاح والوردية اختيارية") : t("ابدأ ورديتك")}</span>{!!currentShiftNumber && <bdi dir="ltr">#{currentShiftNumber}</bdi>}</div>
       </div>
       <div className={`${styles.posHeaderTools} ${shiftStyles.headerTools}`}>
       <button type="button" className={styles.secondary} data-pos-language-toggle onClick={() => setLanguage(language === "ar" ? "en" : "ar")} aria-label={language === "ar" ? "Switch cashier to English" : "تغيير لغة الكاشير إلى العربية"}>{language === "ar" ? "English" : "العربية"}</button>
-      {hospital && <><HospitalOrdersToolbar snapshot={data} onRefresh={state.refresh} />{canReadLoyalty && <FinancePosLoyaltyReader key={`${data.cafe.id}:${data.userId}`} slug={data.cafe.slug} />}</>}
+      {hospital && <><HospitalOrdersToolbar snapshot={data} shiftId={shift?.id ?? null} onRefresh={state.refresh} />{canReadLoyalty && <FinancePosLoyaltyReader key={`${data.cafe.id}:${data.userId}`} slug={data.cafe.slug} />}</>}
       <div className={shiftStyles.controls} aria-label={t("إدارة الوردية")}>
-        {allows("shift_open") && !shift && !outgoing && (incoming.length ? incoming.map(item => <button key={item.id} type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut} title={t(data.accounts.find(account => account.id === item.account_id)?.name ?? t("صندوق الكاشير"))} onClick={() => open({ operation: "shift_accept", title: t("عد النقدية وتأكيد الاستلام"), values: { shiftId: item.id } })}><Plus size={16} aria-hidden="true" />{t("استلام وبدء وردية")}</button>) : <button type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut || data.initialized === false} onClick={() => open({ operation: "shift_open", title: t("بدء وردية جديدة") })}><Plus size={16} aria-hidden="true" />{t("بدء وردية جديدة")}</button>)}
-        {shift ? <button type="button" className={shiftStyles.end} disabled={disabled || loggingOut || cart.length > 0 || !allows("shift_close")} title={cart.length ? t("احفظ السلة أو أفرغها قبل إنهاء الوردية") : t("عد النقدية وحدد جهة التسليم لإقفال الوردية")} onClick={() => open({ operation: "shift_close", title: slug && !butcher ? t("إنهاء الوردية وتسجيل الخروج") : t("إنهاء الوردية"), values: { shiftId: shift.id } })}><LogOut size={16} aria-hidden="true" />{t("إنهاء الوردية")}</button> : slug && <button type="button" className={shiftStyles.exit} disabled={pending || loggingOut || !!outgoing || cart.length > 0} onClick={finishLogout}><LogOut size={16} aria-hidden="true" />{t("خروج")}</button>}
+        {hospital && drawers.length > 0 && <label className={shiftStyles.selector}>{t("صندوق الكاشير", "Cashier drawer")}<select value={drawerId} disabled={disabled || loggingOut} onChange={event => selectDrawer(event.target.value)}>{drawers.map(item => <option key={item.id} value={item.id}>{displayName(item.name)}</option>)}</select></label>}
+        {hospital && closableShifts.length > 1 && <label className={shiftStyles.selector}>{t("الوردية المطلوب إقفالها", "Shift to close")}<select value={closeTarget?.id} disabled={disabled || loggingOut} onChange={event => setCloseTargetId(event.target.value)}>{closableShifts.map(item => <option key={item.id} value={item.id}>{item.shift_number ? `#${item.shift_number} · ` : ""}{date(item.opened_at)}</option>)}</select></label>}
+        {allows("shift_open") && !shift && !outgoing && incoming.map(item => <button key={item.id} type="button" className={shiftStyles.start} disabled={disabled || loggingOut} title={t(data.accounts.find(account => account.id === item.account_id)?.name ?? t("صندوق الكاشير"))} onClick={() => open({ operation: "shift_accept", title: t("عد النقدية وتأكيد الاستلام"), values: { shiftId: item.id } })}><Plus size={16} aria-hidden="true" />{t("استلام وبدء وردية")}</button>)}
+        {allows("shift_open") && (hospital || (!shift && !outgoing && !incoming.length)) && <button type="button" className={shiftStyles.start} disabled={disabled || loggingOut || (!hospital && data.initialized === false)} onClick={() => open({ operation: "shift_open", title: t("بدء وردية جديدة"), ...(hospital ? { values: { accountId: drawerId } } : {}) })}><Plus size={16} aria-hidden="true" />{t("بدء وردية جديدة")}</button>}
+        {hospital && closeTarget && <button type="button" className={shiftStyles.end} disabled={disabled || loggingOut || !allows("shift_close")} onClick={() => { state.clearFeedback(); setLocalError(""); void submitOperation("shift_close", { shiftId: closeTarget.id, ...(data.role === "owner" && closeTarget.user_id !== data.userId ? { supervisorClose: true } : {}) }); }}><ReceiptText size={16} aria-hidden="true" />{t("إقفال الوردية وطباعة التقرير", "Close shift and print report")}{closeTarget.shift_number ? <bdi>#{closeTarget.shift_number}</bdi> : null}</button>}
+        {!hospital && shift && <button type="button" className={shiftStyles.end} disabled={disabled || loggingOut || cart.length > 0 || !allows("shift_close")} title={cart.length ? t("احفظ السلة أو أفرغها قبل إنهاء الوردية") : t("عد النقدية وحدد جهة التسليم لإقفال الوردية")} onClick={() => open({ operation: "shift_close", title: slug && !butcher ? t("إنهاء الوردية وتسجيل الخروج") : t("إنهاء الوردية"), values: { shiftId: shift.id } })}><LogOut size={16} aria-hidden="true" />{t("إنهاء الوردية")}</button>}
+        {slug && (hospital || !shift) && <button type="button" className={shiftStyles.exit} disabled={pending || loggingOut || (!hospital && !!outgoing) || cart.length > 0} onClick={finishLogout}><LogOut size={16} aria-hidden="true" />{t("خروج")}</button>}
       </div>
       {!butcher && !isHospitalStore(data.cafe.slug) && <FinancePosPager slug={slug ?? data.cafe.slug} refreshKey={pagerRefreshKey} />}
       {!offlineEntry && isAldeemCafe(data.cafe) && <Link className={styles.secondary} href={`/finance/${data.cafe.slug}/lab`}><Plus size={17} aria-hidden="true" />{t("طلب للمعمل")}</Link>}
-      <FinancePosActions onPrepare={() => { if (shift && !shift.supervisor_paused && allows("shift_purchase")) void loadPosPurchases(data.cafe.slug, data.userId, shift.id).catch(() => {}); }} details={shift && <><span>{t(data.accounts.find((account) => account.id === shift.account_id)?.name ?? t("الصندوق"))}</span><span>{t("بداية الوردية ")}{date(shift.opened_at)}</span><span>{t("نقدية متوقعة ")}<Numeric value={shift.expected_cash} money /></span></>}>
+      <FinancePosActions onPrepare={() => { if (ownShift && !ownShift.supervisor_paused && allows("shift_purchase")) void loadPosPurchases(data.cafe.slug, data.userId, ownShift.id).catch(() => {}); }} details={shift && <><span>{t(data.accounts.find((account) => account.id === shift.account_id)?.name ?? t("الصندوق"))}</span><span>{t("بداية الوردية ")}{date(shift.opened_at)}</span>{ownShift && <span>{t("نقدية متوقعة ")}<Numeric value={ownShift.expected_cash} money /></span>}</>}>
       <div className={styles.actions} aria-label={t("أدوات الكاشير والوردية")}>
-        {shift && allows("supplier_payout") && (data.employeePermissions || data.posPermissions?.supplierPayout !== false) && <button type="button" className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "supplier_payout", title: t("سداد مورد من الصندوق"), values: { shiftId: shift.id } })}>{t("سداد الموردين")}</button>}
+        {ownShift && allows("supplier_payout") && (data.employeePermissions || data.posPermissions?.supplierPayout !== false) && <button type="button" className={styles.secondary} disabled={disabled || ownShift.supervisor_paused} onClick={() => open({ operation: "supplier_payout", title: t("سداد مورد من الصندوق"), values: { shiftId: ownShift.id } })}>{t("سداد الموردين")}</button>}
         {canReadSales && <button className={styles.secondary} onClick={() => setShowHistory(true)}>{t("سجل المبيعات")}</button>}
-        {shift && allows("shift_purchase") && <button className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "shift_purchase", title: t("فاتورة مشتريات"), values: { shiftId: shift.id } })}>{t("فاتورة مشتريات")}</button>}
+        {ownShift && allows("shift_purchase") && <button className={styles.secondary} disabled={disabled || ownShift.supervisor_paused} onClick={() => open({ operation: "shift_purchase", title: t("فاتورة مشتريات"), values: { shiftId: ownShift.id } })}>{t("فاتورة مشتريات")}</button>}
         {canFinance(data.role, "dashboard", data.employeePermissions) && <Link href={dashboardHref ?? (slug ? `/finance/${slug}` : "/dashboard/finance")} className={styles.secondary}><ArrowRight size={16} />{t("الإدارة المالية")}</Link>}
       </div>
       </FinancePosActions>
@@ -340,7 +376,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     {customerNotice && <div className={styles.notice} role="status">{t(customerNotice)}</div>}
     {(localError || error) && !form && <div className={styles.error} role="alert">{t(localError || error)}</div>}
     {stale && <div className={styles.notice}>{t("توقف تسجيل العمليات حتى تحديث الأرصدة العملية المحفوظة لا تحتاج إلى تكرار")}</div>}
-    {data.initialized === false && <div className={styles.shiftSetup}><div><strong>{t("الأرصدة الافتتاحية لم تسجل بعد")}</strong><p className={styles.muted}>{t("يُسجل مالك العلامة النقدية الموجودة وأرصدة الشبكة قبل بدء أول وردية")}</p></div>{data.canInitialize && <button type="button" className={styles.primary} disabled={disabled} onClick={() => open({ operation: "opening_balances", title: t("الأرصدة الافتتاحية") })}>{t("تسجيل الأرصدة الافتتاحية")}</button>}</div>}
+    {!hospital && data.initialized === false && <div className={styles.shiftSetup}><div><strong>{t("الأرصدة الافتتاحية لم تسجل بعد")}</strong><p className={styles.muted}>{t("يُسجل مالك العلامة النقدية الموجودة وأرصدة الشبكة قبل بدء أول وردية")}</p></div>{data.canInitialize && <button type="button" className={styles.primary} disabled={disabled} onClick={() => open({ operation: "opening_balances", title: t("الأرصدة الافتتاحية") })}>{t("تسجيل الأرصدة الافتتاحية")}</button>}</div>}
       <section aria-label={t("منتجات المنيو")}>
         {!products.length && <div className={styles.panel}><Empty title={data.products.length ? t("لا توجد أصناف مطابقة") : t("المنيو خالٍ من الأصناف")}>{data.products.length ? t("جرّب اسمًا آخر أو اختر جميع الأصناف") : t("أضف منتجات العلامة وصورها وأسعارها من إدارة المنيو")}</Empty></div>}
         <div className={styles.products}>{availableProducts.map((product) => {
@@ -421,6 +457,7 @@ function StandardFinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry
     </Modal>
     <Modal open={!!form} title={form?.title ?? t("الوردية")} onClose={() => { if (!pending && !operationBusy) setForm(null); }} panelClassName={["refund", "shift_purchase"].includes(form?.operation ?? "") ? styles.invoicePanel : styles.shiftDialog}>{form && <FinanceOperationForm directPosRefund={data.cafe.slug === "mind-hospital"} key={form.operation} form={form} snapshot={data} pending={pending} error={error || localError} onInventoryBusyChange={setOperationBusy} onInventorySaved={state.applyInventoryCatalog} onInventoryUnitsChanged={state.applyInventoryUnits} onCancel={() => setForm(null)} onSubmit={submitOperation} />}</Modal>
     <Modal open={showHistory} title={t("سجل المبيعات")} onClose={() => setShowHistory(false)} panelClassName="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">{!butcher && <div className={styles.actions}><button type="button" className={styles.secondary} disabled={invoiceMessages.loading || !history.length} onClick={() => void invoiceMessages.refresh()}><RefreshCw size={16} aria-hidden="true" />{t("تحديث حالة الرسائل")}</button></div>}{data.truncated && <p className={styles.notice}>{t("يعرض السجل أحدث العمليات المتاحة")}</p>}{!history.length ? <Empty title={t("لا توجد مبيعات مسجلة")} /> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>{t("المستند")}</th><th>{t("التاريخ")}</th><th>{t("الإجمالي")}</th><th>{t("الحالة")}</th>{!butcher && <th>{t("واتساب")}</th>}<th>{t("الإجراء")}</th></tr></thead><tbody>{history.map((document) => <tr key={document.id}><td>{document.number ? `#${document.number}` : document.local_reference}{document.sync_status && document.sync_status !== "synced" && <small className={styles.muted}>{t(" بانتظار المزامنة")}</small>}</td><td>{date(document.created_at)}</td><td><Numeric value={document.total} money /></td><td>{t(financeDocumentStatus(document))}</td>{!butcher && <td><FinanceInvoiceMessageStatus entry={invoiceMessages.entries[document.id]} offline={document.sync_status === "queued" || document.sync_status === "conflict"} /></td>}<td><div className={styles.actions}><button className={styles.secondary} onClick={() => { setShowHistory(false); setReceiptId(document.id); }}>{t("الإيصال")}</button>{!document.refunded && (!document.sync_status || document.sync_status === "synced") && <button className={styles.danger} disabled={disabled} onClick={() => { setShowHistory(false); open({ operation: "refund", title: t("مرتجع مبيعات #") + (document.number), values: { documentId: document.id } }); }}>{t("إرجاع")}</button>}</div></td></tr>)}</tbody></table></div>}</Modal>
+    {reportShiftId && <FinancePosShiftReport key={reportShiftId} shiftId={reportShiftId} slug={data.cafe.slug} brandId={data.cafe.id} autoPrint onClose={() => setReportShiftId(null)} />}
     {receiptPreview && <FinanceReceiptDialog preview receiptBrand={state.offline.brand} document={receiptPreview} snapshot={data} onClose={() => setReceiptPreview(null)} />}
     {printDocument && printer.ready && <FinanceReceiptDialog key={`${data.cafe.id}:automatic:${printId}`} document={printDocument} snapshot={data} receiptBrand={state.offline.brand} autoPrint={printer.autoEnabled} backgroundAutoPrint autoPrintKey={printId} onPrint={printer.handler(printId, true)} onClose={() => setPrintQueue((queue) => queue.filter((id) => id !== printId))} />}
     {receipt && <FinanceReceiptDialog key={`${data.cafe.id}:${receiptId}`} document={receipt} snapshot={data} receiptBrand={state.offline.brand} onPrint={printer.handler(receiptId ?? receipt.id, false)} onClose={() => setReceiptId(null)} />}

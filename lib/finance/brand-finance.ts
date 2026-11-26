@@ -23,7 +23,9 @@ export type FinanceShift = { supervisor_paused?: boolean; id: string; shift_numb
 export type FinanceStaff = { employeePermissions?: import("./employee-permissions").EmployeePermissions; posPermissions?: Partial<import("./cashier-permissions").CashierPermissions>; user_id: string; name: string; role: FinanceStaffRole; active: boolean };
 export type FinanceJournalLine = { id: string; document_id: string; account_id: string; debit: number; credit: number; created_at: string; memo: string };
 export type FinanceMovement = { id: string; item_id: string; warehouse_id: string; document_id: string; quantity: number; unit_cost: number; created_at: string };
+export type MindDrawerShift = Pick<FinanceShift, "id" | "account_id" | "user_id" | "status" | "supervisor_paused" | "shift_number" | "opened_at">;
 export type FinanceSnapshot = Partial<FinanceShiftSnapshot> & {
+  mindDrawerShifts?: MindDrawerShift[];
   employeePermissions?: import("./employee-permissions").EmployeePermissions;
   employeePermissionApprovers?: import("./employee-permissions").EmployeePermissionApprover[];
   ownerName?: string;
@@ -44,7 +46,7 @@ export type FinanceSnapshot = Partial<FinanceShiftSnapshot> & {
 };
 export type FinanceOperation = "opening_balances" | "supplier_payout" | "shift_purchase" | "shift_variance_settle" | "finance_reset" | "sale" | "purchase" | "refund" | "refund_approve" | "refund_reject" | "party" | "account" | "item" | "warehouse" | "stock_adjust" | "stock_transfer" | "treasury" | "settlement" | "shift_open" | "shift_close" | "shift_handover" | "shift_accept" | "settings" | "staff" | "journal";
 export type FinanceCommand = { operation: FinanceOperation; requestId: string; payload: Record<string, unknown> };
-export type FinanceCommandResult = { localReference?: string; offline?: boolean; id: string; number?: number; status?: "pending" | "approved" | "rejected"; duplicate?: boolean; customer?: FinancePosCustomerResult };
+export type FinanceCommandResult = { drawerShift?: MindDrawerShift; localReference?: string; offline?: boolean; id: string; number?: number; status?: "pending" | "approved" | "rejected"; duplicate?: boolean; customer?: FinancePosCustomerResult };
 export type FinanceHistoryKind = "documents" | "journal" | "movements";
 export type FinanceHistory = { rows: (FinanceDocument | FinanceJournalLine | FinanceMovement)[]; hasMore: boolean };
 export function financeMoney(value: number) { return new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR" }).format(value).replace("ر.س.", "ر.س"); }
