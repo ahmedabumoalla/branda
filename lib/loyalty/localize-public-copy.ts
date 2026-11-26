@@ -4,6 +4,18 @@ import { englishCatalogText } from "@/lib/cashier/catalog-translation";
 import { loyaltyText } from "./customer-language";
 
 const programPhrases: Record<string, string> = {
+  "رستم": "Rostom",
+  "صالونات الحلاقة الرجالية": "Men’s Barbershops",
+  "سناك مجاني 🍫": "Free snack 🍫",
+  "مشروب او قهوة مجانيه ❤️": "Free drink or coffee ❤️",
+  "اي لعبة الكترونية مجانيه😉": "A free electronic game of your choice 😉",
+  "قيم لشخصين بولينقو😍": "A bowling game for two at Bolingo 😍",
+  "حماية شاشة ملاقيف مجانًا": "Free privacy screen protector",
+  "كيبل شحن من الخيارات المحددة مجاناً": "Free charging cable from the available selection",
+  "طقم شحن سريع مجانًا (رأس شاحن + كيبل)": "Free fast-charging set with adapter and cable",
+  "سماعة بلوتوث لاسلكية مجانًا": "Free wireless Bluetooth headset",
+  "بورك بنك شاحن متنقل": "Portable power bank",
+  "اختر هديتك من إكسسوارات ماهر برو حتى ١٥٠ ريال": "Choose a Maher Pro accessory worth up to SAR 150",
   "*كوب مجاناً من نيف ☕*\n\nاستبدل نقاطك بكوب قهوة مجاناً من اختيارك - فلتر اليوم أو سبانيش لاتيه.\n\n*قبل الاستبدال:*\n- أظهر البطاقة للباريستا قبل الطلب\n- المكافأة لمرة واحدة فقط\n- بدون إضافات، الإضافات بسعرها\n- ما تنجمع مع أي عرض ثاني\n- ما تتحول لكاش\n\nنورتنا 🤎": "A complimentary coffee from Neef ☕\n\nRedeem your points for the filter coffee of the day or a Spanish latte\n\nShow your card to the barista before ordering. Redeem the reward once. Extras cost their regular price. The reward cannot be combined with another offer or exchanged for cash\n\nWelcome 🤎",
   "شروط الاستحقاق للختم : \n١- لا يستحق ختم على الخدمات الأقل من 100 ريال .\n2- لا يستحق ختم في المناسبات والأعياد مهما كان نوع الخدمة المطلوبة .\n\nتطبق الشروط والأحكام الخاصة بالعلامة التجارية": "Stamp eligibility\n\nServices under SAR 100 do not earn a stamp. During holidays and special occasions, no service earns a stamp\n\nThe brand’s terms and conditions apply",
   "مع بطاقة أهل ماهر برو، تكسب نقطة عن كل ريال تدفعه على الإكسسوارات وخدمات الصيانة المؤهلة في فرع طويق. عند ٢٠٠ نقطة تقدر تستبدلها بحماية شاشة عادية للأجهزة المتوفرة لها الحماية، وعند ٥٠٠ نقطة تقدر تستبدلها بكيبل شحن من الخيارات المحددة في الفرع. تُصرف المكافأة في زيارة لاحقة ويُخصم رصيدها عند الاستبدال. شراء الجوالات خارج برنامج النقاط": "Earn one point for every riyal spent on eligible accessories and repairs at Maher Pro’s Tuwaiq branch. Redeem 200 points for a standard screen protector for an eligible device, or 500 points for a charging cable from the branch selection. Redeem on a later visit. Redeemed points are deducted from your balance. Mobile phone purchases do not earn points",
