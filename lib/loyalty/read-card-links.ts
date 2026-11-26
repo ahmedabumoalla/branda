@@ -9,7 +9,7 @@ import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
 import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
 import { getGoogleWalletSaveState } from "@/lib/wallet/google";
 
-type CardLinkJob = { id: string; claimToken: string; cafeId: string; profileId: string; cardId: string; brandSlug: string; brandName: string; phone: string; cardCreated: boolean; googleIssued: boolean; privateSenderRequested: boolean; stampsInCycle?: number | null; purchasesRequired?: number | null; rewardName?: string | null };
+type CardLinkJob = { id: string; claimToken: string; cafeId: string; profileId: string; cardId: string; brandSlug: string; brandName: string; phone: string; cardCreated: boolean; googleIssued: boolean; privateSenderRequested: boolean; meramCashierPhoneIssue?: boolean; stampsInCycle?: number | null; purchasesRequired?: number | null; rewardName?: string | null };
 const BOLINGO_CAFE_ID = "dbe942ba-dfa4-422b-a9f6-9527c3b27cc9";
 /** Brands explicitly authorized to send card links through Branda's notifications number. */
 export const PLATFORM_CARD_LINK_CAFE_IDS: ReadonlySet<string> = new Set([
@@ -76,8 +76,11 @@ export async function dispatchStampCardLinks(limit = 2) {
     // A stamp that completes the card sets the count back to zero, so zero right after a stamp means a reward was earned
     // A brand the user named keeps its card link while the platform switch is off, from the notifications number
     // only. Bolingo's points invoices report zero stamps even when no reward has been earned.
-    const namedLink = Boolean(platformOff && usesPlatformNumber && readyNotifySender) && PLATFORM_CARD_LINK_CAFE_IDS.has(job.cafeId);
-    const earnedReward = !(namedLink && job.cafeId === BOLINGO_CAFE_ID) && Boolean(drain && usesPlatformNumber && rewardSender) && job.stampsInCycle === 0 && Number(job.purchasesRequired) >= 1;
+    // The claim verifies Meram, a new card and the successful cashier phone operation together.
+    const meramInvitation = job.meramCashierPhoneIssue === true && job.cardCreated;
+    if (meramInvitation && !readyNotifySender) { await finish("deferred"); continue; }
+    const namedLink = meramInvitation || (Boolean(platformOff && usesPlatformNumber && readyNotifySender) && PLATFORM_CARD_LINK_CAFE_IDS.has(job.cafeId));
+    const earnedReward = !meramInvitation && !(namedLink && job.cafeId === BOLINGO_CAFE_ID) && Boolean(drain && usesPlatformNumber && rewardSender) && job.stampsInCycle === 0 && Number(job.purchasesRequired) >= 1;
     if (drain && usesPlatformNumber && !earnedReward && !namedLink) { await finish("skipped"); continue; }
     if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }
     if (job.googleIssued) {

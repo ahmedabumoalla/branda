@@ -106,6 +106,21 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
   }
 
   const notify = { apiUrl: 'https://7700.api.greenapi.com', idInstance: 'notify', apiTokenInstance: 'fixture-token' };
+  // Only a verified new cashier-by-phone issue gets the Meram invitation.
+  {
+    const meram = { ...job('new'), cafeId: '98fd33d5-522d-46e7-adeb-34b04a665f4f', meramCashierPhoneIssue: true };
+    const repeat = { ...meram, id: 'repeat', cardCreated: false, meramCashierPhoneIssue: false };
+    const pager = { ...meram, id: 'pager', meramCashierPhoneIssue: false };
+    const x = worker({ paused: true, off: true, notify, primaryReady: true, jobs: [meram, repeat, pager] });
+    await x.exports.dispatchStampCardLinks(3);
+    assert.deepEqual(x.sent, [['notify', meram.phone]]);
+    assert.deepEqual(x.finished, [['new', 'queued'], ['repeat', 'skipped'], ['pager', 'skipped']]);
+    const offline = worker({ paused: true, off: true, notify: null, primaryReady: true, jobs: [meram] });
+    await offline.exports.dispatchStampCardLinks(1);
+    assert.deepEqual(offline.sent, []);
+    assert.deepEqual(offline.finished, [['new', 'deferred']]); checks++;
+  }
+
   // Access-only switch on and the notifications number ready: card links go out from it, never from Branda's primary
   {
     const x = worker({ paused: true, notify, jobs: [job('a'), job('b'), job('c')] });
