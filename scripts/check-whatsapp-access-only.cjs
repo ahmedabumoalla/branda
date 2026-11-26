@@ -18,7 +18,6 @@ function load(file, env, fetcher, stubs = {}) {
   const resolve = name => {
     if (name in stubs) return stubs[name];
     if (name === 'server-only') return {};
-    if (name.includes('owner-guide-delivery')) return { queueOwnerCompanionGuides: async () => {} };
     if (name.startsWith('@/')) return load(name.slice(2) + '.ts', env, fetcher, stubs);
     return require(name);
   };
@@ -51,8 +50,9 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
     await x.module.sendGreenApiOtp({ phoneNormalized: recipient, code: '123456', brandName: 'Example' });
     assert.equal(x.posts().length, 1);
     assert.equal(x.posts()[0].body.chatId, recipient+'@c.us'); checks++;
-    await assert.rejects(() => x.module.sendGreenApiOwnerSignupWelcome({phone:recipient,brandName:'Example'}), /MESSAGING_TEMPORARILY_PAUSED/);
-    assert.equal(x.posts().length, 1); checks++;
+    await x.module.sendGreenApiOwnerCompanionGuide(recipient, 'setup');
+    assert.equal(x.posts()[1].body.chatId, recipient+'@c.us');
+    assert.ok(x.posts()[1].url.includes('waInstance111/sendFileByUrl')); checks++;
   }
 
   // Verification codes still go out, from the primary and from the standby when the primary is restricted
@@ -69,16 +69,19 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
   {
     const x = api(paused);
     await x.module.sendGreenApiOwnerWelcome(trial);
-    assert.equal(x.posts().length, 1); assert.ok(x.posts()[0].url.includes('sendFileByUrl')); checks++;
+    assert.equal(x.posts().length, 1); assert.ok(x.posts()[0].url.includes('/sendMessage/')); assert.equal(x.posts()[0].body.urlFile, undefined); checks++;
     const y = api(paused, { primary: 'blocked' });
     await y.module.sendGreenApiOwnerWelcome(trial);
     assert.equal(y.posts().length, 1); assert.ok(y.posts()[0].url.includes('waInstance222')); checks++;
   }
-  // Since 2026-11-22 the two tutorial clips that follow that login message go out with it; self-registration queues none
-  for (const guide of ['cashier', 'customer']) {
+  // Verified self-registration tutorials only use the primary sender
+  for (const guide of ['setup', 'cashier', 'customer']) {
     const x = api(paused);
     await x.module.sendGreenApiOwnerCompanionGuide(phone, guide);
-    assert.equal(x.posts().length, 1); assert.ok(x.posts()[0].url.includes('sendFileByUrl')); checks++;
+    assert.equal(x.posts().length, 1); assert.ok(x.posts()[0].url.includes('waInstance111/sendFileByUrl'));
+    const blocked = api(paused, { primary: 'blocked' });
+    await assert.rejects(() => blocked.module.sendGreenApiOwnerCompanionGuide(phone, guide), /OWNER_GUIDE_PRIMARY_UNAVAILABLE/);
+    assert.equal(blocked.posts().length, 0); checks++;
   }
   {
     const x = api(paused);
@@ -88,7 +91,6 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
 
   // Everything else is refused before any request, so neither number is touched
   const refused = [
-    ['sendGreenApiOwnerSignupWelcome', { phone, brandName: 'Example' }],
     ['sendGreenApiLoyaltyWelcome', { phone, message: 'card link' }],
     ['sendGreenApiFinanceShiftAlert', { phone, message: 'shift' }],
     ['sendGreenApiFinanceReceipt', { phone, message: 'receipt', pdf, invoiceNumber: 7 }],
@@ -171,5 +173,5 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
   const config = fs.readFileSync('next.config.ts', 'utf8');
   const state = /env: \{ BRANDA_ACCESS_MESSAGES_ONLY: "(true|false)"[,} ]/.exec(config)?.[1];
   assert.ok(state, 'The incident switch must stay declared in next.config.ts as "true" or "false"');
-  console.log(`WhatsApp access-only switch: ${checks} checks passed; switch in next.config.ts is ${state === 'true' ? 'ON (only codes and administrator owner login leave Branda numbers)' : 'OFF (normal sending)'}`);
+  console.log(`WhatsApp access-only switch: ${checks} checks passed; switch in next.config.ts is ${state === 'true' ? 'ON (codes, administrator owner login and verified signup tutorials leave Branda numbers)' : 'OFF (normal sending)'}`);
 })().catch(error => { console.error(error); process.exit(1); });

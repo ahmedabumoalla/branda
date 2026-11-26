@@ -21,6 +21,8 @@ export const BUSINESS_CAPABILITIES: Partial<Record<BusinessCategoryId, BusinessC
   hair_salons: ["menu", "orders", "loyalty", "rewards", "cashier"],
   gifts_flowers: ["menu", "orders", "loyalty", "rewards", "cashier"],
   retail_stores: ["menu", "orders", "loyalty", "rewards", "cashier"],
+  car_washes: ["loyalty", "rewards", "cashier"],
+  other: ["loyalty", "rewards", "cashier"],
   events_conferences: [
     "tickets",
     "ticket_orders",

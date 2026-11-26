@@ -24,31 +24,66 @@ const input={phone:'966511111111',brandName:'Fixture',password:'fixture-only',st
 let posts=[],outcomes=[];
 try {
   for(const key of Object.keys(process.env))if(key.startsWith('GREEN_API_'))delete process.env[key];
+  process.env.BRANDA_ACCESS_MESSAGES_ONLY='true';
   Object.assign(process.env,{GREEN_API_API_URL:'https://api.green-api.com',GREEN_API_ID_INSTANCE:'123456',GREEN_API_API_TOKEN_INSTANCE:'fixture-token'});
   globalThis.fetch=async(url,init={})=>{
     if(init.method!=='POST'){assert(String(url).includes('/getStateInstance/'));return {ok:true,json:async()=>({stateInstance:'authorized'})};}
     posts.push({url:String(url),payload:JSON.parse(init.body)});
-    assert(String(url).includes('/sendFileByUrl/'));
+    assert.match(String(url), /\/(sendMessage|sendFileByUrl)\//);
     const result=outcomes.shift();if(result instanceof Error)throw result;
     return result??{ok:true,json:async()=>({idMessage:'fixture-receipt'})};
   };
-  const queued=[];const api=load('lib/whatsapp/green-api.ts',{'@/lib/whatsapp/owner-guide-delivery':{queueOwnerCompanionGuides:async(phone,receipt)=>{queued.push({phone,receipt});return true;}}});
-  function video(){const p=posts.at(-1).payload;assert.equal(p.chatId,'966511111111@c.us');assert.equal(p.urlFile,'https://barndaksa.com/guides/owner-loyalty-setup-20261118.mp4');assert.equal(p.fileName,'branda-loyalty-account-setup.mp4');assert(p.caption.length<=1024);assert(p.caption.includes('https://barndaksa.com/login'));assert.equal(p.message,undefined);return p.caption;}
+  const api=load('lib/whatsapp/green-api.ts');
+  function handoff(){
+    const {url,payload}=posts.at(-1);
+    assert(url.includes('/sendMessage/'));
+    assert.equal(payload.chatId,'966511111111@c.us');
+    assert(payload.message.includes('https://barndaksa.com/login'));
+    assert.equal(payload.urlFile,undefined);
+    assert.equal(payload.caption,undefined);
+    assert(!payload.message.includes('.mp4'));
+    return payload.message;
+  }
   for(const startsTrial of [true,false]){
     await api.sendGreenApiOwnerWelcome({...input,startsTrial,trialTerms:[{planId:'starter',planName:'Menu',days:30}]});
-    const caption=video();assert(caption.includes(input.password));assert.equal(caption.includes('شهر كامل (٣٠ يومًا)'),startsTrial);assert.equal(caption.includes('دون تغيير مدة الاشتراك'),!startsTrial);checks++;
+    const caption=handoff();assert(caption.includes(input.password));assert.equal(caption.includes('شهر كامل (٣٠ يومًا)'),startsTrial);assert.equal(caption.includes('دون تغيير مدة الاشتراك'),!startsTrial);checks++;
   }
-  for(const planId of ['-','pro','plan-b523d348']){await api.sendGreenApiOwnerWelcome({...input,startsTrial:true,trialTerms:[{planId,planName:planId,days:30}]});assert(video().includes('شهر كامل'));checks++;}
-  await api.sendGreenApiOwnerWelcome({...input,startsTrial:true,trialTerms:[{planId:'finance',planName:'Finance',days:7}]});assert(video().includes('٧ أيام'));assert(!video().includes('شهر'));checks++;
-  await api.sendGreenApiOwnerWelcome({...input,startsTrial:true,trialTerms:[{planId:'starter',planName:'Menu',days:30},{planId:'finance',planName:'Finance',days:7}]});assert(video().includes('٣٠ يومًا) من اليوم لباقات: Menu'));assert(video().includes('٧ أيام من اليوم لباقات: Finance'));checks++;
+  for(const planId of ['-','pro','plan-b523d348']){await api.sendGreenApiOwnerWelcome({...input,startsTrial:true,trialTerms:[{planId,planName:planId,days:30}]});assert(handoff().includes('شهر كامل'));checks++;}
+  await api.sendGreenApiOwnerWelcome({...input,startsTrial:true,trialTerms:[{planId:'finance',planName:'Finance',days:7}]});assert(handoff().includes('٧ أيام'));assert(!handoff().includes('شهر'));checks++;
+  await api.sendGreenApiOwnerWelcome({...input,startsTrial:true,trialTerms:[{planId:'starter',planName:'Menu',days:30},{planId:'finance',planName:'Finance',days:7}]});assert(handoff().includes('٣٠ يومًا) من اليوم لباقات: Menu'));assert(handoff().includes('٧ أيام من اليوم لباقات: Finance'));checks++;
   for(const trialTerms of [undefined,[],[{planId:'finance',planName:'Finance',days:30}],[{planId:'pro',planName:'Loyalty',days:7}]]){const count=posts.length;await assert.rejects(()=>api.sendGreenApiOwnerWelcome({...input,startsTrial:true,trialTerms}),/OWNER_WELCOME_REJECTED/);assert.equal(posts.length,count);checks++;}
-  await api.sendGreenApiOwnerWelcome({...input,brandName:'ب'.repeat(120),password:'a'.repeat(72),startsTrial:true,trialTerms:[{planId:'pro',planName:'L'.repeat(400),days:30},{planId:'finance',planName:'F'.repeat(400),days:7}]});assert(video().includes('٣٠ يومًا أو ٧ أيام'));checks++;
-  const count=posts.length,queuedBefore=queued.length;await api.sendGreenApiOwnerSignupWelcome({phone:input.phone,brandName:input.brandName});assert.equal(posts.length,count+1);assert(!video().includes(input.password));assert(video().includes('كلمة المرور التي اخترتها'));assert(video().includes('١ من ٣'));assert.equal(queued.length,queuedBefore+1);assert.deepEqual(queued.at(-1),{phone:input.phone,receipt:'fixture-receipt'});checks++;
-  for(const phone of ['+966511111111','966111111111','not-phone']){const count=posts.length;await assert.rejects(()=>api.sendGreenApiOwnerSignupWelcome({phone,brandName:'Fixture'}),/INVALID_OWNER_RECIPIENT/);assert.equal(posts.length,count);checks++;}
+  await api.sendGreenApiOwnerWelcome({...input,brandName:'ب'.repeat(120),password:'a'.repeat(72),startsTrial:true,trialTerms:[{planId:'pro',planName:'L'.repeat(400),days:30},{planId:'finance',planName:'F'.repeat(400),days:7}]});assert(handoff().includes('٣٠ يومًا أو ٧ أيام'));checks++;
+  for(const phone of ['+966511111111','966111111111','not-phone']){
+    const count=posts.length;
+    await assert.rejects(()=>api.sendGreenApiOwnerCompanionGuide(phone,'setup'),/INVALID_OWNER_RECIPIENT/);
+    assert.equal(posts.length,count);checks++;
+  }
   for(const [result,expected] of [[{ok:false,status:400},'REJECTED'],[{ok:false,status:503},'UNCERTAIN'],[{ok:true,json:async()=>({})},'UNCERTAIN'],[new Error('network'),'UNCERTAIN']]){outcomes=[result];const count=posts.length;await assert.rejects(()=>api.sendGreenApiOwnerWelcome(input),new RegExp('OWNER_WELCOME_'+expected));assert.equal(posts.length,count+1);checks++;}
   Object.assign(process.env,{GREEN_API_OTP_BACKUP_API_URL:'https://api.green-api.com',GREEN_API_OTP_BACKUP_ID_INSTANCE:'987654',GREEN_API_OTP_BACKUP_API_TOKEN_INSTANCE:'fixture-backup'});
   outcomes=[{ok:false,status:401},{ok:false,status:401},{ok:false,status:401}];const before=posts.length;await api.sendGreenApiOwnerWelcome(input);assert.equal(posts.length,before+4);assert(posts.at(-1).url.includes('/waInstance987654/'));assert.deepEqual(posts.at(-1).payload,posts.at(-2).payload);checks++;
-  outcomes=[new Error('unknown')];const single=posts.length,queuedCount=queued.length;await assert.rejects(()=>api.sendGreenApiOwnerWelcome(input),/UNCERTAIN/);assert.equal(posts.length,single+1);assert.equal(queued.length,queuedCount);checks++;
-  for(const guide of ['cashier','customer']){const before=queued.length;await api.sendGreenApiOwnerCompanionGuide(input.phone,guide);const clip=posts.at(-1).payload;assert(clip.caption.length<1024);assert(!clip.caption.includes(input.password));assert(clip.urlFile.endsWith('.mp4'));assert.equal(queued.length,before);if(guide==='cashier'){assert(clip.caption.includes('٢ من ٣'));assert(clip.caption.includes('إدارة الكاشير'));assert(clip.caption.includes('يسجل له ختمًا'));}else{assert(clip.caption.includes('٣ من ٣'));assert(clip.caption.includes('محفظة الجوال'));}checks++;}
-} finally {globalThis.fetch=oldFetch;for(const key of Object.keys(process.env))if(key.startsWith('GREEN_API_'))delete process.env[key];for(const [key,value] of Object.entries(oldEnv))if(key.startsWith('GREEN_API_'))process.env[key]=value;}
+  outcomes=[new Error('unknown')];const single=posts.length;await assert.rejects(()=>api.sendGreenApiOwnerWelcome(input),/UNCERTAIN/);assert.equal(posts.length,single+1);checks++;
+  const files = {
+    setup: 'owner-loyalty-setup-20261118.mp4',
+    cashier: 'cashier-loyalty-20261118.mp4',
+    customer: 'customer-loyalty-card-20261119.mp4',
+  };
+  for(const [guide,filename] of Object.entries(files)){
+    const before=posts.length;
+    await api.sendGreenApiOwnerCompanionGuide(input.phone,guide);
+    const {url,payload}=posts.at(-1);
+    assert.equal(posts.length,before+1);
+    assert.ok(url.includes('waInstance123456/sendFileByUrl/'));
+    assert.equal(payload.chatId,input.phone+'@c.us');
+    assert.equal(payload.urlFile,'https://barndaksa.com/guides/'+filename);
+    assert(payload.caption.length<=1024);
+    assert(!payload.caption.includes(input.password));
+    assert.equal(payload.message,undefined);checks++;
+  }
+  for(const [outcome,expected] of [[{ok:false,status:401},'OWNER_GUIDE_PRIMARY_UNAVAILABLE'],[{ok:false,status:400},'OWNER_WELCOME_REJECTED'],[new Error('timeout'),'OWNER_WELCOME_UNCERTAIN']]){
+    outcomes=[outcome];const before=posts.length;
+    await assert.rejects(()=>api.sendGreenApiOwnerCompanionGuide(input.phone,'setup'),new RegExp(expected));
+    assert.equal(posts.length,before+1);
+    assert.ok(posts.at(-1).url.includes('waInstance123456/'));checks++;
+  }
+} finally {globalThis.fetch=oldFetch;if(oldEnv.BRANDA_ACCESS_MESSAGES_ONLY===undefined)delete process.env.BRANDA_ACCESS_MESSAGES_ONLY;else process.env.BRANDA_ACCESS_MESSAGES_ONLY=oldEnv.BRANDA_ACCESS_MESSAGES_ONLY;for(const key of Object.keys(process.env))if(key.startsWith('GREEN_API_'))delete process.env[key];for(const [key,value] of Object.entries(oldEnv))if(key.startsWith('GREEN_API_'))process.env[key]=value;}
 console.log('PASS '+checks+' owner welcome authorization, video, trial, failover and no-duplicate checks; no live messages');

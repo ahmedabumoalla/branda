@@ -2,15 +2,15 @@ import "server-only";
 
 import { createHmac, randomBytes, randomInt, randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
-import { after } from "next/server";
 import { z } from "zod";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
 import { normalizeBrandPhone, inferPhoneCountry, isBrandPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { normalizeInputDigits } from "@/lib/auth/input-digits";
+import { SELF_SIGNUP_CATEGORIES } from "@/lib/platform/business-categories";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { isGreenApiConfigured, sendGreenApiOtp, sendGreenApiOwnerSignupWelcome } from "@/lib/whatsapp/green-api";
+import { isGreenApiConfigured, sendGreenApiOtp } from "@/lib/whatsapp/green-api";
 import { resolveBranchGoogleMapsUrl } from "@/lib/maps/resolve-branch-location";
 
 const COOKIE = "barndaksa_owner_onboarding";
@@ -23,6 +23,8 @@ const mapsUrl = z.string().trim().max(1000).url().refine((value) => {
   );
 }, "أدخل رابطًا صحيحًا من خرائط Google");
 export const ownerOnboardingSchema = z.object({
+  category: z.enum(SELF_SIGNUP_CATEGORIES),
+  customCategoryName: z.string().trim().max(80).optional(),
   accountCountry: z.custom<BrandPhoneCountry>(isBrandPhoneCountry).optional(),
   // Accept older open registration forms, but all new self-signups receive loyalty
   planChoice: z.enum(["loyalty", "menu_loyalty"]).default("loyalty").transform(() => "loyalty" as const),
@@ -36,13 +38,18 @@ export const ownerOnboardingSchema = z.object({
     .nullish().transform(value => value || null),
   couponCode: z.string().trim().max(30).optional().transform(value => value?.toUpperCase() || ""),
 }).transform((draft, ctx) => {
+  if (draft.category === "other" && !draft.customCategoryName) {
+    ctx.addIssue({ code: "custom", path: ["customCategoryName"], message: "اكتب اسم التصنيف" });
+    return z.NEVER;
+  }
   const phone = draft.accountCountry ? normalizeBrandPhone(draft.phone, draft.accountCountry) : normalizeOwnerPhone(draft.phone);
   if (!phone) {
     ctx.addIssue({ code: "custom", path: ["phone"], message: "تحقق من رقم الجوال ودولة الحساب" });
     return z.NEVER;
   }
   // Older registration forms sent the selected calling code as part of the phone.
-  return { ...draft, phone, accountCountry: draft.accountCountry ?? inferPhoneCountry(phone) ?? "SA" };
+  return { ...draft, customCategoryName: draft.category === "other" ? draft.customCategoryName : undefined,
+    phone, accountCountry: draft.accountCountry ?? inferPhoneCountry(phone) ?? "SA" };
 });
 export type OwnerOnboardingInput = z.input<typeof ownerOnboardingSchema>;
 export type OwnerOnboardingResult = { ok: boolean; message: string; retryAfterSeconds?: number; redirectTo?: string | null };
@@ -67,6 +74,8 @@ export async function requestOwnerOnboarding(input: OwnerOnboardingInput): Promi
   const parsed = ownerOnboardingSchema.safeParse(input);
   if (!parsed.success) {
     const messages: Record<string, string> = {
+      category: "اختر تصنيف النشاط من القائمة أو اختر غير ذلك",
+      customCategoryName: "اكتب اسم التصنيف بحد أقصى ٨٠ حرفًا",
       brandNameAr: "اكتب اسم العلامة بالعربية من حرفين إلى ١٢٠ حرفًا",
       brandNameEn: "اكتب اسم العلامة بالإنجليزية من حرفين إلى ١٢٠ حرفًا دون رموز خاصة",
       ownerName: "اكتب اسم المسؤول من حرفين إلى ١٢٠ حرفًا",
@@ -149,15 +158,8 @@ export async function completeOwnerOnboarding(input: { password: string; confirm
       app_metadata: { owner_onboarding_id: proof.id, owner_onboarding_proof: proof.sessionHash },
     });
     if (created.error || !created.data.user) return { ok: false, message: "تعذر إنشاء الحساب قد يكون البريد أو الجوال مسجلًا مسبقًا؛ جرّب تسجيل الدخول" };
-    // User decision of 2026-11-22: while Branda's numbers carry access messages only, self-registration sends no
-    // WhatsApp welcome and no tutorial clips. The new owner lands on the guide page with the three tutorial videos
+    // Consuming the verified challenge queues its three tutorials in the Auth transaction.
     const tutorialsInApp = process.env.BRANDA_ACCESS_MESSAGES_ONLY?.trim() === "true";
-    // The account is committed at this point. Media delivery must not delay login or turn
-    // successful signup into a failure. No automatic retry of an ambiguous provider POST.
-    if (!tutorialsInApp) after(async () => {
-      try { await sendGreenApiOwnerSignupWelcome({ phone, brandName: draft.brandNameAr }); }
-      catch { console.warn("[owner-onboarding] welcome video submission unconfirmed"); }
-    });
     (await cookies()).delete(COOKIE);
     const signedIn = await (await createClient()).auth.signInWithPassword({ phone: `+${phone}`, password: password.data });
     if (signedIn.error || !signedIn.data.session) return { ok: true, message: "تم إنشاء حسابك وتفعيل باقة الولاء سجّل الدخول للمتابعة", redirectTo: "/login" };

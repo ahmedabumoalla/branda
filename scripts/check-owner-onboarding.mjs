@@ -28,7 +28,7 @@ const { normalizeOwnerPhone }=load("lib/auth/owner-phone.ts");
 for (const phone of ["+970 59 123 4567", "00970591234567", "٠٥٩١٢٣٤٥٦٧", "۰۵۹۱۲۳۴۵۶۷"]) await test(()=>assert.equal(normalizeOwnerPhone(phone,"970"),"970591234567"));
 await test(()=>assert.equal(normalizeOwnerPhone("0591234567"),"966591234567"));
 for (const phone of ["+970551234567","+97059123","+972591234567"]) await test(()=>assert.equal(normalizeOwnerPhone(phone),null));
-const valid={brandNameAr:"علامة الاختبار",brandNameEn:"Test Brand",ownerName:"Test Owner",email:"owner@example.invalid",phone:"0511111111",mapsUrl:"https://google.com/maps?q=24,46",couponCode:""};
+const valid={category:"car_washes",brandNameAr:"علامة الاختبار",brandNameEn:"Test Brand",ownerName:"Test Owner",email:"owner@example.invalid",phone:"0511111111",mapsUrl:"https://google.com/maps?q=24,46",couponCode:""};
 function context(options={}) {
   const events=[], jar=new Map(), deferred=[]; let capturedCode="";
   const rpc=async(name,args)=>{events.push({name,args});
@@ -44,10 +44,22 @@ function context(options={}) {
     "@/lib/supabase/admin":{createAdminClient:()=>({rpc,auth:{admin:{createUser:async input=>{events.push({name:"createUser",input});return {data:{user:{id:"new-owner"}},error:options.createError?{}:null};}}}})},
     "@/lib/supabase/server":{createClient:async()=>({auth:{signInWithPassword:async input=>{events.push({name:"signIn",input});return {data:{session:options.signInError?null:{}},error:null};}}})},
     "@/lib/maps/resolve-branch-location":{resolveBranchGoogleMapsUrl:async()=>{events.push({name:"mapPreview"});if(options.mapError)throw Error("unavailable");return {latitude:24,longitude:46};}},
-    "@/lib/whatsapp/green-api":{isGreenApiConfigured:()=>!options.unconfigured,sendGreenApiOtp:async input=>{capturedCode=input.code;events.push({name:"provider"});if(options.providerError)throw Error("provider-error");return {providerMessageId:"test"};},sendGreenApiOwnerSignupWelcome:async input=>{events.push({name:"welcome",input});if(options.welcomeError)throw Error("private-provider-error");return {providerMessageId:"welcome-test"};}},
+    "@/lib/whatsapp/green-api":{isGreenApiConfigured:()=>!options.unconfigured,sendGreenApiOtp:async input=>{capturedCode=input.code;events.push({name:"provider"});if(options.providerError)throw Error("provider-error");return {providerMessageId:"test"};}},
   };
   return {api:load("lib/auth/owner-onboarding.ts",stubs),events,jar,deferred,get code(){return capturedCode;}};
 }
+for (const category of [undefined, "", "not_in_catalog", "other"]) await test(async () => {
+  const c = context();
+  assert(!(await c.api.requestOwnerOnboarding({ ...valid, category })).ok);
+  assert.equal(c.events.length, 0);
+});
+for (const category of ["car_washes", "other"]) await test(async () => {
+  const c = context();
+  assert((await c.api.requestOwnerOnboarding({ ...valid, category, customCategoryName: "  صيانة دراجات  " })).ok);
+  const draft = c.events.find(e => e.name === "begin_owner_onboarding").args.p_draft;
+  assert.equal(draft.category, category);
+  assert.equal(draft.customCategoryName, category === "other" ? "صيانة دراجات" : undefined);
+});
 for (const [accountCountry, expected] of [["SA","966591234567"],["PS","970591234567"]]) await test(async () => {
   const c = context();
   assert((await c.api.requestOwnerOnboarding({...valid, accountCountry, phone:"٠٥٩١٢٣٤٥٦٧"})).ok);
@@ -74,25 +86,17 @@ for(const planChoice of ['loyalty','menu_loyalty'])for(const signInError of [fal
   const c=context({draft:{...valid,planChoice},signInError});
   await c.api.requestOwnerOnboarding({...valid,planChoice});
   const result=await c.api.completeOwnerOnboarding({password:'fixture-password',confirmPassword:'fixture-password'});
-  assert(result.ok);assert.equal(c.deferred.length,1);assert(!c.events.some(e=>e.name==='welcome'));
-  await c.deferred[0]();const messages=c.events.filter(e=>e.name==='welcome');assert.equal(messages.length,1);
-  assert.deepEqual(messages[0].input,{phone:'966511111111',brandName:valid.brandNameAr});
-  assert(!JSON.stringify(messages).includes('fixture-password'));
+  assert(result.ok);
+  assert.equal(c.deferred.length,0);
+  assert.equal(c.events.filter(e=>e.name==="createUser").length,1);
+  assert.equal(c.events.filter(e=>e.name==="provider").length,1, "Only the verification code is sent during signup");
   assert(!(await c.api.completeOwnerOnboarding({password:'fixture-password',confirmPassword:'fixture-password'})).ok);
-  assert.equal(c.deferred.length,1);
+  assert.equal(c.events.filter(e=>e.name==="createUser").length,1);
 });
 for(const options of [{createError:true},{unverified:true}])await test(async()=>{
   const c=context(options);await c.api.requestOwnerOnboarding(valid);
   assert(!(await c.api.completeOwnerOnboarding({password:'12345678',confirmPassword:'12345678'})).ok);
   assert.equal(c.deferred.length,0);
-});
-await test(async()=>{
-  const c=context({welcomeError:true});await c.api.requestOwnerOnboarding(valid);
-  assert((await c.api.completeOwnerOnboarding({password:'12345678',confirmPassword:'12345678'})).ok);
-  const original=console.warn,logs=[];console.warn=(...args)=>logs.push(args);
-  try{await c.deferred[0]();}finally{console.warn=original;}
-  assert.equal(c.events.filter(e=>e.name==='welcome').length,1);assert.equal(logs.length,1);
-  assert(!JSON.stringify(logs).includes('private-provider-error'));assert(!JSON.stringify(logs).includes('966511111111'));
 });
 await test(async()=>{const phone="970561234567", c=context({verifiedPhone:phone}); assert((await c.api.requestOwnerOnboarding({...valid,phone:"+٩٧٠ ٥٦ ١٢٣ ٤٥٦٧"})).ok);assert.equal(c.events.find(e=>e.name==="begin_owner_onboarding").args.p_phone,phone);assert((await c.api.verifyOwnerOnboarding(c.code)).ok);assert((await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"})).ok);assert.equal(c.events.find(e=>e.name==="createUser").input.phone,"+"+phone);});
 for(const [field,value,expected] of [["brandNameAr","Test","بالعربية"],["brandNameEn","علامة","بالإنجليزية"],["ownerName","x","المسؤول"],["email","invalid","البريد الإلكتروني"],["phone","05111","رقم جوال صحيح"]])

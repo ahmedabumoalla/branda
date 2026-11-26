@@ -1,7 +1,9 @@
-export const ownerGuideUrl = "https://barndaksa.com/guides/owner-loyalty-setup-20261118.mp4";
-export const ownerGuideFilename = "branda-loyalty-account-setup.mp4";
-
 export const ownerCompanionGuides = {
+  setup: {
+    url: "https://barndaksa.com/guides/owner-loyalty-setup-20261118.mp4",
+    filename: "branda-loyalty-account-setup.mp4",
+    caption: "١ من ٣ — إعداد حساب الولاء\nيوضح هذا المقطع كيف تجهز حسابك وبطاقة الولاء من لوحة التحكم\nإذا احتجت مساعدة في أي خطوة رد علينا هنا",
+  },
   cashier: {
     url: "https://barndaksa.com/guides/cashier-loyalty-20261118.mp4",
     filename: "branda-loyalty-cashier.mp4",

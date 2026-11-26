@@ -1,10 +1,12 @@
 import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 
-export type BusinessKind = "cafe" | "restaurant" | "butcher" | "barbershop" | "events" | "gifts" | "clothing" | "retail";
+export type BusinessKind = "cafe" | "restaurant" | "butcher" | "barbershop" | "events" | "gifts" | "clothing" | "retail" | "car_wash" | "other";
 
 export function resolveBusinessKind(
   category?: string | null
 ): BusinessKind {
+  if (category === "car_washes") return "car_wash";
+  if (category === "other") return "other";
   if (category === "hair_salons") return "barbershop";
   if (category === "clothing_stores") return "clothing";
   if (category === "retail_stores") return "retail";
@@ -121,6 +123,17 @@ const eventsCopy: BusinessCopy = {
 
 export function getBusinessCopy(category?: string | null): BusinessCopy {
   const kind = resolveBusinessKind(category);
+  if (kind === "car_wash" || kind === "other") {
+    const wash = kind === "car_wash";
+    return {
+      kind, categoryId: wash ? "car_washes" : "other",
+      brandNoun: wash ? "مغسلة سيارات" : "علامة تجارية", casualNoun: wash ? "مغسلة" : "علامة",
+      pageNoun: wash ? "صفحة المغسلة" : "صفحة العلامة",
+      itemSingular: wash ? "خدمة" : "منتج أو خدمة", itemPlural: wash ? "الخدمات" : "المنتجات والخدمات",
+      menuSearchPlaceholder: wash ? "ابحث عن خدمة" : "ابحث عن منتج أو خدمة",
+      freeRewardName: "مكافأة خاصة", loyaltyUnitSingular: "ختم", loyaltyUnitPlural: "أختام", loyaltyUnitLit: "أختام مكتملة",
+    };
+  }
   if (kind === "restaurant") return restaurantCopy;
   if (kind === "butcher") return butcherCopy;
   if (kind === "barbershop") return barbershopCopy;

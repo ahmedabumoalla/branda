@@ -131,6 +131,7 @@ export async function updateAdminBrandProfile(input: AdminBrandProfileInput) {
   if (category !== current.data.business_category) {
     if (!(AVAILABLE_BUSINESS_CATEGORY_IDS as readonly string[]).includes(category)) throw new Error("اختر نوع نشاط متاحًا");
     patch.business_category = category;
+    if (current.data.business_category === "other") patch.business_category_custom_name = null;
   }
   if (slug !== String(current.data.slug).toLowerCase()) {
     const delivery = await ownerDeliveryState(client, cafeId);

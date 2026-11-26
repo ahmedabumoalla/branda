@@ -1,14 +1,15 @@
 // Checks the user's plan of 2026-11-22 for what Branda's own numbers send: a reward notice instead of the card
-// link, no cashier welcome, no welcome or clips on self-registration, tutorials inside the dashboard instead.
+// link, no cashier welcome, administrator handoff by text and three tutorials after verified self-registration.
 // No live request is made and nothing is sent.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const path = require('node:path');
 const ts = require('typescript');
 
 const transpile = file => ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 const read = file => fs.readFileSync(file, 'utf8');
 
-function worker({ env, notify, jobs, saved = false }) {
+function worker({ env, notify, jobs, saved = false, activeCard = true }) {
   const finished = [], sent = [];
   const queue = [...jobs];
   const exports = {};
@@ -16,8 +17,20 @@ function worker({ env, notify, jobs, saved = false }) {
     'server-only': {},
     '@/lib/commerce/meram-profile': { MERAM_CAFE_ID: '98fd33d5-522d-46e7-adeb-34b04a665f4f' },
     '@/lib/auth/brand-phone': brandPhone,
+    '@/lib/loyalty/customer-phone': customerPhone,
     '@/lib/data/account-cancellation': { brandAllowsNewWork: async () => true },
-    '@/lib/supabase/admin': { createAdminClient: () => ({ async rpc(fn, args) {
+    '@/lib/supabase/admin': { createAdminClient: () => ({
+      from(table) {
+        assert.equal(table, 'loyalty_cards');
+        const filters = {};
+        return { select() { return this; }, eq(key,val) { filters[key] = val; return this; },
+          async maybeSingle() {
+            assert.equal(filters.status, 'active');
+            assert.ok(filters.id && filters.cafe_id && filters.customer_profile_id);
+            return { data: activeCard ? { id: filters.id } : null, error: null };
+          } };
+      },
+      async rpc(fn, args) {
       if (fn === 'claim_stamp_card_link_v3') return { data: args.p_primary_ready ? queue.shift() ?? null : null, error: null };
       assert.equal(fn, 'finish_stamp_card_link_v2');
       finished.push([args.p_id, args.p_status]); return { data: true, error: null };
@@ -38,12 +51,14 @@ function worker({ env, notify, jobs, saved = false }) {
 const job = (id, extra = {}) => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardId: 'c', brandSlug: 'example', brandName: 'قهوة المثال', phone: '966500000001', cardCreated: false, googleIssued: false, stampsInCycle: 3, purchasesRequired: 6, rewardName: 'قهوة مجانية', ...extra });
 const notify = { idInstance: 'notify' };
 const live = { BRANDA_ACCESS_MESSAGES_ONLY: 'true', BRANDA_PLATFORM_CARD_LINKS: 'off', BRANDA_REWARD_NOTICES: 'on' };
-function loadAuth(name) {
+function loadAuth(name, parent = '.') {
+  const file = (name.startsWith('@/') ? name.slice(2) : path.join(parent, name)) + '.ts';
   const exports = {};
-  new Function('require', 'exports', transpile(name.slice(2) + '.ts'))(loadAuth, exports);
+  new Function('require', 'exports', transpile(file))(child => loadAuth(child, path.dirname(file)), exports);
   return exports;
 }
 const brandPhone = loadAuth('@/lib/auth/brand-phone');
+const customerPhone = loadAuth('@/lib/loyalty/customer-phone');
 
 (async () => {
   let checks = 0;
@@ -172,11 +187,10 @@ const brandPhone = loadAuth('@/lib/auth/brand-phone');
     assert.match(page, /result\.whatsappStatus === "code_only"\s*\? "تم إنشاء حساب الموظف شارك رابط الكاشير معه ويدخل برقم جواله ورمز التحقق الذي يصله على واتساب"/);
     checks++;
   }
-  // Self-registration: no welcome and no clips while the switch is on, and the owner lands on the tutorials
+  // Verified account creation queues tutorials in the database; the signup handler only sends the OTP.
   {
     const source = read('lib/auth/owner-onboarding.ts');
-    assert.match(source, /const tutorialsInApp = process\.env\.BRANDA_ACCESS_MESSAGES_ONLY\?\.trim\(\) === "true";/);
-    assert.match(source, /if \(!tutorialsInApp\) after\(async \(\) => \{\s*try \{ await sendGreenApiOwnerSignupWelcome/);
+    assert.doesNotMatch(source, /sendGreenApiOwnerSignupWelcome|sendGreenApiOwnerCompanionGuide|queueOwnerCompanionGuides/);
     assert.match(source, /redirectTo: tutorialsInApp \? "\/dashboard\/loyalty\/guide\?start=1" : "\/dashboard"/);
     checks++;
   }
@@ -193,11 +207,11 @@ const brandPhone = loadAuth('@/lib/auth/brand-phone');
     assert.match(page, /if \(welcome\) redirect\("\/dashboard"\);/);
     checks++;
   }
-  // The administrator's login message invites a reply, and its clips are allowed with it
+  // The administrator's login text invites a reply and does not enqueue media
   {
     const green = read('lib/whatsapp/green-api.ts');
-    assert.match(green, /"قدرت تدخل حسابك؟ رد علينا بكلمة تم",\s*\]\.join\("\\n"\), "owner_handoff"\);/);
-    assert.match(green, /return sendOwnerVideo\(phone, clip\.url, clip\.filename, clip\.caption, "owner_handoff"\);/);
+    assert.ok(green.includes('قدرت تدخل حسابك؟ رد علينا بكلمة تم'));
+    assert.doesNotMatch(green, /queueOwnerCompanionGuides|sendGreenApiOwnerSignupWelcome/);
     checks++;
   }
 

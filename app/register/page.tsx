@@ -7,6 +7,7 @@ import { registerCafeOwnerAction, requestOwnerRegistrationOtpAction, verifyOwner
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import styles from "./register.module.css";
 import { normalizeInputDigits } from "@/lib/auth/input-digits";
+import { BUSINESS_CATEGORIES, SELF_SIGNUP_CATEGORIES } from "@/lib/platform/business-categories";
 
 import { normalizeBrandPhone, ARAB_COUNTRIES, getBrandCountry, inferPhoneCountry, isBrandPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 
@@ -19,6 +20,8 @@ export default function RegisterPage() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState({ brandNameAr: "", brandNameEn: "", ownerName: "", email: "", phone: "", couponCode: "" });
   const [accountCountry, setAccountCountry] = useState<BrandPhoneCountry>("SA");
+  const [category, setCategory] = useState("");
+  const [customCategoryName, setCustomCategoryName] = useState("");
   const countryChosen = useRef(false);
   const normalizedPhone = normalizeBrandPhone(draft.phone, accountCountry);
   const [code, setCode] = useState("");
@@ -32,7 +35,10 @@ export default function RegisterPage() {
   const update = (field: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [field]: value }));
   async function sendCode() {
     if (!normalizedPhone) { setMessage("تحقق من رقم الجوال ومفتاح الدولة"); return; }
-    const result = await requestOwnerRegistrationOtpAction({ ...draft, phone: normalizedPhone, accountCountry, planChoice: "loyalty" });
+    const selectedCategory = SELF_SIGNUP_CATEGORIES.find(id => id === category);
+    if (!selectedCategory) { setMessage("اختر تصنيف النشاط"); return; }
+    const result = await requestOwnerRegistrationOtpAction({ ...draft, phone: normalizedPhone, accountCountry, planChoice: "loyalty",
+      category: selectedCategory, customCategoryName: selectedCategory === "other" ? customCategoryName.trim() : undefined });
     setMessage(result.message);
     if (result.retryAfterSeconds) setResendAt(Date.now() + result.retryAfterSeconds * 1000);
     if (result.ok) { setCode(""); setStep(1); }
@@ -94,6 +100,11 @@ export default function RegisterPage() {
               <Field label="اسم العلامة بالعربية"><input placeholder="كما سيظهر لعملائك" value={draft.brandNameAr} onChange={event => update("brandNameAr", event.target.value)} required minLength={2} maxLength={120} autoComplete="organization" /></Field>
               <Field label="اسم العلامة بالإنجليزية"><input placeholder="Your brand name" value={draft.brandNameEn} onChange={event => update("brandNameEn", event.target.value)} required minLength={2} maxLength={120} dir="ltr" /></Field>
             </div>
+            <Field label="تصنيف النشاط"><select value={category} required onChange={event => setCategory(event.target.value)}>
+              <option value="" disabled>اختر تصنيف النشاط</option>
+              {SELF_SIGNUP_CATEGORIES.map(id => <option key={id} value={id}>{id === "other" ? "غير ذلك" : BUSINESS_CATEGORIES.find(item => item.id === id)?.label}</option>)}
+            </select></Field>
+            {category === "other" && <Field label="اسم التصنيف"><input value={customCategoryName} onChange={event => setCustomCategoryName(event.target.value)} required maxLength={80} /></Field>}
             <Field label="دولة الحساب"><select value={accountCountry} onChange={event => { if (isBrandPhoneCountry(event.target.value)) { countryChosen.current = true; setAccountCountry(event.target.value); } }}>{ARAB_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.name} (+{country.callingCode})</option>)}</select></Field>
             <p className={styles.note}>تُستخدم دولة الحساب لتحديد مفتاح جوال الموظفين والعملاء</p>
             </div>

@@ -618,7 +618,7 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
         name: String(row.name ?? ""),
         nameEn: String(row.name_en ?? ""),
         businessCategory: String(row.business_category ?? "cafes_coffee"),
-        businessCategoryLabel: categoryLabel(row.business_category),
+        businessCategoryLabel: row.business_category === "other" ? String(row.business_category_custom_name || "غير ذلك") : categoryLabel(row.business_category),
         ownerName: String(settings?.owner_name ?? ownerProfile?.full_name ?? ""),
         ownerEmail: String(settings?.owner_email ?? ownerProfile?.email ?? ""),
         ownerPhone: String(settings?.owner_phone ?? ""),
