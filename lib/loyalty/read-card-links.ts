@@ -4,7 +4,7 @@ import { brandAllowsNewWork } from '@/lib/data/account-cancellation';
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createLoyaltySessionToken, loyaltyIdentityHash } from "@/lib/auth/loyalty-session-token";
 import { isGreenApiLoyaltyWelcomeReady, sendGreenApiCustomerMessage, sendGreenApiLoyaltyWelcome } from "@/lib/whatsapp/green-api";
-import { selectLocoLoyaltySender, selectBrandLoyaltySender } from "@/lib/whatsapp/customer-routing";
+import { selectLocoLoyaltySender, selectBrandLoyaltySender, selectVerifiedBrandWhatsAppSender } from "@/lib/whatsapp/customer-routing";
 import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
 import { selectNotificationSender } from "@/lib/whatsapp/notification-sender";
 import { getGoogleWalletSaveState } from "@/lib/wallet/google";
@@ -69,17 +69,18 @@ export async function dispatchStampCardLinks(limit = 2) {
       if (saveError || !saved) throw new Error("stamp_card_link_result_unavailable");
       result.processed++; result[status]++;
     };
-    const privateSender = job.cafeId === LOCO_CAFE_ID ? locoSender
+    // The database flag proves a successful new cashier phone issue for Meram.
+    const meramInvitation = job.meramCashierPhoneIssue === true && job.cardCreated;
+    const privateSender = meramInvitation ? await selectVerifiedBrandWhatsAppSender(job.cafeId)
+      : job.cafeId === LOCO_CAFE_ID ? locoSender
       : job.privateSenderRequested ? await selectBrandLoyaltySender(job.cafeId) : null;
+    if (meramInvitation && !privateSender) { await finish("deferred"); continue; }
     if (!claimPlatform && !privateSender) { await finish("deferred"); continue; }
     const usesPlatformNumber = job.cafeId !== LOCO_CAFE_ID && !privateSender;
     // A stamp that completes the card sets the count back to zero, so zero right after a stamp means a reward was earned
     // A brand the user named keeps its card link while the platform switch is off, from the notifications number
     // only. Bolingo's points invoices report zero stamps even when no reward has been earned.
-    // The claim verifies Meram, a new card and the successful cashier phone operation together.
-    const meramInvitation = job.meramCashierPhoneIssue === true && job.cardCreated;
-    if (meramInvitation && !readyNotifySender) { await finish("deferred"); continue; }
-    const namedLink = meramInvitation || (Boolean(platformOff && usesPlatformNumber && readyNotifySender) && PLATFORM_CARD_LINK_CAFE_IDS.has(job.cafeId));
+    const namedLink = Boolean(platformOff && usesPlatformNumber && readyNotifySender) && PLATFORM_CARD_LINK_CAFE_IDS.has(job.cafeId);
     const earnedReward = !meramInvitation && !(namedLink && job.cafeId === BOLINGO_CAFE_ID) && Boolean(drain && usesPlatformNumber && rewardSender) && job.stampsInCycle === 0 && Number(job.purchasesRequired) >= 1;
     if (drain && usesPlatformNumber && !earnedReward && !namedLink) { await finish("skipped"); continue; }
     if (!await brandAllowsNewWork(job.cafeId)) { await finish('skipped'); continue; }

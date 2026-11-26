@@ -34,7 +34,7 @@ function selector({ rows, accounts, env = { GREEN_API_ID_INSTANCE: '111', GREEN_
 }
 const row = (id, extra = {}) => ({ idInstance: id, name: `Instance ${id}`, tariff: 'PARTNER', isPartner: true, deleted: false, isExpired: false, apiTokenInstance: `token-${id}-fixture`, apiUrl: 'https://7700.api.greenapi.com', ...extra });
 
-function worker({ paused, notify, primaryReady = false, jobs, off = false, loco = null }) {
+function worker({ paused, notify, primaryReady = false, jobs, off = false, loco = null, meramSender = null }) {
   const finished = [], sent = [], claims = [];
   const queue = [...jobs];
   const exports = {};
@@ -52,7 +52,7 @@ function worker({ paused, notify, primaryReady = false, jobs, off = false, loco 
       sendGreenApiLoyaltyWelcome: async input => { sent.push(['platform', input.phone]); return { status: 'queued', providerMessageId: 'p' }; },
       sendGreenApiCustomerMessage: async (sender, input) => { sent.push([sender.idInstance, input.phone]); return { status: 'queued', providerMessageId: 'n' }; },
     },
-    '@/lib/whatsapp/customer-routing': { selectLocoLoyaltySender: async () => loco, selectBrandLoyaltySender: async () => null },
+    '@/lib/whatsapp/customer-routing': { selectLocoLoyaltySender: async () => loco, selectBrandLoyaltySender: async () => null, selectVerifiedBrandWhatsAppSender: async cafe => { assert.equal(cafe, '98fd33d5-522d-46e7-adeb-34b04a665f4f'); return meramSender; } },
     '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: 'loco', WAHED_MASOUB_CAFE_ID: 'wahed' },
     '@/lib/whatsapp/notification-sender': { selectNotificationSender: async () => notify },
     '@/lib/wallet/google': { getGoogleWalletSaveState: async () => false },
@@ -111,11 +111,11 @@ const job = id => ({ id, claimToken: 't', cafeId: 'brand', profileId: 'p', cardI
     const meram = { ...job('new'), cafeId: '98fd33d5-522d-46e7-adeb-34b04a665f4f', meramCashierPhoneIssue: true };
     const repeat = { ...meram, id: 'repeat', cardCreated: false, meramCashierPhoneIssue: false };
     const pager = { ...meram, id: 'pager', meramCashierPhoneIssue: false };
-    const x = worker({ paused: true, off: true, notify, primaryReady: true, jobs: [meram, repeat, pager] });
+    const x = worker({ paused: true, off: true, notify, meramSender: { idInstance: 'meram-private' }, primaryReady: true, jobs: [meram, repeat, pager] });
     await x.exports.dispatchStampCardLinks(3);
-    assert.deepEqual(x.sent, [['notify', meram.phone]]);
+    assert.deepEqual(x.sent, [['meram-private', meram.phone]]);
     assert.deepEqual(x.finished, [['new', 'queued'], ['repeat', 'skipped'], ['pager', 'skipped']]);
-    const offline = worker({ paused: true, off: true, notify: null, primaryReady: true, jobs: [meram] });
+    const offline = worker({ paused: true, off: true, notify, primaryReady: true, jobs: [meram] });
     await offline.exports.dispatchStampCardLinks(1);
     assert.deepEqual(offline.sent, []);
     assert.deepEqual(offline.finished, [['new', 'deferred']]); checks++;

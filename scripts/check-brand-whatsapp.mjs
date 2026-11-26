@@ -83,11 +83,21 @@ try {
   });
   await test('Meram owner can opt in her verified order sender using the existing pairing flow',async()=>{
     const meram='98fd33d5-522d-46e7-adeb-34b04a665f4f',h=harness({contextCafe:meram});
-    const dash=await h.getBrandWhatsAppDashboard();assert.equal(dash.orderNotificationsOnly,true);
+    const dash=await h.getBrandWhatsAppDashboard();assert.equal(dash.meramNotifications,true);
     assert.equal(h.counts().provisions,0);
     const paired=await h.runBrandWhatsAppAction({action:'connect',phone:'0500000001'});
     assert.equal(paired.dashboard.transactionalEnabled,true);assert.equal(h.row().cafe_id,meram);
     assert.equal(h.calls.find(x=>x.rpc==='loco_claim_whatsapp_connection').args.p_cafe,meram);
+  });
+  await test('Meram reconciles completed mobile pairing before a cashier invitation',async()=>{
+    const meram='98fd33d5-522d-46e7-adeb-34b04a665f4f';
+    const connection=linked({cafe_id:meram,status:'pairing',verified_phone:null,transactional_requested_at:new Date().toISOString()});
+    const h=harness({contextCafe:meram,connection});
+    assert.equal((await h.getBrandCustomerWhatsAppCredentials(meram)).idInstance,creds.idInstance);
+    assert.equal(h.row().status,'connected');assert.equal(h.counts().provisions,0);
+    const mismatch=harness({contextCafe:meram,connection,accountPhone:'966500000009'});
+    assert.equal(await mismatch.getBrandCustomerWhatsAppCredentials(meram),null);
+    assert.equal(mismatch.row().status,'mismatch');
   });
   await test('New brand sees the monthly price and can explicitly pair its own number',async()=>{
     const cafeId=id(8), h=harness({contextCafe:cafeId});

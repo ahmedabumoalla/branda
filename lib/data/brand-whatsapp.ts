@@ -55,7 +55,7 @@ async function dashboard(context: Context): Promise<BrandWhatsAppDashboard> {
     monthlyPriceUsd: context.cafeId === LOCO_CAFE_ID ? null : 30,
     configured: marketingConfigured(),
     platformFallback: context.cafeId !== LOCO_CAFE_ID,
-    ...(context.cafeId === MERAM_CAFE_ID ? { orderNotificationsOnly: true as const } : {}),
+    ...(context.cafeId === MERAM_CAFE_ID ? { meramNotifications: true as const } : {}),
     transactionalEnabled: Boolean(row?.transactional_requested_at) && !["disconnected", "disconnecting"].includes(row!.status),
     connection: row ? {
       status: row.status, phone: row.requested_phone, verifiedPhone: row.verified_phone,
@@ -98,7 +98,12 @@ export async function getBrandCustomerWhatsAppCredentials(cafeId: string | null 
     const db = createAdminClient();
     const { data: cafe, error } = await db.from("cafes").select("id,status").eq("id", cafeId).is("deleted_at", null).maybeSingle();
     if (error || !cafe || !["active", "published"].includes(cafe.status)) return null;
-    const row = await readMarketingConnection({ db, cafeId });
+    let row = await readMarketingConnection({ db, cafeId });
+    // Pairing can finish on the phone after the owner closes the QR screen.
+    if (cafeId === MERAM_CAFE_ID && row?.status === "pairing" && row.transactional_requested_at && row.encrypted_credentials) {
+      if (await refreshMarketingConnection({ db, cafeId }, row) !== "authorized") return null;
+      row = await readMarketingConnection({ db, cafeId });
+    }
     if (!row?.transactional_requested_at || row.status !== "connected" || !canonicalBrandMobile.test(row.requested_phone)
       || row.requested_phone !== row.verified_phone || !row.instance_id || !row.encrypted_credentials) return null;
     return { ...marketingConnectionCredentials(row), expectedPhone: row.requested_phone, generation: row.generation };

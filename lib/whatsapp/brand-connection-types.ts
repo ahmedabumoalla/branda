@@ -23,7 +23,7 @@ export type BrandWhatsAppDashboard = {
   configured: boolean;
   transactionalEnabled: boolean;
   platformFallback: boolean;
-  orderNotificationsOnly?: true;
+  meramNotifications?: true;
   connection: {
     status: MarketingConnectionStatus;
     phone: string;
