@@ -33,6 +33,7 @@ const nonnegative = z.number().int().nonnegative();
 const dateTime = z.string().datetime({ offset: true });
 const nullableCount = nonnegative.nullable();
 const eventSchema = z.object({
+  stampVoided: z.boolean().optional(),
   id: z.string().uuid(), occurredAt: dateTime, recordedAt: dateTime,
   kind: z.enum(loyaltyActivityKinds), outcome: z.enum(loyaltyActivityOutcomes),
   origin: z.enum(["live", "historical"]), cashierId: z.string().uuid().nullable(),
@@ -49,6 +50,7 @@ const eventSchema = z.object({
 
 // A deliberate allowlist prevents future DB metadata or bearer codes leaking into the dashboard.
 export const loyaltyActivityPageSchema = z.object({
+  canVoidStamps: z.boolean().optional(),
   events: z.array(eventSchema).max(50), total: nonnegative,
   page: z.number().int().positive(), pageSize: z.number().int().min(1).max(50),
   recordingStartedAt: dateTime.nullable(),

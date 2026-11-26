@@ -626,6 +626,7 @@ export async function getCustomerLoyaltyCardViewForProfile(
   const { data, error } = branchId
     ? await createAdminClient().rpc("issue_branch_loyalty_card", { p_customer_profile_id: profile.id, p_branch: z.string().uuid().parse(branchId) })
     : await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
+  if (error?.message === "Loyalty card suspended") return null;
   if (error) throw new Error("تعذر إصدار بطاقة الولاء تحقق من تفعيل البرنامج");
   return getLoyaltyCardViewByCode(String(data));
 }

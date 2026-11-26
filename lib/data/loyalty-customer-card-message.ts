@@ -13,6 +13,7 @@ export type LoyaltyCustomerCardMessage = { message: string; whatsappUrl: string 
 export async function getOwnerLoyaltyCustomerCardMessage(id: unknown, downloadedOnly: unknown = false): Promise<LoyaltyCustomerCardMessage> {
   // The directory read authorises the caller for this brand and this customer before any link is created
   const customer = await getOwnerLoyaltyCustomerDetail(id, downloadedOnly);
+  if (customer.cardStatus === "suspended") throw new Error("Card suspended");
   const cafe = await requireOwnerCafeContext();
   const phone = customer.phone ? loyaltyCustomerPhone(customer.phone, await getBrandPhoneCountry(cafe.id), cafe.id) : null;
   if (!phone) throw new Error("customer_phone_unavailable");

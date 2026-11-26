@@ -17,6 +17,7 @@ export type LoyaltyActivityFilters = {
 };
 
 export type LoyaltyActivityEvent = {
+  stampVoided?: boolean;
   id: string;
   occurredAt: string;
   recordedAt: string;
@@ -75,6 +76,7 @@ export type LoyaltyActivitySummary = {
 };
 
 export type LoyaltyActivityPage = {
+  canVoidStamps?: boolean;
   events: LoyaltyActivityEvent[];
   total: number;
   page: number;

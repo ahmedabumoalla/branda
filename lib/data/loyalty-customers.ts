@@ -31,10 +31,10 @@ async function directoryContext() {
   if (!user) throw new Error("Authentication required");
   const [profile, brand] = await Promise.all([
     db.from("profiles").select("status").eq("id", user.id).maybeSingle(),
-    db.from("cafes").select("status").eq("id", cafe.id).is("deleted_at", null).maybeSingle(),
+    db.from("cafes").select("status,owner_user_id").eq("id", cafe.id).is("deleted_at", null).maybeSingle(),
   ]);
   if (profile.error || brand.error || profile.data?.status !== "active" || !["active", "published"].includes(brand.data?.status ?? "")) throw new Error("Account unavailable");
-  return { db, cafeId: cafe.id };
+  return { db, cafeId: cafe.id, isOwner: cafe.role === "owner" && brand.data?.owner_user_id === user.id };
 }
 
 export async function getOwnerLoyaltyCustomers(input: unknown = {}): Promise<LoyaltyCustomerPage> {
@@ -51,12 +51,29 @@ export async function getOwnerLoyaltyCustomers(input: unknown = {}): Promise<Loy
 export async function getOwnerLoyaltyCustomerDetail(id: unknown, downloadedOnly: unknown = false): Promise<LoyaltyCustomerDetail> {
   const customerId = z.string().uuid().parse(id);
   const membersOnly = z.boolean().parse(downloadedOnly);
-  const { db, cafeId } = await directoryContext();
+  const { db, cafeId, isOwner } = await directoryContext();
   const { data, error } = await db.rpc("loyalty_customer_directory_detail", {
     p_cafe: cafeId, p_customer: customerId, p_members_only: membersOnly,
   });
   if (error || !data) throw new Error("Customer unavailable");
   const detail = directoryDetail.parse(data);
-  const region = cafeId === FAROUJ_CAFE_ID && detail.phone ? faroujCustomerPhone(detail.phone)?.region : null;
-  return region ? { ...detail, phoneCountryName: phoneRegionName(region, "ar") } : detail;
+  if (cafeId !== FAROUJ_CAFE_ID) return detail;
+  const region = detail.phone ? faroujCustomerPhone(detail.phone)?.region : null;
+  const card = await db.from("loyalty_cards").select("id,status").eq("cafe_id", cafeId).eq("customer_profile_id", customerId).maybeSingle();
+  if (card.error) throw new Error("Card status unavailable");
+  return {
+    ...detail,
+    ...(region ? { phoneCountryName: phoneRegionName(region, "ar") } : {}),
+    ...(card.data ? { cardStatus: z.enum(["active", "suspended"]).parse(card.data.status) } : {}),
+    ...(isOwner && card.data?.status === "active" ? { suspendableCardId: String(card.data.id) } : {}),
+  };
+}
+
+export async function suspendOwnerLoyaltyCard(id: unknown, cardId: unknown) {
+  const { cafeId, isOwner, db } = await directoryContext();
+  if (cafeId !== FAROUJ_CAFE_ID || !isOwner) throw new Error("Card management forbidden");
+  const { error } = await db.rpc("suspend_farouj_owner_card", {
+    p_customer: z.string().uuid().parse(id), p_card: z.string().uuid().parse(cardId),
+  });
+  if (error) throw new Error("Card suspension failed");
 }

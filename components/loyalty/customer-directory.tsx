@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, Cake, ChevronLeft, ChevronRight, Phone, Search, UsersRound, X } from "lucide-react";
-import { loadLoyaltyCustomerDetailAction, loadLoyaltyCustomersAction } from "@/app/actions/loyalty-customers";
+import { loadLoyaltyCustomerDetailAction, loadLoyaltyCustomersAction, suspendLoyaltyCustomerCardAction } from "@/app/actions/loyalty-customers";
 import type { LoyaltyCustomerBalance, LoyaltyCustomerDetail, LoyaltyCustomerPage, LoyaltyCustomerRow } from "@/lib/loyalty/customer-directory-types";
 import { CustomerCardMessage } from "./customer-card-message";
 import styles from "./customer-directory.module.css";
@@ -35,6 +35,34 @@ function CustomerBalances({ loyalty, name }: { loyalty: LoyaltyCustomerBalance |
     {loyalty.affordablePointRewards !== null && <div><dt>خيارات الاستبدال بالنقاط</dt><dd>{number.format(loyalty.affordablePointRewards)}</dd></div>}
   </dl>;
   return <div className={styles.balanceGroups}>{loyalty.mode === "points" ? [points, stamps] : [stamps, points]}</div>;
+}
+
+function SuspendCard({ customerId, cardId, onSuspended }: { customerId: string; cardId: string; onSuspended: () => void }) {
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function suspend() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await suspendLoyaltyCustomerCardAction(customerId, cardId);
+      if (result.ok) onSuspended();
+      else setError(result.message);
+    } catch {
+      setError("تعذر الاتصال أعد المحاولة");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return <section className={styles.cardSuspension} aria-label="إدارة البطاقة">
+    {confirm ? <>
+      <p>إيقاف البطاقة يمنع جمع الأختام والنقاط واستبدال المكافآت ويحفظ سجل العميل</p>
+      <button type="button" disabled={busy} onClick={() => void suspend()}>{busy ? "جار إيقاف البطاقة" : "تأكيد إيقاف البطاقة"}</button>
+      <button type="button" disabled={busy} onClick={() => { setConfirm(false); setError(""); }}>تراجع</button>
+    </> : <button type="button" onClick={() => setConfirm(true)}>إيقاف بطاقة الولاء</button>}
+    {error && <p role="alert">{error}</p>}
+  </section>;
 }
 
 export function LoyaltyCustomerDetailDialog({ customer, onClose, downloadedOnly = false }: {
@@ -92,7 +120,10 @@ export function LoyaltyCustomerDetailDialog({ customer, onClose, downloadedOnly 
             : detail ? <dl><dt><Phone size={18} aria-hidden="true" /> رقم الجوال</dt><dd>{detail.phone ? <bdi dir="ltr">{detail.phone}</bdi> : <span className={styles.missingPhone}>رقم الجوال غير متوفر</span>}</dd>{detail.phoneCountryName && <><dt>دولة رقم الجوال</dt><dd>{detail.phoneCountryName}</dd></>}{detail.birthdayEnabled ? <><dt className={styles.nextTerm}><Cake size={18} aria-hidden="true" /> تاريخ الميلاد</dt><dd>{detail.birthDate ? <span className={styles.birthDate}>{birthDateLabel(detail.birthDate)}</span> : <span className={styles.missingPhone}>لم يسجل تاريخ الميلاد</span>}</dd></> : null}</dl>
               : <div className={styles.detailLoading} role="status"><span className={styles.skeletonLine} aria-hidden="true" /> جار تحميل بيانات العميل</div>}
         </div>
-        {detail?.phone && <CustomerCardMessage customerId={customer.id} downloadedOnly={downloadedOnly} />}
+        {detail?.cardStatus === "suspended" && <p role="status">بطاقة الولاء موقوفة</p>}
+        {detail?.suspendableCardId && <SuspendCard key={detail.suspendableCardId} customerId={customer.id} cardId={detail.suspendableCardId}
+          onSuspended={() => setDetail(current => current && { ...current, cardStatus: "suspended", suspendableCardId: undefined })} />}
+        {detail?.phone && detail.cardStatus !== "suspended" && <CustomerCardMessage customerId={customer.id} downloadedOnly={downloadedOnly} />}
         <footer className={styles.detailFooter}><button type="button" onClick={onClose}>إغلاق الملف</button></footer>
       </div>
     </dialog>

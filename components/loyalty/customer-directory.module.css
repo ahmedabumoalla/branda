@@ -121,3 +121,8 @@
 @media (prefers-reduced-motion: reduce) {
   .directory *, .dialog, .dialog * { animation: none !important; transition: none !important; }
 }
+
+.cardSuspension { margin-top: 16px; }
+.cardSuspension p { margin: 8px 0; }
+.cardSuspension button { margin-inline-end: 8px; min-height: 44px; padding: 8px 16px; border: 1px solid var(--directory-line); border-radius: 11px; color: var(--directory-red); background: var(--directory-paper); font: inherit; cursor: pointer; }
+.cardSuspension button:disabled { opacity: .65; cursor: wait; }

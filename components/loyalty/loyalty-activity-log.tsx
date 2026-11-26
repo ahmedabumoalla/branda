@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowUpLeft, Check, ChevronLeft, ChevronRight, CircleAlert, Clock3, CreditCard, Gift, History, LoaderCircle, RefreshCw, ScanLine, Search, SlidersHorizontal, Stamp, X } from "lucide-react";
-import { loadLoyaltyActivityAction } from "@/app/actions/loyalty-activity";
+import { loadLoyaltyActivityAction, voidCashierStampAction } from "@/app/actions/loyalty-activity";
 import { defaultLoyaltyActivityFilters, type LoyaltyActivityEvent, type LoyaltyActivityFilters, type LoyaltyActivityKind, type LoyaltyActivityOutcome, type LoyaltyActivityPage, type LoyaltyActivityResult } from "@/lib/loyalty/activity-types";
 import s from "./loyalty-activity-log.module.css";
 
@@ -43,7 +43,7 @@ function rangeLabel(filters: LoyaltyActivityFilters) {
 
 function count(value: number) { return numberFormat.format(value); }
 function actorName(event: LoyaltyActivityEvent) { return event.actorName || (event.actorType === "owner" ? "مالك الحساب" : "الموظف غير مسجل"); }
-function eventLabel(event: LoyaltyActivityEvent) { return event.kind === "scan" && event.rewardSuffix ? "قراءة مكافأة" : kindLabels[event.kind]; }
+function eventLabel(event: LoyaltyActivityEvent) { if (event.stampVoided) return "ختم مُلغى"; return event.kind === "scan" && event.rewardSuffix ? "قراءة مكافأة" : kindLabels[event.kind]; }
 
 function EventIcon({ kind }: { kind: LoyaltyActivityKind }) {
   if (kind === "issue" || kind === "download" || kind === "save_link") return <CreditCard aria-hidden="true" />;
@@ -58,6 +58,7 @@ function Outcome({ outcome }: { outcome: LoyaltyActivityOutcome }) {
 }
 
 function eventSummary(event: LoyaltyActivityEvent) {
+  if (event.stampVoided) return "ألغى المالك هذا الختم وسُجّل التعديل على البطاقة";
   if (event.outcome === "duplicate") return "تكرار طلب سابق؛ لم تُضف عملية جديدة";
   if (event.outcome === "denied") return "لم تُنفّذ العملية لعدم استيفاء شروطها";
   if (event.outcome === "failed") return "تعذر إتمام العملية";
@@ -70,7 +71,20 @@ function eventSummary(event: LoyaltyActivityEvent) {
   return "تم تسجيل إلغاء العملية";
 }
 
-function EventDetails({ event, onClose }: { event: LoyaltyActivityEvent; onClose: () => void }) {
+function EventDetails({ event, onClose, canVoid, onVoided }: { event: LoyaltyActivityEvent; onClose: () => void; canVoid: boolean; onVoided: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [failure, setFailure] = useState("");
+  async function voidStamp() {
+    setSaving(true);
+    setFailure("");
+    try {
+      const result = await voidCashierStampAction(event.id);
+      if (result.ok) onVoided();
+      else setFailure(result.message);
+    } catch { setFailure("تعذّر الاتصال حدّث السجل وأعد المحاولة"); }
+    finally { setSaving(false); }
+  }
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -117,6 +131,13 @@ function EventDetails({ event, onClose }: { event: LoyaltyActivityEvent; onClose
       <div><dt>وقت حفظ السجل</dt><dd>{dateLabel(event.recordedAt)}، {timeLabel(event.recordedAt)}</dd></div>
       <div className={s.detailWide}><dt>مرجع العملية</dt><dd><bdi>{event.id}</bdi></dd></div>
     </dl>
+    {canVoid && event.kind === "stamp" && event.outcome === "success" && !event.stampVoided && <div className={s.filterActions}>
+      {confirming ? <><p>تأكيد إلغاء هذا الختم وتعديل رصيد البطاقة والمكافأة المرتبطة به؟</p>
+        <button type="button" className={s.primary} disabled={saving} onClick={voidStamp}>{saving ? "جار إلغاء الختم" : "تأكيد إلغاء الختم"}</button>
+        <button type="button" className={s.clearButton} disabled={saving} onClick={() => { setConfirming(false); setFailure(""); }}>تراجع</button></>
+        : <button type="button" className={s.detailsButton} onClick={() => setConfirming(true)}>إلغاء الختم</button>}
+      {failure && <p role="alert">{failure}</p>}
+    </div>}
     <p className={s.dialogFoot}>{event.origin === "historical" ? "هذه عملية سابقة يظهر اسم الموظف المتاح في السجلات وقد يختلف عن اسمه وقت العملية الأرصدة غير المسجلة لا تُستنتج من الرصيد الحالي " : ""}تظهر نهاية رقم البطاقة فقط لحماية بيانات العميل جميع الأوقات بتوقيت الرياض</p>
   </dialog>;
 }
@@ -259,6 +280,6 @@ export function LoyaltyActivityLog({ initialResult, initialFilters }: Props) {
       {data && data.total > 0 ? <nav className={s.pagination} aria-label="صفحات سجل العمليات"><p>عرض {count(firstRow)}–{count(lastRow)} من {count(data.total)} عملية</p><div className={s.paginationButtons}><button type="button" className={s.secondary} disabled={pending || data.page <= 1} onClick={() => void load({ ...applied, page: data.page - 1 }, true)}><ChevronRight aria-hidden="true" />السابق</button><span className={s.pageNumber}>صفحة {count(data.page)} من {count(pageCount)}</span><button type="button" className={s.secondary} disabled={pending || data.page >= pageCount} onClick={() => void load({ ...applied, page: data.page + 1 }, true)}>التالي<ChevronLeft aria-hidden="true" /></button></div></nav> : null}
       {updatedAt ? <p className={s.updated}>آخر تحديث للعرض: {dateLabel(updatedAt)} {timeLabel(updatedAt)} بتوقيت الرياض</p> : null}
     </div>
-    {selected ? <EventDetails event={selected} onClose={() => setSelected(null)} /> : null}
+    {selected ? <EventDetails key={selected.id} event={selected} canVoid={!!data?.canVoidStamps} onClose={() => setSelected(null)} onVoided={() => { setSelected({ ...selected, stampVoided: true }); void load(applied); }} /> : null}
   </section>;
 }
