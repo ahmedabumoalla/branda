@@ -18,12 +18,12 @@ type SummaryInput = { cafeId: string; cashierId: string; method: "code" | "phone
 const EMPTY: CustomerSummaryState = { id: null, status: "idle", summary: null, confirmed: false };
 
 /** Only complete identifiers leave the device; partial phones are never card lookups. */
-export function customerSummaryIdentifier(method: "code" | "phone", raw: string, country: BrandPhoneCountry = "SA") {
+export function customerSummaryIdentifier(method: "code" | "phone", raw: string, country: BrandPhoneCountry = "SA", cafeId?: string) {
   const value = normalizeLoyaltyDigits(raw.trim());
   if (!value || value.length > 500) return null;
-  method = resolveReadMethod(method, value, country);
+  method = resolveReadMethod(method, value, country, cafeId);
   if (method === "phone") {
-    const phone = normalizeLoyaltyReadPhone(value, country);
+    const phone = normalizeLoyaltyReadPhone(value, country, cafeId);
     return phone ? { method, value: phone } : null;
   }
   const parsed = parseBarndaksaQrPayload(value, "loyalty-card");
@@ -81,7 +81,7 @@ export function createCustomerSummaryController(options: {
   }
   function resume() { const start = suspended; suspended = null; start?.(); }
   function lookup(method: "code" | "phone", value: string, settings: { immediate?: boolean } = {}): number | null {
-    const identifier = customerSummaryIdentifier(method, value, options.phoneCountry);
+    const identifier = customerSummaryIdentifier(method, value, options.phoneCountry, options.scope.cafeId);
     if (!identifier) { clear(); return null; }
     const key = JSON.stringify([identifier.method, identifier.value]);
     if (key === identifierKey && ["loading", "slow", "ready"].includes(state.status)) {

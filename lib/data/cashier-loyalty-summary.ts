@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { getCashierToken, requireCashierPermission } from "@/lib/data/cashier";
+import { FAROUJ_CAFE_ID, faroujCustomerPhone } from "@/lib/loyalty/customer-phone";
 import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isCashierLoyaltyCode, normalizeLoyaltyDigits, resolveReadMethod } from "@/lib/loyalty/read-identifier";
@@ -37,10 +38,10 @@ export async function getCashierLoyaltySummary(raw: unknown, signal?: AbortSigna
   const input = parsed.data, digits = normalizeLoyaltyDigits(input.value);
   const token = await getCashierToken();
   if (!token) return { ok: false, code: "session_invalid" };
-  const method = resolveReadMethod(input.method, digits);
+  const method = resolveReadMethod(input.method, digits, undefined, input.cafeId);
   // The RPC applies the verified cashier’s brand country to national numbers.
   const value = method === "phone"
-    ? (normalizeOwnerPhone(digits) ? digits.replace(/[\s()-]/g, "") : null)
+    ? input.cafeId === FAROUJ_CAFE_ID ? faroujCustomerPhone(digits)?.phone : (normalizeOwnerPhone(digits) ? digits.replace(/[\s()-]/g, "") : null)
     : parseBarndaksaQrPayload(digits, "loyalty-card") ?? digits.toUpperCase();
   if (!value || (method === "code" && !isCashierLoyaltyCode(value))) return { ok: false, code: "invalid_input" };
   const abort = signal ? AbortSignal.any([signal, AbortSignal.timeout(1500)]) : AbortSignal.timeout(1500);

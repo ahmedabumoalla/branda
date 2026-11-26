@@ -29,6 +29,7 @@ const englishCopy: Record<string, string> = {
   "6. يجب أن تكون كل زيارة مرتبطة بعملية شراء فعلية ومستوفية للحد": "6. Each visit must be linked to a purchase that meets the minimum spend",
   "أدخل اسمك ورقم جوالك بشكل صحيح": "Enter your name and mobile number",
   "برنامج الولاء غير متاح حاليًا": "The loyalty program is currently unavailable",
+  "أدخل رقم جوال صحيحًا مع مفتاح الدولة": "Enter a valid mobile number with its country code",
   "أدخل رقم جوال صحيح لدولة العلامة": "Enter a valid mobile number for this country",
   "محاولات كثيرة انتظر قليلًا ثم حاول مجددًا": "Too many attempts. Please wait a moment and try again",
   "تعذر فتح البطاقة تأكد من الاسم المسجّل ورقم الجوال أو تواصل مع العلامة": "Check your registered name and mobile number or contact the brand",

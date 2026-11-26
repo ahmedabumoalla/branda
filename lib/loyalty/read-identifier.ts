@@ -1,4 +1,5 @@
-import { normalizeBrandPhone, inferPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
+import { loyaltyCustomerPhone } from "./customer-phone";
+import { inferPhoneCountry, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 
 /** Human-facing numbers are brand scoped and never public card credentials. */
 export function normalizeLoyaltyDigits(input: string): string {
@@ -13,13 +14,13 @@ export function isLoyaltyDisplayNumber(input: string): boolean {
 export function isCashierLoyaltyCode(input: string): boolean {
   return isLoyaltyDisplayNumber(input) || /^[A-Z0-9_-]{4,100}$/.test(input);
 }
-export function normalizeLoyaltyReadPhone(input: string, country: BrandPhoneCountry = "SA"): string | null {
-  return normalizeBrandPhone(input, country);
+export function normalizeLoyaltyReadPhone(input: string, country: BrandPhoneCountry = "SA", cafeId?: string): string | null {
+  return loyaltyCustomerPhone(input, country, cafeId);
 }
 /** Detect unambiguous stamp identifiers independently of the input tab. */
-export function resolveReadMethod(method: "code" | "phone", input: string, country: BrandPhoneCountry = "SA"): "code" | "phone" {
+export function resolveReadMethod(method: "code" | "phone", input: string, country: BrandPhoneCountry = "SA", cafeId?: string): "code" | "phone" {
   const value = normalizeLoyaltyDigits(input.trim());
   if (value.startsWith("BARNDAKSA_QR:") || /^[a-f\d]{16}$/i.test(value) || isLoyaltyDisplayNumber(value)) return "code";
-  if (normalizeLoyaltyReadPhone(value, country) || inferPhoneCountry(value) || /^(?:\+|00)\d{7,15}$/.test(value.replace(/[\s()-]/g, "")) || (country === "PS" && /^0?5\d{8}$/.test(value))) return "phone";
+  if (normalizeLoyaltyReadPhone(value, country, cafeId) || inferPhoneCountry(value) || /^(?:\+|00)\d{7,15}$/.test(value.replace(/[\s()-]/g, "")) || (country === "PS" && /^0?5\d{8}$/.test(value))) return "phone";
   return method;
 }

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { loyaltyCustomerPhone } from "@/lib/loyalty/customer-phone";
 import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { requireCashierPermission } from "@/lib/data/cashier";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
@@ -17,7 +17,7 @@ export async function resolveCashierLoyaltyPhone(rawPhone: string): Promise<stri
   await assertRastLoyaltyEntitlement(session.cafeId);
   if (typeof rawPhone !== "string" || rawPhone.length > 30) throw new Error("أدخل رقم جوال صحيح لدولة العلامة");
   const digits = rawPhone.trim().replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 1776 : 1632)));
-  const phone = /^[+\d\s()-]+$/.test(digits) ? normalizeBrandPhone(digits, await getBrandPhoneCountry(session.cafeId)) : null;
+  const phone = /^[+\d\s()-]+$/.test(digits) ? loyaltyCustomerPhone(digits, await getBrandPhoneCountry(session.cafeId), session.cafeId) : null;
   if (!phone) throw new Error("أدخل رقم جوال صحيح لدولة العلامة");
 
   // Both queries derive the tenant from the authenticated session, never client input.

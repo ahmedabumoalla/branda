@@ -34,7 +34,7 @@ async function pointsSession(scope: Scope) {
 
 async function resolveIdentifier(cafeId: string, identifier: string) {
   const raw = normalizeLoyaltyDigits(z.string().trim().min(1).max(500).parse(identifier));
-  const code = resolveReadMethod("code", raw, await getBrandPhoneCountry(cafeId)) === "phone" ? await resolveCashierLoyaltyPhone(raw)
+  const code = resolveReadMethod("code", raw, await getBrandPhoneCountry(cafeId), cafeId) === "phone" ? await resolveCashierLoyaltyPhone(raw)
     : await resolveCashierCardNumber(parseBarndaksaQrPayload(raw, "loyalty-card") ?? raw.toUpperCase(), cafeId);
   if (!isCashierLoyaltyCode(code)) throw new Error("رمز البطاقة غير صالح");
   return code;
@@ -42,7 +42,7 @@ async function resolveIdentifier(cafeId: string, identifier: string) {
 
 export async function resolveInvoiceCardAction(scope: Scope, identifier: string) {
   const session = await pointsSession(invoiceScopeSchema.parse(scope));
-  const phone = normalizeLoyaltyReadPhone(z.string().trim().min(1).max(500).parse(identifier), await getBrandPhoneCountry(session.cafeId));
+  const phone = normalizeLoyaltyReadPhone(z.string().trim().min(1).max(500).parse(identifier), await getBrandPhoneCountry(session.cafeId), session.cafeId);
   if (phone) return `+${phone}`;
   return resolveIdentifier(session.cafeId, identifier);
 }
@@ -68,7 +68,7 @@ const award = z.object({
 export async function addCashierInvoicePointsAction(input: z.input<typeof invoiceCreditSchema>) {
   const parsed = invoiceCreditSchema.parse(input);
   const session = await pointsSession(parsed.scope);
-  const phone = "phone" in parsed ? normalizeLoyaltyReadPhone(parsed.phone, await getBrandPhoneCountry(session.cafeId)) : null;
+  const phone = "phone" in parsed ? normalizeLoyaltyReadPhone(parsed.phone, await getBrandPhoneCountry(session.cafeId), session.cafeId) : null;
   if ("phone" in parsed && !phone) return { ok: false as const, reason: "invalid_input" };
   const args = {
     p_session_token: session.token, p_request_id: parsed.requestId,

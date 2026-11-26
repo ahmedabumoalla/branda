@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { createClient } from "@/lib/supabase/server";
+import { FAROUJ_CAFE_ID, faroujCustomerPhone, phoneRegionName } from "@/lib/loyalty/customer-phone";
 import type { LoyaltyCustomerDetail, LoyaltyCustomerPage } from "@/lib/loyalty/customer-directory-types";
 
 const filterSchema = z.object({ page: z.number().int().min(0).max(100000).default(0), query: z.string().trim().max(100).default(""), downloadedOnly: z.boolean().default(false) });
@@ -55,5 +56,7 @@ export async function getOwnerLoyaltyCustomerDetail(id: unknown, downloadedOnly:
     p_cafe: cafeId, p_customer: customerId, p_members_only: membersOnly,
   });
   if (error || !data) throw new Error("Customer unavailable");
-  return directoryDetail.parse(data);
+  const detail = directoryDetail.parse(data);
+  const region = cafeId === FAROUJ_CAFE_ID && detail.phone ? faroujCustomerPhone(detail.phone)?.region : null;
+  return region ? { ...detail, phoneCountryName: phoneRegionName(region, "ar") } : detail;
 }

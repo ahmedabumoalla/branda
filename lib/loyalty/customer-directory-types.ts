@@ -11,5 +11,5 @@ export type LoyaltyCustomerBalance = {
 };
 export type LoyaltyCustomerRow = { id: string; name: string; joinedAt: string; loyalty: LoyaltyCustomerBalance | null };
 export type LoyaltyCustomerPage = { rows: LoyaltyCustomerRow[]; total: number; page: number; pageSize: number };
-export type LoyaltyCustomerDetail = { id: string; name: string; phone: string | null; birthdayEnabled?: boolean; birthDate?: string | null; loyalty: LoyaltyCustomerBalance | null };
+export type LoyaltyCustomerDetail = { id: string; name: string; phone: string | null; phoneCountryName?: string; birthdayEnabled?: boolean; birthDate?: string | null; loyalty: LoyaltyCustomerBalance | null };
 export type LoyaltyCustomerResult<T> = { ok: true; data: T } | { ok: false; message: string };

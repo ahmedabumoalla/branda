@@ -5,7 +5,7 @@ import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { loyaltyCustomerPhone } from "@/lib/loyalty/customer-phone";
 import { getBrandPhoneCountry } from "@/lib/data/brand-phone-country";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { isCashierLoyaltyCode, normalizeLoyaltyDigits, resolveReadMethod } from "@/lib/loyalty/read-identifier";
@@ -62,11 +62,11 @@ async function cashierScope(expected: LoyaltyReadScope) {
 export async function enqueueLoyaltyRead(input: LoyaltyReadInput) {
   const parsed = inputSchema.parse(input), session = await cashierScope(parsed);
   const country = await getBrandPhoneCountry(session.cafeId);
-  const method = resolveReadMethod(parsed.method, parsed.value, country);
+  const method = resolveReadMethod(parsed.method, parsed.value, country, session.cafeId);
   const digits = normalizeLoyaltyDigits(parsed.value);
   let value: string;
   if (method === "phone") {
-    const phone = /^[+\d\s()-]+$/.test(digits) ? normalizeBrandPhone(digits, country) : null;
+    const phone = /^[+\d\s()-]+$/.test(digits) ? loyaltyCustomerPhone(digits, country, session.cafeId) : null;
     if (!phone) throw new LoyaltyReadError("invalid_phone");
     value = phone;
   } else {

@@ -9,6 +9,7 @@ import { enrollLoyaltyAction } from "@/app/actions/loyalty-experience";
 import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
 import type { LoyaltyCardProgram } from "@/lib/data/loyalty-cards";
 import { RastHeader } from "./rast-brand";
+import { FAROUJ_SLUG, faroujCustomerPhone, phoneRegionName } from "@/lib/loyalty/customer-phone";
 import { getBrandCountry, normalizeBrandPhone, type BrandPhoneCountry } from "@/lib/auth/brand-phone";
 import { RastStampCard } from "./rast-stamp-card";
 import { PointsRewardPath } from "@/components/loyalty/points-reward-path";
@@ -25,6 +26,8 @@ export function RastEnrollment({ language = "ar", identity, program, authenticat
   const [phone, setPhone] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const community = en ? loyaltyText(identity.nameEn || identity.name, language) : loyaltyCommunityName(identity);
+  const international = identity.slug === FAROUJ_SLUG;
+  const detected = international ? faroujCustomerPhone(phone) : null;
   const country = getBrandCountry(phoneCountry);
   const countryName = en ? new Intl.DisplayNames(["en"], { type: "region" }).of(phoneCountry) : country.name;
   const asksBirthDate = identity.slug === MAQAS77_SLUG;
@@ -48,9 +51,9 @@ export function RastEnrollment({ language = "ar", identity, program, authenticat
   async function enroll(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pendingRef.current) return;
-    const digits = normalizeBrandPhone(phone, phoneCountry);
+    const digits = international ? detected?.phone : normalizeBrandPhone(phone, phoneCountry);
     if (name.trim().length < 2 || name.trim().length > 120) { setError(en ? "Enter a name between 2 and 120 characters" : "اكتب اسمك من حرفين إلى 120 حرفًا"); return; }
-    if (!digits) { setError(en ? `Enter a valid mobile number for ${countryName} (+${country.callingCode})` : `أدخل رقم جوال صحيح لدولة الحساب ${getBrandCountry(phoneCountry).name} (+${getBrandCountry(phoneCountry).callingCode})`); return; }
+    if (!digits) { setError(international ? (en ? "Enter a valid mobile number with its country code" : "أدخل رقم جوال صحيحًا مع مفتاح الدولة") : en ? `Enter a valid mobile number for ${countryName} (+${country.callingCode})` : `أدخل رقم جوال صحيح لدولة الحساب ${getBrandCountry(phoneCountry).name} (+${getBrandCountry(phoneCountry).callingCode})`); return; }
     if (asksBirthDate) {
       const today = new Date();
       const limit = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -80,7 +83,11 @@ export function RastEnrollment({ language = "ar", identity, program, authenticat
         {stage === "done" ? <div className={s.welcome} role="status"><Check aria-hidden="true" /><h2>{en ? `${returning ? "Welcome back" : "Welcome"}, ${name.trim()}` : returning ? `يا هلا برجعتك ${name.trim()}` : `يا هلا فيك يا ${name.trim()}`}</h2><p>{en ? "Your loyalty card is ready" : "بطاقتك تجمع لحظاتك الحلوة معنا"}</p><button type="button" className={s.primary} disabled={opening} aria-busy={opening} onClick={openCard}><span role="status">{en ? (opening ? "Opening your card" : "View my card") : opening ? "جار فتح بطاقتك" : "عرض بطاقتي"}</span>{opening ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <ArrowLeft aria-hidden="true" />}</button></div> : <form className={s.enrollmentForm} onSubmit={enroll} aria-busy={pending}>
           <div className={s.formHeading}><h2>{en ? "Join" : "انضم إلى"} {community}</h2></div>
             <label className={s.field} htmlFor="rast-name"><span>{en ? "Your name" : "اسمك"}</span><input id="rast-name" name="name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} placeholder={en ? "Your name" : "الاسم اللي نناديك فيه"} required disabled={pending} /></label>
-            <label className={s.field} htmlFor="rast-phone"><span>{en ? "Mobile number" : "رقم الجوال"} — {countryName} (+{getBrandCountry(phoneCountry).callingCode})</span><input id="rast-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder={getBrandCountry(phoneCountry).placeholder} dir="ltr" maxLength={30} required disabled={pending} aria-describedby="rast-phone-hint" /></label>
+            <label className={s.field} htmlFor="rast-phone"><span>{en ? "Mobile number" : "رقم الجوال"} {international ? "" : `— ${countryName} (+${country.callingCode})`}</span><input id="rast-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder={international ? "+971 50 123 4567" : country.placeholder} dir="ltr" maxLength={30} required disabled={pending} aria-describedby="rast-phone-hint" /></label>
+            {international && <p className={s.fieldHint} aria-live="polite">{detected?.region
+              ? (en ? "Phone number country: " : "دولة رقم الجوال: ") + phoneRegionName(detected.region, language)
+              : detected ? (en ? "This number uses a shared calling code" : "هذا الرقم يستخدم مفتاحًا مشتركًا بين عدة دول")
+              : (en ? "Enter a UAE mobile number or include the country code for an international number" : "أدخل جوالك الإماراتي مباشرة أو أضف مفتاح الدولة للرقم الدولي")}</p>}
             {asksBirthDate ? <label className={s.field} htmlFor="rast-birth"><span>{en ? "Date of birth" : "تاريخ ميلادك"}</span><input id="rast-birth" name="birthDate" type="date" autoComplete="bday" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} min="1900-01-01" required disabled={pending} /></label> : null}
             <p className={s.fieldHint} id="rast-phone-hint">{en ? "Already have a card? Use your registered name and mobile number" : "إذا عندك بطاقة استخدم الاسم ورقم الجوال المسجّلين لفتحها"}</p>
           {error ? <p ref={errorRef} tabIndex={-1} className={s.error} role="alert">{error}</p> : null}

@@ -85,7 +85,7 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
   }
   const normalized = normalizeLoyaltyDigits(parsed.value);
   const value = parseBarndaksaQrPayload(normalized, parsed.kind === "stamp" ? "loyalty-card" : "customer-reward") ?? normalized.toUpperCase();
-  const phone = parsed.stampByPhone ? normalizeLoyaltyReadPhone(normalized, await getBrandPhoneCountry(session.cafeId)) : null;
+  const phone = parsed.stampByPhone ? normalizeLoyaltyReadPhone(normalized, await getBrandPhoneCountry(session.cafeId), session.cafeId) : null;
   if (parsed.stampByPhone && (parsed.kind !== "stamp" || !parsed.expectedScope || !phone)) throw new Error("أدخل رقم جوال صحيح لدولة العلامة");
   if (!phone && !(parsed.kind === "stamp" ? isCashierLoyaltyCode(value) : /^[A-Z0-9_-]{4,100}$/.test(value))) throw new Error("الرمز غير صالح لنوع العملية المحدد");
   const admin = createAdminClient();

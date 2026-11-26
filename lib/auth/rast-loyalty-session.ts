@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { getCustomerProfileByUser } from "@/lib/data/customers";
-import { normalizeBrandPhone } from "@/lib/auth/brand-phone";
+import { FAROUJ_CAFE_ID, FAROUJ_SLUG, loyaltyCustomerPhone } from "@/lib/loyalty/customer-phone";
 import { getBrandPhoneCountryBySlug } from "@/lib/data/brand-phone-country";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -34,10 +34,11 @@ export async function getLoyaltyCustomerProfile(slug: string) {
   const methods = data.claims.amr;
   if (!Array.isArray(methods) || !methods.some((entry) => typeof entry === "object" && entry !== null && "method" in entry && entry.method === "otp")) return null;
   const phoneCountry = await getBrandPhoneCountryBySlug(slug);
-  const phone = normalizeBrandPhone(user.phone ?? "", phoneCountry);
+  const cafeId = slug === FAROUJ_SLUG ? FAROUJ_CAFE_ID : undefined;
+  const phone = loyaltyCustomerPhone(user.phone ?? "", phoneCountry, cafeId);
   if (!phone) return null;
   const profile = await getCustomerProfileByUser(slug, user.id);
-  if (!profile || profile.status !== "active" || profile.blocked_at || profile.phone_auth_conflict || normalizeBrandPhone(String(profile.phone_normalized ?? profile.phone ?? ""), phoneCountry) !== phone) return null;
+  if (!profile || profile.status !== "active" || profile.blocked_at || profile.phone_auth_conflict || loyaltyCustomerPhone(String(profile.phone_normalized ?? profile.phone ?? ""), phoneCountry, cafeId) !== phone) return null;
   return profile;
 }
 

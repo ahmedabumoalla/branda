@@ -1,3 +1,4 @@
+import { FAROUJ_CAFE_ID, faroujCustomerPhone } from "./customer-phone";
 import { getBrandCountry, normalizeBrandPhone, type BrandPhoneCountry } from "../auth/brand-phone";
 import type { LoyaltyReadOperation } from "./read-operation-types";
 import { parseBarndaksaQrPayload } from "./secure-qr-payload";
@@ -94,7 +95,7 @@ export function createReadOutbox(options: {
   const list = () => store.change(key, rows => { const retained = keepRows(rows, now()); return { rows: retained, result: retained }; });
   async function save(method: "code" | "phone", value: string) {
     const clean = value.trim();
-    method = resolveReadMethod(method, clean, options.phoneCountry);
+    method = resolveReadMethod(method, clean, options.phoneCountry, scope.cafeId);
     if (!clean || clean.length > (method === "phone" ? 30 : 500)) throw new Error("invalid_identifier");
     const digits = normalizeLoyaltyDigits(clean);
     let canonical = method === "code" ? parseBarndaksaQrPayload(digits, "loyalty-card") ?? digits.toUpperCase() : digits.replace(/\D/g, "");
@@ -104,6 +105,11 @@ export function createReadOutbox(options: {
       const phone = normalizeBrandPhone(clean, country);
       // Retain the national-number fingerprint used by existing Saudi/Palestinian queues
       canonical = phone ? phone.slice(rule.callingCode.length) : canonical.replace(new RegExp(`^(?:00${rule.callingCode}|${rule.callingCode}${rule.prefix ? "|" + rule.prefix : ""})`), "");
+      if (scope.cafeId === FAROUJ_CAFE_ID) {
+        const international = faroujCustomerPhone(clean);
+        if (!international) throw new Error("invalid_phone");
+        if (international.region !== "AE") canonical = "+" + international.phone;
+      }
     }
     const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${key}:${method}:${canonical}`));
     const identifierKey = Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join("");

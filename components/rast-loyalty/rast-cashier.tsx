@@ -11,6 +11,7 @@ import type { CashierConsole } from "@/lib/data/cashier";
 import type { CashierRewardPreview } from "@/lib/data/customer-rewards";
 import type { LocalRead } from "@/lib/loyalty/read-outbox";
 import { readDisplay } from "@/lib/loyalty/read-display";
+import { FAROUJ_CAFE_ID, faroujCustomerPhone, phoneRegionName } from "@/lib/loyalty/customer-phone";
 import { resolveReadMethod } from "@/lib/loyalty/read-identifier";
 import { CashierInvoicePoints, InvoicePointsHistory } from "./cashier-invoice-points";
 import { useInvoicePointsOutbox } from "./use-invoice-points-outbox";
@@ -96,6 +97,8 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
   const confirmedFinanceFlow = initialData.cashier.financeLinked === true;
   const [value, setValue] = useState("");
   const [lookupMethod, setLookupMethod] = useState<"code" | "phone">("code");
+  const international = initialData.cafe.id === FAROUJ_CAFE_ID;
+  const detectedPhone = international && lookupMethod === "phone" ? faroujCustomerPhone(value) : null;
   const resolvedCode = useRef("");
   const processing = useRef(false);
   const [pending, setPending] = useState(false);
@@ -164,7 +167,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
     processing.current = true;
     setPending(true); setError(""); setMessage(""); setNoRewards(false);
     try {
-      const phoneInput = lookupMethod === "phone" || (kind === "stamp" && resolveReadMethod(lookupMethod, value, initialData.cafe.phoneCountry) === "phone");
+      const phoneInput = lookupMethod === "phone" || (kind === "stamp" && resolveReadMethod(lookupMethod, value, initialData.cafe.phoneCountry, initialData.cafe.id) === "phone");
       if (!confirm) {
         setPreview(null);
         let code = value;
@@ -246,6 +249,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
           <form onSubmit={(event) => { event.preventDefault(); if (kind === "stamp") void queueStamp(); else void processScan(); }} className={layout.scanForm} aria-busy={pending}>
             <label htmlFor="rast-scan-code" className="block text-sm font-bold">{lookupMethod === "phone" ? t("رقم جوال العميل") : kind === "stamp" ? t("رقم البطاقة أو رقم الجوال") : t("رمز البطاقة أو المكافأة")}</label>
             <input id="rast-scan-code" ref={input} dir="ltr" type={lookupMethod === "phone" ? "tel" : "text"} inputMode={lookupMethod === "phone" ? "tel" : "text"} value={value} disabled={pending} onChange={(event) => updateCode(event.target.value)} aria-describedby="rast-scan-help" autoComplete="off" autoCapitalize="off" spellCheck={false} maxLength={lookupMethod === "phone" ? 30 : 500} placeholder={lookupMethod === "phone" ? getBrandCountry(initialData.cafe.phoneCountry ?? "SA").placeholder : kind === "stamp" ? t("امسح البطاقة أو أدخل رقم البطاقة أو الجوال") : t("امسح بالقارئ أو أدخل الرمز")} className="min-h-11 w-full min-w-0 rounded-xl border border-[var(--cashier-ink)]/30 bg-white px-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cashier-ink)]" />
+            {international && lookupMethod === "phone" && <p className={layout.scanHelp} aria-live="polite">{detectedPhone?.region ? phoneRegionName(detectedPhone.region, locale) : detectedPhone ? (locale === "ar" ? "مفتاح اتصال مشترك" : "Shared calling code") : locale === "ar" ? "للرقم الدولي أدخل مفتاح الدولة" : "Include the country code for international numbers"}</p>}
             {newMemberRequest && <p className={layout.scanHelp} role="status">{t("سيُصدر لهذا الجوال بطاقة ولاء عند تأكيد تسجيل الختم")}</p>}
             <button type="submit" disabled={pending || !value.trim()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--cashier-ink)] px-4 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{kind === "stamp" ? <BadgeCheck size={19} aria-hidden="true" /> : lookupMethod === "phone" ? <Search size={19} aria-hidden="true" /> : <ScanLine size={19} aria-hidden="true" />}{kind === "stamp" ? pending ? t("جاري حفظ القراءة") : newMemberRequest ? t("تأكيد إصدار البطاقة وتسجيل الختم") : t("تسجيل الختم") : pending ? t("جاري التحقق") : lookupMethod === "phone" ? t("البحث عن العميل") : t("فحص المكافأة")}</button>
           </form>
