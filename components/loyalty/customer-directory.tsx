@@ -120,10 +120,15 @@ export function LoyaltyCustomerDetailDialog({ customer, onClose, downloadedOnly 
             : detail ? <dl><dt><Phone size={18} aria-hidden="true" /> رقم الجوال</dt><dd>{detail.phone ? <bdi dir="ltr">{detail.phone}</bdi> : <span className={styles.missingPhone}>رقم الجوال غير متوفر</span>}</dd>{detail.phoneCountryName && <><dt>دولة رقم الجوال</dt><dd>{detail.phoneCountryName}</dd></>}{detail.birthdayEnabled ? <><dt className={styles.nextTerm}><Cake size={18} aria-hidden="true" /> تاريخ الميلاد</dt><dd>{detail.birthDate ? <span className={styles.birthDate}>{birthDateLabel(detail.birthDate)}</span> : <span className={styles.missingPhone}>لم يسجل تاريخ الميلاد</span>}</dd></> : null}</dl>
               : <div className={styles.detailLoading} role="status"><span className={styles.skeletonLine} aria-hidden="true" /> جار تحميل بيانات العميل</div>}
         </div>
-        {detail?.cardStatus === "suspended" && <p role="status">بطاقة الولاء موقوفة</p>}
-        {detail?.suspendableCardId && <SuspendCard key={detail.suspendableCardId} customerId={customer.id} cardId={detail.suspendableCardId}
-          onSuspended={() => setDetail(current => current && { ...current, cardStatus: "suspended", suspendableCardId: undefined })} />}
-        {detail?.phone && detail.cardStatus !== "suspended" && <CustomerCardMessage customerId={customer.id} downloadedOnly={downloadedOnly} />}
+        {detail?.cards?.map(card => <section key={card.id} aria-label={`بطاقة الولاء ${card.number ?? ""}`}>
+          <h4>بطاقة الولاء{card.number !== null && ` رقم ${number.format(card.number)}`}{card.branch && ` · ${card.branch}`}</h4>
+          {card.status === "suspended" ? <p role="status">بطاقة الولاء موقوفة</p> : <>
+            {detail.canSuspendCards && <SuspendCard customerId={customer.id} cardId={card.id} onSuspended={() => setDetail(current =>
+              current && { ...current, cards: current.cards?.map(item => item.id === card.id ? { ...item, status: "suspended" } : item) })} />}
+            {detail.phone && <CustomerCardMessage customerId={customer.id} cardId={card.id} downloadedOnly={downloadedOnly} />}
+          </>}
+        </section>)}
+        {detail?.phone && detail.cards?.length === 0 && <CustomerCardMessage customerId={customer.id} downloadedOnly={downloadedOnly} />}
         <footer className={styles.detailFooter}><button type="button" onClick={onClose}>إغلاق الملف</button></footer>
       </div>
     </dialog>

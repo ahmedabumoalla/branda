@@ -1,4 +1,5 @@
 import "server-only";
+import { FAROUJ_CAFE_ID, faroujCustomerPhone } from "@/lib/loyalty/customer-phone";
 import { canonicalBrandMobile } from "@/lib/auth/brand-phone";
 import { brandAllowsNewWork } from '@/lib/data/account-cancellation';
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -19,10 +20,11 @@ export const PLATFORM_CARD_LINK_CAFE_IDS: ReadonlySet<string> = new Set([
 ]);
 /** `rating` is the text for a brand named above: it suits stamps and points alike and closes with a rating that
  * invites a reply. Brands with their own sender keep the original text */
-export function stampCardLinkMessage(job: Pick<CardLinkJob, "cafeId" | "profileId" | "brandSlug" | "brandName" | "phone" | "cardCreated">, options: { rating?: boolean } = {}) {
-  if (!/^[a-z0-9-]{1,80}$/.test(job.brandSlug) || !canonicalBrandMobile.test(job.phone)) throw new Error("invalid_card_link_job");
+export function stampCardLinkMessage(job: Pick<CardLinkJob, "cafeId" | "profileId" | "brandSlug" | "brandName" | "phone" | "cardCreated">, options: { rating?: boolean; cardId?: string } = {}) {
+  const validPhone = job.cafeId === FAROUJ_CAFE_ID ? faroujCustomerPhone(job.phone)?.phone === job.phone : canonicalBrandMobile.test(job.phone);
+  if (!/^[a-z0-9-]{1,80}$/.test(job.brandSlug) || !validPhone) throw new Error("invalid_card_link_job");
   const token = createLoyaltySessionToken({ slug: job.brandSlug, cafeId: job.cafeId, profileId: job.profileId, phoneHash: loyaltyIdentityHash(job.phone) });
-  const link = `https://barndaksa.com/loyalty/${job.brandSlug}/access?token=${encodeURIComponent(token)}`;
+  const link = `https://barndaksa.com/loyalty/${job.brandSlug}/access?token=${encodeURIComponent(token)}${options.cardId ? "&card=" + encodeURIComponent(options.cardId) : ""}`;
   const name = job.brandName.replace(/[\r\n\u0000-\u001f]/g, " ").trim().slice(0, 180);
   if (options.rating) return [ `يا هلا فيك في ${name}`, job.cardCreated ? "بطاقة الولاء جاهزة باسمك" : "تم تحديث رصيدك في بطاقة الولاء", "افتح الرابط لعرض بطاقتك وتحميلها إلى المحفظة", link, `قيّم تجربتك مع ${name} من 1 إلى 5 بالرد برقم` ].join("\n\n");
   return [ `يا هلا فيك في ${name}`, job.cardCreated ? "بطاقة الولاء جاهزة وسجّلنا فيها أول ختم لك" : "تم تسجيل ختمك في بطاقة الولاء", "افتح الرابط لعرض بطاقتك وتحميلها إلى المحفظة", link, "في زيارتك القادمة اعرض بطاقتك للكاشير لتسجيل ختمك" ].join("\n\n");
@@ -95,6 +97,10 @@ export async function dispatchStampCardLinks(limit = 2) {
       catch { await finish("deferred"); continue; }
       if (saved) { await finish("skipped"); continue; }
     }
+    const { data: activeCard, error: cardError } = await admin.from("loyalty_cards").select("id")
+      .eq("id", job.cardId).eq("cafe_id", job.cafeId).eq("customer_profile_id", job.profileId).eq("status", "active").maybeSingle();
+    if (cardError) { await finish("deferred"); continue; }
+    if (!activeCard) { await finish("skipped"); continue; }
     let outcome: Awaited<ReturnType<typeof sendGreenApiLoyaltyWelcome>>;
     try {
       const input = { phone: job.phone, message: earnedReward ? rewardNoticeMessage(job) : stampCardLinkMessage(job, { rating: namedLink }) };

@@ -6,7 +6,7 @@ import { loadLoyaltyCustomerCardMessageAction } from "@/app/actions/loyalty-cust
 import styles from "./customer-card-message.module.css";
 
 /** Builds the customer's card link message on request, so the brand can send it by hand from its own phone */
-export function CustomerCardMessage({ customerId, downloadedOnly = false }: { customerId: string; downloadedOnly?: boolean }) {
+export function CustomerCardMessage({ customerId, cardId, downloadedOnly = false }: { customerId: string; cardId?: string; downloadedOnly?: boolean }) {
   const [ready, setReady] = useState<{ message: string; whatsappUrl: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -16,7 +16,7 @@ export function CustomerCardMessage({ customerId, downloadedOnly = false }: { cu
     setLoading(true);
     setError("");
     try {
-      const result = await loadLoyaltyCustomerCardMessageAction(customerId, downloadedOnly);
+      const result = await loadLoyaltyCustomerCardMessageAction(customerId, downloadedOnly, cardId);
       if (result.ok) setReady(result.data);
       else setError(result.message);
     } catch {

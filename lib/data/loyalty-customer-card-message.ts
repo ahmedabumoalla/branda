@@ -10,19 +10,23 @@ export type LoyaltyCustomerCardMessage = { message: string; whatsappUrl: string 
 
 /** The same card link message the platform sends after a stamp, built on request so the brand can send it by hand
  * from its own phone while Branda's numbers carry access messages only. Nothing is sent here. */
-export async function getOwnerLoyaltyCustomerCardMessage(id: unknown, downloadedOnly: unknown = false): Promise<LoyaltyCustomerCardMessage> {
+export async function getOwnerLoyaltyCustomerCardMessage(id: unknown, downloadedOnly: unknown = false, cardId?: string): Promise<LoyaltyCustomerCardMessage> {
   // The directory read authorises the caller for this brand and this customer before any link is created
   const customer = await getOwnerLoyaltyCustomerDetail(id, downloadedOnly);
-  if (customer.cardStatus === "suspended") throw new Error("Card suspended");
+  const cards = customer.cards ?? [];
+  const selected = cardId ? cards.find(card => card.id === cardId) : cards[0];
+  if ((cardId && !selected) || (!cardId && cards.length > 1) || selected?.status === "suspended") throw new Error("Card unavailable");
   const cafe = await requireOwnerCafeContext();
   const phone = customer.phone ? loyaltyCustomerPhone(customer.phone, await getBrandPhoneCountry(cafe.id), cafe.id) : null;
   if (!phone) throw new Error("customer_phone_unavailable");
   const db = await createClient();
-  const { data: card } = await db.from("loyalty_cards").select("stamps_in_cycle").eq("cafe_id", cafe.id).eq("customer_profile_id", customer.id).eq("status", "active").maybeSingle();
+  const { data: card, error } = selected ? await db.from("loyalty_cards").select("stamps_in_cycle").eq("id", selected.id)
+    .eq("cafe_id", cafe.id).eq("customer_profile_id", customer.id).eq("status", "active").maybeSingle() : { data: null, error: null };
+  if (error || (selected && !card)) throw new Error("Card unavailable");
   const message = stampCardLinkMessage({
     cafeId: cafe.id, profileId: customer.id, brandSlug: cafe.slug, brandName: cafe.name, phone,
     // A card with its first stamp gets the new card wording; a card further along gets the stamp wording
     cardCreated: Number(card?.stamps_in_cycle ?? 1) <= 1,
-  });
+  }, { cardId: selected?.id });
   return { message, whatsappUrl: `https://wa.me/${phone}?text=${encodeURIComponent(message)}` };
 }
