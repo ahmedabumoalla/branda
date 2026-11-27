@@ -28,6 +28,7 @@ export const commerceOptionGroupSchema = z.object({
   if (group.type === "select" && ((group.minChoices ?? 0) > 1 || (group.maxChoices ?? 1) > 1)) context.addIssue({ code: "custom", path: ["maxChoices"], message: "الاختيار الواحد لا يسمح باختيار أكثر من عنصر" });
 });
 export const commerceDetailsSchema = z.object({
+  sourceCategoryIds: z.array(z.string().uuid()).max(100).optional(),
   sourceUrl: z.url().refine(value => /^https?:\/\//.test(value), "رابط المصدر غير صالح").optional(),
   quoteOnly: z.boolean().optional(),
   stock: z.number().int().min(0).max(1_000_000).nullable().optional(),

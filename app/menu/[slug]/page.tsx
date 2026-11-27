@@ -11,6 +11,8 @@ import { PublicPageAnalytics } from "@/components/analytics/public-page-analytic
 import { MenuAutoRefresh } from "@/components/menu/menu-auto-refresh";
 import { isPublicHomeMenuSlug } from "@/lib/data/public-home-catalog";
 import { isMeramStore } from "@/lib/commerce/meram-profile";
+import { VelvetStore } from "@/components/store/velvet-store";
+import { isVelvetStore } from "@/lib/commerce/velvet-profile";
 import { MeramStore } from "@/components/store/meram-store";
 import { TogetherStore } from "@/components/store/together-store";
 import { getGiftStoreSettings } from "@/lib/data/gift-orders";
@@ -44,6 +46,7 @@ type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<Record<
 
 export async function generateViewport({ params }: Props): Promise<Viewport> {
   const { slug } = await params;
+  if (isVelvetStore(slug)) return { themeColor: "#171413", width: "device-width", initialScale: 1 };
   if (slug === AWJ_SLUG) return { themeColor: "#faf7f1", width: "device-width", initialScale: 1 };
   if (slug === AWLAD_SLUG) return { themeColor: AWLAD_BLUE, width: "device-width", initialScale: 1 };
   return { themeColor: isMeramStore(slug) ? "#e2dcd7" : slug === WAHED_MASOUB_SLUG ? WAHED_MASOUB_COLOR : isAldeemStore(slug) ? "#6b347e" : isFawaselStore(slug) ? "#ff8500" : slug === JAMILA_SLUG ? "#5c5c5c" : "#102019", width: "device-width", initialScale: 1 };
@@ -62,6 +65,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (!menu) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
   if (menu.cafeId === AWJ_ID) return { title: "AWJ CAFE | منيو أوج", description: "قهوة أوج والموهيتو والآيس كريم والحلويات", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (isAwladAlIzz(menu.cafeId)) return { title: `${menu.name} | المشروبات والمنيو`, description: "في ضيافة أولاد العز القهوة والمشروبات والمعجنات", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
+  if (isVelvetStore(menu.slug)) return { title: "فيلفت بوكس | ورد وهدايا", description: "اختر باقتك من فيلفت بوكس وأضف كلماتك وحدد موقع التسليم", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (isMeramStore(menu.slug)) return { title: "ميرام | ورود وهدايا", description: "اختر هديتك من ميرام وأضف كلمات الإهداء وحدد موقع التسليم", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (isAldeemStore(menu.slug)) return { title: "خيال الديم | حلا يكمّل حلو أيامك", description: "اكتشف تشكيلة سلسلة خيال الديم للحلويات من الكيك والتشيز والحلا واختَر ما يناسب لحظتك", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   if (isFawaselStore(menu.slug)) return { title: "فواصل | ستايلك كل يوم", description: "تسوّق أزياء وأحذية وإكسسوارات فواصل واختر تفاصيل إطلالتك وانضم إلى نادي فواصل", alternates: { canonical: `/menu/${menu.slug}` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
@@ -110,7 +114,8 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   const fawasel = isFawaselStore(menu.slug);
   const aldeem = isAldeemStore(menu.slug);
   const meram = isMeramStore(menu.slug);
-  const giftStore = meram || menu.businessCategory === "gifts_flowers" || fawasel || aldeem;
+  const velvet = isVelvetStore(menu.slug);
+  const giftStore = velvet || meram || menu.businessCategory === "gifts_flowers" || fawasel || aldeem;
   const teaBakery = menu.slug === "brand-9010051467ed";
   const jamila = menu.slug === JAMILA_SLUG && menu.products.length === 0;
   const signature = signatureBrand(menu.slug, menu.branch?.slug) || defaultSignatureBrand(menu);
@@ -119,9 +124,10 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;
   // Gallery frames are genuine public menus, without visitor/customer tracking or interactions.
   const storeSettings = giftStore ? await getGiftStoreSettings(menu.slug).catch(() => null) : null;
-  if (meram) {
+  if (meram || velvet) {
     const trackingToken = typeof query?.order === "string" && /^[a-zA-Z0-9_-]{32,150}$/.test(query.order) ? query.order : "";
-    const storefront = <MeramStore menu={menu} settings={storeSettings} loyaltyEnabled={Boolean(program?.enabled)} initialTracking={trackingToken} />;
+    const FlowerStore = velvet ? VelvetStore : MeramStore;
+    const storefront = <FlowerStore menu={menu} settings={storeSettings} loyaltyEnabled={Boolean(program?.enabled)} initialTracking={trackingToken} />;
     if (showcase) return <div inert>{storefront}</div>;
     return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{storefront}</>;
   }
