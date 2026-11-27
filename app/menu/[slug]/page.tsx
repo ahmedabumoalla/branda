@@ -46,7 +46,7 @@ type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<Record<
 
 export async function generateViewport({ params }: Props): Promise<Viewport> {
   const { slug } = await params;
-  if (slug === "brand-10620d3a586c") return { themeColor: "#120d0e", width: "device-width", initialScale: 1 };
+  if (slug === "brand-10620d3a586c") return { themeColor: "#0b1c35", width: "device-width", initialScale: 1 };
   if (isVelvetStore(slug)) return { themeColor: "#171413", width: "device-width", initialScale: 1 };
   if (slug === AWJ_SLUG) return { themeColor: "#faf7f1", width: "device-width", initialScale: 1 };
   if (slug === AWLAD_SLUG) return { themeColor: AWLAD_BLUE, width: "device-width", initialScale: 1 };
