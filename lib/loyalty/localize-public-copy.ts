@@ -72,7 +72,7 @@ const programPhrases: Record<string, string> = {
   "بذرة عمتنا": "Bithrat Ammatna",
   "مجمع حسنين واولاده": "Hasanein and Sons Complex",
   "تازا": "Taza",
-  "الركن الفرنسي": "The French Corner",
+  "مقهى فايب يارد": "Vibe Yard Café",
   "مايند": "Mind",
   "كورما": "Korma",
   "لوكو": "LOCO",

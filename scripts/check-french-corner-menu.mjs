@@ -33,13 +33,13 @@ function load(file,cache=new Map()){
 }
 const {FrenchCornerMenu}=load(target);
 const p=(id,name,price,categoryId='coffee')=>({id,name,price,categoryId,category:categoryId==='coffee'?'قهوة':'حلا',description:'',available:true,calories:null,ingredients:[],images:[],videos:[],promo:null});
-const source={name:'مقهى الركن الفرنسي',slug:'brand-10620d3a586c',logoUrl:'/own-logo.webp',description:'قهوة وحلويات',loyaltyEnabled:true,categories:[{id:'coffee',name:'قهوة'},{id:'sweet',name:'حلا'}],products:[p('a','لاتيه',18),p('b','إسبريسو',12),p('c','كيك',25,'sweet')],contacts:{location:null,instagramUrl:null,feedbackEnabled:false}};
+const source={name:'مقهى فايب يارد',slug:'brand-10620d3a586c',logoUrl:'/own-logo.webp',description:'قهوة وحلويات',loyaltyEnabled:true,categories:[{id:'coffee',name:'قهوة'},{id:'sweet',name:'حلا'}],products:[p('a','لاتيه',18),p('b','إسبريسو',12),p('c','كيك',25,'sweet')],contacts:{location:null,instagramUrl:null,feedbackEnabled:false}};
 global.document={getElementById:()=>({scrollIntoView(){}})};
 function render(menu=source,loyalty={purchasesRequired:6,rewardName:'خصم 10%'}){cursor=0;const tree=FrenchCornerMenu({menu,loyalty});return {tree,html:renderToStaticMarkup(tree)};}
 function nodes(tree,predicate){const found=[];function walk(n){if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(walk);return;}if(predicate(n))found.push(n);walk(n.props?.children);}walk(tree);return found;}
 const cards=tree=>nodes(tree,n=>Boolean(n.props?.['data-product-id'])).map(n=>n.props['data-product-id']);
 let checks=0;function check(name,fn){fn();checks++;console.log('PASS '+name);}
-check('French identity, direct loyalty and complete catalog SSR',()=>{const {tree,html}=render();assert.deepEqual(cards(tree),['a','b','c']);assert(html.includes('atelier-v3'));assert(html.includes('/loyalty/brand-10620d3a586c?source=menu'));assert(html.includes('مقهى الركن الفرنسي'));assert(!html.includes('GOOD FOOD'));assert(!html.includes('double-b'));assert(!html.includes('الكواكب'));});
+check('French identity, direct loyalty and complete catalog SSR',()=>{const {tree,html}=render();assert.deepEqual(cards(tree),['a','b','c']);assert(html.includes('atelier-v3'));assert(html.includes('/loyalty/brand-10620d3a586c?source=menu'));assert(html.includes('مقهى فايب يارد'));assert(!html.includes('GOOD FOOD'));assert(!html.includes('double-b'));assert(!html.includes('الكواكب'));});
 check('Search and empty state use actual customer input',()=>{let r=render();nodes(r.tree,n=>n.type==='input'&&n.props.type==='search')[0].props.onChange({target:{value:'لاتيه'}});assert.deepEqual(cards(render().tree),['a']);r=render();nodes(r.tree,n=>n.type==='input')[0].props.onChange({target:{value:'غير موجود'}});assert.deepEqual(cards(render().tree),[]);assert(render().html.includes('خلّنا نجرّب'));state=[];});
 check('Category filter and price ordering retain catalog links',()=>{let r=render();nodes(r.tree,n=>n.type==='button'&&n.key==='coffee')[0].props.onClick();assert.deepEqual(cards(render().tree),['a','b']);r=render();nodes(r.tree,n=>n.type==='select')[0].props.onChange({target:{value:'low'}});assert.deepEqual(cards(render().tree),['b','a']);state=[];});
 check('Compact categories expand and keep a selected later category visible after collapse',()=>{const menu={...source,categories:Array.from({length:8},(_,i)=>({id:'group'+i,name:'قسم '+i})),products:Array.from({length:8},(_,i)=>p('item'+i,'صنف '+i,10,'group'+i))};const buttons=r=>nodes(r.tree,n=>n.type==='button'&&typeof n.props['aria-pressed']==='boolean');const toggle=r=>nodes(r.tree,n=>n.type==='button'&&n.props['aria-controls']==='french-category-options')[0];let r=render(menu);assert.equal(buttons(r).length,6);assert.equal(toggle(r).props['aria-expanded'],false);toggle(r).props.onClick();r=render(menu);assert.equal(buttons(r).length,9);buttons(r).find(n=>n.key==='group7').props.onClick();r=render(menu);assert.deepEqual(cards(r.tree),['item7']);toggle(r).props.onClick();r=render(menu);assert.equal(buttons(r).length,6);assert(buttons(r).find(n=>n.key==='group7').props['aria-pressed']);assert.deepEqual(cards(r.tree),['item7']);state=[];});
@@ -90,21 +90,21 @@ check('Experience excludes expired, hidden and unavailable linked offers without
  assert(!render({...menu,products:[]}).html.includes('id="french-offers"'));state=[];
 });
 check('Experience supports general campaigns and events using the French catalog anchor',()=>{
- state=[];const r=render({...source,highlights:{asOf:100,items:[{id:'general',kind:'general',title:'عرض القهوة',discountPercent:10},{id:'event',kind:'event',title:'لقاء القهوة',eventDate:'2026-10-24',eventTime:'18:00',eventLocation:'الركن الفرنسي'}]}});
+ state=[];const r=render({...source,highlights:{asOf:100,items:[{id:'general',kind:'general',title:'عرض القهوة',discountPercent:10},{id:'event',kind:'event',title:'لقاء القهوة',eventDate:'2026-10-24',eventTime:'18:00',eventLocation:'مقهى فايب يارد'}]}});
  assert(r.html.includes('data-french-offer="general"'));assert(r.html.includes('data-french-offer="event"'));assert(r.html.includes('2026-10-24'));assert(r.html.includes('18:00'));assert(!r.html.includes('#rast-menu-items'));assert(!r.html.includes('RAST'));state=[];
 });
 const route=fs.readFileSync('app/menu/[slug]/page.tsx','utf8');assert(route.includes('menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu'));assert(route.includes('if (showcase) return <div inert>{presentation}</div>'));
 const {menuLoadingBrand}=load('lib/menu/loading-brands.ts');
 const {BrandedMenuLoading}=load('components/menu/branded-menu-loading.tsx');
 const loadingBrand=menuLoadingBrand(source.slug),loadingAsset=path.join(root,'public',loadingBrand.logo);
-const [loadingMetadata,loadingStats,originalMetadata]=await Promise.all([sharp(loadingAsset).metadata(),sharp(loadingAsset).stats(),sharp('public/french-corner/official-logo.png').metadata()]);
+const [loadingMetadata,loadingStats]=await Promise.all([sharp(loadingAsset).metadata(),sharp(loadingAsset).stats()]);
 check('French loading uses the complete transparent published logo without a black square or color blending',()=>{
  assert(loadingMetadata.hasAlpha&&!loadingStats.isOpaque);
  assert.equal(loadingStats.channels[3].min,0);
- assert.equal(loadingMetadata.width,originalMetadata.width);assert.equal(loadingMetadata.height,originalMetadata.height);
+ assert.equal(loadingMetadata.width,560);assert.equal(loadingMetadata.height,560);
  assert.equal(loadingBrand.blend,undefined);
  const loadingHtml=renderToStaticMarkup(React.createElement(BrandedMenuLoading,{brand:loadingBrand}));
- assert(loadingHtml.includes('src="/french-corner/official-logo-transparent-v1.webp"'));
+ assert(loadingHtml.includes('src="/french-corner/crowned-vy-v1.webp"'));
  assert(loadingHtml.includes('class="logo"')&&!loadingHtml.includes('blendedLogo'));
  assert(loadingHtml.includes('aria-busy="true"')&&loadingHtml.includes('role="status"'));
 });

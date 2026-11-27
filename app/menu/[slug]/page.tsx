@@ -46,6 +46,7 @@ type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<Record<
 
 export async function generateViewport({ params }: Props): Promise<Viewport> {
   const { slug } = await params;
+  if (slug === "brand-10620d3a586c") return { themeColor: "#120d0e", width: "device-width", initialScale: 1 };
   if (isVelvetStore(slug)) return { themeColor: "#171413", width: "device-width", initialScale: 1 };
   if (slug === AWJ_SLUG) return { themeColor: "#faf7f1", width: "device-width", initialScale: 1 };
   if (slug === AWLAD_SLUG) return { themeColor: AWLAD_BLUE, width: "device-width", initialScale: 1 };
@@ -74,6 +75,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     ...(showcase ? { robots: { index: false, follow: false }, alternates: { canonical: `/menu/${slug}` } } : {}),
   };
   return {
+    ...(menu.slug === "brand-10620d3a586c" && menu.logoUrl ? { icons: { icon: menu.logoUrl } } : {}),
     title: `${menu.name}${menu.branch ? ` | ${menu.branch.name}` : ""} | ${menu.businessCategory === "gifts_flowers" ? "المنتجات والخدمات" : menu.businessCategory === "butcher_shops" ? "المنتجات" : "المنيو"}`,
     description: menu.businessCategory === "gifts_flowers" ? `اكتشف منتجات وخدمات ${menu.name} واختر هديتك بتفاصيلها` : menu.businessCategory === "butcher_shops" ? `اكتشف منتجات ${menu.name} والأصناف والأسعار والتفاصيل` : `اكتشف منيو ${menu.name} الأصناف والأسعار والمكونات والتفاصيل`,
     ...(showcase ? { robots: { index: false, follow: false }, alternates: { canonical: `/menu/${slug}` } } : {}),

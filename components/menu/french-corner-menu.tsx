@@ -18,7 +18,7 @@ import h from "./french-corner-hero.module.css";
 
 function FrenchImage({ src, alt, className = "", eager = false }: { src?: string | null; alt: string; className?: string; eager?: boolean }) {
   const [failedSource, setFailedSource] = useState<string | null>(null);
-  if (!src || src === failedSource) return <span className={`${s.photoFallback} ${className}`} role="img" aria-label={alt}><Coffee aria-hidden="true" /><span>Le Coin Français</span></span>;
+  if (!src || src === failedSource) return <span className={`${s.photoFallback} ${className}`} role="img" aria-label={alt}><Coffee aria-hidden="true" /><span>Vibe Yard</span></span>;
   // Original brand photography and fresh tenant-scoped signed product assets.
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={src} alt={alt} className={className} loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : "auto"} decoding="async" onError={() => setFailedSource(src)} />;
@@ -53,7 +53,7 @@ export function FrenchCornerMenu({ menu: source }: { menu: StandaloneMenu; loyal
     return () => window.clearInterval(timer);
   }, [source.highlights]);
   const menu = { ...source, contacts: { ...source.contacts, instagramUrl: null, location: {
-    label: "مقهى الركن الفرنسي",
+    label: "مقهى فايب يارد",
     googleUrl: "https://maps.app.goo.gl/ZA1JH1LjR72skeEo7",
     appleUrl: "https://maps.apple.com/?daddr=18.2040338,42.515748&dirflg=d",
   } }, products: source.products.map(product => ({ ...product, promo: getPublishedOfferPromo(product, source.highlights, now), offers: getProductOffers(product, source.highlights, now) })) };
@@ -107,28 +107,28 @@ export function FrenchCornerMenu({ menu: source }: { menu: StandaloneMenu; loyal
     <section className={h.opening} id="french-top" aria-labelledby="french-title" data-french-opening="salon">
       <div className={h.backdrop} aria-hidden="true"><FrenchImage src="/french-corner/salon.webp" alt="" eager /></div>
       <header className={h.header}>
-        <span className={h.wordmark} lang="en" dir="ltr">FRENCH<br /><span>CORNER CAFÉ</span></span>
+        <span className={h.wordmark} lang="en" dir="ltr">VIBE<br /><span>YARD CAFÉ</span></span>
         <div className={h.actions}><button type="button" aria-label="البحث في المنيو" onClick={focusSearch}><Search aria-hidden="true" /></button><button type="button" aria-label="مشاركة المنيو" onClick={share}><Share2 aria-hidden="true" /></button><MenuServices menu={menu} compact /></div>
       </header>
       <div className={h.scene}>
       <div className={h.introduction}>
-        <a className={h.brand} href="#french-top" aria-label={menu.name}><FrenchImage src={menu.logoUrl} alt="مقهى الركن الفرنسي" eager /></a>
-        <p className={h.kicker}>أهلًا بك في الركن الفرنسي</p>
+        <a className={h.brand} href="#french-top" aria-label={menu.name}><FrenchImage src={menu.logoUrl} alt="مقهى فايب يارد" eager /></a>
+        <p className={h.kicker}>أهلًا بك في مقهى فايب يارد</p>
         <h1 id="french-title">هنا يحلو<br /><em>الوقت</em></h1>
         <p className={h.description}>قهوة تُرتشف على مهل<br />وحلوى تجعل للحظة مذاقًا آخر</p>
-        <div className={h.links}><a className={h.explore} href="#french-catalog"><span>اكتشف المنيو<small lang="fr" dir="ltr">À votre goût</small></span><ArrowDownLeft aria-hidden="true" /></a>{menu.loyaltyEnabled && <a className={h.loyalty} href="#french-membership"><WalletCards aria-hidden="true" />بطاقتك في الركن الفرنسي</a>}</div>
+        <div className={h.links}><a className={h.explore} href="#french-catalog"><span>اكتشف المنيو<small lang="fr" dir="ltr">À votre goût</small></span><ArrowDownLeft aria-hidden="true" /></a>{menu.loyaltyEnabled && <a className={h.loyalty} href="#french-membership"><WalletCards aria-hidden="true" />بطاقتك في مقهى فايب يارد</a>}</div>
       </div>
       </div>
       <footer className={h.openingFooter}><FrenchSocialIcons /><span className={h.footerNote}>لك ركن وللحظة مذاق</span></footer>
     </section>
     {menu.loyaltyEnabled && <BrandLoyaltyEntry id="french-membership" slug={menu.slug} name={menu.name} logoUrl={menu.logoUrl} palette={{ background: "var(--panel)", foreground: "var(--paper)", muted: "var(--muted)", cardBackground: "var(--ink)", cardForeground: "var(--paper)", cardBack: "var(--gold)", actionBackground: "var(--paper)", actionForeground: "var(--ink)" }} />}
     {experienceItems.length > 0 && <section className={h.experience} id="french-offers" aria-labelledby="french-offers-title">
-      <div className={h.experienceHeading}><div><p>اختيارات من الركن الفرنسي</p><h2 id="french-offers-title">تستاهل <em>التجربة</em></h2></div><span lang="fr" dir="ltr">À découvrir</span></div>
+      <div className={h.experienceHeading}><div><p>اختيارات من مقهى فايب يارد</p><h2 id="french-offers-title">تستاهل <em>التجربة</em></h2></div><span lang="fr" dir="ltr">À découvrir</span></div>
       <div className={h.offerList}>{experienceItems.map(offer => {
         const product = experienceProducts.find(product => product.id === offer.productId);
         return <article key={offer.id} className={h.offerCard} data-french-offer={offer.id}>
           <div className={h.offerCopy}>
-            <span className={h.offerLabel}>{!experienceOffers.length ? "اختيار من قائمتنا" : offer.discountPercent ? `خصم ${offer.discountPercent}٪` : offer.kind === "event" ? "موعدنا في الركن الفرنسي" : "عرض من الركن الفرنسي"}</span>
+            <span className={h.offerLabel}>{!experienceOffers.length ? "اختيار من قائمتنا" : offer.discountPercent ? `خصم ${offer.discountPercent}٪` : offer.kind === "event" ? "موعدنا في مقهى فايب يارد" : "عرض من مقهى فايب يارد"}</span>
             <h3>{menuDisplayText(offer.title)}</h3>
             {offer.description && <p>{menuDisplayText(offer.description)}</p>}
             {offer.productName && offer.productName !== offer.title && <p>{menuDisplayText(offer.productName)}</p>}
@@ -138,12 +138,12 @@ export function FrenchCornerMenu({ menu: source }: { menu: StandaloneMenu; loyal
             {product && <FrenchPrice product={product} />}
             {product ? <button type="button" onClick={() => setSelectedId(product.id)}>اكتشف الصنف<ArrowUpLeft aria-hidden="true" /></button> : <a href="#french-catalog">تصفح القائمة<ArrowDownLeft aria-hidden="true" /></a>}
           </div>
-          <div className={h.offerPhoto}>{offer.imageUrl ? <FrenchImage src={offer.imageUrl} alt="" /> : <div className={h.offerArt}><span lang="en" dir="ltr">FRENCH CORNER</span><strong>{offer.discountPercent ? <>{offer.discountPercent}<small>٪</small></> : <Gift aria-hidden="true" />}</strong><span>لحظتك تستاهل</span></div>}</div>
+          <div className={h.offerPhoto}>{offer.imageUrl ? <FrenchImage src={offer.imageUrl} alt="" /> : <div className={h.offerArt}><span lang="en" dir="ltr">VIBE YARD</span><strong>{offer.discountPercent ? <>{offer.discountPercent}<small>٪</small></> : <Gift aria-hidden="true" />}</strong><span>لحظتك تستاهل</span></div>}</div>
         </article>;
       })}</div>
     </section>}
     <section className={s.catalog} id="french-catalog" aria-labelledby="french-catalog-title">
-      <h2 id="french-catalog-title" className={base.screenReaderOnly}>قائمة الركن الفرنسي</h2>
+      <h2 id="french-catalog-title" className={base.screenReaderOnly}>قائمة مقهى فايب يارد</h2>
       <div className={s.categoryPicker}>
         <nav id="french-category-options" className={s.categoryGrid} aria-label="أقسام المنيو">{shownCategories.map(c => <button type="button" key={c.id} aria-pressed={category === c.id} onClick={() => selectCategory(c.id)}><FrenchCategoryIcon name={menuDisplayText(c.name)} all={c.id === "all"} /><span>{menuDisplayText(c.name)}</span></button>)}</nav>
         {categoryOptions.length > 6 && <button className={s.categoryToggle} type="button" aria-expanded={categoriesExpanded} aria-controls="french-category-options" onClick={() => setCategoriesExpanded(value => !value)}>{categoriesExpanded ? "اختصار الأقسام" : "بقية الأقسام"}<ChevronDown aria-hidden="true" /></button>}
@@ -163,8 +163,8 @@ export function FrenchCornerMenu({ menu: source }: { menu: StandaloneMenu; loyal
       </div></section>)}
       {!visible.length && <div className={s.empty}><Coffee aria-hidden="true" /><h3>{menu.products.length ? "خلّنا نجرّب اختيارًا ثانيًا" : "قائمتنا قيد التحضير"}</h3><p>{menu.products.length ? "غيّر كلمة البحث أو ارجع لتصفح القائمة كاملة" : "ننتظرك قريبًا مع أصنافنا"}</p>{menu.products.length > 0 && <button type="button" onClick={() => { setQuery(""); setCategory("all"); setOrder("original"); }}>عرض كل الأصناف</button>}</div>}
     </section>
-    <section className={s.visit}><FrenchImage src="/french-corner/drink.webp" alt="موهيتو الركن الفرنسي" /><div><p className={s.eyebrow}>نفس الركن مزاج جديد</p><h2>بعض الأماكن نزورها<br /><em>وبعضها يصير ركننا</em></h2></div></section>
-    <footer className={s.footer}><a href="#french-top" className={s.footerBrand} lang="fr" dir="ltr">Le Coin <i>Français</i></a><div><span>قهوة وحلويات وأكثر</span><a href="https://barndaksa.com" aria-label="بواسطة برندة">بواسطة برندة<ArrowUpLeft aria-hidden="true" /></a><a href="#french-catalog">العودة للقائمة ↑</a></div></footer>
+    <section className={s.visit}><FrenchImage src="/french-corner/catalog-20261023/classic-mojito.webp?v=crowned-v1" alt="موهيتو مقهى فايب يارد" /><div><p className={s.eyebrow}>نفس الركن مزاج جديد</p><h2>بعض الأماكن نزورها<br /><em>وبعضها يصير ركننا</em></h2></div></section>
+    <footer className={s.footer}><a href="#french-top" className={s.footerBrand} lang="en" dir="ltr">Vibe <i>Yard</i></a><div><span>قهوة وحلويات وأكثر</span><a href="https://barndaksa.com" aria-label="بواسطة برندة">بواسطة برندة<ArrowUpLeft aria-hidden="true" /></a><a href="#french-catalog">العودة للقائمة ↑</a></div></footer>
     {message && <div className={s.toast} role="status"><Check aria-hidden="true" />{message}</div>}
     <AnimatePresence mode="wait">{selected && <ProductDetails key={selected.id} brandSlug={menu.slug} product={selected} products={menu.products} close={() => setSelectedId(null)} browse={browse} position={browseProducts.findIndex(p => p.id === selected.id)} total={browseProducts.length} />}</AnimatePresence>
   </main>;

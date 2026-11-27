@@ -1,6 +1,6 @@
-/* French salon entrance: a champagne arch around the original venue photograph. */
+/* French salon entrance: a red arch around the original venue photograph. */
 .opening {
- --champagne:#dfc383; --ivory:#f5efdf; --charcoal:#080908; --stone:#d7cdb8; --hairline:#dfc38355;
+ --champagne:#ff6466; --ivory:#fff7ef; --charcoal:#120d0e; --stone:#dfcacc; --hairline:#ff646655;
  --hero-display:var(--display-font); --hero-body:FrenchTajawal,sans-serif; --hero-caption:Georgia,serif;
  --hero-space:24px; --hero-ease:cubic-bezier(.22,1,.36,1);
  position:relative; isolation:isolate; display:flex; flex-direction:column; align-items:center;
@@ -11,7 +11,7 @@
 .backdrop > span { height:100%; }
 .opening::before {
  content:''; position:absolute; inset:0; z-index:-2; pointer-events:none;
- background:linear-gradient(180deg,var(--charcoal) 0%,#080908e6 17%,#080908a6 45%,#080908b8 70%,var(--charcoal) 96%),linear-gradient(90deg,#080908b8,transparent 35%,transparent 65%,#080908b8);
+ background:linear-gradient(180deg,var(--charcoal) 0%,#120d0ee6 17%,#120d0ea6 45%,#120d0eb8 70%,var(--charcoal) 96%),linear-gradient(90deg,#120d0eb8,transparent 35%,transparent 65%,#120d0eb8);
 }
 .opening::after {
  content:''; position:absolute; top:110px; bottom:94px; left:50%; width:min(660px,calc(100% - 48px)); transform:translateX(-50%); z-index:-1; pointer-events:none;
@@ -27,7 +27,7 @@
 .scene { display:grid; grid-template-columns:minmax(0,1fr); width:100%; max-width:620px; margin-top:42px; text-align:center; }
 .introduction { display:flex; flex-direction:column; align-items:center; width:100%; min-width:0; padding:0 16px; }
 .brand { display:block; width:174px; max-width:65vw; margin:0 auto 20px; }
-.brand > img { width:100%; height:auto; aspect-ratio:1; object-fit:contain; display:block; mix-blend-mode:screen; }
+.brand > img { width:100%; height:auto; aspect-ratio:1; object-fit:contain; display:block; mix-blend-mode:normal; }
 .brand > span[role="img"] { width:100%; aspect-ratio:1; }
 .kicker { display:flex; align-items:center; justify-content:center; gap:16px; width:100%; margin:0 0 18px; color:var(--stone); font:14px/1.7 var(--hero-body); }
 .kicker::before,.kicker::after { content:''; flex:0 1 32px; height:1px; background:var(--hairline); }
@@ -91,7 +91,7 @@
 .offerCopy :is(button,a) svg { width:16px; height:16px; flex-shrink:0; }
 .offerPhoto { position:relative; min-width:0; min-height:180px; overflow:hidden; }
 .offerPhoto > img,.offerPhoto > span { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; object-position:center; }
-.offerArt { display:flex; min-height:100%; height:100%; padding:16px; flex-direction:column; justify-content:center; align-items:center; gap:14px; color:var(--gold); background:radial-gradient(ellipse at center,#ddbf7922,transparent 70%); text-align:center; }
+.offerArt { display:flex; min-height:100%; height:100%; padding:16px; flex-direction:column; justify-content:center; align-items:center; gap:14px; color:var(--gold); background:radial-gradient(ellipse at center,#ff646622,transparent 70%); text-align:center; }
 .offerArt > span { font-size:10px; line-height:1.5; }
 .offerArt > strong { font:clamp(42px,6vw,70px) Georgia,serif; }
 .offerArt small { font-size:.35em; }.offerArt svg { width:48px; height:48px; stroke-width:1; }
