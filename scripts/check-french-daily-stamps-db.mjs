@@ -124,6 +124,7 @@ try {
   await db.exec(await readFile('supabase/migrations/20261108180040_loyalty_read_queue.sql','utf8'));
   await (await import('./lib/french-daily-stamps-cases.mjs')).runFrenchDailyStampCases(db);
   console.log(`PASS ${checks} inherited entitlement checks and French Corner daily cap assertions`);
+  await (await import("./lib/farouj-stamp-interval-cases.mjs")).checkFaroujStampInterval(db);
 } catch(error) {
   console.error(JSON.stringify({message:error.message,code:error.code,where:error.where,detail:error.detail}));
   process.exitCode=1;

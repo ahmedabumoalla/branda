@@ -108,6 +108,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
   const [checkedAt, setCheckedAt] = useState(0);
   const [preview, setPreview] = useState<RastScanPreview | null>(null);
   const [newMemberRequest, setNewMemberRequest] = useState("");
+  const faroujStampWait = initialData.cafe.id === FAROUJ_CAFE_ID ? "يمكن تسجيل الختم التالي بعد مرور 30 دقيقة من آخر ختم ناجح على هذه البطاقة" : undefined;
   const [session] = useState(() => createRastScanSession({ lookupCard: lookupRastCashierCardAction, lookupReward: lookupRastCashierRewardAction, commit: input => scanLoyaltyExperienceAction({ ...input, expectedScope: { cafeId: initialData.cafe.id, cashierId: initialData.cashier.id } }), createRequestId: () => crypto.randomUUID() }));
   const input = useRef<HTMLInputElement>(null);
   const focusInputAfterScan = useRef(false);
@@ -199,7 +200,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
           : { text: "تم تسجيل الختم رصيد {name}: {stamps} من {required}", values: { name: customer, stamps: Number(result.stampsInCycle), required: Number(result.purchasesRequired) } });
         setNewMemberRequest(""); focusInputAfterScan.current = true; setValue(""); setPreview(null);
       } else {
-        const errors: Record<string, string> = { recent_scan: "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", cooldown: "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", already_redeemed: "هذه المكافأة مصروفة سابقًا", expired: "انتهت صلاحية المكافأة", inactive: "البطاقة غير نشطة", invalid: "الرمز غير صالح أو لا يتبع هذه العلامة", duplicate: "هذه العملية مسجلة بالفعل", reward_unavailable: "المكافأة المحددة صُرفت أو لم تعد متاحة أعد فحص البطاقة؛ لم تُصرف مكافأة أخرى", card_unavailable: "البطاقة أو حساب العميل غير نشط", session_invalid: "انتهت جلسة الكاشير سجّل الدخول من جديد", program_disabled: "برنامج الولاء موقوف حاليًا", request_conflict: "بيانات العملية لا تطابق الطلب السابق أعد فحص الرمز", invalid_code: "الرمز غير صالح أعد فحص البطاقة", operation_failed: "لم تُسجل العملية أعد فحص الرمز وحاول مرة أخرى" };
+        const errors: Record<string, string> = { recent_scan: faroujStampWait ?? "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", cooldown: "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", already_redeemed: "هذه المكافأة مصروفة سابقًا", expired: "انتهت صلاحية المكافأة", inactive: "البطاقة غير نشطة", invalid: "الرمز غير صالح أو لا يتبع هذه العلامة", duplicate: "هذه العملية مسجلة بالفعل", reward_unavailable: "المكافأة المحددة صُرفت أو لم تعد متاحة أعد فحص البطاقة؛ لم تُصرف مكافأة أخرى", card_unavailable: "البطاقة أو حساب العميل غير نشط", session_invalid: "انتهت جلسة الكاشير سجّل الدخول من جديد", program_disabled: "برنامج الولاء موقوف حاليًا", request_conflict: "بيانات العملية لا تطابق الطلب السابق أعد فحص الرمز", invalid_code: "الرمز غير صالح أعد فحص البطاقة", operation_failed: "لم تُسجل العملية أعد فحص الرمز وحاول مرة أخرى" };
         errors.daily_stamp_limit = "بلغ العميل الحد اليومي المسموح وهو ختمان يمكن إضافة ختم جديد غدًا";
         errors.approval_pending = "أرسل الطلب لمسؤول الموافقة أعد التأكيد بعد اعتماده من طلبات الموافقة";
         errors.approval_rejected = "رفض مسؤول الموافقة هذه العملية راجع ملاحظة الرفض في طلبات الموافقة";
@@ -253,7 +254,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity, embedded 
             {newMemberRequest && <p className={layout.scanHelp} role="status">{t("سيُصدر لهذا الجوال بطاقة ولاء عند تأكيد تسجيل الختم")}</p>}
             <button type="submit" disabled={pending || !value.trim()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--cashier-ink)] px-4 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{kind === "stamp" ? <BadgeCheck size={19} aria-hidden="true" /> : lookupMethod === "phone" ? <Search size={19} aria-hidden="true" /> : <ScanLine size={19} aria-hidden="true" />}{kind === "stamp" ? pending ? t("جاري حفظ القراءة") : newMemberRequest ? t("تأكيد إصدار البطاقة وتسجيل الختم") : t("تسجيل الختم") : pending ? t("جاري التحقق") : lookupMethod === "phone" ? t("البحث عن العميل") : t("فحص المكافأة")}</button>
           </form>
-          {kind === "stamp" && <CashierCustomerSummary state={customerSummary.state} saved={Boolean(selectedRead)} operation={selectedRead?.operation} displayName={displayName} />}
+          {kind === "stamp" && <CashierCustomerSummary recentScanMessage={faroujStampWait} state={customerSummary.state} saved={Boolean(selectedRead)} operation={selectedRead?.operation} displayName={displayName} />}
           {lookupMethod === "code" && <RastCameraScanner key={kind} disabled={pending} onDetected={detectCode} />}</>}
           {preview && <section ref={previewElement} tabIndex={-1} className={layout.preview} aria-labelledby="rast-scan-preview">
             {catalog?.unavailable && <p className="mb-2 text-xs leading-5 opacity-75" role="status">{t("تعذرت ترجمة بعض التفاصيل يُعرض النص الأصلي أعد الفحص للمحاولة مجددًا")}</p>}
