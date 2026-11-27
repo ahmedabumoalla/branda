@@ -1,5 +1,9 @@
-export const stampStyles = ["ceramic", "paper", "meal", "brand", "scissors", "comb", "plant", "shirt", "phone", "sim", "headphones", "tea", "star", "check"] as const;
+export const stampStyles = ["ceramic", "paper", "meal", "cutlery", "brand", "scissors", "comb", "plant", "shirt", "phone", "sim", "headphones", "tea", "star", "check"] as const;
 export type LoyaltyStampStyle = typeof stampStyles[number];
+
+export function canChooseCutleryStamp(category: string | null | undefined) {
+  return category === "cafes_coffee" || category === "restaurants";
+}
 
 export function loyaltyStampStyle(value: unknown): LoyaltyStampStyle {
   return stampStyles.includes(value as LoyaltyStampStyle) ? value as LoyaltyStampStyle : "ceramic";
@@ -22,6 +26,7 @@ export function stampLogoUrl(slug: string, branchId?: string | null) {
 
 // Shared outlines keep the card preview and both native wallets consistent.
 export const stampPaths = {
+  cutlery: "M3 2v6a3 3 0 0 0 6 0V2M6 2v20M15 22V2c3.4 2.4 5 6.2 5 11h-5",
   star: "M12 2.6 14.7 8.9 21.5 9.5 16.4 14 17.9 20.7 12 17.2 6.1 20.7 7.6 14 2.5 9.5 9.3 8.9Z",
   check: "M21.5 12a9.5 9.5 0 1 1-19 0 9.5 9.5 0 0 1 19 0ZM7.8 12.4l2.9 2.9 5.6-6.2",
   tea: "M6 8h12l-2 11H8L6 8Zm1 4h10M4 22h16M9 2c-2 2 2 2 0 4m5-4c-2 2 2 2 0 4",

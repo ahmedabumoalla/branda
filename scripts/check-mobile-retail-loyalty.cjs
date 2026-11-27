@@ -37,20 +37,36 @@ for(const logoUrl of [null,'https://fixture.test/uploaded-logo.png']){
 const glyph=load('components/rast-loyalty/stamp-glyph.tsx',{'next/image':p=>React.createElement('img',p)});
 const art=load('lib/wallet/art.ts');
 const member={cafeSlug:slug,cafeName:'Fixture',card:{id:'11111111-1111-4111-8111-111111111111',stampsInCycle:2,updatedAt:'2026-11-19'},program,experience};
-for(const style of ['phone','sim','headphones']){
+for(const style of ['phone','sim','headphones','cutlery']){
  const html=renderToStaticMarkup(React.createElement(glyph.StampGlyph,{style}));check(html.includes(styles.stampPaths[style]),'web uses shared icon');
  const svg=art.walletStampSvg({...member,program:{...program,stampStyle:style}});check(svg.includes(styles.stampPaths[style]),'wallet uses same outline');
  check(!svg.includes('undefined'),'valid wallet artwork');
 }
 const logo='data:image/png;base64,fixture';check(art.walletStampSvg({...member,program:{...program,stampStyle:'brand'}},2,false,logo).includes(logo),'wallet embeds selected brand logo');
-let permitted=true,rpcs=[];
+for (const category of ['restaurants', 'cafes_coffee', 'retail_stores', 'hair_salons', 'other']) {
+  const html = renderToStaticMarkup(React.createElement(dashboard.RastLoyaltyDashboard, {
+    identity: {...identity, businessCategory: category}, initialDashboard: {program}, initialExperience: experience,
+    signupUrl: 'https://example.test', walletAvailability: {apple: true, google: true}, view: 'rewards',
+  }));
+  assert.equal(html.includes('value="cutlery"'), ['restaurants', 'cafes_coffee'].includes(category));
+}
+let permitted=true,rpcs=[],businessCategory='cafes_coffee';
 const service=load('lib/data/loyalty-experience.ts',{
- '@/lib/data/cafes':{requireOwnerCafeContext:async()=>{if(!permitted)throw Error('Forbidden');return{id:'11111111-1111-4111-8111-111111111111'};}},
+ '@/lib/data/cafes':{requireOwnerCafeContext:async()=>{if(!permitted)throw Error('Forbidden');return{id:'11111111-1111-4111-8111-111111111111',businessCategory};}},
  '@/lib/data/feature-entitlements':{getOwnerFeatureCodes:async()=>['loyalty']},
  '@/lib/supabase/server':{createClient:async()=>({rpc:async(name,args)=>{rpcs.push({name,args});return{error:null};}})},
  '@/lib/supabase/admin':{createAdminClient:()=>{throw Error('Unexpected privileged query');}},
 });
 (async()=>{
+ for (businessCategory of ['restaurants', 'cafes_coffee']) {
+   await service.saveBrandLoyaltyProgram({program: {...program, stampStyle: 'cutlery'}, experience});
+   assert.equal(rpcs.at(-1).args.p_program.cardDesign.stampStyle, 'cutlery');
+ }
+ businessCategory = 'retail_stores';
+ const callsBefore = rpcs.length;
+ await assert.rejects(() => service.saveBrandLoyaltyProgram({program: {...program, stampStyle: 'cutlery'}, experience}));
+ await assert.rejects(() => service.saveBrandLoyaltyProgram({program: {...program, stampStyle: undefined, cardDesign: {stampStyle: 'cutlery'}}, experience}));
+ assert.equal(rpcs.length, callsBefore);
  for(const stampStyle of ['phone','sim','headphones','brand']){await service.saveBrandLoyaltyProgram({program:{...program,stampStyle},experience});const call=rpcs.at(-1);check(call.name==='set_rast_loyalty_settings','existing authorized save RPC');check(call.args.p_program.cardDesign.stampStyle===stampStyle&&call.args.p_program.cardDesign.keep===true,'save preserves choice and other design data');}
  const before=rpcs.length;await assert.rejects(()=>service.saveBrandLoyaltyProgram({program:{...program,stampStyle:'invalid'},experience}));check(rpcs.length===before,'invalid style never persists');
  permitted=false;await assert.rejects(()=>service.saveBrandLoyaltyProgram({program,experience}),/Forbidden/);check(rpcs.length===before,'unauthorized save blocked');

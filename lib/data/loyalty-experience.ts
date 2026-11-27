@@ -26,7 +26,7 @@ import { getNearbySchedule } from "@/lib/data/nearby-schedule";
 import { scheduledNearbyMessage } from "@/lib/loyalty/nearby-schedule";
 import { getLoyaltyBranch } from "@/lib/data/loyalty-branches";
 import { branchIdentity, branchProgram } from "@/lib/loyalty/branch-appearance";
-import { stampStyles } from "@/lib/loyalty/stamp-style";
+import { canChooseCutleryStamp, stampStyles } from "@/lib/loyalty/stamp-style";
 
 export async function getLoyaltyExperience(cafeId: string) {
   const [{ data, error }, { data: category }] = await Promise.all([
@@ -193,7 +193,11 @@ export async function saveBrandLoyaltyProgram(input: { program: z.infer<typeof p
     if (error) throw new Error("تعذر حفظ المكافأة إعداداتك لم تتغير");
     return;
   }
-  const { error } = await (await createClient()).rpc("set_rast_loyalty_settings", { p_cafe_id: cafe.id, p_program: { ...program, cardDesign: { ...(program.cardDesign && typeof program.cardDesign === "object" && !Array.isArray(program.cardDesign) ? program.cardDesign : {}), ...(program.stampStyle ? { stampStyle: program.stampStyle } : {}) } }, p_experience: experience });
+  const cardDesign = { ...(program.cardDesign && typeof program.cardDesign === "object" && !Array.isArray(program.cardDesign) ? program.cardDesign : {}), ...(program.stampStyle ? { stampStyle: program.stampStyle } : {}) };
+  if (cardDesign.stampStyle === "cutlery" && !canChooseCutleryStamp(cafe.businessCategory)) {
+    throw new Error("ختم الشوكة والسكين متاح للمقاهي والمطاعم فقط");
+  }
+  const { error } = await (await createClient()).rpc("set_rast_loyalty_settings", { p_cafe_id: cafe.id, p_program: { ...program, cardDesign }, p_experience: experience });
   if (error) throw new Error("تعذر حفظ برنامج الولاء إعداداتك لم تتغير");
 }
 

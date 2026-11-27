@@ -12,7 +12,7 @@ export function brandStampArtwork(slug: string): string | undefined {
 /** Replace legacy cafe defaults with each brand's stamp identity, retaining an explicit logo, star or check choice. */
 export function brandStampStyle(slug: string, value: unknown): LoyaltyStampStyle {
   const style = loyaltyStampStyle(value);
-  if (isUniversalStampStyle(style)) return style;
+  if (style === "cutlery" || isUniversalStampStyle(style)) return style;
   if (isMobileRetailLoyalty(slug) && !["phone", "sim", "headphones"].includes(style)) return "phone";
   if (slug === "brand-1c2b6f7e028f") return "shirt";
   return brandStampArtwork(slug) ? "plant" : style;
