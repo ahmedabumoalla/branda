@@ -187,11 +187,12 @@ const customerPhone = loadAuth('@/lib/loyalty/customer-phone');
     assert.match(page, /result\.whatsappStatus === "code_only"\s*\? "تم إنشاء حساب الموظف شارك رابط الكاشير معه ويدخل برقم جواله ورمز التحقق الذي يصله على واتساب"/);
     checks++;
   }
-  // Verified account creation queues tutorials in the database; the signup handler only sends the OTP.
+  // Self-signup now ends with a receipt. The activation transaction schedules owner tutorials.
   {
     const source = read('lib/auth/owner-onboarding.ts');
     assert.doesNotMatch(source, /sendGreenApiOwnerSignupWelcome|sendGreenApiOwnerCompanionGuide|queueOwnerCompanionGuides/);
-    assert.match(source, /redirectTo: tutorialsInApp \? "\/dashboard\/loyalty\/guide\?start=1" : "\/dashboard"/);
+    assert.doesNotMatch(source, /signInWithPassword|redirectTo: .*dashboard/);
+    assert.match(source, /deliverSignupTeamNotice\(proof\.id\)/);
     checks++;
   }
   // The tutorials page: three videos that exist on disk, shown on the guide page, with a way out for accounts without loyalty

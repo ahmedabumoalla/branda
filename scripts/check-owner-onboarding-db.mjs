@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile as readSource, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 const { PGlite } = await import(pathToFileURL(process.env.PGLITE_MODULE ?? path.join(tmpdir(), "branda-loyalty-sql-tests/node_modules/@electric-sql/pglite/dist/index.js")).href);
+const readFile = async (file, encoding) => (await readSource(file, encoding)).replace(/\r\n/g, "\n");
 const db = new PGlite();
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
 const q = (sql, args=[]) => db.query(sql,args);
@@ -188,5 +189,52 @@ try {
   }
   await assert.rejects(()=>create(183,83,null,'966599887773'),/Invalid signup plan choice/);checks++;
   check(!await v("SELECT has_function_privilege('anon','public.handle_new_user()','EXECUTE') OR has_function_privilege('authenticated','public.handle_new_user()','EXECUTE') OR has_function_privilege('service_role','public.handle_new_user()','EXECUTE')"),'auth trigger remains private');
+  // Activate only a new verified owner. Drive the same deferred Auth insert and metadata update as GoTrue.
+  await db.exec(`
+    ALTER TABLE auth.users ADD COLUMN banned_until timestamptz, ADD COLUMN deleted_at timestamptz;
+    ALTER TABLE public.cafes ADD COLUMN deleted_at timestamptz;
+    CREATE TABLE auth.sessions(user_id uuid REFERENCES auth.users(id));
+    CREATE TABLE public.brand_account_cancellations(cafe_id uuid);
+    CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('test.actor',true),'')::uuid $$;
+    CREATE FUNCTION public.is_platform_admin() RETURNS boolean LANGUAGE sql AS $$ SELECT auth.uid()='00000000-0000-4000-8000-000000000555'::uuid $$;
+  `);
+  for (const migration of ['20261119111000_owner_companion_guides','20261127002100_self_signup_owner_guides','20261128010000_self_signup_activation']) {
+    await db.exec(await readFile('supabase/migrations/'+migration+'.sql','utf8'));
+  }
+  check(await v("SELECT count(*)=0 FROM owner_onboarding_private.approvals"), "no historic account is held");
+  const heldPhone = '966555776688', heldOwner = id(901), heldProof = id(900);
+  check((await begin(900,heldPhone,{...draft,email:"pending@example.invalid",slug:"pending-owner",planChoice:"loyalty"},"f".repeat(64))).ok,"new signup started");
+  await q("SELECT public.mark_owner_onboarding_sent($1,$2,true)",[heldProof,proof]);
+  check((await verify(900)).ok,"new signup verified");
+  await db.exec("BEGIN");
+  await q("INSERT INTO auth.users(id,phone,raw_user_meta_data,raw_app_meta_data) VALUES($1,$2,$3::jsonb,'{}')",[heldOwner,heldPhone,JSON.stringify({account_type:"cafe_owner"})]);
+  await q("UPDATE auth.users SET raw_app_meta_data=$2::jsonb WHERE id=$1",[heldOwner,JSON.stringify({owner_onboarding_id:heldProof,owner_onboarding_proof:proof})]);
+  await db.exec("COMMIT");
+  const heldCafe = await v("SELECT id FROM cafes WHERE owner_user_id=$1",[heldOwner]);
+  check(heldCafe && await v("SELECT banned_until>now() FROM auth.users WHERE id=$1",[heldOwner]),"owner and brand created with Auth login blocked");
+  await denied("INSERT INTO auth.sessions VALUES($1)",[heldOwner]);
+  check(await v("SELECT count(*)=0 FROM owner_guide_private.jobs"),"no videos before approval");
+  await denied("SELECT public.owner_signup_activation($1,true)",[heldCafe]);
+  check(!await v("SELECT has_function_privilege('authenticated','public.claim_signup_team_notice(uuid)','EXECUTE')"),"owners cannot retrieve team contacts");
+  const job = await v("SELECT public.claim_signup_team_notice($1)",[heldProof]);
+  check(job.phone===heldPhone && job.contact.email==="pending@example.invalid" && !JSON.stringify(job).includes(proof),"notice uses verified contact only");
+  check(!await v("SELECT public.claim_signup_team_notice(NULL)"),"concurrent worker cannot reclaim");
+  check(await v("SELECT public.finish_signup_team_notice($1,$2,'pending')",[job.id,job.attempt]),"unavailable primary defers");
+  await q("UPDATE owner_onboarding_private.approvals SET notice_due=now() WHERE challenge_id=$1",[heldProof]);
+  const retry = await v("SELECT public.claim_signup_team_notice(NULL)");
+  check(retry.attempt!==job.attempt && await v("SELECT public.finish_signup_team_notice($1,$2,'sent')",[retry.id,retry.attempt]),"safe retry recorded once");
+  check(await v("SELECT contact IS NULL FROM owner_onboarding_private.approvals WHERE challenge_id=$1",[heldProof]),"delivered contact copy erased");
+  await q("SELECT set_config('test.actor',$1,false)",[id(555)]);
+  check(await v("SELECT public.owner_signup_activation($1,false)",[heldCafe])==="pending","admin sees pending status");
+  await q("INSERT INTO public.brand_account_cancellations VALUES($1)",[heldCafe]);
+  await denied("SELECT public.owner_signup_activation($1,true)",[heldCafe]);
+  await q("DELETE FROM public.brand_account_cancellations WHERE cafe_id=$1",[heldCafe]);
+  for (let i=0;i<2;i++) check(await v("SELECT public.owner_signup_activation($1,true)",[heldCafe])==="active","activation is idempotent");
+  check(await v("SELECT banned_until IS NULL FROM auth.users WHERE id=$1",[heldOwner]),"existing login methods unlocked");
+  await q("INSERT INTO auth.sessions VALUES($1)",[heldOwner]);
+  const clips=(await q("SELECT phone,guide FROM owner_guide_private.jobs WHERE signup_challenge_id=$1 ORDER BY guide",[heldProof])).rows;
+  check(clips.map(row=>row.guide).join(',')==="cashier,customer,setup" && clips.every(row=>row.phone===heldPhone),"exactly three tutorial jobs for this owner");
+  const first = await v("SELECT public.claim_owner_guide_with_activation()");
+  check(first.guide==="setup" && first.activation===true && first.phone===heldPhone,"activation message accompanies the first video");
   console.log(`PASS owner onboarding SQL: ${checks} real PostgreSQL checks; no provider or production mutation.`);
 } finally { await db.close(); }

@@ -54,10 +54,11 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
 }
 
 /** Called by the verified self-signup worker. Only the primary instance may receive this media. */
-export async function sendGreenApiOwnerCompanionGuide(phone: string, guide: OwnerCompanionGuide) {
+export async function sendGreenApiOwnerCompanionGuide(phone: string, guide: OwnerCompanionGuide, activation = false) {
   if (!supportedMobile.test(phone)) throw new Error("INVALID_OWNER_RECIPIENT");
   if (!Object.hasOwn(ownerCompanionGuides, guide)) throw new Error("OWNER_WELCOME_REJECTED");
   const clip = ownerCompanionGuides[guide];
+  const caption = activation && guide === "setup" ? "تم تفعيل حسابك في برندة ويمكنك الآن تسجيل الدخول\n" + clip.caption : clip.caption;
   if (isGreenApiBackupOnly()) throw new Error("OWNER_GUIDE_PRIMARY_UNAVAILABLE");
   let primary: OtpSender;
   try { primary = validateOtpSender(requireGreenApiConfig()); }
@@ -68,11 +69,29 @@ export async function sendGreenApiOwnerCompanionGuide(phone: string, guide: Owne
     response = await fetch(otpEndpoint(primary, "sendFileByUrl"), {
       method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
       signal: AbortSignal.timeout(30_000),
-      body: JSON.stringify({ chatId: `${phone}@c.us`, urlFile: clip.url, fileName: clip.filename, caption: clip.caption }),
+      body: JSON.stringify({ chatId: `${phone}@c.us`, urlFile: clip.url, fileName: clip.filename, caption }),
     });
   } catch { throw new Error("OWNER_WELCOME_UNCERTAIN"); }
   if ([401, 403, 429, 466].includes(response.status)) throw new Error("OWNER_GUIDE_PRIMARY_UNAVAILABLE");
   return ownerMessageAcknowledgement(response);
+}
+
+// Only the primary instance may send a verified signup to this internal recipient.
+export async function sendSignupNoticeFromPrimary(message: string): Promise<"sent" | "pending" | "uncertain"> {
+  if (isGreenApiBackupOnly()) return "pending";
+  let primary: OtpSender;
+  try { primary = validateOtpSender(requireGreenApiConfig()); } catch { return "pending"; }
+  if (!await probeSenderReady(primary)) return "pending";
+  try {
+    const response = await fetch(otpEndpoint(primary, "sendMessage"), {
+      method: "POST", headers: { "content-type": "application/json" }, redirect: "error",
+      cache: "no-store", signal: AbortSignal.timeout(15_000),
+      body: JSON.stringify({ chatId: "966508424401@c.us", message, linkPreview: false }),
+    });
+    if ([400, 401, 403, 429, 466].includes(response.status)) return "pending";
+    await ownerMessageAcknowledgement(response);
+    return "sent";
+  } catch { return "uncertain"; }
 }
 
 async function ownerMessageAcknowledgement(response: Response) {

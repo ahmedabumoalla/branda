@@ -10,7 +10,7 @@ function context({jobs=[],finishFailures=0,claimError=false}={}){
   const api=load('lib/whatsapp/owner-guide-delivery.ts',{'@/lib/supabase/admin':{createAdminClient:()=>({
     rpc:async(name,args)=>{
       calls.push({name,args});
-      if(name==='claim_owner_signup_guide')return {data:jobs.shift()??null,error:claimError?{}:null};
+      if(name==='claim_owner_guide_with_activation')return {data:jobs.shift()??null,error:claimError?{}:null};
       if(name==='finish_owner_companion_guide')return {data:true,error:++finishes<=finishFailures?{}:null};
       if(name==='defer_owner_signup_guide')return {data:true,error:null};
       throw Error(name);

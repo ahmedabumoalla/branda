@@ -41,6 +41,24 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
 
 (async () => {
   let checks = 0;
+  for (const state of ['authorized','notAuthorized']) {
+    const service = api(paused, { primary: state });
+    const result = await service.module.sendSignupNoticeFromPrimary('Internal signup fixture');
+    const accepted = state === 'authorized';
+    assert.equal(result, accepted ? 'sent' : 'pending');
+    assert.equal(service.posts().length, accepted ? 1 : 0);
+    assert(service.calls.every(call => call.url.includes('waInstance111')));
+    if (accepted) assert.equal(service.posts()[0].body.chatId, '966508424401@c.us');
+    checks++;
+  }
+  {
+    const service = api(paused);
+    await service.module.sendGreenApiOwnerCompanionGuide(phone, 'setup', true);
+    assert.match(service.posts()[0].body.caption, /تم تفعيل حسابك/);
+    assert.equal(service.posts()[0].body.chatId, phone+'@c.us');
+    checks++;
+  }
+
 
   // Validate every supported country at the final provider boundary, with network fully mocked
   const countries = load('lib/auth/arab-phone-rules.ts', paused, () => { throw new Error('Unexpected network'); }).default;
@@ -173,5 +191,5 @@ const trial = { phone, brandName: 'Example', password: 'fixture-only', startsTri
   const config = fs.readFileSync('next.config.ts', 'utf8');
   const state = /env: \{ BRANDA_ACCESS_MESSAGES_ONLY: "(true|false)"[,} ]/.exec(config)?.[1];
   assert.ok(state, 'The incident switch must stay declared in next.config.ts as "true" or "false"');
-  console.log(`WhatsApp access-only switch: ${checks} checks passed; switch in next.config.ts is ${state === 'true' ? 'ON (codes, administrator owner login and verified signup tutorials leave Branda numbers)' : 'OFF (normal sending)'}`);
+  console.log(`WhatsApp access-only switch: ${checks} checks passed; switch in next.config.ts is ${state === 'true' ? 'ON (codes, administrator owner login signup team notices and activated owner tutorials leave Branda numbers)' : 'OFF (normal sending)'}`);
 })().catch(error => { console.error(error); process.exit(1); });

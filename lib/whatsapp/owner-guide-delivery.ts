@@ -2,14 +2,14 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { OwnerCompanionGuide } from "./owner-guide";
 
-type SendGuide = (phone: string, guide: OwnerCompanionGuide) => Promise<{ providerMessageId: string }>;
+type SendGuide = (phone: string, guide: OwnerCompanionGuide, activation: boolean) => Promise<{ providerMessageId: string }>;
 
 export async function runOwnerCompanionGuides(send: SendGuide) {
   const admin = createAdminClient();
   const started = Date.now();
   let processed = 0;
   for (let i = 0; i < 10 && (i === 0 || Date.now() - started < 20_000); i++) {
-    const claimed = await admin.rpc("claim_owner_signup_guide");
+    const claimed = await admin.rpc("claim_owner_guide_with_activation");
     if (claimed.error) throw new Error("owner_guide_claim_unavailable");
     const job = claimed.data;
     if (!job) break;
@@ -17,7 +17,7 @@ export async function runOwnerCompanionGuides(send: SendGuide) {
     let receipt: string | null = null;
     try {
       if (job.guide !== "setup" && job.guide !== "cashier" && job.guide !== "customer") throw new Error("invalid_guide");
-      receipt = (await send(String(job.phone), job.guide)).providerMessageId;
+      receipt = (await send(String(job.phone), job.guide, job.activation === true)).providerMessageId;
       status = "sent";
     } catch (error) {
       if (error instanceof Error && error.message === "OWNER_GUIDE_PRIMARY_UNAVAILABLE") status = "deferred";

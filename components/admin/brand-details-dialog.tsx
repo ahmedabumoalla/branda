@@ -23,6 +23,7 @@ import { BrandPasswordDelivery } from "./brand-password-delivery";
 import { BrandArchiveFiles } from "./brand-archive-files";
 import { SubscriptionDeadlineEditor } from "./subscription-deadline-editor";
 import { formatSaudiDeadline } from "@/lib/platform/subscription-deadline";
+import { BrandSignupActivation } from "./brand-signup-activation";
 import { BrandAccountEditors } from "./brand-account-editors";
 import { BrandBillingCard, BrandBillingDetails, useBrandBilling } from "./brand-billing";
 
@@ -234,6 +235,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         {section === "account" && <>
           <SectionHeading icon={UserRound}>بيانات الحساب والمالك</SectionHeading>
           <DataList items={[["اسم العلامة", cafe.name], ["الاسم بالإنجليزية", cafe.nameEn], ["الرابط المختصر", cafe.slug], ["نوع النشاط", cafe.businessCategoryLabel], ["اسم المالك", cafe.ownerName], ["البريد الإلكتروني", cafe.ownerEmail], ["بريد الدخول", cafe.ownerLoginEmail], ["جوال المالك", cafe.ownerPhone], ["تاريخ الانضمام", cafe.createdAt]]} />
+          {!cafe.cancellation && <BrandSignupActivation key={cafe.id} cafeId={cafe.id} disabled={statusPending || deletionPending || accountPending} />}
           {!cafe.cancellation && <BrandAccountEditors cafe={cafe} disabled={statusPending || deletionPending} onBusyChange={setAccountPending} onUpdated={onUpdated} />}
           {!cafe.cancellation && <BrandPasswordDelivery key={cafe.id} cafeId={cafe.id} disabled={statusPending || deletionPending || accountPending} />}
           {!cafe.cancellation && <><button type="button" className={s.primaryButton} style={{ marginTop: 22 }} disabled={statusPending || deletionPending || accountPending} onClick={async () => { setStatusPending(true); try { await toggleStatus(); } finally { setStatusPending(false); } }}>{statusPending ? "جارٍ تحديث الحالة…" : cafe.status === "نشط" ? "إيقاف العلامة" : "تفعيل العلامة"}</button>

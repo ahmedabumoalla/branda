@@ -29,6 +29,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [visible, setVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [completed, setCompleted] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
   const [resendAt, setResendAt] = useState(0);
@@ -56,7 +57,7 @@ export default function RegisterPage() {
       } else {
         const result = await registerCafeOwnerAction({ password, confirmPassword });
         setMessage(result.message);
-        if (result.ok && result.redirectTo) window.location.assign(result.redirectTo);
+        if (result.ok) { setPassword(""); setConfirmPassword(""); setCode(""); setCompleted(true); }
       }
     } catch { setMessage("تعذر الاتصال حاول مجددًا دون إغلاق الصفحة"); }
     finally { setPending(false); }
@@ -89,8 +90,11 @@ export default function RegisterPage() {
       <section className={styles.content}><div className={styles.formWrap}>
         <div className={styles.topline}><Link href="/" aria-label="برندة الرئيسية"><BarndaksaLogo variant="brown" width={100} height={42} /></Link><span>لديك حساب؟ <Link href="/login">تسجيل الدخول <ArrowLeft size={15} aria-hidden="true" /></Link></span></div>
         <div className={styles.formCard}>
+        {completed ? <header className={styles.heading} role="status">
+          <Check size={28} aria-hidden="true" /><h2>تم استلام طلبكم</h2><p>{message}</p>
+        </header> : <>
         <ol className={styles.steps} aria-label="خطوات التسجيل">{steps.map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={step >= index ? styles.current : ""}><span>{step > index ? <Check size={16} aria-hidden="true" /> : index + 1}</span><b>{label}</b></li>)}</ol>
-        <header className={styles.heading}><span className={styles.kicker}>خطوتك الأولى مع برندة</span><h2>{step === 0 ? "أهلًا بعلامتك" : step === 1 ? "رسالة واحدة ونكمل" : "باقي خطوة وتبدأ"}</h2><p>{step === 0 ? "عرّفنا بعلامتك لتبدأ مع باقة الولاء" : step === 1 ? `أرسلنا رمز التحقق إلى واتساب +${normalizedPhone} أدخله لإكمال التسجيل` : "احمِ حسابك بكلمة مرور ثم انتقل إلى لوحة تحكم علامتك"}</p></header>
+        <header className={styles.heading}><span className={styles.kicker}>خطوتك الأولى مع برندة</span><h2>{step === 0 ? "أهلًا بعلامتك" : step === 1 ? "رسالة واحدة ونكمل" : "باقي خطوة وتبدأ"}</h2><p>{step === 0 ? "عرّفنا بعلامتك لتبدأ مع باقة الولاء" : step === 1 ? `أرسلنا رمز التحقق إلى واتساب +${normalizedPhone} أدخله لإكمال التسجيل` : "اختر كلمة مرور لحسابك لتستخدمها بعد التفعيل"}</p></header>
         <div className={styles.trial}><span className={styles.trialIcon}><Sparkles size={21} aria-hidden="true" /></span><div><b>باقة ولاء برندة</b><span>شهر مجاني يبدأ بعد إنشاء الحساب بدون بطاقة دفع</span></div><span className={styles.free}>٣٠ يومًا</span></div>
         {message ? <p className={styles.message} role="status" aria-live="polite">{message}</p> : null}
         <form onSubmit={submit} aria-busy={pending}><fieldset disabled={pending} className={styles.fields}>
@@ -125,11 +129,12 @@ export default function RegisterPage() {
             <PasswordField label="تأكيد كلمة المرور" value={confirmPassword} setValue={setConfirmPassword} visible={confirmVisible} toggle={() => setConfirmVisible(value => !value)} />
             <p className={styles.note}>٨ أحرف على الأقل يمكنك لصق كلمة المرور أو استخدام مدير كلمات المرور</p>
           </>}
-          <button className={styles.submit} type="submit">{pending ? "جارٍ إكمال الطلب…" : step === 0 ? "متابعة والتحقق عبر واتساب" : step === 1 ? "تأكيد الرمز والمتابعة" : "إنشاء الحساب وتفعيل الولاء"}{pending ? <LoaderCircle className={styles.spinner} size={20} aria-hidden="true" /> : <ArrowLeft size={20} aria-hidden="true" />}</button>
+          <button className={styles.submit} type="submit">{pending ? "جارٍ إكمال الطلب…" : step === 0 ? "متابعة والتحقق عبر واتساب" : step === 1 ? "تأكيد الرمز والمتابعة" : "إنشاء الحساب"}{pending ? <LoaderCircle className={styles.spinner} size={20} aria-hidden="true" /> : <ArrowLeft size={20} aria-hidden="true" />}</button>
           {step === 1 ? <div className={styles.secondary}><button type="button" onClick={resend}>إعادة إرسال الرمز</button><button type="button" onClick={() => { setStep(0); setMessage(""); }}>تعديل البيانات</button></div> : null}
           {step === 2 ? <div className={styles.secondary}><button type="button" onClick={() => { setStep(0); setCode(""); setPassword(""); setConfirmPassword(""); setMessage(""); }}>بدء تحقق جديد أو تعديل البيانات</button></div> : null}
         </fieldset></form>
         <p className={styles.footer}>تتفعّل باقة الولاء تلقائيًا بعد إنشاء الحساب<br />بطاقات الولاء والأختام والمكافآت لعملائك</p>
+        </>}
         </div>
         <p className={styles.bottomNote}>علامتك تستحق تجربة تليق بها</p>
       </div></section>

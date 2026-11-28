@@ -34,11 +34,12 @@ function context(options={}) {
   const rpc=async(name,args)=>{events.push({name,args});
     if(name==="begin_owner_onboarding")return {data:{ok:!options.limited},error:null};
     if(name==="verify_owner_onboarding")return {data:{ok:!options.badCode},error:null};
-    if(name==="get_verified_owner_onboarding")return {data:options.unverified?null:{draft:options.draft??valid,phone:options.verifiedPhone??"966511111111"},error:null};
+    if(name==="get_verified_owner_for_approval")return {data:options.unverified?null:{draft:options.draft??valid,phone:options.verifiedPhone??"966511111111"},error:null};
     return {data:true,error:null};
   };
   const stubs={
     "next/server":{after:callback=>deferred.push(callback)},
+    "@/lib/whatsapp/signup-team-notice":{deliverSignupTeamNotice:async id=>events.push({name:"teamNotice",id})},
     "next/headers":{cookies:async()=>({get:key=>jar.has(key)?{value:jar.get(key)}:undefined,set:(key,val,config)=>{jar.set(key,val);events.push({name:"cookie",config});},delete:key=>jar.delete(key)}),headers:async()=>new Headers()},
     "@/lib/barndaksa/env":{getSupabaseServiceRoleKey:()=>"test-secret-never-production"},
     "@/lib/supabase/admin":{createAdminClient:()=>({rpc,auth:{admin:{createUser:async input=>{events.push({name:"createUser",input});return {data:{user:{id:"new-owner"}},error:options.createError?{}:null};}}}})},
@@ -87,7 +88,9 @@ for(const planChoice of ['loyalty','menu_loyalty'])for(const signInError of [fal
   await c.api.requestOwnerOnboarding({...valid,planChoice});
   const result=await c.api.completeOwnerOnboarding({password:'fixture-password',confirmPassword:'fixture-password'});
   assert(result.ok);
-  assert.equal(c.deferred.length,0);
+  assert.equal(c.deferred.length,1);
+  await c.deferred[0]();
+  assert.equal(c.events.find(e=>e.name==="teamNotice").id,c.events.find(e=>e.name==="createUser").input.app_metadata.owner_onboarding_id);
   assert.equal(c.events.filter(e=>e.name==="createUser").length,1);
   assert.equal(c.events.filter(e=>e.name==="provider").length,1, "Only the verification code is sent during signup");
   assert(!(await c.api.completeOwnerOnboarding({password:'fixture-password',confirmPassword:'fixture-password'})).ok);
@@ -114,9 +117,9 @@ await test(async()=>{const c=context({mapError:true});assert.equal((await c.api.
 await test(async()=>{const c=context();assert.equal((await c.api.requestOwnerOnboarding(valid)).ok,true);assert.match(c.code,/^\d{6}$/);const event=c.events.find(e=>e.name==="begin_owner_onboarding");assert.equal(event.args.p_phone,"966511111111");assert.equal(event.args.p_code_hash.length,64);assert(!JSON.stringify(event).includes(`"${c.code}"`));assert(!JSON.stringify(event).includes("password"));const cookie=c.events.find(e=>e.name==="cookie");assert(cookie.config.httpOnly);assert.equal(cookie.config.sameSite,"lax");});
 await test(async()=>{const c=context({unverified:true});await c.api.requestOwnerOnboarding(valid);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678",verified:true});assert(!result.ok);assert(!c.events.some(e=>e.name==="createUser"));});
 await test(async()=>{const c=context();await c.api.requestOwnerOnboarding(valid);assert((await c.api.verifyOwnerOnboarding(c.code)).ok);assert(!(await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"wrongpass"})).ok);assert(!c.events.some(e=>e.name==="createUser"));});
-await test(async()=>{const c=context();await c.api.requestOwnerOnboarding(valid);await c.api.verifyOwnerOnboarding(c.code);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"});assert(result.ok);assert.equal(result.redirectTo,"/dashboard");const creation=c.events.find(e=>e.name==="createUser").input;assert.equal(creation.phone_confirm,true);assert.equal(creation.email_confirm,false);assert.equal(creation.email,undefined);assert.equal(creation.app_metadata.owner_onboarding_proof.length,64);assert(!creation.user_metadata.primary_branch_name);assert.equal(c.jar.size,0);assert.equal(c.events.find(e=>e.name==="signIn").input.phone,"+966511111111");});
+await test(async()=>{const c=context();await c.api.requestOwnerOnboarding(valid);await c.api.verifyOwnerOnboarding(c.code);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"});assert(result.ok);assert.equal(result.redirectTo,undefined);assert.match(result.message,/فريق برندة/);const creation=c.events.find(e=>e.name==="createUser").input;assert.equal(creation.phone_confirm,true);assert.equal(creation.email_confirm,false);assert.equal(creation.email,undefined);assert.equal(creation.app_metadata.owner_onboarding_proof.length,64);assert(!creation.user_metadata.primary_branch_name);assert.equal(c.jar.size,0);assert(!c.events.some(e=>e.name==="signIn"));});
 await test(async()=>{const c=context({createError:true});await c.api.requestOwnerOnboarding(valid);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"});assert(!result.ok);assert(!c.events.some(e=>e.name==="signIn"));});
-await test(async()=>{const c=context({signInError:true});await c.api.requestOwnerOnboarding(valid);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"});assert(result.ok);assert.equal(result.redirectTo,"/login");});
+await test(async()=>{const c=context({signInError:true});await c.api.requestOwnerOnboarding(valid);const result=await c.api.completeOwnerOnboarding({password:"12345678",confirmPassword:"12345678"});assert(result.ok);assert.equal(result.redirectTo,undefined);});
 await test(()=>{const Page=load("app/register/page.tsx",{"next/link":{__esModule:true,default:"a"},"@/app/actions/auth":{},"@/components/ui/barndaksa-logo":{BarndaksaLogo:()=>React.createElement("span",null,"brand")}}).default;const html=renderToStaticMarkup(React.createElement(Page));assert.equal((html.match(/<input/g)||[]).length,6);assert(!html.includes('type="password"'));assert(!html.includes("Mapbox"));assert(!html.includes('type="url"')&&!html.includes('<iframe')&&!html.includes('موقع الفرع الأساسي'));assert(!html.match(/<input[^>]*type="email"[^>]*>/)[0].includes('required'));assert(html.includes('البريد الإلكتروني (اختياري)'));assert(html.match(/<input[^>]*type="tel"[^>]*>/)[0].includes('required'));assert(html.includes("تحقق واتساب"));assert(html.includes("باقة ولاء برندة"));assert(!html.includes("الولاء والمنيو"));assert(html.includes("شهر مجاني"));assert.equal((html.match(/type="radio"/g)||[]).length,0);});
 for(const email of ['', '   ', undefined, null]) await test(async()=>{
   const input={...valid,email};delete input.mapsUrl;
@@ -127,7 +130,7 @@ for(const email of ['', '   ', undefined, null]) await test(async()=>{
   assert((await c.api.verifyOwnerOnboarding(c.code)).ok);
   assert((await c.api.completeOwnerOnboarding({password:'12345678',confirmPassword:'12345678'})).ok);
   assert.equal(c.events.find(event=>event.name==='createUser').input.email,undefined);
-  assert.equal(c.events.find(event=>event.name==='signIn').input.phone,'+966511111111');
+  assert(!c.events.some(event=>event.name==='signIn'));
 });
 await test(async()=>{const c=context();assert((await c.api.requestOwnerOnboarding({...valid,email:' Owner@Example.invalid ',mapsUrl:''})).ok);assert.equal(c.events.find(event=>event.name==='begin_owner_onboarding').args.p_draft.email,'owner@example.invalid');assert(!c.events.some(event=>event.name==='mapPreview'));});
 for(const email of ['invalid', 'owner@', 'a'.repeat(255)+'@example.invalid'])await test(async()=>{const c=context();assert(!(await c.api.requestOwnerOnboarding({...valid,email})).ok);assert.equal(c.events.length,0);});

@@ -9,7 +9,8 @@ import { normalizeOwnerPhone } from "@/lib/auth/owner-phone";
 import { normalizeInputDigits } from "@/lib/auth/input-digits";
 import { SELF_SIGNUP_CATEGORIES } from "@/lib/platform/business-categories";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { after } from "next/server";
+import { deliverSignupTeamNotice } from "@/lib/whatsapp/signup-team-notice";
 import { isGreenApiConfigured, sendGreenApiOtp } from "@/lib/whatsapp/green-api";
 import { resolveBranchGoogleMapsUrl } from "@/lib/maps/resolve-branch-location";
 
@@ -148,8 +149,9 @@ export async function completeOwnerOnboarding(input: { password: string; confirm
     const proof = await sessionProof();
     if (!proof) return { ok: false, message: "تحقق من رقم الجوال أولًا" };
     const admin = createAdminClient();
-    const verified = await admin.rpc("get_verified_owner_onboarding", { p_id: proof.id, p_session_hash: proof.sessionHash });
-    if (verified.error || !verified.data?.draft) return { ok: false, message: "انتهت جلسة التحقق اطلب رمزًا جديدًا" };
+    const verified = await admin.rpc("get_verified_owner_for_approval", { p_id: proof.id, p_session_hash: proof.sessionHash });
+    if (verified.error) return unavailable();
+    if (!verified.data?.draft) return { ok: false, message: "انتهت جلسة التحقق اطلب رمزًا جديدًا" };
     const { draft, phone } = verified.data;
     const created = await admin.auth.admin.createUser({
       phone: `+${phone}`, password: password.data,
@@ -158,11 +160,11 @@ export async function completeOwnerOnboarding(input: { password: string; confirm
       app_metadata: { owner_onboarding_id: proof.id, owner_onboarding_proof: proof.sessionHash },
     });
     if (created.error || !created.data.user) return { ok: false, message: "تعذر إنشاء الحساب قد يكون البريد أو الجوال مسجلًا مسبقًا؛ جرّب تسجيل الدخول" };
-    // Consuming the verified challenge queues its three tutorials in the Auth transaction.
-    const tutorialsInApp = process.env.BRANDA_ACCESS_MESSAGES_ONLY?.trim() === "true";
+    after(async () => {
+      try { await deliverSignupTeamNotice(proof.id); }
+      catch { console.warn("[owner-onboarding] team notice pending reconciliation"); }
+    });
     (await cookies()).delete(COOKIE);
-    const signedIn = await (await createClient()).auth.signInWithPassword({ phone: `+${phone}`, password: password.data });
-    if (signedIn.error || !signedIn.data.session) return { ok: true, message: "تم إنشاء حسابك وتفعيل باقة الولاء سجّل الدخول للمتابعة", redirectTo: "/login" };
-    return { ok: true, message: "حسابك جاهز وباقة الولاء مفعلة", redirectTo: tutorialsInApp ? "/dashboard/loyalty/guide?start=1" : "/dashboard" };
+    return { ok: true, message: "تم إرسال بياناتكم إلى فريق برندة وسيتم التواصل معكم عند الانتهاء من تجهيز الحساب" };
   } catch { return unavailable(); }
 }

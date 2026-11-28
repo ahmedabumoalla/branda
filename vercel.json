@@ -12,6 +12,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/owner-signup/notices",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/owner-guides/jobs",
       "schedule": "* * * * *"
     },
